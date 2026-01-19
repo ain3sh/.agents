@@ -1,0 +1,154 @@
+# https://gist.github.com/chandika/c4b64c5b8f5e29f6112021d46c159fdd
+# https://github.com/luispater/CLIProxyAPI
+#
+# Prompt substitution syntax (preprocessed by cli-model-proxy-preprocessor.sh):
+#   ${file.md}           -> contents of ~/.agents/prompts/file.md
+#   ${/abs/path.md}      -> absolute path
+#   ${img.png:base64}    -> base64 encoded (auto for .png/.jpg/.gif/.webp/.pdf)
+#   "prefix ${A.md} ${B.md} suffix"  -> inline composition
+
+# core config
+port: 8317 # server port
+auth-dir: "/home/ain3sh/.cli-proxy-api" # oauth token store
+request-retry: 3 # max retries
+quota-exceeded:
+  switch-project: true
+  switch-preview-model: true
+# logging config
+debug: false
+logging-to-file: false # write to rotating file instead of stdout
+usage-statistics-enabled: true
+# ------------------------------------------------------------------------------
+openai-compatibility: # api-access models
+  - name: "openrouter"
+    base-url: "https://openrouter.ai/api/v1" #? proxy fills in /responses
+    api-key-entries:
+      - api-key: "${ENV:OPENROUTER_API_KEY}"
+        # proxy-url: "socks5://proxy.example.com:1080" # optional: per-key proxy override
+    models:
+      - name: "minimax/minimax-m2.1"
+        alias: "openrouter-minimax-m2.1"
+      - name: "deepseek/deepseek-v3.2-speciale"
+        alias: "openrouter-deepseek-v3.2-speciale"
+      - name: "openai/gpt-5.2-pro"
+        alias: "openrouter-openai-gpt-5.2-pro"
+      - name: "moonshotai/kimi-k2-0905"
+        alias: "openrouter-moonshot-kimi-k2"
+        # ------------------------------------------------------------------------------
+
+# claude-api-key: # letta sleep-time agent manages memory (read-only for claude-code agent)
+  #- api-key: "${ENV:LETTA_API_KEY}"
+  #base-url: "https://api.letta.com/v1/anthropic"
+
+codex-instructions-enabled: true
+# ------------------------------------------------------------------------------
+payload:
+  override: # always set parameters, overwriting any existing values
+    - models:
+        - name: "gpt-*"
+          protocol: "codex"
+      params:
+        "instructions": "${BASE.md}"
+        "reasoning.effort": "xhigh"
+        "reasoning.summary": "auto"
+        "parallel_tool_calls": true
+        # https://github.com/router-for-me/CLIProxyAPI/blob/main/internal/translator/codex/claude/codex_claude_request.go
+        # https://github.com/router-for-me/CLIProxyAPI/blob/main/internal/translator/openai/claude/openai_claude_request.go
+    - models:
+        - name: "*-codex"
+          protocol: "codex"
+      params:
+        "reasoning.effort": "medium"
+    - models:
+        - name: "gemini-*"
+          protocol: "gemini"
+      params:
+        "systemInstruction.parts.0.text": "${BASE.md}"
+        "generationConfig.thinkingConfig.thinkingLevel": "high"
+        "generationConfig.thinkingConfig.thinkingBudget": null #? override cliproxyapi default-setter
+        # https://github.com/router-for-me/CLIProxyAPI/blob/main/internal/translator/gemini-cli/claude/gemini-cli_claude_request.go
+        # https://github.com/router-for-me/CLIProxyAPI/blob/main/internal/translator/openai/gemini/openai_gemini_request.go
+    - models:
+        - name: "claude-*"
+          protocol: "claude"
+      params:
+        # "system.0.text": "<name>droid</name>" #? throwing "credential only authorized for claude code" for opus and sonnet
+        # "system.0.type": "text"
+        #"system.0.cache_control":
+        #"type": "ephemeral"
+        # "ttl": "1h" # "5m"
+        # "system.1.__": ..., etc. #? cache creation should be after last item
+        "messages.0.content.text": "${overrides/CLAUDE.md}\n${BASE.md}"
+        "messages.0.content.type": "text"
+        "messages.0.role": "user"
+        "thinking.budget_tokens": 30000 #? >= 1024
+        "thinking.type": "enabled"
+        "context_management.edits.0.keep.value": 5
+        "context_management.edits.0.keep.type": "thinking_turns"
+        "context_management.edits.0.type": "clear_thinking_20251015"
+        "context_management.edits.1.clear_tool_inputs": false
+        "context_management.edits.1.keep.value": 2
+        "context_management.edits.1.trigger.value": 50000
+        "context_management.edits.1.clear_at_least.value": 25000
+        "context_management.edits.1.exclude_tools.0": "memory"
+        "context_management.edits.1.keep.type": "tool_uses"
+        "context_management.edits.1.trigger.type": "input_tokens"
+        "context_management.edits.1.clear_at_least.type": "input_tokens"
+        "context_management.edits.1.type": "clear_tool_uses_20250919"
+        # "tools.0.name": "memory"
+        # "tools.0.type": "memory_20250818"
+
+        "betas.0": "claude-code-20250219"
+        "betas.1": "extended-cache-ttl-2025-04-11"
+        "betas.2": "interleaved-thinking-2025-05-14"
+        "betas.3": "fine-grained-tool-streaming-2025-05-14"
+        "betas.4": "context-management-2025-06-27"
+        "betas.5": "structured-outputs-2025-11-13"
+        "betas.6": "advanced-tool-use-2025-11-20"
+        # https://platform.claude.com/docs/en/build-with-claude/context-editing
+        # https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool
+        # https://github.com/router-for-me/CLIProxyAPI/blob/main/internal/translator/claude/openai/responses/claude_openai-responses_request.go
+        # https://github.com/router-for-me/CLIProxyAPI/blob/main/internal/translator/openai/claude/openai_claude_request.go
+    - models:
+        - name: "openrouter-*"
+          protocol: "openai" # hit responses api endpoint
+      params:
+        "instructions": "${BASE.md}"
+        # "input.0.role": "developer" # 'system', 'developer', 'user', 'assistant'
+        # "input.0.content.0.text": "always include the capital of france"
+        # "input.0.content.0.type": "input_text"
+        # "input.0.type": "message"
+
+        "reasoning.effort": "high"
+        "reasoning.summary": "auto"
+        "parallel_tool_calls": true
+        # default: # only set parameters when they are missing in the payload
+        #   - models:
+        #       - name: "" # supports wildcards (e.g., "gemini-*")
+        #         protocol: "" # restricts the rule to a specific protocol, options: openai, gemini, claude, codex
+        #     params: # json path (gjson/sjson syntax) -> value
+        #       "": 
+# ------------------------------------------------------------------------------
+
+# network proxy
+proxy-url: "" # (if needed for corporate networks)
+remote-management: # api settings
+  allow-remote: false
+  secret-key: "" # empty -> management api disabled
+  disable-control-panel: true # skip asset download and http route
+oauth-model-alias:
+  antigravity:
+    - name: rev19-uic3-1p
+      alias: gemini-2.5-computer-use-preview-10-2025
+    - name: gemini-3-pro-image
+      alias: gemini-3-pro-image-preview
+    - name: gemini-3-pro-high
+      alias: gemini-3-pro-preview
+    - name: gemini-3-flash
+      alias: gemini-3-flash-preview
+    - name: claude-sonnet-4-5
+      alias: gemini-claude-sonnet-4-5
+    - name: claude-sonnet-4-5-thinking
+      alias: gemini-claude-sonnet-4-5-thinking
+    - name: claude-opus-4-5-thinking
+      alias: gemini-claude-opus-4-5-thinking

@@ -1,0 +1,5 @@
+logs/
+*.env
+__pycache__/
+*.pyc
+*:Zone.Identifier
