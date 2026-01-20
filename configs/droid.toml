@@ -1,0 +1,73 @@
+# droid.toml - unified droid config file
+
+# ------------------------------------------------------------------------------
+[hooks]
+
+# ---
+[hooks.session_start]
+
+[hooks.session_start.environment]
+when = ["startup", "resume", "clear"]
+secrets = "~/.factory/.env" # .env secrets loaded by env vars session-start hook
+# config env vars
+EXAMPLE_CONFIG_VAR = "clod"
+
+[hooks.session_start.instructions]
+when = ["startup", "clear", "compact"] # "startup", "resume", "clear", "compact"
+prompts_dir = "~/.agents/prompts"
+# optional prompt composition (future extensibility)
+include = ["BASE.md"] # ordered list of files relative to base_dir
+
+# ---
+[hooks.pre_tool_use]
+
+[hooks.pre_tool_use.policy]
+[pre_tool_use.policy.allow]
+tools = ["mcp:codebase/warpgrep_*","mcp:context/ask_docs_agent","mcp:context/fetch_docs","mcp:vscode/get_*","mcp:vscode/list_*"]
+message = "[policy] {tool_name} is allowlisted"
+[hooks.pre_tool_use.policy.ask]
+tools = ["mcp:review"]
+message = "[policy] confirm {tool_name} tool use"
+[hooks.pre_tool_use.policy.deny]
+tools = ["Grep","Skill","Task","mcp:codebase/edit_file"]
+message = "[policy] {tool_name} is denylisted"
+[hooks.pre_tool_use.policy.overrides."Grep"]
+decision = "deny" # optional
+message = "[policy] Grep blocked; use warpgrep for codebase searching, or read files directly for targeted info. If you must use regular grep, use it through bash." # optional
+
+[hooks.pre_tool_use.commit_review_guard]
+type = "committed"
+max_chars = 6000
+
+# ---
+[hooks.post_tool_use]
+
+# ---
+[hooks.notification]
+
+# ---
+[hooks.pre_compact]
+
+# ---
+[hooks.user_prompt_submit]
+
+[hooks.user_prompt_submit.conflict_guard]
+cache_dir = "/tmp/conflicts"
+token_threshold = 20000
+skip_prefix = "" # ignored if missing/null or empty string
+
+# ---
+[hooks.subagent_stop]
+
+# ---
+[hooks.stop]
+
+# ---
+[hooks.session_end]
+
+[hooks.session_end.store_artifacts]
+tail = 1
+tail_when = ["prompt_input_exit", "other"]
+todo_when = ["prompt_input_exit", "clear", "other"]
+
+# ------------------------------------------------------------------------------
