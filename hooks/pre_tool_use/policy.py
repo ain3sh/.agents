@@ -113,15 +113,11 @@ def _list_from_config(value: object) -> list[str]:
 
 
 def _policy_root(data: dict[str, object]) -> dict[str, object]:
-    return get_toml_section(data, "hooks", "pre_tool_use", "policy") or get_toml_section(
-        data, "pre_tool_use", "policy"
-    )
+    return get_toml_section(data, "hooks", "pre_tool_use", "policy")
 
 
 def _policy_section(data: dict[str, object], name: str) -> dict[str, object]:
-    return get_toml_section(data, "hooks", "pre_tool_use", "policy", name) or get_toml_section(
-        data, "pre_tool_use", "policy", name
-    )
+    return get_toml_section(data, "hooks", "pre_tool_use", "policy", name)
 
 
 def _parse_overrides(section: dict[str, object]) -> tuple[tuple[str, Override], ...]:
@@ -139,6 +135,24 @@ def _parse_overrides(section: dict[str, object]) -> tuple[tuple[str, Override], 
         )
         overrides.append((key, override))
     return tuple(overrides)
+
+
+def _match_mcp_server(server: str, pattern: str) -> bool:
+    """Match MCP server name with flexible pattern matching.
+
+    Supports:
+    - Exact match: "vscode" matches "vscode"
+    - Glob patterns: "code*" matches "codebase"
+    - Partial/contains: "codebase" matches "plugin_codebase_codebase"
+    """
+    if pattern == "*":
+        return True
+    # Try exact fnmatch first (handles globs)
+    if fnmatch.fnmatch(server, pattern):
+        return True
+    # Fall back to substring match for flexibility with prefixed server names
+    # e.g., pattern "codebase" matches server "plugin_codebase_codebase"
+    return pattern in server
 
 
 def _match_any(targets: tuple[str, ...], tool_name: str) -> bool:
@@ -160,7 +174,7 @@ def _match_any(targets: tuple[str, ...], tool_name: str) -> bool:
             if len(parts) < 3:
                 continue
             server, tool = parts[1], parts[2]
-            if fnmatch.fnmatch(server, server_pattern) and fnmatch.fnmatch(tool, tool_pattern):
+            if _match_mcp_server(server, server_pattern) and fnmatch.fnmatch(tool, tool_pattern):
                 return True
             continue
 

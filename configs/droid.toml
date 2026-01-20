@@ -22,7 +22,7 @@ include = ["BASE.md"] # ordered list of files relative to base_dir
 [hooks.pre_tool_use]
 
 [hooks.pre_tool_use.policy]
-[pre_tool_use.policy.allow]
+[hooks.pre_tool_use.policy.allow]
 tools = ["mcp:codebase/warpgrep_*","mcp:context/ask_docs_agent","mcp:context/fetch_docs","mcp:vscode/get_*","mcp:vscode/list_*"]
 message = "[policy] {tool_name} is allowlisted"
 [hooks.pre_tool_use.policy.ask]
