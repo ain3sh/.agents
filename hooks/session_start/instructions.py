@@ -58,9 +58,13 @@ def main():
     config = _parse_args(sys.argv[1:])
 
     try:
-        read_input_as(SessionStartInput)
+        hook_input = read_input_as(SessionStartInput)
     except HookInputError as exc:
         exit(1, text=f"[session_start] Hook input error: {exc}", to_stderr=True)
+
+    allowed_sources = {"startup", "resume", "clear", "compact"}
+    if hook_input.source not in allowed_sources:
+        exit()
 
     content = _compose_instructions(config.base_dir)
     if content:

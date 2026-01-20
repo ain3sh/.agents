@@ -209,8 +209,8 @@ def main():
     except HookInputError as exc:
         exit(1, text=f"[env_vars] Hook input error: {exc}", to_stderr=True)
 
-    # Only load on startup (not resume/clear/compact)
-    if hook_input.source != "startup":
+    # Load on startup, resume, and clear to keep env consistent.
+    if hook_input.source not in {"startup", "resume", "clear"}:
         exit()
 
     env_vars = parse_env_files(vars_files, strict=bool(args.strict))

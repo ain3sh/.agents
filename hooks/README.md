@@ -1,160 +1,128 @@
 # Agent Hooks
 
-Reusable Python utilities and hooks for Factory Droid, Claude Code, etc.. The `utils/` library handles JSON parsing, output emission, env vars, and common operations—so hooks can focus on logic, not plumbing.
+High-level, reusable hooks for Factory Droid that prioritize clear behavior, reliable defaults, and minimal boilerplate. This repository is the one-stop reference for how hooks are organized, how they’re configured, and how to extend them without re-reading the codebase.
+
+## At a Glance
+
+- **Hooks are grouped by event** (`pre_tool_use/`, `session_start/`, etc.).
+- **Utilities live in `utils/`**, providing typed I/O, env helpers, and cross-platform tools.
+- **Configuration lives outside this repo** (e.g., `~/.factory/settings.json`, `~/.factory/vars.env`).
 
 ## Directory Layout
 
 ```
 hooks/
-├── utils/                  # Shared utilities
-│   ├── types.py            # Typed dataclasses for all hook inputs/outputs
-│   ├── io.py               # Stdin parsing, stdout emission, exit helpers
-│   ├── config.py           # Environment variable parsing (env_bool, env_int, etc.)
-│   ├── env.py              # DROID_ENV_FILE helpers (set_env, add_to_path)
-│   ├── tokens.py           # Token counting (tiktoken with fallback)
-│   └── clipboard.py        # Cross-platform clipboard operations
-├── env_vars.py             # SessionStart: loads ~/.factory/vars.env
-├── prompt_conflict_identifier.py  # UserPromptSubmit: blocks long prompts
-└── pre_compact.py          # PreCompact: logs compaction events
+├── utils/
+│   ├── __init__.py
+│   ├── types.py
+│   ├── io.py
+│   ├── config.py
+│   ├── env.py
+│   ├── tokens.py
+│   └── clipboard.py
+├── pre_tool_use/
+│   ├── policy.py
+│   └── commit_review_guard.py
+├── post_tool_use/
+│   └── reminders.py
+├── pre_compact/
+│   ├── block_auto.py
+│   └── instructions.py
+├── session_start/
+│   ├── env_vars.py
+│   ├── instructions.py
+│   └── debug.sh
+├── session_end/
+│   └── store_artifacts.py
+└── user_prompt_submit/
+    └── conflict_guard.py
 ```
 
-## Quick Start
+## Quick Start (Minimal Hook)
 
-Minimal hook example—a `PreToolUse` hook that denies `rm -rf /`:
+Example `PreToolUse` hook that blocks dangerous commands:
 
 ```python
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
 
-from utils import read_input_as, PreToolUseInput, emit_permission_deny, exit_success
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from utils import HookInputError, PreToolUseInput, emit, exit, read_input_as  # type: ignore
 
-def main():
-    inp = read_input_as(PreToolUseInput)
-    
-    if inp.tool_name == "Bash" and "rm -rf /" in inp.tool_input.get("command", ""):
-        emit_permission_deny("Blocked: dangerous command")
+
+def main() -> None:
+    try:
+        hook_input = read_input_as(PreToolUseInput)
+    except HookInputError as exc:
+        exit(1, text=f"[example] Hook input error: {exc}", to_stderr=True)
+
+    if hook_input.tool_name == "Bash" and "rm -rf /" in str(hook_input.tool_input.get("command", "")):
+        emit(decision="deny", reason="Blocked: dangerous command")
         return
-    
-    exit_success()
+
+    exit()
+
 
 if __name__ == "__main__":
     main()
 ```
 
-## Utils Reference
+## Utilities (What You Should Use)
 
-### I/O (`utils.io`)
+### `utils.io`
+- `read_input()` and `read_input_as(...)` parse stdin into typed inputs.
+- `emit(...)` sends hook output (permission decisions, additional context, etc.).
+- `exit(...)` exits with optional output or error text.
 
-| Function | Description |
-|----------|-------------|
-| `read_input()` | Parse stdin JSON, auto-detect hook type, return typed input |
-| `read_input_as(Type)` | Parse stdin JSON, validate it matches `Type` |
-| `emit_block(reason)` | Output `{"decision": "block", "reason": ...}` |
-| `emit_context(msg)` | Print context (for UserPromptSubmit/SessionStart) |
-| `emit_permission_allow(reason)` | PreToolUse: allow and bypass permission system |
-| `emit_permission_deny(reason)` | PreToolUse: deny tool call, reason shown to Droid |
-| `emit_permission_ask(reason)` | PreToolUse: prompt user to confirm |
-| `emit_modified_input(updates)` | PreToolUse: allow with modified tool input |
-| `exit_success()` | Exit 0 (allow) |
-| `exit_block(msg)` | Exit 2, stderr shown to Droid |
-| `exit_error(msg)` | Exit 1, stderr shown to user |
+### `utils.types`
+- Typed dataclasses for **all hook inputs/outputs**, plus helper types like `PermissionResult`.
+- Use `PreToolUseInput`, `SessionStartInput`, etc. to avoid stringly-typed code.
 
-### Input Types (`utils.types`)
+### `utils.config`
+- Typed env parsing: `env_bool`, `env_int`, `env_float`, `env_path`, `env_list`, `env_set`, `env_choice`, `require_env`.
 
-| Type | Hook Event | Key Fields |
-|------|------------|------------|
-| `PreToolUseInput` | PreToolUse | `tool_name`, `tool_input` |
-| `PostToolUseInput` | PostToolUse | `tool_name`, `tool_input`, `tool_response` |
-| `UserPromptSubmitInput` | UserPromptSubmit | `prompt` |
-| `NotificationInput` | Notification | `message` |
-| `StopInput` | Stop | `stop_hook_active` |
-| `SubagentStopInput` | SubagentStop | `stop_hook_active` |
-| `PreCompactInput` | PreCompact | `trigger`, `custom_instructions` |
-| `SessionStartInput` | SessionStart | `source` |
-| `SessionEndInput` | SessionEnd | `reason` |
+### `utils.env`
+- Persist env vars via `DROID_ENV_FILE` using `set_env`/`set_envs`.
+- Session helpers: `get_project_dir`, `get_plugin_root`, `is_droid_context`.
 
-All inputs share: `session_id`, `transcript_path`, `cwd`, `permission_mode`, `hook_event_name`
+### `utils.tokens`
+- Token counts with tiktoken when available (`count_tokens`, `count_tokens_exact`).
+- Fast heuristics and threshold checks (`estimate_tokens`, `exceeds_threshold`).
 
-### Config (`utils.config`)
+### `utils.clipboard`
+- Cross-platform clipboard access: `copy_to_clipboard`, `get_from_clipboard`.
+- Platform detection: `is_wsl`, `is_macos`, `is_windows`, `is_linux`.
 
-```python
-from utils import env_bool, env_int, env_str, env_path, env_list
+## Hook Catalog (Behavior Summary)
 
-debug = env_bool("DEBUG", False)           # Parses 1/true/yes/on
-threshold = env_int("THRESHOLD", 1000)     # Int with fallback
-api_url = env_str("API_URL", "localhost")  # String with fallback
-data_dir = env_path("DATA_DIR", "/tmp")    # Returns Path object
-tags = env_list("TAGS", sep=",")           # Splits "a,b,c" → ["a","b","c"]
-```
+### PreToolUse
+- **`policy.py`**: rule-based tool policy with glob matching and `mcp:` server/tool matching. Supports allow, ask, or deny decisions.
+- **`commit_review_guard.py`**: blocks `git push` if CodeRabbit CLI reports findings; runs on detected push commands.
 
-### Environment (`utils.env`)
+### PostToolUse
+- **`reminders.py`**: injects reminders after matched tool usage (configured via settings matcher). Reads from `.factory/commands/reminders.md` (workspace preferred).
 
-```python
-from utils import set_env, add_to_path, activate_venv, get_project_dir
+### PreCompact
+- **`block_auto.py`**: prevents auto-compaction while allowing manual `/compact`.
+- **`instructions.py`**: injects default compaction instructions from `commands/compact.md` when manual compact has none.
 
-# Persist env vars for Droid session (writes to DROID_ENV_FILE)
-set_env("MY_VAR", "value")
-add_to_path("/usr/local/bin")
-activate_venv("./venv")
+### SessionStart
+- **`env_vars.py`**: loads `.env`-style variables into the session (defaults to `~/.factory/vars.env`) on `startup`, `resume`, and `clear`.
+- **`instructions.py`**: injects base instructions from `.agents/prompts/BASE.md` (configurable base dir). Foundation for richer instruction assembly.
+- **`debug.sh`**: emits detailed diagnostics for env discovery and tool availability.
 
-# Read Droid context
-project = get_project_dir()  # FACTORY_PROJECT_DIR as Path
-```
+### SessionEnd
+- **`store_artifacts.py`**: stores session tail and latest todos under `.agents/{MM_DD_YYYY}/`.
 
-### Tokens (`utils.tokens`)
+### UserPromptSubmit
+- **`conflict_guard.py`**: blocks long prompts, stores them on disk, and instructs use of `/check-conflicts`.
 
-```python
-from utils import count_tokens, exceeds_threshold
+## Configuration (Factory Droid)
 
-tokens = count_tokens("Hello world")  # Uses tiktoken, falls back to len/4
-if exceeds_threshold(long_text, 2000):
-    emit_block("Too long")
-```
-
-### Clipboard (`utils.clipboard`)
-
-```python
-from utils import copy_to_clipboard, is_wsl, is_macos
-
-if copy_to_clipboard("/check-conflicts"):
-    print("Copied!")
-```
-
-Works on macOS (pbcopy), Windows (clip.exe), WSL, Linux (xclip/xsel).
-
-## Existing Hooks
-
-### `env_vars.py`
-**Event:** SessionStart (startup only)  
-**Purpose:** Loads `~/.factory/vars.env` into the Droid session. Provides Claude Code-like `"env": {}` UX.
-
-### `prompt_conflict_identifier.py`
-**Event:** UserPromptSubmit  
-**Purpose:** Blocks prompts exceeding token threshold, saves to `/tmp/prompt-conflicts/`, copies `/check-conflicts` to clipboard.  
-**Config:** `LONG_PROMPT_THRESHOLD`, `PROMPT_CONFLICT_ALWAYS_ON`, `PROMPT_CONFLICT_ALLOW_OVERRIDE`
-
-### `pre_compact.py`
-**Event:** PreCompact  
-**Purpose:** Logs manual/auto compaction events with any custom instructions.
-
-## Configuration
-
-### `~/.factory/vars.env`
-
-Environment variables loaded on session start:
-
-```bash
-# Hook config
-LONG_PROMPT_THRESHOLD=2000
-PROMPT_CONFLICT_ALLOW_OVERRIDE=true
-
-# Custom vars
-MY_API_KEY=secret
-```
-
-### `~/.factory/settings.json`
+### `~/.factory/settings.json` (Example)
 
 ```json
 {
@@ -163,14 +131,40 @@ MY_API_KEY=secret
       {
         "matcher": "startup",
         "hooks": [
-          { "type": "command", "command": "~/.factory/hooks/env_vars.py", "timeout": 5 }
+          {
+            "type": "command",
+            "command": "/home/USER/.agents/hooks/session_start/env_vars.py",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "/home/USER/.agents/hooks/session_start/instructions.py",
+            "timeout": 5
+          }
         ]
       }
     ],
-    "UserPromptSubmit": [
+    "PreToolUse": [
       {
         "hooks": [
-          { "type": "command", "command": "~/.factory/hooks/prompt_conflict_identifier.py", "timeout": 30 }
+          {
+            "type": "command",
+            "command": "/home/USER/.agents/hooks/pre_tool_use/policy.py",
+            "timeout": 5,
+            "args": ["--trust", "Bash", "--verify", "mcp:*/*"]
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "TodoWrite",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/USER/.agents/hooks/post_tool_use/reminders.py",
+            "timeout": 5
+          }
         ]
       }
     ]
@@ -178,8 +172,37 @@ MY_API_KEY=secret
 }
 ```
 
-## See Also
+### `~/.factory/vars.env` (Example)
 
-- [Factory Hooks Reference](https://docs.factory.ai/reference/hooks-reference) — Full hook API docs for Factory Droid
-- [Claude Code Hooks Reference](https://code.claude.com/docs/en/hooks.md) — Full hook API docs for Claude Code
-- [Session Automation Guide](https://docs.factory.ai/guides/hooks/session-automation) — Droid session configuration example
+```bash
+# Loaded by session_start/env_vars.py
+LONG_PROMPT_THRESHOLD=2000
+MY_API_KEY=secret
+```
+
+## Operating Model (How These Hooks Fit Together)
+
+1. **SessionStart** loads defaults and optional env vars.
+2. **UserPromptSubmit** can block overly long prompts and route them for analysis.
+3. **PreToolUse** enforces permissions and pre-flight checks (policy, CodeRabbit on push).
+4. **PostToolUse** injects reminders after specific tool actions.
+5. **PreCompact** governs compaction behavior and instructions.
+6. **SessionEnd** stores run artifacts (tail + todo snapshot).
+
+## Adding a New Hook (Minimal Checklist)
+
+1. Create a script in the correct event directory.
+2. Parse input with `read_input_as(...)` and handle errors.
+3. Emit decisions or context with `emit(...)` and exit cleanly.
+4. Register in `~/.factory/settings.json` with the correct matcher.
+
+## Troubleshooting
+
+- **Hook not firing:** verify `settings.json` matcher and path are correct.
+- **Env vars not persisting:** ensure `DROID_ENV_FILE` or `CLAUDE_ENV_FILE` is set.
+- **Need diagnostics:** run `session_start/debug.sh` to inspect env discovery.
+
+## References
+
+- Factory Hooks Reference: https://docs.factory.ai/reference/hooks-reference
+- Claude Code Hooks: https://code.claude.com/docs/en/hooks.md
