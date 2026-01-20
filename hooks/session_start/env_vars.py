@@ -44,9 +44,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils import (  # type: ignore
     HookInputError,
     SessionStartInput,
-    env_path,
     exit,
     get_droid_env_file,
+    get_toml_section,
+    load_toml,
     read_input_as,
     set_env,
 )
@@ -55,9 +56,6 @@ from utils import (  # type: ignore
 # ============================================================================
 # Configuration
 # ============================================================================
-
-# Default location for vars.env
-DEFAULT_VARS_FILE = Path.home() / ".factory" / "vars.env"
 
 # Regex for parsing env file lines: KEY=value or KEY="value" or KEY='value'
 # Supports:
@@ -169,22 +167,46 @@ def apply_env_vars(env_vars: dict[str, str]) -> int:
     return count
 
 
-def load_env_vars(vars_file: Path, *, strict: bool = False) -> int:
-    """Load environment variables from file into the agent session env file."""
-    env_vars = parse_env_file(vars_file, strict=strict)
-    return apply_env_vars(env_vars)
-
-
 # ============================================================================
 # CLI
 # ============================================================================
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--vars-file", action="append", default=[], help="Path to .env file (repeatable)")
+    parser.add_argument("--config-file", default="", help="Path to TOML config file")
+    parser.add_argument("--vars-file", action="append", default=[], help="Path to secrets .env file (repeatable)")
     parser.add_argument("--strict", action="store_true", help="Fail if a specified file is missing/unreadable")
     parser.add_argument("--verbose", action="store_true", help="Print which source was used")
     return parser.parse_args(argv)
+
+
+def _resolve_sources(config: dict[str, object]) -> set[str]:
+    sources = config.get("when") or config.get("sources")
+    if isinstance(sources, list):
+        return {value for value in sources if isinstance(value, str)}
+    return {"startup", "resume", "clear"}
+
+
+def _resolve_secrets_files(config: dict[str, object], args: argparse.Namespace) -> list[Path]:
+    if args.vars_file:
+        return [Path(p).expanduser() for p in args.vars_file]
+
+    secrets = config.get("secrets")
+    if isinstance(secrets, str) and secrets:
+        return [Path(secrets).expanduser()]
+
+    return []
+
+
+def _config_env_vars(config: dict[str, object]) -> dict[str, str]:
+    env_vars: dict[str, str] = {}
+    reserved = {"when", "sources", "secrets", "strict", "verbose"}
+    for key, value in config.items():
+        if key in reserved:
+            continue
+        if isinstance(value, (str, int, float, bool)):
+            env_vars[key] = str(value)
+    return env_vars
 
 
 # ============================================================================
@@ -195,13 +217,19 @@ def main():
     """Entry point for the hook script."""
     args = _parse_args(sys.argv[1:])
 
-    # Determine vars file location
-    vars_files: list[Path]
-    if args.vars_file:
-        vars_files = [Path(p).expanduser() for p in args.vars_file]
-    else:
-        vars_file = env_path("DROID_VARS_FILE", DEFAULT_VARS_FILE) or DEFAULT_VARS_FILE
-        vars_files = [vars_file]
+    try:
+        config_data = load_toml(args.config_file)
+    except OSError as exc:
+        exit(1, text=f"[env_vars] Config file error: {exc}", to_stderr=True)
+    except Exception as exc:
+        exit(1, text=f"[env_vars] Config parse error: {exc}", to_stderr=True)
+
+    config = get_toml_section(config_data, "hooks", "session_start", "environment")
+
+    sources = _resolve_sources(config)
+    secrets_files = _resolve_secrets_files(config, args)
+    strict = bool(args.strict or config.get("strict", False))
+    verbose = bool(args.verbose or config.get("verbose", False))
 
     # Parse hook input to verify we're in a SessionStart context
     try:
@@ -209,11 +237,15 @@ def main():
     except HookInputError as exc:
         exit(1, text=f"[env_vars] Hook input error: {exc}", to_stderr=True)
 
-    # Load on startup, resume, and clear to keep env consistent.
-    if hook_input.source not in {"startup", "resume", "clear"}:
+    if hook_input.source not in sources:
         exit()
 
-    env_vars = parse_env_files(vars_files, strict=bool(args.strict))
+    env_vars: dict[str, str] = {}
+    if secrets_files:
+        env_vars.update(parse_env_files(secrets_files, strict=strict))
+
+    env_vars.update(_config_env_vars(config))
+
     if not env_vars:
         exit()
 
@@ -221,11 +253,12 @@ def main():
 
     if count > 0:
         # Output is shown to user in transcript mode
-        if args.vars_file:
-            sources = ", ".join(str(p) for p in vars_files)
-            print(f"[env_vars] Loaded {count} environment variable(s) from {sources}")
-        elif args.verbose:
-            print(f"[env_vars] Loaded {count} environment variable(s) from {vars_files[0]}")
+        if secrets_files:
+            sources = ", ".join(str(p) for p in secrets_files)
+            if args.vars_file or verbose:
+                print(f"[env_vars] Loaded {count} environment variable(s) from {sources}")
+        elif verbose:
+            print(f"[env_vars] Loaded {count} environment variable(s) from config")
 
     exit()
 

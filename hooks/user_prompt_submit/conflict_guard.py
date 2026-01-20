@@ -23,6 +23,8 @@ from utils import (  # type: ignore
     count_tokens,
     emit,
     exit,
+    get_toml_section,
+    load_toml,
     read_input_as,
 )
 
@@ -44,16 +46,38 @@ class Config:
 def load_config(argv: list[str]) -> Config:
     """Load configuration from CLI flags."""
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--token-threshold", type=int, default=1800)
-    parser.add_argument("--cache-dir", default="/tmp/prompt-conflicts")
-    parser.add_argument("--skip-prefix", default="", help="Optional prefix to skip conflict checking")
+    parser.add_argument("--config-file", default="", help="Path to TOML config file")
+    parser.add_argument("--token-threshold", type=int, default=None)
+    parser.add_argument("--cache-dir", default="")
+    parser.add_argument("--skip-prefix", default=None, help="Optional prefix to skip conflict checking")
     args = parser.parse_args(argv)
 
-    skip_prefix = str(args.skip_prefix or "")
+    try:
+        config_data = load_toml(args.config_file)
+    except OSError as exc:
+        exit(1, text=f"[prompt_conflict] Config file error: {exc}", to_stderr=True)
+    except Exception as exc:
+        exit(1, text=f"[prompt_conflict] Config parse error: {exc}", to_stderr=True)
+
+    config = get_toml_section(config_data, "hooks", "user_prompt_submit", "conflict_guard")
+
+    token_threshold = (
+        args.token_threshold
+        if args.token_threshold is not None
+        else config.get("token_threshold", 1800)
+    )
+    cache_dir = args.cache_dir or config.get("cache_dir") or "/tmp/prompt-conflicts"
+    skip_prefix = (
+        args.skip_prefix
+        if args.skip_prefix is not None
+        else config.get("skip_prefix", "")
+    )
+
+    skip_prefix = str(skip_prefix or "")
 
     return Config(
-        token_threshold=int(args.token_threshold),
-        cache_dir=Path(args.cache_dir).expanduser(),
+        token_threshold=int(token_threshold),
+        cache_dir=Path(str(cache_dir)).expanduser(),
         skip_prefix=skip_prefix,
         skip_prefix_lower=skip_prefix.lower(),
     )

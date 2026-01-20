@@ -10,7 +10,9 @@ When manual compact is triggered without custom instructions, this hook
 loads default instructions from ~/.factory/commands/compact.md.
 """
 from __future__ import annotations
+import argparse
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 # add hooks dir to path for rel import
@@ -21,7 +23,9 @@ from utils import (  # type: ignore
     emit,
     env_path,
     exit,
+    get_toml_section,
     get_project_dir,
+    load_toml,
     read_input_as,
 )
 
@@ -30,11 +34,36 @@ from utils import (  # type: ignore
 # Configuration
 # ============================================================================
 
-def get_default_instructions_path() -> Path:
+@dataclass(slots=True, frozen=True)
+class Config:
+    instructions_path: Path | None
+
+
+def _parse_args(argv: list[str]) -> Config:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--config-file", default="", help="Path to TOML config file")
+    args = parser.parse_args(argv)
+
+    try:
+        config_data = load_toml(args.config_file)
+    except OSError as exc:
+        exit(1, text=f"[pre_compact] Config file error: {exc}", to_stderr=True)
+    except Exception as exc:
+        exit(1, text=f"[pre_compact] Config parse error: {exc}", to_stderr=True)
+
+    config = get_toml_section(config_data, "hooks", "pre_compact", "instructions")
+    path_value = config.get("path") or config.get("instructions_path")
+    path = Path(path_value).expanduser() if isinstance(path_value, str) else None
+    return Config(instructions_path=path)
+
+def get_default_instructions_path(config: Config) -> Path:
     """Get path to the default compact instructions file.
 
     Checks workspace commands first, then falls back to user commands.
     """
+    if config.instructions_path is not None:
+        return config.instructions_path
+
     # Try workspace-level commands first (takes precedence)
     project_dir = get_project_dir()
     if project_dir:
@@ -47,12 +76,12 @@ def get_default_instructions_path() -> Path:
     return user_path / "commands" / "compact.md"
 
 
-def load_default_instructions() -> str | None:
+def load_default_instructions(config: Config) -> str | None:
     """Load default compact instructions from the command file.
 
     Returns None if the file doesn't exist or can't be read.
     """
-    path = get_default_instructions_path()
+    path = get_default_instructions_path(config)
     if not path.exists():
         return None
 
@@ -68,7 +97,7 @@ def load_default_instructions() -> str | None:
         return None
 
 
-def handle_pre_compact(hook_input: PreCompactInput) -> None:
+def handle_pre_compact(hook_input: PreCompactInput, config: Config) -> None:
     """Handle PreCompact hook.
 
     Args:
@@ -88,7 +117,7 @@ def handle_pre_compact(hook_input: PreCompactInput) -> None:
             )
         else:
             # No custom instructions - try to load defaults from slash command
-            default_instructions = load_default_instructions()
+            default_instructions = load_default_instructions(config)
             if default_instructions:
                 emit(
                     text=(
@@ -100,7 +129,7 @@ def handle_pre_compact(hook_input: PreCompactInput) -> None:
                 emit(text="[PreCompact] Manual compact requested (no instructions)")
     else:
         # Auto-compact from context window full
-        default_instructions = load_default_instructions()
+        default_instructions = load_default_instructions(config)
         if default_instructions:
             emit(
                 text=(
@@ -114,12 +143,14 @@ def handle_pre_compact(hook_input: PreCompactInput) -> None:
 
 def main():
     """Entry point for the hook script."""
+    config = _parse_args(sys.argv[1:])
+
     try:
         hook_input = read_input_as(PreCompactInput)
     except HookInputError as exc:
         exit(1, text=f"[pre_compact] Hook input error: {exc}", to_stderr=True)
 
-    handle_pre_compact(hook_input)
+    handle_pre_compact(hook_input, config)
     exit()
 
 

@@ -6,8 +6,9 @@ Provides helpers to parse environment variables with type safety and defaults.
 from __future__ import annotations
 
 import os
+import tomllib
 from pathlib import Path
-from typing import TypeVar, overload
+from typing import Any, TypeVar, overload
 
 T = TypeVar("T")
 
@@ -189,3 +190,44 @@ def require_env(key: str) -> str:
     if value is None:
         raise ValueError(f"Required environment variable '{key}' is not set")
     return value
+
+
+def read_toml(path: str | Path) -> dict[str, Any]:
+    """Read a TOML file and return its contents as a dict.
+
+    Args:
+        path: TOML file path
+
+    Returns:
+        Parsed TOML data
+
+    Raises:
+        FileNotFoundError: If file does not exist
+        OSError: If file cannot be read
+        tomllib.TOMLDecodeError: If TOML is invalid
+    """
+    file_path = Path(path).expanduser()
+    if not file_path.exists():
+        raise FileNotFoundError(str(file_path))
+    with file_path.open("rb") as handle:
+        return tomllib.load(handle)
+
+
+def load_toml(path: str | Path | None) -> dict[str, Any]:
+    """Load TOML data from a path, returning empty dict if path is None/empty."""
+    if not path:
+        return {}
+    return read_toml(path)
+
+
+def get_toml_section(data: dict[str, Any], *keys: str) -> dict[str, Any]:
+    """Safely retrieve a nested dict section from TOML data.
+
+    Returns empty dict if any key is missing or the path isn't a dict.
+    """
+    current: Any = data
+    for key in keys:
+        if not isinstance(current, dict):
+            return {}
+        current = current.get(key)
+    return current if isinstance(current, dict) else {}

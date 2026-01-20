@@ -6,7 +6,7 @@ High-level, reusable hooks for Factory Droid that prioritize clear behavior, rel
 
 - **Hooks are grouped by event** (`pre_tool_use/`, `session_start/`, etc.).
 - **Utilities live in `utils/`**, providing typed I/O, env helpers, and cross-platform tools.
-- **Configuration lives outside this repo** (e.g., `~/.factory/settings.json`, `~/.factory/vars.env`).
+- **Configuration lives outside this repo** (e.g., `~/.factory/settings.json`, `~/.factory/droid.toml`).
 
 ## Directory Layout
 
@@ -83,6 +83,7 @@ if __name__ == "__main__":
 
 ### `utils.config`
 - Typed env parsing: `env_bool`, `env_int`, `env_float`, `env_path`, `env_list`, `env_set`, `env_choice`, `require_env`.
+- TOML helpers: `read_toml`, `load_toml`, `get_toml_section`.
 
 ### `utils.env`
 - Persist env vars via `DROID_ENV_FILE` using `set_env`/`set_envs`.
@@ -110,7 +111,7 @@ if __name__ == "__main__":
 - **`instructions.py`**: injects default compaction instructions from `commands/compact.md` when manual compact has none.
 
 ### SessionStart
-- **`env_vars.py`**: loads `.env`-style variables into the session (defaults to `~/.factory/vars.env`) on `startup`, `resume`, and `clear`.
+- **`env_vars.py`**: loads inline config env vars plus optional secrets file on `startup`, `resume`, and `clear`.
 - **`instructions.py`**: injects base instructions from `.agents/prompts/BASE.md` (configurable base dir). Foundation for richer instruction assembly.
 - **`debug.sh`**: emits detailed diagnostics for env discovery and tool availability.
 
@@ -122,7 +123,39 @@ if __name__ == "__main__":
 
 ## Configuration (Factory Droid)
 
-### `~/.factory/settings.json` (Example)
+- **Behavior config** lives in `~/.factory/droid.toml` (agent-agnostic).
+- **Invocation** lives in `~/.factory/settings.json` (per environment).
+
+### `~/.factory/droid.toml` (Behavior)
+
+```toml
+[hooks.session_start.environment]
+when = ["startup", "resume", "clear"]
+secrets = "~/.factory/.env"
+EXAMPLE_CONFIG_VAR = "clod"
+
+[hooks.session_start.instructions]
+when = ["startup", "clear", "compact"]
+prompts_dir = "~/.agents/prompts"
+include = ["BASE.md"]
+
+[hooks.pre_tool_use.policy]
+[pre_tool_use.policy.allow]
+tools = ["mcp:codebase/warpgrep_*"]
+message = "[policy] {tool_name} is allowlisted"
+
+[hooks.user_prompt_submit.conflict_guard]
+cache_dir = "/tmp/conflicts"
+token_threshold = 20000
+skip_prefix = ""
+
+[hooks.session_end.store_artifacts]
+tail = 1
+tail_when = ["prompt_input_exit", "other"]
+todo_when = ["prompt_input_exit", "clear", "other"]
+```
+
+### `~/.factory/settings.json` (Invocation)
 
 ```json
 {
@@ -134,12 +167,14 @@ if __name__ == "__main__":
           {
             "type": "command",
             "command": "/home/USER/.agents/hooks/session_start/env_vars.py",
-            "timeout": 5
+            "timeout": 5,
+            "args": ["--config-file", "/home/USER/.factory/droid.toml"]
           },
           {
             "type": "command",
             "command": "/home/USER/.agents/hooks/session_start/instructions.py",
-            "timeout": 5
+            "timeout": 5,
+            "args": ["--config-file", "/home/USER/.factory/droid.toml"]
           }
         ]
       }
@@ -151,7 +186,7 @@ if __name__ == "__main__":
             "type": "command",
             "command": "/home/USER/.agents/hooks/pre_tool_use/policy.py",
             "timeout": 5,
-            "args": ["--trust", "Bash", "--verify", "mcp:*/*"]
+            "args": ["--config-file", "/home/USER/.factory/droid.toml"]
           }
         ]
       }
@@ -163,21 +198,14 @@ if __name__ == "__main__":
           {
             "type": "command",
             "command": "/home/USER/.agents/hooks/post_tool_use/reminders.py",
-            "timeout": 5
+            "timeout": 5,
+            "args": ["--config-file", "/home/USER/.factory/droid.toml"]
           }
         ]
       }
     ]
   }
 }
-```
-
-### `~/.factory/vars.env` (Example)
-
-```bash
-# Loaded by session_start/env_vars.py
-LONG_PROMPT_THRESHOLD=2000
-MY_API_KEY=secret
 ```
 
 ## Operating Model (How These Hooks Fit Together)

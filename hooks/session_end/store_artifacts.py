@@ -11,7 +11,14 @@ from pathlib import Path
 
 # add hooks dir to path for rel import
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from utils import HookInputError, SessionEndInput, exit, read_input_as  # type: ignore
+from utils import (  # type: ignore
+    HookInputError,
+    SessionEndInput,
+    exit,
+    get_toml_section,
+    load_toml,
+    read_input_as,
+)
 
 
 @dataclass(slots=True, frozen=True)
@@ -23,22 +30,37 @@ class Config:
 
 def _parse_args(argv: list[str]) -> Config:
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--tail", type=int, default=0, help="Number of user prompts to include in tail")
+    parser.add_argument("--config-file", default="", help="Path to TOML config file")
+    parser.add_argument("--tail", type=int, default=None, help="Number of user prompts to include in tail")
     parser.add_argument(
         "--tail-when",
-        default="prompt_input_exit,other",
+        default="",
         help="Comma-separated SessionEnd reasons to store tail",
     )
     parser.add_argument(
         "--todo-when",
-        default="prompt_input_exit,other,clear",
+        default="",
         help="Comma-separated SessionEnd reasons to store todos",
     )
     args = parser.parse_args(argv)
+
+    try:
+        config_data = load_toml(args.config_file)
+    except OSError as exc:
+        exit(1, text=f"[session_end] Config file error: {exc}", to_stderr=True)
+    except Exception as exc:
+        exit(1, text=f"[session_end] Config parse error: {exc}", to_stderr=True)
+
+    config = get_toml_section(config_data, "hooks", "session_end", "store_artifacts")
+
+    tail_count = args.tail if args.tail is not None else config.get("tail", 0)
+    tail_when = _parse_reasons(args.tail_when) or _parse_reasons(config.get("tail_when"))
+    todo_when = _parse_reasons(args.todo_when) or _parse_reasons(config.get("todo_when"))
+
     return Config(
-        tail_count=args.tail,
-        tail_when=_split_reasons(args.tail_when),
-        todo_when=_split_reasons(args.todo_when),
+        tail_count=int(tail_count),
+        tail_when=tail_when or {"prompt_input_exit", "other"},
+        todo_when=todo_when or {"prompt_input_exit", "other", "clear"},
     )
 
 
@@ -50,6 +72,14 @@ def _safe_session_id(session_id: str) -> str:
 
 def _split_reasons(value: str) -> set[str]:
     return {item for item in (part.strip() for part in value.split(",")) if item}
+
+
+def _parse_reasons(value: object) -> set[str]:
+    if isinstance(value, list):
+        return {item for item in value if isinstance(item, str)}
+    if isinstance(value, str):
+        return _split_reasons(value)
+    return set()
 
 
 def _storage_dir(cwd: str) -> Path:

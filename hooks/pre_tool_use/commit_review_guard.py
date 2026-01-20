@@ -17,7 +17,15 @@ from pathlib import Path
 
 # add hooks dir to path for rel import
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from utils import HookInputError, PreToolUseInput, emit, exit, read_input_as  # type: ignore
+from utils import (  # type: ignore
+    HookInputError,
+    PreToolUseInput,
+    emit,
+    exit,
+    get_toml_section,
+    load_toml,
+    read_input_as,
+)
 
 
 # ============================================================================
@@ -32,12 +40,25 @@ class Config:
 
 def _parse_args(argv: list[str]) -> Config:
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--max-chars", type=int, default=6000)
-    parser.add_argument("--type", dest="review_type", choices=["all", "committed", "uncommitted"], default="committed")
+    parser.add_argument("--config-file", default="", help="Path to TOML config file")
+    parser.add_argument("--max-chars", type=int, default=None)
+    parser.add_argument("--type", dest="review_type", choices=["all", "committed", "uncommitted"], default=None)
     args = parser.parse_args(argv)
+
+    try:
+        config_data = load_toml(args.config_file)
+    except OSError as exc:
+        exit(1, text=f"[coderabbit] Config file error: {exc}", to_stderr=True)
+    except Exception as exc:
+        exit(1, text=f"[coderabbit] Config parse error: {exc}", to_stderr=True)
+
+    config = get_toml_section(config_data, "hooks", "pre_tool_use", "commit_review_guard")
+    review_type = args.review_type or config.get("type") or "committed"
+    max_chars = args.max_chars if args.max_chars is not None else config.get("max_chars", 6000)
+
     return Config(
-        max_chars=int(args.max_chars),
-        review_type=str(args.review_type),
+        max_chars=int(max_chars),
+        review_type=str(review_type),
     )
 
 

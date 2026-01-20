@@ -95,6 +95,9 @@ from .config import (
     env_set,
     env_choice,
     require_env,
+    read_toml,
+    load_toml,
+    get_toml_section,
 )
 
 # Tokens
@@ -175,6 +178,9 @@ __all__ = [
     "env_set",
     "env_choice",
     "require_env",
+    "read_toml",
+    "load_toml",
+    "get_toml_section",
     # Tokens
     "count_tokens",
     "count_tokens_exact",
