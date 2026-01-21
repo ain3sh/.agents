@@ -23,13 +23,13 @@ include = ["BASE.md"] # ordered list of files relative to base_dir
 
 [hooks.pre_tool_use.policy]
 [hooks.pre_tool_use.policy.allow]
-tools = ["mcp:codebase/warpgrep_*","mcp:context/ask_docs_agent","mcp:context/fetch_docs","mcp:vscode/get_*","mcp:vscode/list_*"]
+tools = ["codebase:warpgrep_*","context:ask_docs_agent","context:fetch_docs","vscode:get_*","vscode:list_*"]
 message = "[policy] {tool_name} is allowlisted"
 [hooks.pre_tool_use.policy.ask]
-tools = ["mcp:review"]
+tools = ["review"]
 message = "[policy] confirm {tool_name} tool use"
 [hooks.pre_tool_use.policy.deny]
-tools = ["Grep","Skill","Task","mcp:codebase/edit_file"]
+tools = ["Grep","Skill","Task","codebase:edit_file"]
 message = "[policy] {tool_name} is denylisted"
 [hooks.pre_tool_use.policy.overrides."Grep"]
 decision = "deny" # optional

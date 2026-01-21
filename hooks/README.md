@@ -100,7 +100,7 @@ if __name__ == "__main__":
 ## Hook Catalog (Behavior Summary)
 
 ### PreToolUse
-- **`policy.py`**: rule-based tool policy with glob matching and `mcp:` server/tool matching. Supports allow, ask, or deny decisions.
+- **`policy.py`**: rule-based tool policy with glob matching and `server:tool` pattern matching. Supports allow, ask, or deny decisions.
 - **`commit_review_guard.py`**: blocks `git push` if CodeRabbit CLI reports findings; runs on detected push commands.
 
 ### PostToolUse
@@ -141,7 +141,7 @@ include = ["BASE.md"]
 
 [hooks.pre_tool_use.policy]
 [hooks.pre_tool_use.policy.allow]
-tools = ["mcp:codebase/warpgrep_*"]
+tools = ["codebase:warpgrep_*"]
 message = "[policy] {tool_name} is allowlisted"
 
 [hooks.user_prompt_submit.conflict_guard]

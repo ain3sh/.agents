@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -149,29 +150,50 @@ def _match_mcp_server(server: str, pattern: str) -> bool:
     return pattern in server
 
 
+def _parse_mcp_tool(tool_name: str) -> tuple[str, str] | None:
+    """Parse tool name into (server, tool) for MCP-style matching.
+
+    Splits on 2+ consecutive underscores. Handles optional 'mcp' prefix.
+    Returns None if the name doesn't follow server__tool pattern.
+
+    Examples:
+        mcp__codebase__warpgrep_search -> ('codebase', 'warpgrep_search')
+        codebase___warpgrep_search     -> ('codebase', 'warpgrep_search')
+        codebase__tool                 -> ('codebase', 'tool')
+    """
+    parts = re.split(r'_{2,}', tool_name, maxsplit=2)
+    if parts and parts[0] == 'mcp':
+        parts = parts[1:]
+    if len(parts) >= 2:
+        return (parts[0], parts[-1])
+    return None
+
+
+def _parse_server_tool_pattern(pattern: str) -> tuple[str, str] | None:
+    """Parse server:tool pattern. Returns None if no colon."""
+    if ":" not in pattern:
+        return None
+    server, tool = pattern.split(":", 1)
+    return (server or "*", tool or "*")
+
+
 def _match_any(targets: tuple[str, ...], tool_name: str) -> bool:
     for raw in targets:
         cleaned = raw.strip()
-        if cleaned.startswith("mcp:"):
-            rest = cleaned[4:]
-            if "/" in rest:
-                server_pattern, tool_pattern = rest.split("/", 1)
-                server_pattern = server_pattern or "*"
-                tool_pattern = tool_pattern or "*"
-            else:
-                server_pattern = rest or "*"
-                tool_pattern = "*"
 
-            if not tool_name.startswith("mcp__"):
+        # Check for server:tool pattern syntax
+        parsed_pattern = _parse_server_tool_pattern(cleaned)
+        if parsed_pattern is not None:
+            server_pattern, tool_pattern = parsed_pattern
+            parsed_tool = _parse_mcp_tool(tool_name)
+            if parsed_tool is None:
                 continue
-            parts = tool_name.split("__", 2)
-            if len(parts) < 3:
-                continue
-            server, tool = parts[1], parts[2]
+            server, tool = parsed_tool
             if _match_mcp_server(server, server_pattern) and fnmatch.fnmatch(tool, tool_pattern):
                 return True
             continue
 
+        # Fallback: direct glob match on full tool name
         pattern = cleaned or "*"
         if fnmatch.fnmatch(tool_name, pattern):
             return True
