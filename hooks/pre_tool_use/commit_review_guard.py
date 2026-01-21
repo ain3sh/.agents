@@ -20,7 +20,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils import (  # type: ignore
     HookInputError,
     PreToolUseInput,
-    emit,
     exit,
     get_toml_section,
     load_toml,
@@ -214,14 +213,13 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
     combined_output = "\n".join(part for part in [stdout, stderr] if part)
 
     if code != 0:
-        emit(decision="deny", reason="[coderabbit] CLI failed before push.")
-        return
+        exit(decision="deny", reason="[coderabbit] CLI failed before push.")
 
     if _is_clean(combined_output):
         exit()
 
     excerpt = _truncate(combined_output, config.max_chars)
-    emit(
+    exit(
         decision="deny",
         reason=(
             "[coderabbit] Issues found before push.\n"

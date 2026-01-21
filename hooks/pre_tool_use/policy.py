@@ -13,7 +13,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils import (  # type: ignore
     HookInputError,
     PreToolUseInput,
-    emit,
     exit,
     get_toml_section,
     load_toml,
@@ -176,7 +175,7 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
         if (override and override.message)
         else getattr(config, f"{decision}_message") or ""
     )
-    emit(decision=decision, reason=template.format(tool_name=tool_name))
+    exit(decision=decision, reason=template.format(tool_name=tool_name))
 
 
 def main() -> int:

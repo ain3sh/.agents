@@ -50,7 +50,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from utils import HookInputError, PreToolUseInput, emit, exit, read_input_as  # type: ignore
+from utils import HookInputError, PreToolUseInput, exit, read_input_as  # type: ignore
 
 
 def main() -> None:
@@ -60,8 +60,7 @@ def main() -> None:
         exit(1, text=f"[example] Hook input error: {exc}", to_stderr=True)
 
     if hook_input.tool_name == "Bash" and "rm -rf /" in str(hook_input.tool_input.get("command", "")):
-        emit(decision="deny", reason="Blocked: dangerous command")
-        return
+        exit(decision="deny", reason="Blocked: dangerous command")
 
     exit()
 

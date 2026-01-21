@@ -19,7 +19,6 @@ from .types import (
     PostToolUseInput,
     PreCompactInput,
     PreToolUseInput,
-    PreToolUseOutput,
     SessionEndInput,
     SessionStartInput,
     StopInput,
@@ -143,17 +142,25 @@ def emit(
     decision: PermissionDecision | None = None,
     reason: str | None = None,
     updated_input: dict[str, Any] | None = None,
+    suppress_output: bool = True,
     to_stderr: bool = False,
 ) -> None:
     if decision is not None:
-        output = HookOutput(
-            hook_specific_output=PreToolUseOutput(
-                permission_decision=decision,
-                permission_decision_reason=reason,
-                updated_input=updated_input,
-            ),
-        )
-    if output is not None:
+        # hookSpecificOutput format with suppressOutput at top level
+        hook_output: dict[str, Any] = {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": decision,
+        }
+        if reason:
+            hook_output["permissionDecisionReason"] = reason
+        if updated_input:
+            hook_output["updatedInput"] = updated_input
+
+        data: dict[str, Any] = {"hookSpecificOutput": hook_output}
+        if suppress_output:
+            data["suppressOutput"] = True
+        print(json.dumps(data), flush=True)
+    elif output is not None:
         data = output.to_dict() if isinstance(output, HookOutput) else output
         print(json.dumps(data))
     if text is not None:
@@ -165,8 +172,35 @@ def exit(
     *,
     text: str | None = None,
     output: HookOutput | dict[str, Any] | None = None,
+    decision: PermissionDecision | None = None,
+    reason: str | None = None,
+    updated_input: dict[str, Any] | None = None,
+    suppress_output: bool = True,
     to_stderr: bool = False,
 ) -> NoReturn:
-    if output is not None or text is not None:
+    """Exit hook with optional output or permission decision.
+
+    This is the primary API for ending a hook. It handles both:
+    - Permission decisions (decision, reason, updated_input, suppress_output)
+    - Text/structured output (text, output, to_stderr)
+
+    Args:
+        code: Exit code (0 for success)
+        text: Plain text to output
+        output: Structured hook output
+        decision: Permission decision ("allow", "deny", "ask")
+        reason: Reason for permission decision
+        updated_input: Modified tool input (for allow decisions)
+        suppress_output: Suppress tool output in UI (default True for decisions)
+        to_stderr: Send text to stderr instead of stdout
+    """
+    if decision is not None:
+        emit(
+            decision=decision,
+            reason=reason,
+            updated_input=updated_input,
+            suppress_output=suppress_output,
+        )
+    elif output is not None or text is not None:
         emit(text=text, output=output, to_stderr=to_stderr)
     sys.exit(code)
