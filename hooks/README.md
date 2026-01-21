@@ -140,7 +140,7 @@ prompts_dir = "~/.agents/prompts"
 include = ["BASE.md"]
 
 [hooks.pre_tool_use.policy]
-[pre_tool_use.policy.allow]
+[hooks.pre_tool_use.policy.allow]
 tools = ["mcp:codebase/warpgrep_*"]
 message = "[policy] {tool_name} is allowlisted"
 

@@ -36,22 +36,21 @@ class Override:
 
 @dataclass(slots=True, frozen=True)
 class Config:
-    trust: tuple[str, ...]
-    verify: tuple[str, ...]
-    block: tuple[str, ...]
+    allow: tuple[str, ...]
+    ask: tuple[str, ...]
+    deny: tuple[str, ...]
     allow_message: str | None
     ask_message: str | None
     deny_message: str | None
-    default_decision: Decision
     overrides: tuple[tuple[str, Override], ...]
 
 
 def _parse_args(argv: list[str]) -> Config:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--config-file", default="", help="Path to TOML config file")
-    parser.add_argument("--trust", action="append", default=[])
-    parser.add_argument("--verify", action="append", default=[])
-    parser.add_argument("--block", action="append", default=[])
+    parser.add_argument("--allow", action="append", default=[])
+    parser.add_argument("--ask", action="append", default=[])
+    parser.add_argument("--deny", action="append", default=[])
     args = parser.parse_args(argv)
 
     try:
@@ -66,24 +65,19 @@ def _parse_args(argv: list[str]) -> Config:
     ask_section = _policy_section(config_data, "ask")
     deny_section = _policy_section(config_data, "deny")
 
-    trust = _split_targets(args.trust) or _split_targets(_list_from_config(allow_section.get("tools")))
-    verify = _split_targets(args.verify) or _split_targets(_list_from_config(ask_section.get("tools")))
-    block = _split_targets(args.block) or _split_targets(_list_from_config(deny_section.get("tools")))
-
-    default_decision = policy_root.get("default_decision")
-    if default_decision not in {"system", "allow", "ask", "deny"}:
-        default_decision = "system"
+    allow = _split_targets(args.allow) or _split_targets(_list_from_config(allow_section.get("tools")))
+    ask = _split_targets(args.ask) or _split_targets(_list_from_config(ask_section.get("tools")))
+    deny = _split_targets(args.deny) or _split_targets(_list_from_config(deny_section.get("tools")))
 
     overrides = _parse_overrides(_policy_section(config_data, "overrides"))
 
     return Config(
-        trust=trust,
-        verify=verify,
-        block=block,
+        allow=allow,
+        ask=ask,
+        deny=deny,
         allow_message=_as_str(allow_section.get("message")),
         ask_message=_as_str(ask_section.get("message")),
         deny_message=_as_str(deny_section.get("message")),
-        default_decision=str(default_decision),
         overrides=overrides,
     )
 
@@ -214,14 +208,15 @@ def _render_message(message: str | None, tool_name: str) -> str | None:
     except Exception:
         return message
 
-def _decide(tool_name: str, config: Config) -> Decision:
-    if _match_any(config.block, tool_name):
+def _decide(tool_name: str, config: Config) -> Decision | None:
+    """Return decision if tool matches a list, else None to defer to system."""
+    if _match_any(config.deny, tool_name):
         return "deny"
-    if _match_any(config.verify, tool_name):
+    if _match_any(config.ask, tool_name):
         return "ask"
-    if _match_any(config.trust, tool_name):
+    if _match_any(config.allow, tool_name):
         return "allow"
-    return config.default_decision
+    return None
 
 
 def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
@@ -240,7 +235,8 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
     elif decision == "allow":
         reason = _render_message(config.allow_message, tool_name)
 
-    if decision == "system":
+    # If no decision (no list match, no override), defer to system
+    if decision not in {"allow", "ask", "deny"}:
         exit()
 
     if decision == "deny":
@@ -254,8 +250,6 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
     if decision == "allow":
         _emit_allow(reason=reason)
         return
-
-    exit()
 
 
 def main() -> int:
