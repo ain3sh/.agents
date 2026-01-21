@@ -206,9 +206,9 @@ def _match_any(targets: tuple[str, ...], tool_name: str) -> bool:
 
 def _emit_allow(updated_input: dict[str, object] | None = None, reason: str | None = None) -> None:
     if updated_input is None:
-        emit(decision="allow", reason=reason, suppress=True)
+        emit(decision="allow", reason=reason)
         return
-    emit(decision="allow", reason=reason, suppress=True, updated_input=updated_input)
+    emit(decision="allow", reason=reason, updated_input=updated_input)
 
 
 # ============================================================================

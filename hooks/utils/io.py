@@ -142,13 +142,11 @@ def emit(
     output: HookOutput | dict[str, Any] | None = None,
     decision: PermissionDecision | None = None,
     reason: str | None = None,
-    suppress: bool = False,
     updated_input: dict[str, Any] | None = None,
     to_stderr: bool = False,
 ) -> None:
     if decision is not None:
         output = HookOutput(
-            suppress_output=suppress if suppress and decision == "allow" else None,
             hook_specific_output=PreToolUseOutput(
                 permission_decision=decision,
                 permission_decision_reason=reason,

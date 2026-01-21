@@ -266,7 +266,6 @@ class HookOutput:
     reason: str | None = None
     continue_: bool | None = None  # 'continue' is reserved in Python
     stop_reason: str | None = None
-    suppress_output: bool | None = None
     system_message: str | None = None
 
     # Hook-specific output
@@ -290,8 +289,6 @@ class HookOutput:
             result["continue"] = self.continue_
         if self.stop_reason is not None:
             result["stopReason"] = self.stop_reason
-        if self.suppress_output is not None:
-            result["suppressOutput"] = self.suppress_output
         if self.system_message is not None:
             result["systemMessage"] = self.system_message
         if self.hook_specific_output is not None:
