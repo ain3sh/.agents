@@ -15,18 +15,18 @@ EXAMPLE_CONFIG_VAR = "clod"
 [hooks.session_start.instructions]
 when = ["startup", "clear", "compact"] # "startup", "resume", "clear", "compact"
 prompts_dir = "~/.agents/prompts"
-# optional prompt composition (future extensibility)
-include = ["BASE.md"] # ordered list of files relative to base_dir
+# optional prompt composition (ordered list of files relative to prompts_dir)
+include = ["BASICS.md"]
 
 # ---
 [hooks.pre_tool_use]
 
 [hooks.pre_tool_use.policy]
 [hooks.pre_tool_use.policy.allow]
-tools = ["codebase:warpgrep_*","context:ask_docs_agent","context:fetch_docs","vscode:get_*","vscode:list_*"]
+tools = ["LS", "Read", "WebFetch", "ExitSpecMode", "codebase:warpgrep_*","context:ask_docs_agent","context:fetch_docs","vscode:get_*","vscode:list_*"]
 message = "[policy] {tool_name} is allowlisted"
 [hooks.pre_tool_use.policy.ask]
-tools = ["review"]
+tools = ["review:*"]
 message = "[policy] confirm {tool_name} tool use"
 [hooks.pre_tool_use.policy.deny]
 tools = ["Grep","Skill","Task","codebase:edit_file"]

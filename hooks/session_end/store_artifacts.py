@@ -92,27 +92,6 @@ def _as_str_dict(value: object) -> dict[str, object] | None:
         return {str(key): val for key, val in value.items()}
     return None
 
-
-def _read_transcript_lines(path: Path) -> list[dict[str, object]]:
-    items: list[dict[str, object]] = []
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError:
-        return items
-    for line in text.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            data = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        data_dict = _as_str_dict(data)
-        if data_dict is not None:
-            items.append(data_dict)
-    return items
-
-
 def _stringify_content(content: object) -> str:
     if isinstance(content, str):
         return content
@@ -161,53 +140,182 @@ def _extract_role_content(item: dict[str, object]) -> tuple[str | None, str | No
 
     return None, None
 
-
-def _extract_tail(items: list[dict[str, object]], tail_count: int) -> str | None:
-    if tail_count <= 0:
-        return None
-
-    messages: list[tuple[str, str]] = []
-    user_indices: list[int] = []
-    for item in items:
-        role, content = _extract_role_content(item)
-        if role is not None and content is not None:
-            if role == "user":
-                user_indices.append(len(messages))
-            messages.append((role, content))
-
-    if not user_indices:
-        return None
-
-    start_index = user_indices[-tail_count] if len(user_indices) >= tail_count else user_indices[0]
-    tail_messages = messages[start_index:]
-    if not tail_messages:
-        return None
-
+def _format_tail(messages: list[tuple[str, str]]) -> str:
     lines = ["# Session Tail", ""]
-    for role, content in tail_messages:
+    for role, content in messages:
         lines.append(f"## {role}")
         lines.append(content.strip())
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _extract_latest_todos(items: list[dict[str, object]]) -> str | None:
-    latest: str | None = None
-    for item in items:
-        tool_name = item.get("tool_name") or item.get("name")
-        if tool_name != "TodoWrite":
-            continue
+def _scan_transcript_reverse(
+    path: Path,
+    *,
+    tail_count: int,
+    capture_tail: bool,
+    capture_todos: bool,
+) -> tuple[str | None, str | None]:
+    if (not capture_tail or tail_count <= 0) and not capture_todos:
+        return None, None
 
-        tool_input = _as_str_dict(item.get("tool_input") or item.get("input") or item.get("arguments"))
-        if tool_input is None:
-            continue
-        todos = tool_input.get("todos")
-        if isinstance(todos, str):
-            todos = todos.strip()
-            if todos:
-                latest = f"{todos}\n"
+    try:
+        from file_read_backwards import FileReadBackwards
+    except ImportError:
+        return _scan_transcript_forward(
+            path,
+            tail_count=tail_count,
+            capture_tail=capture_tail,
+            capture_todos=capture_todos,
+        )
 
-    return latest
+    tail_messages_rev: list[tuple[str, str]] = []
+    user_count = 0
+    tail_done = (not capture_tail) or tail_count <= 0
+
+    latest_todos: str | None = None
+    todos_done = not capture_todos
+
+    try:
+        with FileReadBackwards(str(path), encoding="utf-8") as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line:
+                    continue
+
+                try:
+                    data = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                item = _as_str_dict(data)
+                if item is None:
+                    continue
+
+                if capture_todos and not todos_done:
+                    tool_name = item.get("tool_name") or item.get("name")
+                    if tool_name == "TodoWrite":
+                        tool_input = _as_str_dict(
+                            item.get("tool_input")
+                            or item.get("input")
+                            or item.get("arguments")
+                        )
+                        if tool_input is not None:
+                            todos = tool_input.get("todos")
+                            if isinstance(todos, str):
+                                todos = todos.strip()
+                                if todos:
+                                    latest_todos = f"{todos}\n"
+                                    todos_done = True
+
+                if capture_tail and not tail_done:
+                    role, content = _extract_role_content(item)
+                    if role is not None and content is not None:
+                        tail_messages_rev.append((role, content))
+                        if role == "user":
+                            user_count += 1
+                            if user_count >= tail_count:
+                                tail_done = True
+
+                if tail_done and todos_done:
+                    break
+    except OSError:
+        return None, None
+
+    tail_content: str | None = None
+    if capture_tail and tail_count > 0 and user_count > 0 and tail_messages_rev:
+        messages = list(reversed(tail_messages_rev))
+        start_index = next((i for i, (role, _) in enumerate(messages) if role == "user"), 0)
+        messages = messages[start_index:]
+        if messages:
+            tail_content = _format_tail(messages)
+
+    return tail_content, (latest_todos if capture_todos else None)
+
+
+def _scan_transcript_forward(
+    path: Path,
+    *,
+    tail_count: int,
+    capture_tail: bool,
+    capture_todos: bool,
+) -> tuple[str | None, str | None]:
+    if (not capture_tail or tail_count <= 0) and not capture_todos:
+        return None, None
+
+    tail_buffer: list[tuple[str, str]] = []
+    user_positions: list[int] = []
+    latest_todos: str | None = None
+
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line:
+                    continue
+
+                try:
+                    data = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                item = _as_str_dict(data)
+                if item is None:
+                    continue
+
+                if capture_todos:
+                    tool_name = item.get("tool_name") or item.get("name")
+                    if tool_name == "TodoWrite":
+                        tool_input = _as_str_dict(
+                            item.get("tool_input")
+                            or item.get("input")
+                            or item.get("arguments")
+                        )
+                        if tool_input is not None:
+                            todos = tool_input.get("todos")
+                            if isinstance(todos, str):
+                                todos = todos.strip()
+                                if todos:
+                                    latest_todos = f"{todos}\n"
+
+                if capture_tail and tail_count > 0:
+                    role, content = _extract_role_content(item)
+                    if role is None or content is None:
+                        continue
+
+                    tail_buffer.append((role, content))
+                    if role == "user":
+                        user_positions.append(len(tail_buffer) - 1)
+                        if len(user_positions) > tail_count:
+                            cut_index = user_positions[1]
+                            tail_buffer = tail_buffer[cut_index:]
+                            user_positions = [i - cut_index for i in user_positions[1:]]
+    except OSError:
+        return None, None
+
+    tail_content: str | None = None
+    if capture_tail and tail_count > 0 and user_positions:
+        start = user_positions[0]
+        messages = tail_buffer[start:]
+        if messages:
+            tail_content = _format_tail(messages)
+
+    return tail_content, (latest_todos if capture_todos else None)
+
+
+def _scan_transcript(
+    path: Path,
+    *,
+    tail_count: int,
+    capture_tail: bool,
+    capture_todos: bool,
+) -> tuple[str | None, str | None]:
+    return _scan_transcript_reverse(
+        path,
+        tail_count=tail_count,
+        capture_tail=capture_tail,
+        capture_todos=capture_todos,
+    )
 
 
 def _write_file(path: Path, content: str) -> None:
@@ -230,22 +338,24 @@ def main():
     if not transcript_path.exists():
         exit()
 
-    items = _read_transcript_lines(transcript_path)
-    if not items:
-        exit()
+    want_tail = hook_input.reason in config.tail_when and config.tail_count > 0
+    want_todos = hook_input.reason in config.todo_when
+
+    tail_content, todos = _scan_transcript(
+        transcript_path,
+        tail_count=config.tail_count,
+        capture_tail=want_tail,
+        capture_todos=want_todos,
+    )
 
     safe_id = _safe_session_id(hook_input.session_id)
     base_dir = _storage_dir(hook_input.cwd)
 
-    if hook_input.reason in config.tail_when:
-        tail_content = _extract_tail(items, config.tail_count)
-        if tail_content:
-            _write_file(base_dir / f"{safe_id}_tail.md", tail_content)
+    if want_tail and tail_content:
+        _write_file(base_dir / f"{safe_id}_tail.md", tail_content)
 
-    if hook_input.reason in config.todo_when:
-        todos = _extract_latest_todos(items)
-        if todos:
-            _write_file(base_dir / f"{safe_id}_todo.md", todos)
+    if want_todos and todos:
+        _write_file(base_dir / f"{safe_id}_todo.md", todos)
 
     exit()
 

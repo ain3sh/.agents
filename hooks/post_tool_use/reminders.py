@@ -19,7 +19,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils import (  # type: ignore
     HookInputError,
     PostToolUseInput,
-    emit,
     env_path,
     exit,
     get_toml_section,
@@ -106,7 +105,7 @@ def load_reminders(config: Config) -> str | None:
 # Main Hook Logic
 # ============================================================================
 
-def handle_post_tool_use(hook_input: PostToolUseInput, config: Config) -> None:
+def handle_post_tool_use(hook_input: PostToolUseInput, config: Config) -> str | None:
     """Handle PostToolUse hook - inject reminders after matched tool uses.
 
     Args:
@@ -118,7 +117,8 @@ def handle_post_tool_use(hook_input: PostToolUseInput, config: Config) -> None:
     """
     reminders = load_reminders(config)
     if reminders:
-        emit(text=f"[Agent Reminders]\n{reminders}")
+        return f"[Agent Reminders]\n{reminders}"
+    return None
 
 
 def main():
@@ -130,7 +130,9 @@ def main():
     except HookInputError as exc:
         exit(1, text=f"[agent_reminders] Hook input error: {exc}", to_stderr=True)
 
-    handle_post_tool_use(hook_input, config)
+    text = handle_post_tool_use(hook_input, config)
+    if text:
+        exit(text=text)
     exit()
 
 

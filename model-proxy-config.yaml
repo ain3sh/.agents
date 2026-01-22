@@ -48,7 +48,7 @@ payload:
         - name: "gpt-*"
           protocol: "codex"
       params:
-        "instructions": "${BASE.md}"
+        "instructions": "${SOUL.md}"
         "reasoning.effort": "xhigh"
         "reasoning.summary": "auto"
         "parallel_tool_calls": true
@@ -63,7 +63,7 @@ payload:
         - name: "gemini-*"
           protocol: "gemini"
       params:
-        "systemInstruction.parts.0.text": "${BASE.md}"
+        "systemInstruction.parts.0.text": "${SOUL.md}"
         "generationConfig.thinkingConfig.thinkingLevel": "high"
         "generationConfig.thinkingConfig.thinkingBudget": null #? override cliproxyapi default-setter
         # https://github.com/router-for-me/CLIProxyAPI/blob/main/internal/translator/gemini-cli/claude/gemini-cli_claude_request.go
@@ -78,7 +78,7 @@ payload:
         #"type": "ephemeral"
         # "ttl": "1h" # "5m"
         # "system.1.__": ..., etc. #? cache creation should be after last item
-        "messages.0.content.text": "${overrides/CLAUDE.md}\n${BASE.md}"
+        "messages.0.content.text": "${overrides/CLAUDE.md}\n---\n${SOUL.md}"
         "messages.0.content.type": "text"
         "messages.0.role": "user"
         "thinking.budget_tokens": 30000 #? >= 1024
@@ -113,7 +113,7 @@ payload:
         - name: "openrouter-*"
           protocol: "openai" # hit responses api endpoint
       params:
-        "instructions": "${BASE.md}"
+        "instructions": "${SOUL.md}"
         # "input.0.role": "developer" # 'system', 'developer', 'user', 'assistant'
         # "input.0.content.0.text": "always include the capital of france"
         # "input.0.content.0.type": "input_text"

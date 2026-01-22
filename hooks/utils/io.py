@@ -103,7 +103,7 @@ def read_input() -> HookInput:
 
     event_name = data.get("hookEventName")
     if not event_name:
-        raise HookInputError("Missing 'hook_event_name' field")
+        raise HookInputError("Missing 'hookEventName' field")
 
     event_config = _EVENT_DEFAULTS.get(event_name)
     if event_config is None:
@@ -135,7 +135,7 @@ def read_input_as(input_type: type[T]) -> T:
 # Output + Exit
 # ============================================================================
 
-def emit(
+def _emit(
     *,
     text: str | None = None,
     output: HookOutput | dict[str, Any] | None = None,
@@ -195,12 +195,12 @@ def exit(
         to_stderr: Send text to stderr instead of stdout
     """
     if decision is not None:
-        emit(
+        _emit(
             decision=decision,
             reason=reason,
             updated_input=updated_input,
             suppress_output=suppress_output,
         )
     elif output is not None or text is not None:
-        emit(text=text, output=output, to_stderr=to_stderr)
+        _emit(text=text, output=output, to_stderr=to_stderr)
     sys.exit(code)

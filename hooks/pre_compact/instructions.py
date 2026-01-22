@@ -20,7 +20,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils import (  # type: ignore
     HookInputError,
     PreCompactInput,
-    emit,
     env_path,
     exit,
     get_toml_section,
@@ -97,7 +96,7 @@ def load_default_instructions(config: Config) -> str | None:
         return None
 
 
-def handle_pre_compact(hook_input: PreCompactInput, config: Config) -> None:
+def handle_pre_compact(hook_input: PreCompactInput, config: Config) -> str:
     """Handle PreCompact hook.
 
     Args:
@@ -109,36 +108,28 @@ def handle_pre_compact(hook_input: PreCompactInput, config: Config) -> None:
     if hook_input.trigger == "manual":
         if hook_input.custom_instructions:
             # User provided explicit instructions - use those
-            emit(
-                text=(
-                    "[PreCompact] Manual compact with user instructions:\n"
-                    f"{hook_input.custom_instructions}"
-                )
+            return (
+                "[PreCompact] Manual compact with user instructions:\n"
+                f"{hook_input.custom_instructions}"
             )
         else:
             # No custom instructions - try to load defaults from slash command
             default_instructions = load_default_instructions(config)
             if default_instructions:
-                emit(
-                    text=(
-                        "[PreCompact] Manual compact with default instructions "
-                        f"(from commands/compact.md):\n{default_instructions}"
-                    )
+                return (
+                    "[PreCompact] Manual compact with default instructions "
+                    f"(from commands/compact.md):\n{default_instructions}"
                 )
-            else:
-                emit(text="[PreCompact] Manual compact requested (no instructions)")
+            return "[PreCompact] Manual compact requested (no instructions)"
     else:
         # Auto-compact from context window full
         default_instructions = load_default_instructions(config)
         if default_instructions:
-            emit(
-                text=(
-                    "[PreCompact] Auto-compact triggered (context window full). "
-                    f"Using default instructions:\n{default_instructions}"
-                )
+            return (
+                "[PreCompact] Auto-compact triggered (context window full). "
+                f"Using default instructions:\n{default_instructions}"
             )
-        else:
-            emit(text="[PreCompact] Auto-compact triggered (context window full)")
+        return "[PreCompact] Auto-compact triggered (context window full)"
 
 
 def main():
@@ -150,8 +141,7 @@ def main():
     except HookInputError as exc:
         exit(1, text=f"[pre_compact] Hook input error: {exc}", to_stderr=True)
 
-    handle_pre_compact(hook_input, config)
-    exit()
+    exit(text=handle_pre_compact(hook_input, config))
 
 
 if __name__ == "__main__":

@@ -10,7 +10,6 @@ the saved prompt for conflicts using the built-in Edit/ApplyPatch tool.
 from __future__ import annotations
 import argparse
 import hashlib, time, os, sys
-from typing import Literal
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,7 +20,6 @@ from utils import (  # type: ignore
     UserPromptSubmitInput,
     copy_to_clipboard,
     count_tokens,
-    emit,
     exit,
     get_toml_section,
     load_toml,
@@ -126,29 +124,23 @@ def store_prompt(prompt: str, config: Config, session_id: str) -> StoredPrompt:
 # Main Hook Logic
 # ============================================================================
 
-Action = Literal["allow", "block"]
-
-
-def handle_prompt(
+def get_block_reason(
     hook_input: UserPromptSubmitInput,
     config: Config,
-) -> Action:
-    """Decide whether to block a prompt and emit appropriate output.
-
-    Returns "allow" or "block".
-    """
+) -> str | None:
+    """Return a block reason if the prompt should be blocked, otherwise None."""
     prompt = hook_input.prompt
     stripped = prompt.lstrip()
 
     # Optional override: skip conflict checking with special prefix
     if config.skip_prefix_lower and stripped.lower().startswith(config.skip_prefix_lower):
-        return "allow"
+        return None
 
     token_count = count_tokens(prompt)
 
     # Short prompts always pass through
     if token_count <= config.token_threshold:
-        return "allow"
+        return None
 
     # Long prompt detected - save to file
     stored = store_prompt(prompt, config, hook_input.session_id)
@@ -174,8 +166,7 @@ This will ask the agent to analyze the saved prompt for conflicting
 or ambiguous instructions using Edit/ApplyPatch with git-diff highlighting.
 """
 
-    emit(output={"decision": "block", "reason": reason})
-    return "block"
+    return reason
 
 
 def main() -> int:
@@ -187,12 +178,10 @@ def main() -> int:
     except HookInputError as exc:
         exit(1, text=f"[prompt_conflict] Hook input error: {exc}", to_stderr=True)
 
-    action = handle_prompt(hook_input, config)
-
-    if action == "allow":
-        exit()
-
-    return 0
+    reason = get_block_reason(hook_input, config)
+    if reason is not None:
+        exit(output={"decision": "block", "reason": reason})
+    exit()
 
 
 if __name__ == "__main__":

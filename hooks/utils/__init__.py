@@ -14,7 +14,7 @@ Example usage:
     from hooks.utils import (
         read_input_as,
         UserPromptSubmitInput,
-        emit,
+        exit,
         count_tokens,
         env_bool,
         env_int,
@@ -24,10 +24,9 @@ Example usage:
         input = read_input_as(UserPromptSubmitInput)
 
         if env_bool("STRICT_MODE") and count_tokens(input.prompt) > env_int("MAX_TOKENS", 1000):
-            emit(output={"decision": "block", "reason": "Prompt too long"})
-            return
+            exit(output={"decision": "block", "reason": "Prompt too long"})
 
-        emit(text=f"Processing prompt with {count_tokens(input.prompt)} tokens")
+        exit(text=f"Processing prompt with {count_tokens(input.prompt)} tokens")
 
     if __name__ == "__main__":
         main()
@@ -69,7 +68,7 @@ from .types import (
 )
 
 # I/O
-from .io import HookInputError, read_input, read_input_as, emit, exit
+from .io import HookInputError, read_input, read_input_as, exit
 
 # Environment
 from .env import (
@@ -156,7 +155,6 @@ __all__ = [
     "HookInputError",
     "read_input",
     "read_input_as",
-    "emit",
     "exit",
     # Environment
     "get_droid_env_file",

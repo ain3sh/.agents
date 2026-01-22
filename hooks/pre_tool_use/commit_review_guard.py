@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """PreToolUse hook to run CodeRabbit CLI before git push.
 
-Blocks git push when CodeRabbit reports findings, and caches results per HEAD
-to avoid repeated runs in the same session.
+Blocks git push when CodeRabbit reports findings.
 """
 from __future__ import annotations
 
