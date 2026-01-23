@@ -36,7 +36,9 @@ Usage in ~/.factory/settings.json:
 """
 from __future__ import annotations
 import argparse
-import os, re, sys
+import os
+import re
+import sys
 from pathlib import Path
 
 # add hooks dir to path for rel import
@@ -51,6 +53,8 @@ from utils import (  # type: ignore
     read_input_as,
     set_env,
 )
+
+HOOK_EVENT_NAME = "SessionStart"
 
 
 # ============================================================================
@@ -220,9 +224,19 @@ def main():
     try:
         config_data = load_toml(args.config_file)
     except OSError as exc:
-        exit(1, text=f"[env_vars] Config file error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[env_vars] Config file error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
     except Exception as exc:
-        exit(1, text=f"[env_vars] Config parse error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[env_vars] Config parse error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     config = get_toml_section(config_data, "hooks", "session_start", "environment")
 
@@ -235,10 +249,15 @@ def main():
     try:
         hook_input = read_input_as(SessionStartInput)
     except HookInputError as exc:
-        exit(1, text=f"[env_vars] Hook input error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[env_vars] Hook input error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     if hook_input.source not in sources:
-        exit()
+        exit(hook_event_name=HOOK_EVENT_NAME)
 
     env_vars: dict[str, str] = {}
     if secrets_files:
@@ -247,7 +266,7 @@ def main():
     env_vars.update(_config_env_vars(config))
 
     if not env_vars:
-        exit()
+        exit(hook_event_name=HOOK_EVENT_NAME)
 
     count = apply_env_vars(env_vars)
 
@@ -260,7 +279,7 @@ def main():
         elif verbose:
             print(f"[env_vars] Loaded {count} environment variable(s) from config")
 
-    exit()
+    exit(hook_event_name=HOOK_EVENT_NAME)
 
 
 if __name__ == "__main__":

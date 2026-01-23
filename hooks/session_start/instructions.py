@@ -6,6 +6,7 @@ import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 # add hooks dir to path for rel import
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -19,13 +20,53 @@ from utils import (  # type: ignore
     load_toml,
     read_input_as,
 )
+from utils.instructions import (  # type: ignore
+    build_template_context,
+    dedupe,
+    parse_str_list,
+    render_instructions,
+)
+
+HOOK_EVENT_NAME = "SessionStart"
+
+
+@dataclass(slots=True, frozen=True)
+class Rule:
+    when: set[str]
+    include: tuple[str, ...]
+    include_text: tuple[str, ...]
 
 
 @dataclass(slots=True, frozen=True)
 class Config:
     prompts_dir: Path
-    include_files: tuple[str, ...]
-    sources: set[str]
+    rules: tuple[Rule, ...]
+
+
+def _parse_when(value: object) -> set[str]:
+    if isinstance(value, list):
+        return {item for item in value if isinstance(item, str) and item}
+    if isinstance(value, str):
+        return {item for item in (part.strip() for part in value.split(",")) if item}
+    return set()
+
+
+def _parse_rules(value: object) -> tuple[Rule, ...]:
+    if not isinstance(value, list):
+        return ()
+
+    rules: list[Rule] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        item_dict = cast(dict[str, object], item)
+        when = _parse_when(item_dict.get("when"))
+        include = parse_str_list(item_dict.get("include"))
+        include_text = parse_str_list(item_dict.get("include_text"))
+        if not include and not include_text:
+            continue
+        rules.append(Rule(when=when, include=include, include_text=include_text))
+    return tuple(rules)
 
 
 def _parse_args(argv: list[str]) -> Config:
@@ -41,9 +82,19 @@ def _parse_args(argv: list[str]) -> Config:
     try:
         config_data = load_toml(args.config_file)
     except OSError as exc:
-        exit(1, text=f"[session_start] Config file error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[session_start] Config file error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
     except Exception as exc:
-        exit(1, text=f"[session_start] Config parse error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[session_start] Config parse error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     config = get_toml_section(config_data, "hooks", "session_start", "instructions")
     config_prompts = config.get("prompts_dir")
@@ -54,49 +105,32 @@ def _parse_args(argv: list[str]) -> Config:
     else:
         prompts_dir_value = "~/.agents/prompts"
 
-    include_files = config.get("include")
-    if isinstance(include_files, str):
-        include = (include_files,) if include_files else ()
-    elif isinstance(include_files, list):
-        include = tuple(item for item in include_files if isinstance(item, str))
-    else:
-        include = ()
-
-    if not include:
-        include = ("BASICS.md",)
-
-    sources_value = config.get("when") or config.get("sources")
-    if isinstance(sources_value, list):
-        sources = {item for item in sources_value if isinstance(item, str)}
-    else:
-        sources = {"startup", "resume", "clear", "compact"}
+    rules = _parse_rules(config.get("rules"))
 
     return Config(
         prompts_dir=Path(prompts_dir_value).expanduser(),
-        include_files=include,
-        sources=sources,
+        rules=rules,
     )
 
 
-def _read_text(path: Path) -> str | None:
-    if not path.exists():
-        return None
-    try:
-        content = path.read_text(encoding="utf-8").strip()
-    except OSError:
-        return None
-    return content or None
+def _matches_source(when: set[str], source: str) -> bool:
+    if not when:
+        return True
+    if "*" in when:
+        return True
+    return source in when
 
+def _resolve_includes(config: Config, source: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    if not config.rules:
+        return (), ()
 
-def _compose_instructions(prompts_dir: Path, include_files: tuple[str, ...]) -> str | None:
-    contents: list[str] = []
-    for filename in include_files or ("BASICS.md",):
-        text = _read_text(prompts_dir / filename)
-        if text:
-            contents.append(text)
-    if not contents:
-        return None
-    return "\n\n".join(contents)
+    ordered: list[str] = []
+    text_blocks: list[str] = []
+    for rule in config.rules:
+        if _matches_source(rule.when, source):
+            ordered.extend(rule.include)
+            text_blocks.extend(rule.include_text)
+    return dedupe(ordered), tuple(text_blocks)
 
 
 def main():
@@ -105,20 +139,42 @@ def main():
     try:
         hook_input = read_input_as(SessionStartInput)
     except HookInputError as exc:
-        exit(1, text=f"[session_start] Hook input error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[session_start] Hook input error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
-    if hook_input.source not in config.sources:
-        exit()
+    if not config.rules:
+        exit(hook_event_name=HOOK_EVENT_NAME)
 
-    content = _compose_instructions(config.prompts_dir, config.include_files)
+    include_files, include_text = _resolve_includes(config, hook_input.source)
+    if not include_files and not include_text:
+        exit(hook_event_name=HOOK_EVENT_NAME)
+
+    content, missing, ambiguous = render_instructions(
+        config.prompts_dir,
+        include_files,
+        include_text,
+        build_template_context(hook_input),
+    )
+    if missing or ambiguous:
+        warning_parts: list[str] = []
+        if missing:
+            warning_parts.append(f"missing={sorted(missing)}")
+        if ambiguous:
+            warning_parts.append(f"ambiguous={sorted(ambiguous)}")
+        print(f"[session_start] Unresolved placeholders: {', '.join(warning_parts)}", file=sys.stderr)
     if content:
         exit(
             output=HookOutput(
                 hook_specific_output=SessionStartOutput(additional_context=content)
-            )
+            ),
+            hook_event_name=HOOK_EVENT_NAME,
         )
 
-    exit()
+    exit(hook_event_name=HOOK_EVENT_NAME)
 
 
 if __name__ == "__main__":

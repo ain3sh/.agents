@@ -13,10 +13,17 @@ secrets = "~/.factory/.env" # .env secrets loaded by env vars session-start hook
 EXAMPLE_CONFIG_VAR = "clod"
 
 [hooks.session_start.instructions]
-when = ["startup", "clear", "compact"] # "startup", "resume", "clear", "compact"
 prompts_dir = "~/.agents/prompts"
-# optional prompt composition (ordered list of files relative to prompts_dir)
-include = ["BASICS.md"]
+# prompt composition rules (ordered, files relative to prompts_dir)
+[[hooks.session_start.instructions.rules]]
+when = ["startup", "clear"]
+include = ["instructions/OPERATOR.md"]
+[[hooks.session_start.instructions.rules]]
+when = ["compact"]
+include = ["instructions/POST_COMPACT.md"]
+[[hooks.session_start.instructions.rules]]
+when = ["*"]
+include = ["instructions/PRINCIPLES.md"]
 
 # ---
 [hooks.pre_tool_use]
@@ -41,6 +48,26 @@ max_chars = 6000
 
 # ---
 [hooks.post_tool_use]
+
+[hooks.post_tool_use.instructions]
+debug = false
+prompts_dir = "~/.agents/prompts"
+
+[[hooks.post_tool_use.instructions.rules]]
+match.tool = "ExitSpecMode"
+match.output = "re:approved.*false"
+include = ["instructions/IMPROVE_SPEC.md"]
+
+[[hooks.post_tool_use.instructions.rules]]
+match.tool = "ExitSpecMode"
+match.output = "re:approved.*true.*isEdited.*false"
+include = ["instructions/IMPLEMENT_SPEC.md"]
+
+[[hooks.post_tool_use.instructions.rules]]
+match.tool = "ExitSpecMode"
+match.output = "re:approved.*true.*isEdited.*true"
+include = ["instructions/IMPLEMENT_SPEC.md"]
+include_text = ["Read ${filePath} fully to make a mental note of all changes made first."]
 
 # ---
 [hooks.notification]

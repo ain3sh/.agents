@@ -28,6 +28,8 @@ from utils import (  # type: ignore
     read_input_as,
 )
 
+HOOK_EVENT_NAME = "PreCompact"
+
 
 # ============================================================================
 # Configuration
@@ -46,9 +48,19 @@ def _parse_args(argv: list[str]) -> Config:
     try:
         config_data = load_toml(args.config_file)
     except OSError as exc:
-        exit(1, text=f"[pre_compact] Config file error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[pre_compact] Config file error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
     except Exception as exc:
-        exit(1, text=f"[pre_compact] Config parse error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[pre_compact] Config parse error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     config = get_toml_section(config_data, "hooks", "pre_compact", "instructions")
     path_value = config.get("path") or config.get("instructions_path")
@@ -139,9 +151,14 @@ def main():
     try:
         hook_input = read_input_as(PreCompactInput)
     except HookInputError as exc:
-        exit(1, text=f"[pre_compact] Hook input error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[pre_compact] Hook input error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
-    exit(text=handle_pre_compact(hook_input, config))
+    exit(text=handle_pre_compact(hook_input, config), hook_event_name=HOOK_EVENT_NAME)
 
 
 if __name__ == "__main__":

@@ -23,6 +23,8 @@ from utils import (  # type: ignore
     read_input_as,
 )
 
+HOOK_EVENT_NAME = "PreCompact"
+
 
 def _parse_args(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(add_help=False)
@@ -32,9 +34,19 @@ def _parse_args(argv: list[str]) -> None:
     try:
         config_data = load_toml(args.config_file)
     except OSError as exc:
-        exit(1, text=f"[block_auto_compact] Config file error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[block_auto_compact] Config file error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
     except Exception as exc:
-        exit(1, text=f"[block_auto_compact] Config parse error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[block_auto_compact] Config parse error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     get_toml_section(config_data, "hooks", "pre_compact", "block_auto")
 
@@ -45,7 +57,12 @@ def main():
     try:
         hook_input = read_input_as(PreCompactInput)
     except HookInputError as exc:
-        exit(1, text=f"[block_auto_compact] Hook input error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[block_auto_compact] Hook input error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     if hook_input.trigger == "auto":
         # Block auto-compaction
@@ -53,11 +70,12 @@ def main():
             output={
                 "continue": False,
                 "stopReason": "Auto compaction blocked by hook. Use /compact manually when ready.",
-            }
+            },
+            hook_event_name=HOOK_EVENT_NAME,
         )
 
     # Allow manual compaction to proceed
-    exit()
+    exit(hook_event_name=HOOK_EVENT_NAME)
 
 
 if __name__ == "__main__":

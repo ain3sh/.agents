@@ -9,7 +9,10 @@ the saved prompt for conflicts using the built-in Edit/ApplyPatch tool.
 """
 from __future__ import annotations
 import argparse
-import hashlib, time, os, sys
+import hashlib
+import time
+import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,6 +28,8 @@ from utils import (  # type: ignore
     load_toml,
     read_input_as,
 )
+
+HOOK_EVENT_NAME = "UserPromptSubmit"
 
 
 # ============================================================================
@@ -53,9 +58,19 @@ def load_config(argv: list[str]) -> Config:
     try:
         config_data = load_toml(args.config_file)
     except OSError as exc:
-        exit(1, text=f"[prompt_conflict] Config file error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[prompt_conflict] Config file error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
     except Exception as exc:
-        exit(1, text=f"[prompt_conflict] Config parse error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[prompt_conflict] Config parse error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     config = get_toml_section(config_data, "hooks", "user_prompt_submit", "conflict_guard")
 
@@ -169,19 +184,27 @@ or ambiguous instructions using Edit/ApplyPatch with git-diff highlighting.
     return reason
 
 
-def main() -> int:
+def main() -> None:
     """Entry point for the hook script."""
     config = load_config(sys.argv[1:])
 
     try:
         hook_input = read_input_as(UserPromptSubmitInput)
     except HookInputError as exc:
-        exit(1, text=f"[prompt_conflict] Hook input error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[prompt_conflict] Hook input error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     reason = get_block_reason(hook_input, config)
     if reason is not None:
-        exit(output={"decision": "block", "reason": reason})
-    exit()
+        exit(
+            output={"decision": "block", "reason": reason},
+            hook_event_name=HOOK_EVENT_NAME,
+        )
+    exit(hook_event_name=HOOK_EVENT_NAME)
 
 
 if __name__ == "__main__":

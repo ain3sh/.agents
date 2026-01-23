@@ -25,6 +25,8 @@ from utils import (  # type: ignore
     read_input_as,
 )
 
+HOOK_EVENT_NAME = "PreToolUse"
+
 
 # ============================================================================
 # Configuration
@@ -46,9 +48,19 @@ def _parse_args(argv: list[str]) -> Config:
     try:
         config_data = load_toml(args.config_file)
     except OSError as exc:
-        exit(1, text=f"[coderabbit] Config file error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[coderabbit] Config file error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
     except Exception as exc:
-        exit(1, text=f"[coderabbit] Config parse error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[coderabbit] Config parse error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     config = get_toml_section(config_data, "hooks", "pre_tool_use", "commit_review_guard")
     review_type = args.review_type or config.get("type") or "committed"
@@ -169,23 +181,23 @@ def _truncate(text: str, limit: int) -> str:
 
 def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
     if hook_input.tool_name != "Bash":
-        exit()
+        exit(hook_event_name=HOOK_EVENT_NAME)
 
     command = str(hook_input.tool_input.get("command", ""))
     if not _is_git_push_command(command):
-        exit()
+        exit(hook_event_name=HOOK_EVENT_NAME)
 
     coderabbit_bin = _resolve_coderabbit_binary()
     if coderabbit_bin is None:
         print("[coderabbit] CLI not found. Skipping commit review.")
-        exit()
+        exit(hook_event_name=HOOK_EVENT_NAME)
         return
     coderabbit_cmd = coderabbit_bin
 
     git_cwd = _extract_git_cwd(command, hook_input.cwd)
     repo_root = _get_repo_root(git_cwd)
     if repo_root is None:
-        exit()
+        exit(hook_event_name=HOOK_EVENT_NAME)
         return
     repo_root_path = repo_root
 
@@ -212,10 +224,14 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
     combined_output = "\n".join(part for part in [stdout, stderr] if part)
 
     if code != 0:
-        exit(decision="deny", reason="[coderabbit] CLI failed before push.")
+        exit(
+            decision="deny",
+            reason="[coderabbit] CLI failed before push.",
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     if _is_clean(combined_output):
-        exit()
+        exit(hook_event_name=HOOK_EVENT_NAME)
 
     excerpt = _truncate(combined_output, config.max_chars)
     exit(
@@ -227,6 +243,7 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
             f"Excerpt:\n{excerpt}\n\n"
             "Fix critical issues, then re-run push to recheck."
         ),
+        hook_event_name=HOOK_EVENT_NAME,
     )
 
 
@@ -236,10 +253,15 @@ def main():
     try:
         hook_input = read_input_as(PreToolUseInput)
     except HookInputError as exc:
-        exit(1, text=f"[coderabbit] Hook input error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[coderabbit] Hook input error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     _handle_pre_tool_use(hook_input, config)
-    exit()
+    exit(hook_event_name=HOOK_EVENT_NAME)
 
 
 if __name__ == "__main__":

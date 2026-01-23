@@ -124,7 +124,8 @@ def main():
 
         # Process response and convert to PNG
         image_saved = False
-        for part in response.parts:
+        parts = response.parts if response.parts is not None else []
+        for part in parts:
             if part.text is not None:
                 print(f"Model response: {part.text}")
             elif part.inline_data is not None:

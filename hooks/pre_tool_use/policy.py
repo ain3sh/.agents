@@ -7,6 +7,7 @@ import fnmatch
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 # add hooks dir to path for rel import
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -18,6 +19,8 @@ from utils import (  # type: ignore
     load_toml,
     read_input_as,
 )
+
+HOOK_EVENT_NAME = "PreToolUse"
 
 
 # ============================================================================
@@ -64,8 +67,9 @@ def _parse_overrides(section: object) -> tuple[tuple[str, Override], ...]:
         if not isinstance(pattern, str) or not isinstance(raw, dict):
             continue
 
-        decision = raw.get("decision")
-        message = raw.get("message")
+        raw_dict = cast(dict[str, object], raw)
+        decision = raw_dict.get("decision")
+        message = raw_dict.get("message")
         overrides.append(
             (
                 pattern,
@@ -88,9 +92,19 @@ def _parse_args(argv: list[str]) -> Config:
         try:
             config_data = load_toml(args.config_file)
         except OSError as exc:
-            exit(1, text=f"[policy] Config file error: {exc}", to_stderr=True)
+            exit(
+                1,
+                text=f"[policy] Config file error: {exc}",
+                to_stderr=True,
+                hook_event_name=HOOK_EVENT_NAME,
+            )
         except Exception as exc:
-            exit(1, text=f"[policy] Config parse error: {exc}", to_stderr=True)
+            exit(
+                1,
+                text=f"[policy] Config parse error: {exc}",
+                to_stderr=True,
+                hook_event_name=HOOK_EVENT_NAME,
+            )
 
     base_path = ("hooks", "pre_tool_use", "policy")
     sections = {k: get_toml_section(config_data, *base_path, k) for k in ("allow", "ask", "deny")}
@@ -168,24 +182,33 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
         else base_decision
 
     if decision is None:  # defer to system by default
-        exit()
+        exit(hook_event_name=HOOK_EVENT_NAME)
 
     template = (
         override.message
         if (override and override.message)
         else getattr(config, f"{decision}_message") or ""
     )
-    exit(decision=decision, reason=template.format(tool_name=tool_name))
+    exit(
+        decision=decision,
+        reason=template.format(tool_name=tool_name),
+        hook_event_name=HOOK_EVENT_NAME,
+    )
 
 
-def main() -> int:
+def main() -> None:
     try:
         hook_input = read_input_as(PreToolUseInput)
     except HookInputError as exc:
-        exit(1, text=f"[policy] Hook input error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[policy] Hook input error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     _handle_pre_tool_use(hook_input, _parse_args(sys.argv[1:]))
-    exit()
+    exit(hook_event_name=HOOK_EVENT_NAME)
 
 if __name__ == "__main__":
     raise SystemExit(main())

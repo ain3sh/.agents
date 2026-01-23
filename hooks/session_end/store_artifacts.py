@@ -8,6 +8,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 # add hooks dir to path for rel import
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -19,6 +20,8 @@ from utils import (  # type: ignore
     load_toml,
     read_input_as,
 )
+
+HOOK_EVENT_NAME = "SessionEnd"
 
 
 @dataclass(slots=True, frozen=True)
@@ -47,9 +50,19 @@ def _parse_args(argv: list[str]) -> Config:
     try:
         config_data = load_toml(args.config_file)
     except OSError as exc:
-        exit(1, text=f"[session_end] Config file error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[session_end] Config file error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
     except Exception as exc:
-        exit(1, text=f"[session_end] Config parse error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[session_end] Config parse error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     config = get_toml_section(config_data, "hooks", "session_end", "store_artifacts")
 
@@ -159,9 +172,20 @@ def _scan_transcript_reverse(
     if (not capture_tail or tail_count <= 0) and not capture_todos:
         return None, None
 
+    FileReadBackwards: type[Any] | None = None
     try:
-        from file_read_backwards import FileReadBackwards
-    except ImportError:
+        import importlib
+
+        module = importlib.import_module("file_read_backwards")
+        FileReadBackwards = getattr(module, "FileReadBackwards", None)
+    except Exception:
+        return _scan_transcript_forward(
+            path,
+            tail_count=tail_count,
+            capture_tail=capture_tail,
+            capture_todos=capture_todos,
+        )
+    if FileReadBackwards is None:
         return _scan_transcript_forward(
             path,
             tail_count=tail_count,
@@ -332,11 +356,16 @@ def main():
     try:
         hook_input = read_input_as(SessionEndInput)
     except HookInputError as exc:
-        exit(1, text=f"[session_end] Hook input error: {exc}", to_stderr=True)
+        exit(
+            1,
+            text=f"[session_end] Hook input error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     transcript_path = Path(hook_input.transcript_path).expanduser()
     if not transcript_path.exists():
-        exit()
+        exit(hook_event_name=HOOK_EVENT_NAME)
 
     want_tail = hook_input.reason in config.tail_when and config.tail_count > 0
     want_todos = hook_input.reason in config.todo_when
@@ -357,7 +386,7 @@ def main():
     if want_todos and todos:
         _write_file(base_dir / f"{safe_id}_todo.md", todos)
 
-    exit()
+    exit(hook_event_name=HOOK_EVENT_NAME)
 
 
 if __name__ == "__main__":

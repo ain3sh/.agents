@@ -1,5 +1,6 @@
 logs/
 *.env
+.ruff_cache/
 __pycache__/
 *.pyc
 *:Zone.Identifier

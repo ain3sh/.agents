@@ -144,6 +144,7 @@ def _emit(
     updated_input: dict[str, Any] | None = None,
     suppress_output: bool = True,
     to_stderr: bool = False,
+    hook_event_name: HookEventName | None = None,
 ) -> None:
     if decision is not None:
         # hookSpecificOutput format with suppressOutput at top level
@@ -161,7 +162,14 @@ def _emit(
             data["suppressOutput"] = True
         print(json.dumps(data), flush=True)
     elif output is not None:
-        data = output.to_dict() if isinstance(output, HookOutput) else output
+        if isinstance(output, HookOutput):
+            data = output.to_dict()
+        else:
+            data = dict(output)
+            if hook_event_name is not None:
+                hook_specific = data.get("hookSpecificOutput")
+                if isinstance(hook_specific, dict) and "hookEventName" not in hook_specific:
+                    hook_specific["hookEventName"] = hook_event_name
         print(json.dumps(data))
     if text is not None:
         print(text, file=sys.stderr if to_stderr else sys.stdout)
@@ -177,6 +185,7 @@ def exit(
     updated_input: dict[str, Any] | None = None,
     suppress_output: bool = True,
     to_stderr: bool = False,
+    hook_event_name: HookEventName | None = None,
 ) -> NoReturn:
     """Exit hook with optional output or permission decision.
 
@@ -200,7 +209,13 @@ def exit(
             reason=reason,
             updated_input=updated_input,
             suppress_output=suppress_output,
+            hook_event_name=hook_event_name,
         )
     elif output is not None or text is not None:
-        _emit(text=text, output=output, to_stderr=to_stderr)
+        _emit(
+            text=text,
+            output=output,
+            to_stderr=to_stderr,
+            hook_event_name=hook_event_name,
+        )
     sys.exit(code)

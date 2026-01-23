@@ -6,7 +6,7 @@ High-level, reusable hooks for Factory Droid that prioritize clear behavior, rel
 
 - **Hooks are grouped by event** (`pre_tool_use/`, `session_start/`, etc.).
 - **Utilities live in `utils/`**, providing typed I/O, env helpers, and cross-platform tools.
-- **Configuration lives outside this repo** (e.g., `~/.factory/settings.json`, `~/.factory/droid.toml`).
+- **Configuration lives outside this repo** (behavior in `~/.agents/configs/droid.toml`).
 
 ## Directory Layout
 
@@ -24,7 +24,7 @@ hooks/
 │   ├── policy.py
 │   └── commit_review_guard.py
 ├── post_tool_use/
-│   └── reminders.py
+│   └── instructions.py
 ├── pre_compact/
 │   ├── block_auto.py
 │   └── instructions.py
@@ -76,6 +76,11 @@ if __name__ == "__main__":
 - `emit(...)` sends hook output (permission decisions, additional context, etc.).
 - `exit(...)` exits with optional output or error text.
 
+### `utils.instructions`
+- Shared instruction rendering for SessionStart/PostToolUse.
+- Supports `include` + `include_text` with `${...}` interpolation.
+- Soft-warns on unresolved/ambiguous placeholders (stderr), but never blocks.
+
 ### `utils.types`
 - Typed dataclasses for **all hook inputs/outputs**, plus helper types like `PermissionResult`.
 - Use `PreToolUseInput`, `SessionStartInput`, etc. to avoid stringly-typed code.
@@ -103,7 +108,7 @@ if __name__ == "__main__":
 - **`commit_review_guard.py`**: blocks `git push` if CodeRabbit CLI reports findings; runs on detected push commands.
 
 ### PostToolUse
-- **`reminders.py`**: injects reminders after matched tool usage (configured via settings matcher). Reads from `.factory/commands/reminders.md` (workspace preferred).
+- **`instructions.py`**: rule-based instruction injection by tool, with optional input/output matching and `${...}` interpolation for dynamic text.
 
 ### PreCompact
 - **`block_auto.py`**: prevents auto-compaction while allowing manual `/compact`.
@@ -111,7 +116,7 @@ if __name__ == "__main__":
 
 ### SessionStart
 - **`env_vars.py`**: loads inline config env vars plus optional secrets file on `startup`, `resume`, and `clear`.
-- **`instructions.py`**: injects base instructions from `.agents/prompts/BASE.md` (configurable base dir). Foundation for richer instruction assembly.
+- **`instructions.py`**: injects instructions via ordered rules (`when` + `include`/`include_text`) with interpolation support.
 - **`debug.sh`**: emits detailed diagnostics for env discovery and tool availability.
 
 ### SessionEnd
@@ -120,12 +125,9 @@ if __name__ == "__main__":
 ### UserPromptSubmit
 - **`conflict_guard.py`**: blocks long prompts, stores them on disk, and instructs use of `/check-conflicts`.
 
-## Configuration (Factory Droid)
+## Configuration
 
-- **Behavior config** lives in `~/.factory/droid.toml` (agent-agnostic).
-- **Invocation** lives in `~/.factory/settings.json` (per environment).
-
-### `~/.factory/droid.toml` (Behavior)
+### `~/.agents/configs/droid.toml` (Behavior)
 
 ```toml
 [hooks.session_start.environment]
@@ -134,9 +136,26 @@ secrets = "~/.factory/.env"
 EXAMPLE_CONFIG_VAR = "clod"
 
 [hooks.session_start.instructions]
-when = ["startup", "clear", "compact"]
 prompts_dir = "~/.agents/prompts"
-include = ["BASE.md"]
+[[hooks.session_start.instructions.rules]]
+when = ["startup", "clear"]
+include = ["instructions/OPERATOR.md"]
+[[hooks.session_start.instructions.rules]]
+when = ["compact"]
+include = ["instructions/POST_COMPACT.md"]
+[[hooks.session_start.instructions.rules]]
+when = ["*"]
+include = ["instructions/PRINCIPLES.md"]
+
+[hooks.post_tool_use.instructions]
+prompts_dir = "~/.agents/prompts"
+debug = false
+
+[[hooks.post_tool_use.instructions.rules]]
+match.tool = "ExitSpecMode"
+match.output = "re:approved.*true.*isEdited.*true"
+include = ["instructions/IMPLEMENT_SPEC.md"]
+include_text = ["Read ${filePath} fully to make a mental note of all changes made first."]
 
 [hooks.pre_tool_use.policy]
 [hooks.pre_tool_use.policy.allow]
@@ -154,58 +173,6 @@ tail_when = ["prompt_input_exit", "other"]
 todo_when = ["prompt_input_exit", "clear", "other"]
 ```
 
-### `~/.factory/settings.json` (Invocation)
-
-```json
-{
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/USER/.agents/hooks/session_start/env_vars.py",
-            "timeout": 5,
-            "args": ["--config-file", "/home/USER/.factory/droid.toml"]
-          },
-          {
-            "type": "command",
-            "command": "/home/USER/.agents/hooks/session_start/instructions.py",
-            "timeout": 5,
-            "args": ["--config-file", "/home/USER/.factory/droid.toml"]
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/USER/.agents/hooks/pre_tool_use/policy.py",
-            "timeout": 5,
-            "args": ["--config-file", "/home/USER/.factory/droid.toml"]
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "TodoWrite",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/USER/.agents/hooks/post_tool_use/reminders.py",
-            "timeout": 5,
-            "args": ["--config-file", "/home/USER/.factory/droid.toml"]
-          }
-        ]
-      }
-    ]
-  }
-}
-```
 
 ## Operating Model (How These Hooks Fit Together)
 
@@ -220,8 +187,8 @@ todo_when = ["prompt_input_exit", "clear", "other"]
 
 1. Create a script in the correct event directory.
 2. Parse input with `read_input_as(...)` and handle errors.
-3. Emit decisions or context with `emit(...)` and exit cleanly.
-4. Register in `~/.factory/settings.json` with the correct matcher.
+3. Emit decisions or context with `exit(...)` and exit cleanly.
+4. Register the hook in your runtime-specific configuration (matcher, command, timeout).
 
 ## Troubleshooting
 
