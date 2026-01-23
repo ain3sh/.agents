@@ -46,8 +46,8 @@ from utils.instructions import (  # type: ignore
 @dataclass(slots=True, frozen=True)
 class Matchers:
     tool: str
-    input_pattern: str | None
-    output_pattern: str | None
+    input_pattern: object | None
+    output_pattern: object | None
 
 
 @dataclass(slots=True, frozen=True)
@@ -75,8 +75,8 @@ def _parse_matchers(value: object) -> Matchers | None:
     output_pattern = value_dict.get("output")
     return Matchers(
         tool=tool,
-        input_pattern=input_pattern if isinstance(input_pattern, str) and input_pattern else None,
-        output_pattern=output_pattern if isinstance(output_pattern, str) and output_pattern else None,
+        input_pattern=input_pattern if input_pattern is not None else None,
+        output_pattern=output_pattern if output_pattern is not None else None,
     )
 
 
@@ -159,10 +159,39 @@ def _match_tool(tool_name: str, pattern: str) -> bool:
     return fnmatch.fnmatch(tool_name, pattern)
 
 
-def _match_text(pattern: str | None, value: object) -> bool:
-    if not pattern:
+def _match_dict(pattern: dict[str, object], value: dict[str, object]) -> bool:
+    for key, expected in pattern.items():
+        if key not in value:
+            return False
+        actual = value[key]
+        if isinstance(expected, dict):
+            if not isinstance(actual, dict):
+                return False
+            if not _match_dict(cast(dict[str, object], expected), cast(dict[str, object], actual)):
+                return False
+            continue
+        if actual != expected:
+            return False
+    return True
+
+
+def _match_value(pattern: object | None, value: object) -> bool:
+    if pattern is None:
         return True
-    text = json.dumps(value, ensure_ascii=False, sort_keys=True)
+    if isinstance(pattern, dict):
+        pattern_dict = cast(dict[str, object], pattern)
+        candidate = value
+        if isinstance(candidate, str):
+            try:
+                candidate = json.loads(candidate)
+            except json.JSONDecodeError:
+                return False
+        if not isinstance(candidate, dict):
+            return False
+        return _match_dict(pattern_dict, cast(dict[str, object], candidate))
+    if not isinstance(pattern, str):
+        return False
+    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, sort_keys=True)
     if pattern.startswith("re:"):
         try:
             return re.search(pattern[3:], text) is not None
@@ -184,9 +213,9 @@ def _resolve_includes(config: Config, hook_input: PostToolUseInput) -> tuple[tup
     for rule in config.rules:
         if not _match_tool(hook_input.tool_name, rule.matchers.tool):
             continue
-        if not _match_text(rule.matchers.input_pattern, hook_input.tool_input):
+        if not _match_value(rule.matchers.input_pattern, hook_input.tool_input):
             continue
-        if not _match_text(rule.matchers.output_pattern, hook_input.tool_response):
+        if not _match_value(rule.matchers.output_pattern, hook_input.tool_response):
             continue
         ordered.extend(rule.include)
         text_blocks.extend(rule.include_text)

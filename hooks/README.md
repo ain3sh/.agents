@@ -108,7 +108,7 @@ if __name__ == "__main__":
 - **`commit_review_guard.py`**: blocks `git push` if CodeRabbit CLI reports findings; runs on detected push commands.
 
 ### PostToolUse
-- **`instructions.py`**: rule-based instruction injection by tool, with optional input/output matching and `${...}` interpolation for dynamic text.
+- **`instructions.py`**: rule-based instruction injection by tool, with optional input/output matching (string, regex, or structured dict) and `${...}` interpolation for dynamic text.
 
 ### PreCompact
 - **`block_auto.py`**: prevents auto-compaction while allowing manual `/compact`.
@@ -153,7 +153,7 @@ debug = false
 
 [[hooks.post_tool_use.instructions.rules]]
 match.tool = "ExitSpecMode"
-match.output = "re:approved.*true.*isEdited.*true"
+match.output = { approved = true, isEdited = true }
 include = ["instructions/IMPLEMENT_SPEC.md"]
 include_text = ["Read ${filePath} fully to make a mental note of all changes made first."]
 
@@ -192,7 +192,7 @@ todo_when = ["prompt_input_exit", "clear", "other"]
 
 ## Troubleshooting
 
-- **Hook not firing:** verify `settings.json` matcher and path are correct.
+- **Hook not firing:** verify your runtime hook registration (matcher, command, timeout).
 - **Env vars not persisting:** ensure `DROID_ENV_FILE` or `CLAUDE_ENV_FILE` is set.
 - **Need diagnostics:** run `session_start/debug.sh` to inspect env discovery.
 

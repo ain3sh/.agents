@@ -55,17 +55,17 @@ prompts_dir = "~/.agents/prompts"
 
 [[hooks.post_tool_use.instructions.rules]]
 match.tool = "ExitSpecMode"
-match.output = "re:approved.*false"
+match.output = { approved = false }
 include = ["instructions/IMPROVE_SPEC.md"]
 
 [[hooks.post_tool_use.instructions.rules]]
 match.tool = "ExitSpecMode"
-match.output = "re:approved.*true.*isEdited.*false"
+match.output = { approved = true, isEdited = false }
 include = ["instructions/IMPLEMENT_SPEC.md"]
 
 [[hooks.post_tool_use.instructions.rules]]
 match.tool = "ExitSpecMode"
-match.output = "re:approved.*true.*isEdited.*true"
+match.output = { approved = true, isEdited = true }
 include = ["instructions/IMPLEMENT_SPEC.md"]
 include_text = ["Read ${filePath} fully to make a mental note of all changes made first."]
 
