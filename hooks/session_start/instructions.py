@@ -23,6 +23,7 @@ from utils import (  # type: ignore
 from utils.instructions import (  # type: ignore
     build_template_context,
     dedupe,
+    match_when,
     parse_str_list,
     render_instructions,
 )
@@ -113,13 +114,6 @@ def _parse_args(argv: list[str]) -> Config:
     )
 
 
-def _matches_source(when: set[str], source: str) -> bool:
-    if not when:
-        return True
-    if "*" in when:
-        return True
-    return source in when
-
 def _resolve_includes(config: Config, source: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
     if not config.rules:
         return (), ()
@@ -127,7 +121,7 @@ def _resolve_includes(config: Config, source: str) -> tuple[tuple[str, ...], tup
     ordered: list[str] = []
     text_blocks: list[str] = []
     for rule in config.rules:
-        if _matches_source(rule.when, source):
+        if match_when(rule.when, source):
             ordered.extend(rule.include)
             text_blocks.extend(rule.include_text)
     return dedupe(ordered), tuple(text_blocks)

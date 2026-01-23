@@ -1,6 +1,7 @@
 """Shared helpers for instruction-style hooks."""
 from __future__ import annotations
 
+import fnmatch
 import json
 import re
 from dataclasses import asdict
@@ -61,6 +62,25 @@ def build_template_context(hook_input: BaseHookInput) -> dict[str, object]:
     return context
 
 
+def match_when(when: set[str], value: str) -> bool:
+    if not when:
+        return True
+    if "*" in when:
+        return True
+    return value in when
+
+
+def match_tool(tool_name: str, pattern: str) -> bool:
+    if not pattern or pattern == "*":
+        return True
+    if pattern.startswith("re:"):
+        try:
+            return re.search(pattern[3:], tool_name) is not None
+        except re.error:
+            return False
+    return fnmatch.fnmatch(tool_name, pattern)
+
+
 def _resolve_path(data: object, path: list[str]) -> tuple[bool, object | None]:
     current: object = data
     for part in path:
@@ -71,6 +91,47 @@ def _resolve_path(data: object, path: list[str]) -> tuple[bool, object | None]:
             return False, None
         current = current_dict[part]
     return True, current
+
+
+def _match_dict(pattern: dict[str, object], value: dict[str, object]) -> bool:
+    for key, expected in pattern.items():
+        if key not in value:
+            return False
+        actual = value[key]
+        if isinstance(expected, dict):
+            if not isinstance(actual, dict):
+                return False
+            if not _match_dict(cast(dict[str, object], expected), cast(dict[str, object], actual)):
+                return False
+            continue
+        if actual != expected:
+            return False
+    return True
+
+
+def match_value(pattern: object | None, value: object) -> bool:
+    if pattern is None:
+        return True
+    if isinstance(pattern, dict):
+        pattern_dict = cast(dict[str, object], pattern)
+        candidate = value
+        if isinstance(candidate, str):
+            try:
+                candidate = json.loads(candidate)
+            except json.JSONDecodeError:
+                return False
+        if not isinstance(candidate, dict):
+            return False
+        return _match_dict(pattern_dict, cast(dict[str, object], candidate))
+    if not isinstance(pattern, str):
+        return False
+    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, sort_keys=True)
+    if pattern.startswith("re:"):
+        try:
+            return re.search(pattern[3:], text) is not None
+        except re.error:
+            return False
+    return pattern in text
 
 
 def _stringify_value(value: object) -> str:

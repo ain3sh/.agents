@@ -10,9 +10,7 @@ Output: Adds additional context via hookSpecificOutput
 from __future__ import annotations
 
 import argparse
-import fnmatch
 import json
-import re
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -34,6 +32,8 @@ from utils import (  # type: ignore
 from utils.instructions import (  # type: ignore
     build_template_context,
     dedupe,
+    match_tool,
+    match_value,
     parse_str_list,
     render_instructions,
 )
@@ -145,62 +145,6 @@ def _parse_args(argv: list[str]) -> Config:
 
 
 # ============================================================================
-# Matching helpers
-# ============================================================================
-
-def _match_tool(tool_name: str, pattern: str) -> bool:
-    if not pattern or pattern == "*":
-        return True
-    if pattern.startswith("re:"):
-        try:
-            return re.search(pattern[3:], tool_name) is not None
-        except re.error:
-            return False
-    return fnmatch.fnmatch(tool_name, pattern)
-
-
-def _match_dict(pattern: dict[str, object], value: dict[str, object]) -> bool:
-    for key, expected in pattern.items():
-        if key not in value:
-            return False
-        actual = value[key]
-        if isinstance(expected, dict):
-            if not isinstance(actual, dict):
-                return False
-            if not _match_dict(cast(dict[str, object], expected), cast(dict[str, object], actual)):
-                return False
-            continue
-        if actual != expected:
-            return False
-    return True
-
-
-def _match_value(pattern: object | None, value: object) -> bool:
-    if pattern is None:
-        return True
-    if isinstance(pattern, dict):
-        pattern_dict = cast(dict[str, object], pattern)
-        candidate = value
-        if isinstance(candidate, str):
-            try:
-                candidate = json.loads(candidate)
-            except json.JSONDecodeError:
-                return False
-        if not isinstance(candidate, dict):
-            return False
-        return _match_dict(pattern_dict, cast(dict[str, object], candidate))
-    if not isinstance(pattern, str):
-        return False
-    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, sort_keys=True)
-    if pattern.startswith("re:"):
-        try:
-            return re.search(pattern[3:], text) is not None
-        except re.error:
-            return False
-    return pattern in text
-
-
-# ============================================================================
 # Content loading
 # ============================================================================
 
@@ -211,11 +155,11 @@ def _resolve_includes(config: Config, hook_input: PostToolUseInput) -> tuple[tup
     ordered: list[str] = []
     text_blocks: list[str] = []
     for rule in config.rules:
-        if not _match_tool(hook_input.tool_name, rule.matchers.tool):
+        if not match_tool(hook_input.tool_name, rule.matchers.tool):
             continue
-        if not _match_value(rule.matchers.input_pattern, hook_input.tool_input):
+        if not match_value(rule.matchers.input_pattern, hook_input.tool_input):
             continue
-        if not _match_value(rule.matchers.output_pattern, hook_input.tool_response):
+        if not match_value(rule.matchers.output_pattern, hook_input.tool_response):
             continue
         ordered.extend(rule.include)
         text_blocks.extend(rule.include_text)
