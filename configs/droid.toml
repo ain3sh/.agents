@@ -39,8 +39,8 @@ message = "[policy] confirm {tool_name} tool use"
 tools = ["Grep","Skill","Task","codebase:edit_file"]
 message = "[policy] {tool_name} is denylisted"
 [hooks.pre_tool_use.policy.overrides."Grep"]
-decision = "deny" # optional
-message = "[policy] Grep blocked; use warpgrep for codebase searching, or read files directly for targeted info. If you must use regular grep, use it through bash." # optional
+decision = "deny"
+message = "[policy] Grep blocked; use warpgrep for high-quality codebase searching, or read files directly for targeted info. Only use rg through bash if searching **within** a file or collection of **logfiles**."
 
 [hooks.pre_tool_use.commit_review_guard]
 type = "committed"
