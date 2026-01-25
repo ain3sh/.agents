@@ -180,7 +180,7 @@ def _truncate(text: str, limit: int) -> str:
 # ============================================================================
 
 def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
-    if hook_input.tool_name != "Bash":
+    if hook_input.tool_name != "Execute":
         exit(hook_event_name=HOOK_EVENT_NAME)
 
     command = str(hook_input.tool_input.get("command", ""))
