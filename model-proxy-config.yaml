@@ -28,6 +28,8 @@ openai-compatibility: # api-access models
     models:
       - name: "minimax/minimax-m2.1"
         alias: "openrouter-minimax-m2.1"
+      - name: "minimax/minimax-m2-her"
+        alias: "openrouter-minimax-m2-her"
       - name: "deepseek/deepseek-v3.2-speciale"
         alias: "openrouter-deepseek-v3.2-speciale"
       - name: "openai/gpt-5.2-pro"

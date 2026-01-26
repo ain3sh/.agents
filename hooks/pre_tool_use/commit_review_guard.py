@@ -481,9 +481,6 @@ def _store_cache(path: Path, entry: CacheEntry) -> None:
 # ============================================================================
 
 def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
-    if hook_input.tool_name != "Execute":
-        exit(hook_event_name=HOOK_EVENT_NAME)
-
     command = str(hook_input.tool_input.get("command", ""))
     if not _is_git_push_command(command):
         exit(hook_event_name=HOOK_EVENT_NAME)
