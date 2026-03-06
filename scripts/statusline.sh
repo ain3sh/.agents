@@ -1,117 +1,190 @@
 #!/usr/bin/env bash
 # ~/.agents/scripts/statusline.sh
-# Factory Droid Status Line
 
-# read JSON input from Factory Droid
 input=$(cat)
 
-# === ELEGANT DISPLAY CONFIG ===
-TIME_COLOR="\033[38;2;135;206;250m"        # sky blue
-HOST_COLOR="\033[38;2;106;159;181m"        # steel blue
-MODEL_COLOR="\033[38;2;186;133;232m"       # soft purple
-TOKENS_COLOR="\033[38;2;255;159;67m"       # orange amber
-ACTIVE_TIME_COLOR="\033[38;2;152;251;152m" # pale green
-DIR_COLOR="\033[38;2;255;179;71m"          # warm amber
-PARENTS_COLOR="\033[38;2;255;205;128m"     # light amber
-GIT_COLOR="\033[38;2;152;195;121m"         # soft green
-PY_COLOR="\033[38;2;97;214;214m"           # aqua
-SESSION_COLOR="\033[38;2;169;169;169m"     # dim gray
-SEPARATOR_COLOR="\033[38;2;128;128;128m"   # medium gray
-ACCENT_COLOR="\033[38;2;180;180;180m"      # light gray
+TIME_COLOR="\033[38;2;135;206;250m"
+HOST_COLOR="\033[38;2;106;159;181m"
+MODEL_COLOR="\033[38;2;186;133;232m"
+TOKENS_COLOR="\033[38;2;255;159;67m"
+DIR_COLOR="\033[38;2;255;179;71m"
+PARENTS_COLOR="\033[38;2;255;205;128m"
+GIT_COLOR="\033[38;2;152;195;121m"
+PR_COLOR="\033[38;2;132;211;255m"
+PY_COLOR="\033[38;2;97;214;214m"
+SESSION_COLOR="\033[38;2;169;169;169m"
+SEPARATOR_COLOR="\033[38;2;128;128;128m"
+ACCENT_COLOR="\033[38;2;180;180;180m"
 RESET="\033[0m"
 SEP_DOT="◦"
 
-
-# === HELPER FUNCTIONS ===
 format_tokens() {
     local tokens=$1
     if [[ $tokens -ge 1000000 ]]; then
-        local whole=$((tokens / 1000000))
-        local frac=$(( (tokens % 1000000) / 10000 ))
-        printf "%d.%02dM" "$whole" "$frac"
+        printf "%d.%02dM" "$((tokens / 1000000))" "$(((tokens % 1000000) / 10000))"
     elif [[ $tokens -ge 1000 ]]; then
-        local whole=$((tokens / 1000))
-        local frac=$(( (tokens % 1000) / 10 ))
-        printf "%d.%02dk" "$whole" "$frac"
+        printf "%d.%02dk" "$((tokens / 1000))" "$(((tokens % 1000) / 10))"
     else
         printf "%d" "$tokens"
     fi
 }
 
-format_duration() {
-    local ms=$1
-    local secs=$((ms / 1000))
-    local mins=$((secs / 60))
-    local hours=$((mins / 60))
-    secs=$((secs % 60))
-    mins=$((mins % 60))
-    if [[ $hours -gt 0 ]]; then
-        printf "%02d:%02d:%02d" "$hours" "$mins" "$secs"
-    else
-        printf "%d:%02d" "$mins" "$secs"
-    fi
+trim_spaces() {
+    local s="$1"
+    s="${s#${s%%[![:space:]]*}}"
+    s="${s%${s##*[![:space:]]}}"
+    printf '%s' "$s"
 }
 
+first_valid_dir() {
+    local d
+    for d in "$@"; do
+        if [[ -n "$d" && -d "$d" ]]; then
+            printf '%s' "$d"
+            return 0
+        fi
+    done
+    return 1
+}
 
-# === SYSTEM DATA ===
+resolve_parent_cwd() {
+    local p
+    p=$(readlink -f "/proc/$PPID/cwd" 2>/dev/null || true)
+    [[ -n "$p" && -d "$p" ]] && printf '%s' "$p"
+}
+
+resolve_cwd_from_transcript() {
+    local transcript_path="$1"
+    local tail_text
+    local candidate
+
+    [[ -f "$transcript_path" ]] || return 0
+
+    tail_text=$(tail -c 65536 "$transcript_path" 2>/dev/null || true)
+    [[ -n "$tail_text" ]] || return 0
+
+    candidate=$(printf '%s' "$tail_text" | grep -oE '"command":"cd [^"]+"' | tail -n 1 | sed -E 's/^"command":"cd //; s/"$//')
+    if [[ -z "$candidate" ]]; then
+        candidate=$(printf '%s' "$tail_text" | grep -oE '\\"command\\":\\"cd [^\\"]+' | tail -n 1 | sed -E 's/^\\"command\\":\\"cd //')
+    fi
+    if [[ -z "$candidate" ]]; then
+        candidate=$(printf '%s' "$tail_text" | grep -oE 'Running: cd [^\n"]+' | tail -n 1 | sed -E 's/^Running: cd //')
+    fi
+
+    [[ -n "$candidate" ]] || return 0
+
+    candidate=$(trim_spaces "$candidate")
+    candidate="${candidate%%&&*}"
+    candidate="${candidate%%;*}"
+    candidate=$(trim_spaces "$candidate")
+
+    if [[ "$candidate" == ~/* ]]; then
+        candidate="$HOME/${candidate#~/}"
+    fi
+
+    [[ -d "$candidate" ]] || return 0
+    printf '%s' "$candidate"
+}
+
+git_in_cwd() {
+    GIT_OPTIONAL_LOCKS=0 git -C "$CWD" "$@" 2>/dev/null
+}
+
+get_pr_number() {
+    local repo_root=$1
+    local branch=$2
+    local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/factory-statusline"
+    local cache_key_source="${repo_root}|${branch}"
+    local cache_key
+    local cache_file
+    local now
+    local ts
+    local val
+
+    if ! command -v gh >/dev/null 2>&1; then
+        return 0
+    fi
+
+    mkdir -p "$cache_dir" 2>/dev/null || return 0
+
+    if command -v sha1sum >/dev/null 2>&1; then
+        cache_key=$(printf '%s' "$cache_key_source" | sha1sum | awk '{print $1}')
+    else
+        cache_key=$(printf '%s' "$cache_key_source" | tr '/:| ' '_')
+    fi
+
+    cache_file="${cache_dir}/pr-${cache_key}"
+    now=$(date +%s)
+
+    if [[ -f "$cache_file" ]]; then
+        read -r ts val < "$cache_file"
+        if [[ "$ts" =~ ^[0-9]+$ ]] && (( now - ts < 180 )); then
+            [[ "$val" == "-" ]] && return 0
+            [[ -n "$val" ]] && printf '%s' "$val"
+            return 0
+        fi
+    fi
+
+    val=$(cd "$CWD" 2>/dev/null && GH_PAGER=cat gh pr view --json number --jq '.number' 2>/dev/null || true)
+    [[ -z "$val" ]] && val="-"
+    printf '%s %s\n' "$now" "$val" > "$cache_file" 2>/dev/null || true
+
+    [[ "$val" == "-" ]] && return 0
+    printf '%s' "$val"
+}
+
 TIME=$(date '+%H:%M')
 HOSTNAME=$(hostname -s)
 
-
-# === JSON DATA EXTRACTION ===
 MODEL="droid"
+CLI_VERSION=""
 SESSION_ID=""
-CWD=$(pwd)
+INPUT_CWD=""
+PROCESS_CWD=$(pwd -P 2>/dev/null || pwd)
+PARENT_CWD=$(resolve_parent_cwd)
+CWD=""
 TRANSCRIPT_PATH=""
 
-if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]]; then
-    if echo "$input" | jq -e . >/dev/null 2>&1; then
-        # model display name (direct, no parsing needed)
-        raw_model=$(echo "$input" | jq -r '.model.display_name // .model.id // empty' 2>/dev/null)
-        [[ -n "$raw_model" && "$raw_model" != "null" ]] && MODEL="$raw_model"
+if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && echo "$input" | jq -e . >/dev/null 2>&1; then
+    p_model=$(echo "$input" | jq -r '.model.display_name // .model.id // "droid"' 2>/dev/null)
+    p_version=$(echo "$input" | jq -r '.version // ""' 2>/dev/null)
+    p_session=$(echo "$input" | jq -r '.session_id // ""' 2>/dev/null)
+    p_cwd=$(echo "$input" | jq -r '.cwd // ""' 2>/dev/null)
+    p_transcript=$(echo "$input" | jq -r '.transcript_path // ""' 2>/dev/null)
 
-        # session id
-        raw_session=$(echo "$input" | jq -r '.session_id // empty' 2>/dev/null)
-        [[ -n "$raw_session" && "$raw_session" != "null" ]] && SESSION_ID="$raw_session"
-
-        # working directory
-        raw_cwd=$(echo "$input" | jq -r '.cwd // empty' 2>/dev/null)
-        [[ -n "$raw_cwd" && "$raw_cwd" != "null" ]] && CWD="$raw_cwd"
-
-        # transcript path (for settings.json lookup)
-        raw_transcript=$(echo "$input" | jq -r '.transcript_path // empty' 2>/dev/null)
-        [[ -n "$raw_transcript" && "$raw_transcript" != "null" ]] && TRANSCRIPT_PATH="$raw_transcript"
-    fi
+    [[ -n "$p_model" && "$p_model" != "null" ]] && MODEL="$p_model"
+    [[ -n "$p_version" && "$p_version" != "null" ]] && CLI_VERSION="$p_version"
+    [[ -n "$p_session" && "$p_session" != "null" ]] && SESSION_ID="$p_session"
+    [[ -n "$p_cwd" && "$p_cwd" != "null" ]] && INPUT_CWD="$p_cwd"
+    [[ -n "$p_transcript" && "$p_transcript" != "null" ]] && TRANSCRIPT_PATH="$p_transcript"
 fi
 
-
-# === SESSION SETTINGS EXTRACTION ===
-TOKENS_USED=""
-ACTIVE_TIME=""
+CWD=$(first_valid_dir "$PROCESS_CWD" "$INPUT_CWD" "$PARENT_CWD" "${FACTORY_PROJECT_DIR:-}" || printf '%s' "$HOME")
 
 if [[ -n "$TRANSCRIPT_PATH" ]]; then
-    # derive settings path: /path/to/<session-id>.jsonl -> /path/to/<session-id>.settings.json
-    SETTINGS_PATH="${TRANSCRIPT_PATH%.jsonl}.settings.json"
-    
-    if [[ -f "$SETTINGS_PATH" ]] && command -v jq >/dev/null 2>&1; then
-        settings=$(cat "$SETTINGS_PATH" 2>/dev/null)
-        if echo "$settings" | jq -e . >/dev/null 2>&1; then
-            # token usage: inputTokens + thinkingTokens + outputTokens
-            input_tok=$(echo "$settings" | jq -r '.tokenUsage.inputTokens // 0' 2>/dev/null)
-            thinking_tok=$(echo "$settings" | jq -r '.tokenUsage.thinkingTokens // 0' 2>/dev/null)
-            output_tok=$(echo "$settings" | jq -r '.tokenUsage.outputTokens // 0' 2>/dev/null)
-            total_tok=$((input_tok + thinking_tok + output_tok))
-            [[ $total_tok -gt 0 ]] && TOKENS_USED=$(format_tokens $total_tok)
-
-            # active time (extracted but not displayed - for future use)
-            active_ms=$(echo "$settings" | jq -r '.assistantActiveTimeMs // 0' 2>/dev/null)
-            [[ $active_ms -gt 0 ]] && ACTIVE_TIME=$(format_duration $active_ms)
+    transcript_cwd=$(resolve_cwd_from_transcript "$TRANSCRIPT_PATH")
+    if [[ -n "$transcript_cwd" ]]; then
+        if [[ "$CWD" == "$INPUT_CWD" || "$CWD" == "${FACTORY_PROJECT_DIR:-}" || -z "$INPUT_CWD" ]]; then
+            CWD="$transcript_cwd"
         fi
     fi
 fi
 
+TOKENS_USED=""
+if [[ -n "$TRANSCRIPT_PATH" ]]; then
+    SETTINGS_PATH="${TRANSCRIPT_PATH%.jsonl}.settings.json"
+    if [[ -f "$SETTINGS_PATH" ]] && command -v jq >/dev/null 2>&1; then
+        tok_tuple=$(jq -r '[
+            (.tokenUsage.inputTokens // 0),
+            (.tokenUsage.thinkingTokens // 0),
+            (.tokenUsage.outputTokens // 0)
+        ] | @tsv' "$SETTINGS_PATH" 2>/dev/null)
+        IFS=$'\t' read -r input_tok thinking_tok output_tok <<< "$tok_tuple"
+        total_tok=$((input_tok + thinking_tok + output_tok))
+        [[ $total_tok -gt 0 ]] && TOKENS_USED=$(format_tokens "$total_tok")
+    fi
+fi
 
-# === DIRECTORY CONTEXT (2 levels up) ===
 DIR_NAME=$(basename "$CWD")
 PARENT_CONTEXT=""
 if [[ "$CWD" != "/" ]]; then
@@ -126,55 +199,59 @@ if [[ "$CWD" != "/" ]]; then
     fi
 fi
 
-
-# === GIT BRANCH (simplified) ===
 GIT_INFO=""
-if cd "$CWD" 2>/dev/null && git rev-parse --git-dir >/dev/null 2>&1; then
-    BRANCH=$(git branch --show-current 2>/dev/null)
+PR_INFO=""
+if [[ -d "$CWD" ]] && git_in_cwd rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    BRANCH=$(git_in_cwd symbolic-ref --quiet --short HEAD || true)
+    if [[ -z "$BRANCH" ]]; then
+        SHA=$(git_in_cwd rev-parse --short HEAD)
+        [[ -n "$SHA" ]] && BRANCH="detached@${SHA}"
+    fi
+
     if [[ -n "$BRANCH" ]]; then
         DIRTY=""
-        if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+        if [[ -n "$(git_in_cwd status --porcelain --untracked-files=normal | head -n 1)" ]]; then
             DIRTY="● "
         fi
         GIT_INFO="${DIRTY}${BRANCH}"
+
+        if [[ "$BRANCH" != detached@* ]]; then
+            REPO_ROOT=$(git_in_cwd rev-parse --show-toplevel)
+            PR_NUMBER=$(get_pr_number "$REPO_ROOT" "$BRANCH")
+            [[ -n "$PR_NUMBER" ]] && PR_INFO="#${PR_NUMBER}"
+        fi
     fi
 fi
 
-
-# === PYTHON ENVIRONMENT ===
 PY_INFO=""
-if [[ -n "$VIRTUAL_ENV" ]]; then
+if [[ -n "${VIRTUAL_ENV:-}" ]]; then
     VENV_NAME=$(basename "$VIRTUAL_ENV")
     [[ "$VENV_NAME" == ".venv" ]] && VENV_NAME="venv"
     PY_INFO="$VENV_NAME"
 fi
 
-
-# === OUTPUT ===
-# time
 printf "🕐 ${TIME_COLOR}%s${RESET}" "$TIME"
 
-# model [tokens]
 printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
 printf "🤖 ${MODEL_COLOR}%s${RESET}" "$MODEL"
+if [[ -n "$CLI_VERSION" ]]; then
+    printf " ${ACCENT_COLOR}(v%s)${RESET}" "$CLI_VERSION"
+fi
 if [[ -n "$TOKENS_USED" ]]; then
     printf " ${ACCENT_COLOR}[${RESET}${TOKENS_COLOR}%s${RESET}${ACCENT_COLOR}]${RESET}" "$TOKENS_USED"
 fi
 
-# directory
 printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
 printf "📁 ${DIR_COLOR}%s${RESET}" "$DIR_NAME"
 if [[ -n "$PARENT_CONTEXT" ]]; then
     printf " ${ACCENT_COLOR}(${RESET}${PARENTS_COLOR}%s${RESET}${ACCENT_COLOR})${RESET}" "$PARENT_CONTEXT"
 fi
 
-# python env (before git)
 if [[ -n "$PY_INFO" ]]; then
     printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
     printf "🐍 ${PY_COLOR}%s${RESET}" "$PY_INFO"
 fi
 
-# git
 if [[ -n "$GIT_INFO" ]]; then
     printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
     if [[ "$GIT_INFO" == "● "* ]]; then
@@ -182,9 +259,11 @@ if [[ -n "$GIT_INFO" ]]; then
     else
         printf "🌿 ${GIT_COLOR}%s${RESET}" "$GIT_INFO"
     fi
+    if [[ -n "$PR_INFO" ]]; then
+        printf " ${ACCENT_COLOR}(${RESET}${PR_COLOR}%s${RESET}${ACCENT_COLOR})${RESET}" "$PR_INFO"
+    fi
 fi
 
-# hostname/session_id (rightmost)
 printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
 printf "💻 ${HOST_COLOR}%s${RESET}" "$HOSTNAME"
 if [[ -n "$SESSION_ID" ]]; then
