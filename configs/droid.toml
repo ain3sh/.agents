@@ -36,7 +36,7 @@ message = "[policy] {tool_name} is allowlisted"
 tools = ["review:*"]
 message = "[policy] confirm {tool_name} tool use"
 [hooks.pre_tool_use.policy.deny]
-tools = ["Grep","Skill","Task","codebase:edit_file"]
+tools = ["Grep","Task","codebase:edit_file"]
 message = "[policy] {tool_name} is denylisted"
 [hooks.pre_tool_use.policy.overrides."Grep"]
 decision = "deny"
