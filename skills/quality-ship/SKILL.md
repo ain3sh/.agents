@@ -6,20 +6,6 @@ user-invocable: false
 
 # Quality Checks + Ship
 
-## Pre-flight: Worktree `node_modules`
-
-If working in a **git worktree**, `node_modules` may be missing. Check first:
-
-```bash
-if [ ! -d "node_modules" ] && [ ! -L "node_modules" ]; then
-  # Symlink to the main repo's node_modules -- never npm install in a worktree
-  MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
-  ln -s "$MAIN_REPO/node_modules" node_modules
-fi
-```
-
-**Do not** run `npm install` in a worktree. It's slow, may conflict with the main repo's lockfile, and the symlink approach is what's expected.
-
 ## Quality Checks
 
 Detect the project's tooling from config files at the repo root, then run each applicable check:
