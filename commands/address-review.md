@@ -9,16 +9,29 @@ Load skills: **pr-context**, **quality-ship**.
 
 Follow the **pr-context** skill to fetch full PR context from `$ARGUMENTS`.
 
-Additionally, fetch all review comments and review threads:
+Fetch review comments, reviews, and **GraphQL thread IDs** (needed for resolving threads later):
 ```bash
 gh api "repos/$REPO/pulls/<number>/comments" | jq '.[] | {id, path, line, body, user: .user.login, in_reply_to_id}'
 gh api "repos/$REPO/pulls/<number>/reviews" | jq '.[] | {id, state, body, user: .user.login}'
+
+# Fetch thread node IDs upfront -- REST API cannot resolve threads
+gh api graphql -f query='
+  query {
+    repository(owner: "<owner>", name: "<repo>") {
+      pullRequest(number: <number>) {
+        reviewThreads(first: 100) {
+          nodes { id isResolved comments(first: 1) { nodes { databaseId body } } }
+        }
+      }
+    }
+  }'
 ```
 
 Group comments into threads. For each thread, identify:
 - **What the reviewer is asking for**: code change, clarification, or acknowledgment.
 - **File + line**: Where the feedback targets.
 - **Whether it's blocking**: `REQUEST_CHANGES` reviews vs `COMMENT` suggestions.
+- **GraphQL thread ID**: Map each root comment's `databaseId` to its thread `id` for resolution.
 
 ## 2. Triage
 
@@ -55,7 +68,21 @@ gh api "repos/$REPO/pulls/<number>/comments" \
 
 For threads where the response is a clarification or disagreement, post the drafted reply from step 2.
 
-## 6. Re-request Review
+## 6. Resolve Threads
+
+Thread resolution is **GraphQL-only** (REST API has no endpoint for this).
+
+For each addressed thread, resolve it using the thread ID fetched in step 1:
+```bash
+gh api graphql -f query='
+  mutation {
+    resolveReviewThread(input: {threadId: "<thread-node-id>"}) {
+      thread { isResolved }
+    }
+  }'
+```
+
+## 7. Re-request Review
 
 ```bash
 gh pr edit <number> --add-reviewer <reviewer-login>
