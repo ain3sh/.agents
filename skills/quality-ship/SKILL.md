@@ -12,7 +12,7 @@ Detect the project's tooling from config files at the repo root, then run each a
 
 | Check | Detection signals | Typical command |
 |-------|-------------------|-----------------|
-| Format | `.prettierrc*`, `biome.json`, `dprint.json` | `npm run format` or equivalent |
+| Format | `.prettierrc*`, `biome.json`, `dprint.json` | `npm run format --write` or `npx prettier --write` or equivalent |
 | Lint fix | `eslint.config*`, `.eslintrc*`, `biome.json` | `npm run fix` or `npx eslint --fix` |
 | Dead code | `knip.*`, `knip` in package.json scripts | `npm run knip` or `npx knip` |
 | Type check | `tsconfig.json` | `npm run typecheck` or `npx tsc --noEmit` |
