@@ -18,6 +18,7 @@ argument-hint: <TICKET-ID or pasted ticket content>
 - Read the key files: entry points, data models, services, components, tests.
 - Map the current behavior and data flow in the area of change.
 - Identify existing patterns, conventions, and abstractions to follow.
+- When the ticket names specific flows or commands to reuse, trace each one end-to-end and note exactly where the new feature's behavior diverges.
 - Note tests, types, configs, and documentation that will need updating.
 
 ## 3. Think Through the Approach
@@ -30,6 +31,7 @@ Do **not** take the easiest-but-ugly path. Evaluate the implementation against:
 - **Edge cases**: Boundary conditions, empty states, concurrent access.
 - **Testability**: Changes are easy to unit/integration test.
 - **Blast radius**: Minimize files changed; avoid unnecessary refactors.
+- **Composition over extraction**: Before introducing a new helper or wrapper, check whether the feature can be implemented by entering an existing flow at a different point. Routing through existing plumbing is the default; new plumbing is fine when the existing flow has side effects you don't want, or when direct composition would create worse coupling than a small new abstraction -- but the spec must say why.
 
 If there are multiple viable approaches, evaluate trade-offs explicitly.
 
@@ -41,6 +43,7 @@ Present a structured implementation plan:
 - **Files to modify/create**: List with a brief description of the changes per file.
 - **Key decisions**: Non-obvious choices and their reasoning.
 - **Risks**: Potential issues, migration concerns, or things to watch.
+- **Alternatives rejected**: At least one simpler approach (e.g., composing an existing flow directly) with a concrete reason it was insufficient.
 - **Open questions**: Anything ambiguous that needs user input.
 
 **Wait for user approval before writing any code.**
