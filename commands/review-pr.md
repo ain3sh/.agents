@@ -63,7 +63,17 @@ For each finding, note:
 - **File + line**: Exact location in the diff
 - **What/Why/How**: The issue, why it matters, suggested fix
 
-## 5. Post Threaded Review Comments
+## 5. User Approval Gate
+
+Present all findings to the user before posting anything to GitHub:
+
+- List each finding grouped by file, with severity, line, and suggested fix.
+- State the intended verdict (`APPROVE` / `COMMENT` / `REQUEST_CHANGES`).
+- **Wait for explicit user confirmation** before proceeding to step 6.
+
+If the user edits, drops, or re-severities any findings, apply those changes before posting.
+
+## 6. Post Threaded Review Comments
 
 Use `REPO` and `HEAD_SHA` from the **pr-context** skill.
 
@@ -82,7 +92,7 @@ gh api "repos/$REPO/pulls/<number>/comments" \
 - Group closely-related findings into a single comment where it improves readability.
 - Include the relevant code snippet in the comment body for context.
 
-## 6. Verdict
+## 7. Verdict
 
 After posting all line comments, submit a formal review:
 
