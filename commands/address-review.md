@@ -51,7 +51,7 @@ For each thread marked "Fix":
 
 ## 4. Quality + Push
 
-Follow the **quality-ship** skill for quality checks, commit, and push only (skip PR creation -- branch already has one):
+Follow the **quality-ship** skill for quality checks, commit, and push:
 - Run detected quality checks. Fix issues until clean.
 - Commit: `fix(<scope>): address review feedback (<TICKET-ID>)`
 - Push to the existing PR branch.

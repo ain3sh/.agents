@@ -3,7 +3,7 @@ description: Reflect on session learnings, update a skill, then open a PR
 argument-hint: <skill-name> [context about what was learned]
 ---
 
-Load skills: **ticket-branch**, **quality-ship**.
+Load skills: **ticket-branch**, **quality-ship**, **pr-description**.
 
 ## 1. Reflect
 
@@ -47,8 +47,18 @@ Rewrite/amend the skill so that a future agent with **no prior context** would s
 Follow the **quality-ship** skill:
 - Run all detected quality checks on changed files.
 - Commit with message: `docs(<skill-name>): update with learnings from <context>`.
-- Push and open PR.
+- Push.
 
-PR body should describe: what was learned, what changed in the skill, and why it improves future agent success.
+## 7. Open PR
+
+Follow the **pr-description** skill to write the PR body. The Description section should cover: what was learned, what changed in the skill, and why it improves future agent success.
+
+```bash
+DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
+gh pr create \
+  --base "$DEFAULT_BRANCH" \
+  --title "docs(<skill-name>): update with learnings from <context>" \
+  --body-file /tmp/pr-body.md
+```
 
 Report the PR URL.
