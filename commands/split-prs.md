@@ -3,7 +3,7 @@ description: Break a branch's commits into clean, separate PRs
 argument-hint: <branch-name> [--base <base-branch>]
 ---
 
-Load skills: **ticket-branch**, **quality-ship**.
+Load skills: **ticket-branch**, **quality-ship**, **pr-description**.
 
 ## 1. Analyze the Branch
 
@@ -63,17 +63,14 @@ git checkout -b "ain3sh/<prefix>-<number>-<stub>" "<previous-pr-branch>"
 Follow the **quality-ship** skill: run detected checks, fix issues, commit any fixups, push.
 
 ### Open PR
+Follow the **pr-description** skill to analyze the diff and write the PR body. Include the contextual additions for stacked/split PRs (part K of N, dependencies, scope).
+
 ```bash
 gh pr create \
   --base "$TARGET" \
   --title "<title>" \
-  --body "<body>"
+  --body-file /tmp/pr-body.md
 ```
-
-PR body should include:
-- **Context**: "Part K of N from [ticket/branch]. Splits [original-branch] into focused PRs."
-- **Dependencies**: "Depends on #X" or "Independent -- can merge in any order."
-- **What this PR covers**: brief scope description.
 
 ## 4. Report
 

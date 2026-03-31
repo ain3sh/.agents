@@ -3,7 +3,7 @@ description: Full PR workflow -- ticket, branch, verify/fix, lint/test, commit, 
 argument-hint: [TICKET-ID | description of work]
 ---
 
-Load skills: **ticket-branch**, **quality-ship**.
+Load skills: **ticket-branch**, **quality-ship**, **pr-description**.
 
 ## 1. Ticket + Branch
 
@@ -31,6 +31,21 @@ First, determine the **entry state** -- does working code already exist from thi
 Follow the **quality-ship** skill:
 - Run all detected quality checks. Fix issues and re-run until clean.
 - Commit (conventional format, referencing the ticket).
-- Push and open the PR.
+- Push.
+
+## 4. Open PR
+
+Follow the **pr-description** skill:
+- Analyze the diff to determine change type, scope, and motivation.
+- Format the PR title (conventional commits).
+- Write the full PR body (all four sections: Description, Related Issue, Risk & Impact, Testing).
+
+```bash
+DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
+gh pr create \
+  --base "$DEFAULT_BRANCH" \
+  --title "<title>" \
+  --body-file /tmp/pr-body.md
+```
 
 Report the PR URL.

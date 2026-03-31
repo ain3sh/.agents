@@ -1,6 +1,6 @@
 ---
 name: quality-ship
-description: Shared atom for running quality checks, committing, pushing, and opening a PR. Background knowledge for workflow commands -- not invoked directly.
+description: Shared atom for running quality checks, committing, and pushing. Background knowledge for workflow commands -- not invoked directly.
 user-invocable: false
 ---
 
@@ -40,21 +40,3 @@ git commit -m "<type>(<scope>): <description> (<TICKET-ID>)"
 ```bash
 git push -u origin HEAD
 ```
-
-## Open PR
-
-```bash
-DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
-gh pr create \
-  --base "$DEFAULT_BRANCH" \
-  --title "<type>(<scope>): <description> (<TICKET-ID>)" \
-  --body "<body>"
-```
-
-PR body structure:
-- **Summary**: What changed and why.
-- **Linear ticket**: Link (use `linear i link <ID>`).
-- **Testing**: What was tested and how.
-- **Screenshots / output**: If applicable.
-
-Report the PR URL when done.
