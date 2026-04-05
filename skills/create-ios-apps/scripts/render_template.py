@@ -48,12 +48,11 @@ def copy_tree(src_dir, dst_dir, mapping):
             shutil.copystat(src_file, dst_file)
 
 
-
 def main():
-    parser = argparse.ArgumentParser(description="Render a template directory with placeholders.")
+    parser = argparse.ArgumentParser(description="Render template directory with __KEY__ placeholders.")
     parser.add_argument("--src", required=True, help="Template source directory")
     parser.add_argument("--dst", required=True, help="Destination directory")
-    parser.add_argument("--var", action="append", default=[], help="Template variable KEY=VALUE")
+    parser.add_argument("--var", action="append", default=[], help="KEY=VALUE placeholder")
     args = parser.parse_args()
 
     mapping = parse_vars(args.var)
