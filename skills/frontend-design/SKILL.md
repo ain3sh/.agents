@@ -40,3 +40,16 @@ Interpret creatively and make unexpected choices that feel genuinely designed fo
 **IMPORTANT**: Match implementation complexity to the aesthetic vision. Maximalist designs need elaborate code with extensive animations and effects. Minimalist or refined designs need restraint, precision, and careful attention to spacing, typography, and subtle details. Elegance comes from executing the vision well.
 
 Remember: Claude is capable of extraordinary creative work. Don't hold back, show what can truly be created when thinking outside the box and committing fully to a distinctive vision.
+
+## Pre-built Themes
+
+When the user wants consistent, ready-made styling (slides, docs, reports, landing pages) rather than bespoke design, 10 curated themes are available in `themes/`. Each defines a color palette (hex codes) and font pairing.
+
+**Available themes**: Ocean Depths, Sunset Boulevard, Forest Canopy, Modern Minimalist, Golden Hour, Arctic Frost, Desert Rose, Tech Innovation, Botanical Garden, Midnight Galaxy.
+
+**Workflow**:
+1. Present the list above and let the user pick (or describe what they want).
+2. Read the chosen theme file from `themes/` (e.g. `themes/ocean-depths.md`).
+3. Apply its colors and fonts consistently across the artifact.
+
+**Custom themes**: If none fit, generate a new theme on-the-fly -- pick a evocative name, define 3-4 hex colors + a header/body font pair, and apply it. Follow the same structure as the existing theme files.
