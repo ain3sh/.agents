@@ -39,6 +39,39 @@ linear i open TEAM-123                             # Open in browser
 linear i link TEAM-123                             # Print URL
 ```
 
+## Relations
+
+```bash
+linear rel list TEAM-123                           # List relationships
+linear rel add TEAM-1 -r blocks TEAM-2             # TEAM-1 blocks TEAM-2
+linear rel add TEAM-1 -r blocked-by TEAM-2         # TEAM-1 blocked by TEAM-2
+linear rel add TEAM-1 -r related TEAM-2            # Link as related
+linear rel add TEAM-1 -r duplicate TEAM-2          # Mark as duplicate
+linear rel remove TEAM-1 TEAM-2                    # Remove link
+linear rel parent TEAM-2 TEAM-1                    # Set parent
+linear rel unparent TEAM-2                         # Remove parent
+```
+
+Relation types: `blocks`, `blocked-by`, `related`, `duplicate`.
+
+## Statuses
+
+```bash
+linear st list -t TEAM                             # Workflow states
+linear st get "In Progress" -t TEAM                # State details
+```
+
+Use `st list` to discover valid names for `i update -s`.
+
+## Bulk Operations
+
+```bash
+linear b update-state -s Done TEAM-1 TEAM-2        # Bulk status
+linear b assign --user me TEAM-1 TEAM-2            # Bulk assign
+linear b label --add bug TEAM-1 TEAM-2             # Bulk label
+linear b unassign TEAM-1 TEAM-2                    # Bulk unassign
+```
+
 ## Projects & Teams
 
 ```bash
@@ -59,6 +92,59 @@ linear sp status -t TEAM                           # Sprint status
 linear sp progress -t TEAM                         # Progress bar
 linear sp burndown -t TEAM                         # Burndown chart
 linear sp velocity -t TEAM                         # Velocity
+```
+
+## Git Integration
+
+```bash
+linear g checkout TEAM-123                         # Checkout/create branch
+linear g branch TEAM-123                           # Print branch name
+linear g create TEAM-123                           # Create branch (no checkout)
+linear g pr TEAM-123                               # GitHub PR
+linear g pr TEAM-123 --draft                       # Draft PR
+```
+
+## Context
+
+Detects current issue from git branch. Designed for AI agents.
+
+```bash
+linear context                                     # Issue from branch
+linear ctx --output json                           # JSON for parsing
+```
+
+Parses: `fac-123-fix-bug`, `feature/FAC-456-new-feature`.
+
+## History
+
+```bash
+linear history issue TEAM-123                      # Activity log
+linear hist issue TEAM-123 --limit 50              # More entries
+```
+
+## Triage
+
+```bash
+linear triage list                                 # Unassigned issues
+linear tr claim TEAM-123                           # Claim + backlog
+linear tr snooze TEAM-123 --duration 1w            # Snooze 1 week
+```
+
+## Slack Thread Enrichment
+
+Linear tickets often have Slack threads attached (in comments or description URLs).
+If the `slack-cli` skill is available, use it to fetch thread context for richer understanding of an issue or feature goal:
+
+```bash
+# 1. Pull ticket details / comments for Slack URLs
+linear i get TEAM-123 --comments
+
+# 2. Extract channel ID + thread timestamp from the Slack URL
+#    e.g. https://workspace.slack.com/archives/C0123456789/p1234567890123456
+#    → channel=C0123456789, thread_ts=1234567890.123456
+
+# 3. Fetch the thread via slack-cli
+slack ch history C0123456789 --oldest 1234567890.123456 --count 50
 ```
 
 ## Agent Output Patterns
