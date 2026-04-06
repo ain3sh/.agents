@@ -31,6 +31,7 @@ HOOK_EVENT_NAME = "PreToolUse"
 class Override:
     decision: str | None
     message: str | None
+    match_input: dict[str, str] | None
 @dataclass(slots=True, frozen=True)
 class Config:
     allow: tuple[str, ...]
@@ -70,12 +71,18 @@ def _parse_overrides(section: object) -> tuple[tuple[str, Override], ...]:
         raw_dict = cast(dict[str, object], raw)
         decision = raw_dict.get("decision")
         message = raw_dict.get("message")
+        match_input_raw = raw_dict.get("match_input")
+        match_input = (
+            {k: v for k, v in match_input_raw.items() if isinstance(k, str) and isinstance(v, str)}
+            if isinstance(match_input_raw, dict) else None
+        )
         overrides.append(
             (
                 pattern,
                 Override(
                     decision=decision if isinstance(decision, str) and decision in valid else None,
                     message=message if isinstance(message, str) else None,
+                    match_input=match_input or None,
                 ),
             )
         )
@@ -159,10 +166,19 @@ def _match_tool(tool_name: str, pattern: str) -> bool:
     # tool match: glob on the tool portion
     return fnmatch.fnmatch(tool, tool_pattern)
 
+def _match_input(tool_input: dict[str, object], conditions: dict[str, str] | None) -> bool:
+    if conditions is None:
+        return True
+    return all(
+        re.search(pattern, str(tool_input.get(field, "")))
+        for field, pattern in conditions.items()
+    )
+
 def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
     tool_name = hook_input.tool_name
     override = next(
-        (ov for pat, ov in config.overrides if _match_tool(tool_name, pat)),
+        (ov for pat, ov in config.overrides
+         if _match_tool(tool_name, pat) and _match_input(hook_input.tool_input, ov.match_input)),
         None,
     )
     base_decision = next(
