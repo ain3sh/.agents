@@ -76,3 +76,17 @@ When the PR is part of a larger effort, add context:
 - **Stacked PRs**: "Part K of N. Depends on #X." or "Independent -- can merge in any order."
 - **Split from a branch**: "Splits `<original-branch>` into focused PRs. This one covers <scope>."
 - **Follow-up work**: "Follow-up: <brief description of what's next>."
+- **Bug fixes**: Append a collapsible "Root Cause Analysis" section to the PR body:
+
+  ```markdown
+  <details>
+  <summary>Root Cause Analysis</summary>
+
+  **How the bug was traced**: <Describe the repro path, the symptoms observed, and the
+  investigation steps that narrowed down the root cause.>
+
+  **How root cause drove the fix**: <Explain why the chosen fix addresses the actual cause
+  rather than the symptom, and any alternatives considered.>
+
+  </details>
+  ```
