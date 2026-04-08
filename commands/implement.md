@@ -3,6 +3,8 @@ description: Implement a Linear ticket -- explore, plan, spec, then code
 argument-hint: <TICKET-ID or pasted ticket content>
 ---
 
+Load skills: **linear-cli**, **quality-ship**.
+
 ## 1. Understand the Ticket
 
 - If `$ARGUMENTS` contains a ticket ID (e.g., `TEAM-123`), fetch it:
@@ -59,3 +61,14 @@ Present a structured implementation plan:
 **Wait for user approval before writing any code.**
 
 If questions arise during exploration, ask them immediately -- do not guess at requirements.
+
+## 5. Validate
+
+After implementation is complete and working, **re-load the quality-ship skill** and strictly follow its guidance:
+
+- Detect and run **every** applicable validator (format, lint, knip, typecheck, tests).
+- Scope correctly in monorepos (turbo or per-package).
+- Check for worktree context and symlink dependencies if needed.
+- Fix all issues and re-run until clean.
+
+Do not skip this step or defer it to a follow-up command. The implementation is not done until validators pass.
