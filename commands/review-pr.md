@@ -3,7 +3,7 @@ description: Review a PR -- classify type, verify per type, analyze changes, pos
 argument-hint: <PR-number-or-URL>
 ---
 
-Load skill: **pr-context**.
+Load skills: **pr-context**, **linear-cli**.
 
 ## 1. Gather Context
 

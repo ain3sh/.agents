@@ -3,7 +3,7 @@ description: Full PR workflow -- ticket, branch, verify/fix, lint/test, commit, 
 argument-hint: [TICKET-ID | description of work]
 ---
 
-Load skills: **ticket-branch**, **quality-ship**, **pr-description**.
+Load skills: **linear-cli**, **ticket-branch**, **quality-ship**, **pr-description**, **worktree-setup**.
 
 ## 1. Ticket + Branch
 
@@ -27,6 +27,8 @@ First, determine the **entry state** -- does working code already exist from thi
 - **Feature / enhancement**: implement on the new branch.
 
 ## 3. Quality + Ship
+
+If in a git worktree, follow the **worktree-setup** skill to symlink dependencies before running any checks.
 
 Follow the **quality-ship** skill:
 - Run all detected quality checks. Fix issues and re-run until clean.
