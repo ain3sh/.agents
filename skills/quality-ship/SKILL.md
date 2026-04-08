@@ -8,6 +8,19 @@ user-invocable: false
 
 ## Quality Checks
 
+### Pre-check: worktree environment
+
+Before running any checks, determine if you're in a git worktree:
+
+```bash
+MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
+[ "$(git rev-parse --show-toplevel)" != "$MAIN_REPO" ] && echo "WORKTREE"
+```
+
+If in a worktree, follow the **worktree-setup** skill to symlink dependencies before proceeding. Never `npm install` or `pip install` in a worktree.
+
+### Run all detected checks
+
 Detect the project's tooling from config files at the repo root, then run each applicable check:
 
 | Check | Detection signals | Typical command |
@@ -21,9 +34,13 @@ Detect the project's tooling from config files at the repo root, then run each a
 - Check `package.json` scripts for canonical commands (`format`, `fix`, `lint`, `knip`, `test`, `typecheck`).
 - Fix any issues found. Re-run until clean.
 
-### Monorepo lint: use turbo, not direct invocation
+**Run every check with a detection signal present -- do not skip any.** A CI pipeline will typically gate on all of these; missing one here means a failed check after push.
 
-In monorepos with `turbo.json`, **always** use `turbo run lint --filter=<package>` instead of running `npx eslint` directly. Direct invocation breaks on path aliases (`@/utils/...`) because ESLint doesn't resolve the project's `tsconfig` paths without turbo's workspace setup. The same applies to `typecheck` and `test`.
+### Monorepo scoping: use turbo, not direct invocation
+
+In monorepos with `turbo.json`, **always** use `turbo run <task> --filter=<package>` instead of direct tool invocation for **all** checks: `format`, `lint`, `knip`, `typecheck`, and `test`. Direct invocation misses workspace-level configuration (path aliases, package-scoped configs) and runs against the entire repo unnecessarily.
+
+In monorepos without turbo, scope validators to the changed packages. Use `git diff --name-only` against the base branch to identify affected packages, then run checks from within those package directories.
 
 ## Commit
 

@@ -21,6 +21,16 @@ argument-hint: <TICKET-ID or pasted ticket content>
 - When the ticket names specific flows or commands to reuse, trace each one end-to-end and note exactly where the new feature's behavior diverges.
 - Note tests, types, configs, and documentation that will need updating.
 
+### Bug-fix tickets: reproduce before proposing a fix
+
+When the ticket describes a bug, confirm you can reliably trigger it before moving to Step 3:
+
+- Identify or write a minimal repro (test case, script, or manual steps) that demonstrates the failure on the current base branch.
+- Document the observed vs. expected behavior and the exact conditions that trigger it.
+- If reproduction fails, revisit exploration -- a bug you can't trigger is a bug you don't yet understand.
+
+The fix approach in Step 3 should flow directly from the reproduction: explain *which part of the repro breaks* and *why the proposed change stops it from breaking*.
+
 ## 3. Think Through the Approach
 
 Do **not** take the easiest-but-ugly path. Evaluate the implementation against:
