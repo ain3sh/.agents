@@ -31,10 +31,21 @@ Detect the project's tooling from config files at the repo root, then run each a
 | Type check | `tsconfig.json` | `npm run typecheck` or `npx tsc --noEmit` |
 | Tests | `jest.config*`, `vitest.config*`, `pytest.ini` | Run relevant test subset for changed files |
 
-- Check `package.json` scripts for canonical commands (`format`, `fix`, `lint`, `knip`, `test`, `typecheck`).
+- Inspect `package.json` scripts (or `pyproject.toml` / `Makefile` for Python) for canonical commands (`format`, `fix`, `lint`, `knip`, `test`, `typecheck`).
 - Fix any issues found. Re-run until clean.
 
-**Run every check with a detection signal present -- do not skip any.** A CI pipeline will typically gate on all of these; missing one here means a failed check after push.
+**Mandatory gate -- before committing, emit a checklist covering every row in the table above:**
+
+```
+quality-ship checklist:
+- format:    <ran | no signal> (evidence)
+- lint:      <ran | no signal> (evidence)
+- dead-code: <ran | no signal> (evidence)
+- typecheck: <ran | no signal> (evidence)
+- tests:     <ran | no signal> (evidence)
+```
+
+`evidence` = the command executed, or the missing config file. Do not commit until every line is filled. A CI pipeline gates on all of these; skipping one here means a failed check after push.
 
 ### Monorepo scoping: use turbo, not direct invocation
 
