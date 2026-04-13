@@ -10,6 +10,7 @@ TOKENS_COLOR="\033[38;2;255;159;67m"
 DIR_COLOR="\033[38;2;255;179;71m"
 PARENTS_COLOR="\033[38;2;255;205;128m"
 GIT_COLOR="\033[38;2;152;195;121m"
+GIT_DIRTY_COLOR="\033[38;2;204;136;255m"
 PR_COLOR="\033[38;2;132;211;255m"
 PY_COLOR="\033[38;2;97;214;214m"
 SESSION_COLOR="\033[38;2;169;169;169m"
@@ -255,7 +256,7 @@ fi
 if [[ -n "$GIT_INFO" ]]; then
     printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
     if [[ "$GIT_INFO" == "● "* ]]; then
-        printf "🌿 ${ACCENT_COLOR}●${RESET} ${GIT_COLOR}%s${RESET}" "${GIT_INFO#● }"
+        printf "🌿 ${GIT_DIRTY_COLOR}%s${RESET}" "${GIT_INFO#● }"
     else
         printf "🌿 ${GIT_COLOR}%s${RESET}" "$GIT_INFO"
     fi
