@@ -62,6 +62,32 @@ Present a structured implementation plan:
 
 If questions arise during exploration, ask them immediately -- do not guess at requirements.
 
+## 4b. Bug-fix: regression test (red-green)
+
+After spec approval, before implementing the fix, write an e2e test that captures the broken behavior.
+
+### Write the test
+
+- The test should exercise the **real user-facing flow** that broke -- informed by root cause and fix path from the spec, not just the surface symptom.
+- Test the **behavior**, not the implementation detail. This makes it a durable regression guard rather than something coupled to today's code.
+- Confirm the test **fails** on the current (unfixed) code.
+
+### After implementing the fix
+
+- Re-run the test. Confirm it **passes**.
+
+### When to skip
+
+Not every bug has an e2e-testable surface. If a non-contrived e2e test isn't feasible, you must justify the skip:
+
+- No e2e test harness exists in the project.
+- The bug is in a layer e2e can't reach (race conditions, infra, build-time issues).
+- An e2e test would be contrived -- testing an artificial scenario rather than a real user flow.
+
+When skipping, fall back to the narrowest viable alternative: integration test, unit test, or the ad-hoc repro from step 2. State which fallback was used and why.
+
+Record the skip in the PR's **Root Cause Analysis** section (see pr-description): what was attempted, why e2e wasn't viable, and which fallback was used.
+
 ## 5. Validate
 
 After implementation is complete and working, **re-load the quality-ship skill** and strictly follow its guidance:
