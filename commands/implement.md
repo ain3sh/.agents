@@ -3,7 +3,7 @@ description: Implement a Linear ticket -- explore, plan, spec, then code
 argument-hint: <TICKET-ID or pasted ticket content>
 ---
 
-Load skills: **linear-cli**, **quality-ship**.
+Load skills: **linear-cli**, **quality-ship**. Bug-fix tickets also load: **root-cause-finder**, **step-through**, **consolidate-test-suites**.
 
 ## 1. Understand the Ticket
 
@@ -23,15 +23,22 @@ Load skills: **linear-cli**, **quality-ship**.
 - When the ticket names specific flows or commands to reuse, trace each one end-to-end and note exactly where the new feature's behavior diverges.
 - Note tests, types, configs, and documentation that will need updating.
 
-### Bug-fix tickets: reproduce before proposing a fix
+### Bug-fix tickets: root-cause analysis before proposing a fix
 
-When the ticket describes a bug, confirm you can reliably trigger it before moving to Step 3:
+When the ticket describes a bug, apply the **root-cause-finder** methodology before moving to Step 3:
 
-- Identify or write a minimal repro (test case, script, or manual steps) that demonstrates the failure on the current base branch.
-- Document the observed vs. expected behavior and the exact conditions that trigger it.
-- If reproduction fails, revisit exploration -- a bug you can't trigger is a bug you don't yet understand.
+1. **Reproduce**: Identify or write a minimal repro (test case, script, or manual steps) that demonstrates the failure on the current base branch. If reproduction fails, revisit exploration -- a bug you can't trigger is a bug you don't yet understand.
 
-The fix approach in Step 3 should flow directly from the reproduction: explain *which part of the repro breaks* and *why the proposed change stops it from breaking*.
+2. **Trace root cause**: Do not stop at the first error. Follow the root-cause-finder workflow:
+   - State the expected behavior and invariant in plain language.
+   - Trace the causal chain from intended action to observed effect.
+   - Ask whether the request or mutation should have happened at all.
+   - Find the first unintended side effect -- that is the root cause, not the downstream error.
+   - Audit hidden writes: lifecycle hooks, subscribers, watchers, background jobs, persistence restore, cache refreshers.
+
+3. **Step through** (when applicable): If the bug involves multi-actor sequencing, async callbacks, background refreshes, recovery paths, queues, retries, or state machines, apply the **step-through** skill: walk the broken flow with explicit state (`actor = {...}`) at every transition, taking each actor's perspective, until an invariant breaks. Do not skip to "walk the fix" -- step through the broken flow first.
+
+The fix approach in Step 3 should flow directly from the root-cause analysis: explain *what the first unintended side effect is*, *which part of the repro breaks*, and *why the proposed change stops it from breaking*.
 
 ## 3. Think Through the Approach
 
@@ -64,29 +71,39 @@ If questions arise during exploration, ask them immediately -- do not guess at r
 
 ## 4b. Bug-fix: regression test (red-green)
 
-After spec approval, before implementing the fix, write an e2e test that captures the broken behavior.
+After spec approval, before implementing the fix, apply the **consolidate-test-suites** skill to decide where the test belongs, then write it.
+
+### Place the test
+
+Before writing any test code, run the consolidate-test-suites decision process:
+
+1. **Name the invariant** -- the rule that must stay true.
+2. **Pick the owning layer** -- the lowest layer (unit, integration, or e2e) that truly owns and can prove the invariant. If torn between unit and integration, choose integration. Never choose e2e to compensate for uncertainty.
+3. **Find the canonical suite** -- prefer adding to an existing test file in the owning layer over creating a new file. Follow the decision order: existing test > new test in existing file > new file in canonical suite > standalone regression (exception rule only).
 
 ### Write the test
 
 - The test should exercise the **real user-facing flow** that broke -- informed by root cause and fix path from the spec, not just the surface symptom.
 - Test the **behavior**, not the implementation detail. This makes it a durable regression guard rather than something coupled to today's code.
+- Place it in the canonical suite identified above.
 - Confirm the test **fails** on the current (unfixed) code.
 
 ### After implementing the fix
 
 - Re-run the test. Confirm it **passes**.
+- Search for tests that assert the same invariant. Keep the strongest owned location, merge unique assertions, delete or simplify weaker duplicates.
 
 ### When to skip
 
-Not every bug has an e2e-testable surface. If a non-contrived e2e test isn't feasible, you must justify the skip:
+Not every bug has a testable surface. If a test isn't feasible, you must justify the skip:
 
-- No e2e test harness exists in the project.
-- The bug is in a layer e2e can't reach (race conditions, infra, build-time issues).
-- An e2e test would be contrived -- testing an artificial scenario rather than a real user flow.
+- No test harness exists in the project for the owning layer.
+- The bug is in a layer tests can't reach (race conditions, infra, build-time issues).
+- A test would be contrived -- testing an artificial scenario rather than a real flow.
 
-When skipping, fall back to the narrowest viable alternative: integration test, unit test, or the ad-hoc repro from step 2. State which fallback was used and why.
+When skipping, fall back to the narrowest viable alternative: the next lower layer, or the ad-hoc repro from step 2. State which fallback was used and why.
 
-Record the skip in the PR's **Root Cause Analysis** section (see pr-description): what was attempted, why e2e wasn't viable, and which fallback was used.
+Record the skip in the PR's **Root Cause Analysis** section (see pr-description): what was attempted, why testing wasn't viable, and which fallback was used.
 
 ## 5. Validate
 
