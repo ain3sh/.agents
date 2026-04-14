@@ -69,7 +69,23 @@ Closes TEAM-123
 - **Risk & Impact** must reflect actual thought about what could go wrong. "N/A" is acceptable only for truly zero-risk changes (typo fixes, comment-only changes).
 - **Testing** should be specific enough that a reviewer can reproduce or verify.
 
-## 4. Contextual Additions
+## 4. Optional Supporting Artifacts
+
+When screenshots, videos, logs, or sample outputs would make the change easier to understand or verify, include them when practical.
+
+- If `gh-attach` is available, upload supporting artifacts and link them in the PR body or a follow-up comment.
+- Good candidates: UI screenshots, short repro videos, before/after outputs, and small log snippets that clarify behavior or make validation easier.
+- Keep artifact references focused and high-signal; do not dump large noisy outputs into the PR body.
+- Never include secrets, tokens, machine-specific paths, hostnames, or other private environment details in uploaded artifacts or PR text.
+
+If the current machine cannot access the needed browser-authenticated GitHub session, it is acceptable to:
+
+- run `gh-attach` from a trusted machine that does have that access, including over SSH, or
+- use an exported `gh-attach --session-file` flow.
+
+Keep any such mention generic in public PRs; describe the artifact itself, not your personal setup.
+
+## 5. Contextual Additions
 
 When the PR is part of a larger effort, add context:
 
