@@ -85,6 +85,29 @@ If the current machine cannot access the needed browser-authenticated GitHub ses
 
 Keep any such mention generic in public PRs; describe the artifact itself, not your personal setup.
 
+### Architecture diagrams
+
+When the PR introduces non-trivial architectural changes -- new components, altered data flows, changed service boundaries, new integration points, restructured modules -- generate a diagram using the **excalidraw** skill and link it in the PR body.
+
+Use semantic colors for component types:
+
+| Component Type | Excalidraw Fill | Stroke |
+|----------------|-----------------|--------|
+| Frontend / UI | `#a5d8ff` | `#4a9eed` |
+| Backend / API | `#b2f2bb` | `#22c55e` |
+| Database / Storage | `#d0bfff` | `#8b5cf6` |
+| Cloud / Infra | `#fff3bf` | `#f59e0b` |
+| Security / Auth | `#ffc9c9` | `#ef4444` |
+| Message Bus / Queue | `#ffd8a8` | `#fb923c` |
+| External / Generic | `#c3fae8` | `#94a3b8` |
+
+Workflow:
+1. Generate the `.excalidraw` file showing the relevant components and their relationships.
+2. Upload via `python ~/.agents/skills/excalidraw/scripts/upload.py <file>` to get a shareable link.
+3. Add the link to the PR body under a "Architecture" heading or inline in the Description.
+
+Skip this when the change is purely behavioral (logic fixes, config tweaks, test additions) with no structural impact.
+
 ## 5. Contextual Additions
 
 When the PR is part of a larger effort, add context:
@@ -106,3 +129,46 @@ When the PR is part of a larger effort, add context:
 
   </details>
   ```
+
+## 6. Post-Push Refresh
+
+When a PR already exists and new commits have been pushed, run this two-phase check to keep the description accurate and coherent.
+
+### Phase 1: Staleness check
+
+Determine whether the existing description still covers what the PR actually does.
+
+1. Fetch the current PR body and the new diff:
+   ```bash
+   PR_NUM=$(gh pr view --json number --jq '.number')
+   gh pr view "$PR_NUM" --json body --jq '.body' > /tmp/pr-current-body.md
+   DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
+   git log --oneline "origin/$DEFAULT_BRANCH"..HEAD
+   git diff --stat "origin/$DEFAULT_BRANCH"..HEAD
+   ```
+
+2. Compare the description against the actual diff. Check for:
+   - **Missing scope**: new files, modules, or packages touched that the description doesn't mention.
+   - **Changed intent**: the original description says "fix X" but the diff now also includes a refactor of Y.
+   - **Stale claims**: the description references files, approaches, or risks that no longer apply after subsequent commits.
+   - **Testing gaps**: new code paths that aren't reflected in the "How Has This Been Tested?" section.
+
+3. If none of the above apply, stop here -- no update needed. Do not rewrite for style or phrasing in this phase.
+
+### Phase 2: Coherence pass
+
+Only runs if Phase 1 identified updates. The goal is a description that reads as one authored piece, not a log of patches.
+
+1. Draft the updated description incorporating the new material from Phase 1.
+2. Before writing, check that the result:
+   - Reads as a single coherent narrative about what the PR does and why -- not a chronological list of commits.
+   - Preserves the four-section structure (Description, Related Issue, Risk & Impact, Testing).
+   - Doesn't bloat: if the PR scope grew, the description should still be 2-4 sentences in the Description section, not a paragraph per commit.
+   - Updates Risk & Impact to reflect the current full scope, not just the delta.
+3. Apply the update:
+   ```bash
+   REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+   gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f body="$(cat /tmp/pr-updated-body.md)"
+   ```
+
+**Do not** rewrite a description that is already accurate just because the phrasing could be marginally better. The bar for Phase 2 changes is: "a reviewer reading this description would get a wrong or incomplete picture of the PR."
