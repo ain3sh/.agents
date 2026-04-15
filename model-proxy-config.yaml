@@ -9,7 +9,7 @@
 
 # core config
 port: 8317 # server port
-auth-dir: "/home/ain3sh/.cli-proxy-api" # oauth token store
+auth-dir: "${ENV:HOME}/.cli-proxy-api" # oauth token store
 request-retry: 3 # max retries
 quota-exceeded:
   switch-project: true

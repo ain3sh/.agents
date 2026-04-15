@@ -40,11 +40,12 @@ Extract from the ticket identifier:
 ```bash
 DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
 git fetch origin
-git checkout -b "ain3sh/<prefix>-<number>-<stub>" "origin/$DEFAULT_BRANCH"
+git checkout -b "<owner>/<prefix>-<number>-<stub>" "origin/$DEFAULT_BRANCH"
 ```
 
 - Derive `<stub>` from the ticket title: lowercase, hyphenated, ASCII-only.
 - **Full branch name must be <= 32 characters.** Truncate the stub to fit.
-- Example: `FAC-456 "Fix onboarding tooltip"` -> `ain3sh/fac-456-fix-onboard`
+- Replace `<owner>` with your branch namespace.
+- Example: `FAC-456 "Fix onboarding tooltip"` -> `team/fac-456-fix-onboard`
 
 
