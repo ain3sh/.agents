@@ -1,5 +1,11 @@
 # droid.toml - unified droid config file
 
+[flash_compact.defaults]
+state_dir = "~/.agents/state/flash-compact"
+prompt_cache_dir = "~/.agents/state/flash-compact/prompt-cache"
+sessions_dir = "~/.factory/sessions"
+morph_api_url = "https://api.morphllm.com/v1/compact"
+
 # ------------------------------------------------------------------------------
 [hooks]
 
@@ -79,6 +85,23 @@ include_text = ["Read ${filePath} fully to make a mental note of all changes mad
 # ---
 [hooks.pre_compact]
 
+[hooks.pre_compact.flash_compact]
+enabled = true
+debug = false
+compression_ratio = 0.35
+preserve_recent = 4
+compact_prefix_max_tokens = 120000
+include_markers = false
+use_typed_reducers = true
+recent_turns_raw = 4
+execute_short_output_chars = 3000
+execute_head_lines = 20
+execute_tail_lines = 30
+execute_max_signal_lines = 80
+read_large_output_chars = 4000
+todo_keep_latest_old = true
+fail_open = true
+
 # ---
 [hooks.user_prompt_submit]
 
@@ -86,6 +109,19 @@ include_text = ["Read ${filePath} fully to make a mental note of all changes mad
 cache_dir = "/tmp/conflicts"
 token_threshold = 20000
 skip_prefix = "" # ignored if missing/null or empty string
+
+[hooks.user_prompt_submit.flash_compact_budget]
+enabled = true
+debug = false
+soft_turn_interval = 12
+soft_token_delta = 30000
+hard_token_threshold = 120000
+hard_token_delta = 60000
+cooldown_turns = 3
+soft_action = "advisory"
+hard_action = "block"
+max_advisory_chars = 1200
+fail_open = true
 
 # ---
 [hooks.subagent_stop]
@@ -100,5 +136,12 @@ skip_prefix = "" # ignored if missing/null or empty string
 tail = 1
 tail_when = ["prompt_input_exit", "other"]
 todo_when = ["prompt_input_exit", "clear", "other"]
+
+[hooks.session_start.flash_compact_hydrate]
+enabled = true
+debug = false
+sources = ["compact", "resume"]
+max_injected_chars = 6000
+fail_open = true
 
 # ------------------------------------------------------------------------------
