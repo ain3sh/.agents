@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import re
 
 
 # ============================================================================
@@ -28,6 +29,67 @@ def get_droid_env_file() -> Path | None:
     if env_file:
         return Path(env_file)
     return None
+
+
+# Regex for parsing env file lines: KEY=value or KEY="value" or KEY='value'
+ENV_LINE_PATTERN = re.compile(
+    r'^(?:export\s+)?'
+    r'([A-Za-z_][A-Za-z0-9_]*)'
+    r'='
+    r'(.*)$'
+)
+
+
+def parse_env_text(text: str) -> dict[str, str]:
+    """Parse .env-formatted text into environment variables."""
+    env_vars: dict[str, str] = {}
+
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+
+        match = ENV_LINE_PATTERN.match(line)
+        if not match:
+            continue
+
+        key = match.group(1)
+        value = match.group(2).strip()
+        if (value.startswith('"') and value.endswith('"')) or (
+            value.startswith("'") and value.endswith("'")
+        ):
+            value = value[1:-1]
+        elif " #" in value:
+            value = value.split(" #", 1)[0].strip()
+
+        env_vars[key] = value
+
+    return env_vars
+
+
+def parse_env_file(file_path: Path, *, strict: bool = False) -> dict[str, str]:
+    """Parse a .env file and return a dict of variables."""
+    if not file_path.exists():
+        if strict:
+            raise FileNotFoundError(str(file_path))
+        return {}
+
+    try:
+        text = file_path.read_text(encoding="utf-8")
+    except OSError:
+        if strict:
+            raise
+        return {}
+
+    return parse_env_text(text)
+
+
+def parse_env_files(file_paths: list[Path], *, strict: bool = False) -> dict[str, str]:
+    """Parse one or more .env files and merge them (last writer wins)."""
+    merged: dict[str, str] = {}
+    for file_path in file_paths:
+        merged.update(parse_env_file(file_path, strict=strict))
+    return merged
 
 
 def set_env(key: str, value: str) -> bool:

@@ -197,6 +197,7 @@ state_dir = "~/.agents/state/flash-compact"
 prompt_cache_dir = "~/.agents/state/flash-compact/prompt-cache"
 sessions_dir = "~/.factory/sessions"
 morph_api_url = "https://api.morphllm.com/v1/compact"
+env_file = "~/.factory/.env"
 ```
 
 Hook-specific tuning then lives in:
@@ -211,7 +212,14 @@ Environment overrides are supported for portability:
 - `FLASH_COMPACT_PROMPT_CACHE_DIR`
 - `FLASH_COMPACT_SESSIONS_DIR`
 - `MORPH_API_URL`
-- `MORPH_API_KEY`
+
+Morph credentials are expected either:
+
+- in the live environment as `MORPH_API_KEY`, or
+- from `flash_compact.defaults.env_file` / `env_files`, or
+- from one or more explicit `--env-file` arguments passed to flash-compact entrypoints
+
+The flash-compact code does **not** rely on `~/.factory/mcp.json`.
 
 ## Failure model
 

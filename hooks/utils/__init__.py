@@ -73,6 +73,9 @@ from .io import HookInputError, read_input, read_input_as, exit
 # Environment
 from .env import (
     get_droid_env_file,
+    parse_env_text,
+    parse_env_file,
+    parse_env_files,
     set_env,
     set_envs,
     add_to_path,
@@ -158,6 +161,9 @@ __all__ = [
     "exit",
     # Environment
     "get_droid_env_file",
+    "parse_env_text",
+    "parse_env_file",
+    "parse_env_files",
     "set_env",
     "set_envs",
     "add_to_path",

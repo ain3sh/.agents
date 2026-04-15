@@ -49,6 +49,7 @@ def main():
         default=str(Path(__file__).resolve().parents[1] / "configs" / "droid.toml"),
         help="Path to droid.toml for shared flash-compact defaults",
     )
+    parser.add_argument("--env-file", action="append", default=[], help="Path to a .env file that provides MORPH_API_KEY (repeatable)")
     parser.add_argument("--query", "-q", help="Focus query for relevance-based pruning")
     parser.add_argument("--ratio", "-r", type=float, default=0.5, help="Fraction to keep (default: 0.5)")
     parser.add_argument("--recent", "-n", type=int, default=4, help="Recent messages to preserve (default: 4)")
@@ -61,6 +62,7 @@ def main():
     args = parser.parse_args()
     config_data = load_toml(args.config_file)
     defaults = load_flash_compact_defaults(config_data)
+    env_files = tuple(Path(value).expanduser() for value in args.env_file) or defaults.env_files
     view_config = CompactViewConfig(use_typed_reducers=not args.no_reducers)
     if args.hierarchical:
         if not args.project:
@@ -95,6 +97,7 @@ def main():
             preserve_recent=0,
             include_markers=True,
             api_url=defaults.morph_api_url,
+            env_files=env_files,
         )
 
         if args.raw:
@@ -133,6 +136,7 @@ def main():
         preserve_recent=args.recent,
         include_markers=True,
         api_url=defaults.morph_api_url,
+        env_files=env_files,
     )
 
     if args.raw:
