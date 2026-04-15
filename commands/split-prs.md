@@ -44,11 +44,13 @@ For each proposed PR, in dependency order:
 ### Create branch
 ```bash
 # Independent: branch off base
-git checkout -b "ain3sh/<prefix>-<number>-<stub>" "origin/$BASE"
+git checkout -b "<owner>/<prefix>-<number>-<stub>" "origin/$BASE"
 
 # Stacked: branch off previous PR's branch
-git checkout -b "ain3sh/<prefix>-<number>-<stub>" "<previous-pr-branch>"
+git checkout -b "<owner>/<prefix>-<number>-<stub>" "<previous-pr-branch>"
 ```
+
+Replace `<owner>` with your branch namespace.
 
 ### Apply commits
 
