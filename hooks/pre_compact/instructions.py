@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""PreCompact hook to perform actions before compacting session data.
+"""PreCompact hook to perform actions before compressing session data.
 
-This hook runs before Droid compacts the session. It can be used to:
-- Add additional context to manual compaction requests
-- Log compaction events
-- Perform pre-compaction cleanup
+This hook runs before Droid compresses the session. It can be used to:
+- Add additional context to manual compression requests
+- Log compression events
+- Perform pre-compression cleanup
 
-When manual compact is triggered without custom instructions, this hook
-loads default instructions from ~/.factory/commands/compact.md.
+When manual compression is triggered without custom instructions, this hook
+loads default instructions from ~/.factory/commands/compress.md.
 """
 from __future__ import annotations
 import argparse
@@ -68,7 +68,7 @@ def _parse_args(argv: list[str]) -> Config:
     return Config(instructions_path=path)
 
 def get_default_instructions_path(config: Config) -> Path:
-    """Get path to the default compact instructions file.
+    """Get path to the default compression instructions file.
 
     Checks workspace commands first, then falls back to user commands.
     """
@@ -78,17 +78,17 @@ def get_default_instructions_path(config: Config) -> Path:
     # Try workspace-level commands first (takes precedence)
     project_dir = get_project_dir()
     if project_dir:
-        workspace_path = project_dir / ".factory" / "commands" / "compact.md"
+        workspace_path = project_dir / ".factory" / "commands" / "compress.md"
         if workspace_path.exists():
             return workspace_path
 
     # Fall back to user-level commands
     user_path = env_path("FACTORY_USER_DIR", Path.home() / ".factory") or (Path.home() / ".factory")
-    return user_path / "commands" / "compact.md"
+    return user_path / "commands" / "compress.md"
 
 
 def load_default_instructions(config: Config) -> str | None:
-    """Load default compact instructions from the command file.
+    """Load default compression instructions from the command file.
 
     Returns None if the file doesn't exist or can't be read.
     """
@@ -114,14 +114,14 @@ def handle_pre_compact(hook_input: PreCompactInput, config: Config) -> str:
     Args:
         hook_input: Parsed PreCompact hook input
 
-    For manual compacts without custom instructions, loads default instructions
-    from commands/compact.md and emits them as context for the compaction.
+    For manual compressions without custom instructions, loads default instructions
+    from commands/compress.md and emits them as context for the compression.
     """
     if hook_input.trigger == "manual":
         if hook_input.custom_instructions:
             # User provided explicit instructions - use those
             return (
-                "[PreCompact] Manual compact with user instructions:\n"
+                "[PreCompact] Manual compression with user instructions:\n"
                 f"{hook_input.custom_instructions}"
             )
         else:
@@ -129,19 +129,19 @@ def handle_pre_compact(hook_input: PreCompactInput, config: Config) -> str:
             default_instructions = load_default_instructions(config)
             if default_instructions:
                 return (
-                    "[PreCompact] Manual compact with default instructions "
-                    f"(from commands/compact.md):\n{default_instructions}"
+                    "[PreCompact] Manual compression with default instructions "
+                    f"(from commands/compress.md):\n{default_instructions}"
                 )
-            return "[PreCompact] Manual compact requested (no instructions)"
+            return "[PreCompact] Manual compression requested (no instructions)"
     else:
         # Auto-compact from context window full
         default_instructions = load_default_instructions(config)
         if default_instructions:
             return (
-                "[PreCompact] Auto-compact triggered (context window full). "
+                "[PreCompact] Auto-compression triggered (context window full). "
                 f"Using default instructions:\n{default_instructions}"
             )
-        return "[PreCompact] Auto-compact triggered (context window full)"
+        return "[PreCompact] Auto-compression triggered (context window full)"
 
 
 def main():

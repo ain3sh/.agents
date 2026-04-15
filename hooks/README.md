@@ -26,7 +26,6 @@ hooks/
 ├── post_tool_use/
 │   └── instructions.py
 ├── pre_compact/
-│   ├── block_auto.py
 │   └── instructions.py
 ├── session_start/
 │   ├── env_vars.py
@@ -111,8 +110,7 @@ if __name__ == "__main__":
 - **`instructions.py`**: rule-based instruction injection by tool, with optional input/output matching (string, regex, or structured dict) and `${...}` interpolation for dynamic text.
 
 ### PreCompact
-- **`block_auto.py`**: prevents auto-compaction while allowing manual `/compact`.
-- **`instructions.py`**: injects default compaction instructions from `commands/compact.md` when manual compact has none.
+- **`instructions.py`**: injects default compression instructions from `commands/compress.md` when manual compression has none.
 
 ### SessionStart
 - **`env_vars.py`**: loads inline config env vars plus optional secrets file on `startup`, `resume`, and `clear`.
@@ -180,7 +178,7 @@ todo_when = ["prompt_input_exit", "clear", "other"]
 2. **UserPromptSubmit** can block overly long prompts and route them for analysis.
 3. **PreToolUse** enforces permissions and pre-flight checks (policy, CodeRabbit on push).
 4. **PostToolUse** injects reminders after specific tool actions.
-5. **PreCompact** governs compaction behavior and instructions.
+5. **PreCompact** governs compression behavior and instructions.
 6. **SessionEnd** stores run artifacts (tail + todo snapshot).
 
 ## Adding a New Hook (Minimal Checklist)

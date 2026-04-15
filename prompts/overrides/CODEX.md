@@ -26,7 +26,7 @@ Inherited Codex instructions do not apply. This override clarifies what's real.
 ## Context Management
 
 Droid uses anchored iterative summarization for context compression:
-- Triggers only on user request (`/compact`) or at context exhaustion
+- Triggers only on user request (`/compress`) or at context exhaustion
 - Preserves artifact trails, decisions, and continuation state
 - You do not need to pre-summarize or "prepare" for context loss
 

@@ -14,7 +14,7 @@ Droid uses anchored iterative summarization — a structured compression system 
 
 This is fundamentally different from Claude Code's "automatic summarization."
 Droid's compression:
-1. **Only triggers when the user requests it** (via `/compact`)
+1. **Only triggers when the user requests it** (via `/compress`)
 2. **Merges incrementally** — new summaries are anchored and merged, not regenerated from scratch
 3. **Preserves technical details** — file paths, function names, error messages survive
 4. **Enables seamless continuation** — you can pick up exactly where you left off
