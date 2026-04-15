@@ -12,6 +12,7 @@ import re
 import subprocess
 from typing import Callable, Literal
 
+from .env import parse_env_files
 from .tokens import count_tokens
 
 DEFAULT_FLASH_COMPACT_STATE_DIR = "~/.agents/state/flash-compact"
@@ -43,6 +44,7 @@ class FlashCompactDefaults:
     prompt_cache_dir: Path
     sessions_dir: Path
     morph_api_url: str
+    env_files: tuple[Path, ...] = ()
 
 
 @dataclass(slots=True, frozen=True)
@@ -171,6 +173,26 @@ def _flash_compact_default(
     return str(value).strip() if value is not None else ""
 
 
+def _flash_compact_default_list(
+    config_data: dict[str, object] | None,
+    key: str,
+) -> list[str]:
+    if not isinstance(config_data, dict):
+        return []
+    flash_compact = config_data.get("flash_compact")
+    if not isinstance(flash_compact, dict):
+        return []
+    defaults = flash_compact.get("defaults")
+    if not isinstance(defaults, dict):
+        return []
+    value = defaults.get(key)
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    return []
+
+
 def load_flash_compact_defaults(
     config_data: dict[str, object] | None = None,
 ) -> FlashCompactDefaults:
@@ -195,11 +217,15 @@ def load_flash_compact_defaults(
         or _flash_compact_default(config_data, "morph_api_url")
         or DEFAULT_FLASH_COMPACT_MORPH_API_URL
     )
+    env_file_values = _flash_compact_default_list(config_data, "env_files")
+    if not env_file_values:
+        env_file_values = _flash_compact_default_list(config_data, "env_file")
     return FlashCompactDefaults(
         state_dir=state_dir,
         prompt_cache_dir=Path(prompt_cache_dir_value).expanduser(),
         sessions_dir=Path(sessions_dir_value).expanduser(),
         morph_api_url=morph_api_url,
+        env_files=tuple(Path(value).expanduser() for value in env_file_values),
     )
 
 
@@ -236,30 +262,18 @@ def write_json(path: Path, data: dict[str, object]) -> None:
         handle.write("\n")
 
 
-def get_morph_api_key() -> str:
+def get_morph_api_key(env_files: list[Path] | tuple[Path, ...] | None = None) -> str:
     key = os.environ.get("MORPH_API_KEY")
     if key:
         return key
 
-    mcp_path = Path.home() / ".factory" / "mcp.json"
-    mcp = read_json(mcp_path) if mcp_path.exists() else None
-    if mcp is None:
-        raise RuntimeError("MORPH_API_KEY not found in environment or ~/.factory/mcp.json")
+    if env_files:
+        env_values = parse_env_files(list(env_files), strict=False)
+        key = env_values.get("MORPH_API_KEY")
+        if key:
+            return key
 
-    codebase = mcp.get("mcpServers", {})
-    if not isinstance(codebase, dict):
-        raise RuntimeError("Invalid ~/.factory/mcp.json structure")
-    server = codebase.get("codebase", {})
-    if not isinstance(server, dict):
-        raise RuntimeError("Invalid codebase MCP configuration")
-    env = server.get("env", {})
-    if not isinstance(env, dict):
-        raise RuntimeError("Invalid codebase MCP environment configuration")
-    key = env.get("MORPH_API_KEY")
-    if isinstance(key, str) and key:
-        return key
-
-    raise RuntimeError("MORPH_API_KEY not found in environment or ~/.factory/mcp.json")
+    raise RuntimeError("MORPH_API_KEY not found in environment or provided env file(s)")
 
 
 def truncate_text(text: str, max_chars: int) -> str:
@@ -777,6 +791,7 @@ def morph_compact_messages(
     preserve_recent: int,
     include_markers: bool,
     api_url: str | None = None,
+    env_files: list[Path] | tuple[Path, ...] | None = None,
     timeout_seconds: int = 120,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
@@ -803,7 +818,7 @@ def morph_compact_messages(
             "-H",
             "Content-Type: application/json",
             "-H",
-            f"Authorization: Bearer {get_morph_api_key()}",
+            f"Authorization: Bearer {get_morph_api_key(env_files)}",
             "--data-binary",
             "@-",
         ],

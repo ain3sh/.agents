@@ -37,7 +37,6 @@ Usage in ~/.factory/settings.json:
 from __future__ import annotations
 import argparse
 import os
-import re
 import sys
 from pathlib import Path
 
@@ -50,6 +49,7 @@ from utils import (  # type: ignore
     get_droid_env_file,
     get_toml_section,
     load_toml,
+    parse_env_files,
     read_input_as,
     set_env,
 )
@@ -60,97 +60,6 @@ HOOK_EVENT_NAME = "SessionStart"
 # ============================================================================
 # Configuration
 # ============================================================================
-
-# Regex for parsing env file lines: KEY=value or KEY="value" or KEY='value'
-# Supports:
-#   - Simple: KEY=value
-#   - Quoted: KEY="value with spaces" or KEY='value'
-#   - Export prefix: export KEY=value
-ENV_LINE_PATTERN = re.compile(
-    r'^(?:export\s+)?'           # Optional 'export ' prefix
-    r'([A-Za-z_][A-Za-z0-9_]*)'  # Variable name
-    r'='                          # Equals sign
-    r'(.*)$'                      # Value (everything after =)
-)
-
-
-# ============================================================================
-# Env File Parsing
-# ============================================================================
-
-def parse_env_text(text: str) -> dict[str, str]:
-    """Parse .env formatted text and return a dict of variables.
-
-    Supports:
-    - Comments (lines starting with #)
-    - Empty lines
-    - KEY=value format
-    - KEY="quoted value" format
-    - KEY='single quoted value' format
-    - export KEY=value format
-    - Inline comments: KEY=value # comment
-
-    Args:
-        text: Raw .env text
-
-    Returns:
-        Dict of environment variable names to values
-    """
-    env_vars: dict[str, str] = {}
-
-    for line in text.splitlines():
-        line = line.strip()
-
-        # Skip empty lines and comments
-        if not line or line.startswith("#"):
-            continue
-
-        match = ENV_LINE_PATTERN.match(line)
-        if not match:
-            # Invalid line - skip silently (could log in debug mode)
-            continue
-
-        key = match.group(1)
-        value = match.group(2).strip()
-
-        # Handle quoted values
-        if (value.startswith('"') and value.endswith('"')) or \
-           (value.startswith("'") and value.endswith("'")):
-            value = value[1:-1]
-        else:
-            # Remove inline comments for unquoted values
-            if " #" in value:
-                value = value.split(" #", 1)[0].strip()
-
-        env_vars[key] = value
-
-    return env_vars
-
-
-def parse_env_file(file_path: Path, *, strict: bool = False) -> dict[str, str]:
-    """Parse a .env file and return a dict of variables."""
-    if not file_path.exists():
-        if strict:
-            raise FileNotFoundError(str(file_path))
-        return {}
-
-    try:
-        text = file_path.read_text(encoding="utf-8")
-    except OSError:
-        if strict:
-            raise
-        return {}
-
-    return parse_env_text(text)
-
-
-def parse_env_files(file_paths: list[Path], *, strict: bool = False) -> dict[str, str]:
-    """Parse one or more .env files and merge them (last writer wins)."""
-    merged: dict[str, str] = {}
-    for file_path in file_paths:
-        merged.update(parse_env_file(file_path, strict=strict))
-    return merged
-
 
 def apply_env_vars(env_vars: dict[str, str]) -> int:
     """Persist a set of environment variables into the agent session env file."""

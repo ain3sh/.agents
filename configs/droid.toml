@@ -5,6 +5,7 @@ state_dir = "~/.agents/state/flash-compact"
 prompt_cache_dir = "~/.agents/state/flash-compact/prompt-cache"
 sessions_dir = "~/.factory/sessions"
 morph_api_url = "https://api.morphllm.com/v1/compact"
+env_file = "~/.factory/.env"
 
 # ------------------------------------------------------------------------------
 [hooks]

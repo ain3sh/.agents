@@ -39,6 +39,7 @@ class Config:
     debug: bool
     state_dir: Path
     morph_api_url: str
+    env_files: tuple[Path, ...]
     compression_ratio: float
     preserve_recent: int
     compact_prefix_max_tokens: int
@@ -57,6 +58,7 @@ class Config:
 def load_config(argv: list[str]) -> Config:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--config-file", default="", help="Path to TOML config file")
+    parser.add_argument("--env-file", action="append", default=[], help="Path to a .env file that provides MORPH_API_KEY (repeatable)")
     args = parser.parse_args(argv)
 
     try:
@@ -73,6 +75,7 @@ def load_config(argv: list[str]) -> Config:
         debug=bool(config.get("debug", False)),
         state_dir=state_root(config.get("state_dir"), config_data=config_data),
         morph_api_url=str(config.get("morph_api_url") or defaults.morph_api_url),
+        env_files=tuple(Path(value).expanduser() for value in args.env_file) or defaults.env_files,
         compression_ratio=float(config.get("compression_ratio", 0.35) or 0.35),
         preserve_recent=int(config.get("preserve_recent", 4) or 0),
         compact_prefix_max_tokens=int(config.get("compact_prefix_max_tokens", 120000) or 0),
@@ -159,6 +162,7 @@ def main() -> None:
             preserve_recent=config.preserve_recent,
             include_markers=config.include_markers,
             api_url=config.morph_api_url,
+            env_files=config.env_files,
         )
 
         compacted_output = str(result.get("output") or "").strip()
