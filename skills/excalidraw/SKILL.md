@@ -24,7 +24,7 @@ Wrap your elements array in the standard `.excalidraw` envelope:
   "source": "droid",
   "elements": [ ...your elements array here... ],
   "appState": {
-    "viewBackgroundColor": "#ffffff"
+    "viewBackgroundColor": "#1e1e1e"
   }
 }
 ```
@@ -32,10 +32,65 @@ Wrap your elements array in the standard `.excalidraw` envelope:
 ### Uploading for a shareable link
 
 ```bash
-python ~/.agents/skills/excalidraw/scripts/upload.py ~/diagrams/my_diagram.excalidraw
+uv run --with cryptography python ~/.agents/skills/excalidraw/scripts/upload.py diagram.excalidraw
 ```
 
-Uploads to excalidraw.com (no account needed) and prints a shareable URL. Requires `pip install cryptography`.
+Uploads to excalidraw.com (no account needed) and prints a shareable URL.
+
+**Note:** This produces a shareable *editing* link, not an embeddable image. GitHub markdown will not render it inline -- it's just a clickable URL. Use the rendering workflow below to get an inline image.
+
+### Rendering to PNG/SVG (excalirender)
+
+Use `excalirender` to render `.excalidraw` files directly to PNG, SVG, or PDF without a browser.
+
+**Install** (native Linux binary, no dependencies):
+```bash
+curl -fsSL https://raw.githubusercontent.com/JonRC/excalirender/main/install.sh | PREFIX=$HOME/.local sh
+```
+
+**Render** (always use `--dark -s 2` unless explicitly asked for light mode):
+```bash
+excalirender diagram.excalidraw -o output.png --dark -s 2   # Default: dark mode, 2x (recommended)
+excalirender diagram.excalidraw -o output.png -s 2          # Light mode, 2x
+excalirender diagram.excalidraw -o output.svg --dark        # SVG, dark mode
+excalirender diagram.excalidraw --transparent --dark        # Transparent background, dark mode
+```
+
+### Embedding in GitHub PRs
+
+To get a diagram rendering inline in a PR body on GitHub:
+
+1. Create the `.excalidraw` file
+2. Render to PNG: `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
+3. Upload to GitHub CDN via `gh-attach`: `gh-attach --repo owner/repo --md /tmp/diagram.png`
+   - This prints a markdown image link with a `user-attachments.githubusercontent.com` URL
+   - Use this URL in the PR body: `![Diagram](https://github.com/user-attachments/assets/...)`
+4. Optionally upload an editable link: `uv run --with cryptography python ~/.agents/skills/excalidraw/scripts/upload.py diagram.excalidraw`
+5. Put the editable link in a collapsible section directly below the image so it's visually attached to the diagram:
+
+```markdown
+![Architecture](https://github.com/user-attachments/assets/...)
+
+<details>
+<summary>Edit diagram</summary>
+
+Source: https://excalidraw.com/#json=...
+
+Rendered with: `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
+
+</details>
+```
+
+**Do NOT:**
+- Commit the PNG to the branch -- use `gh-attach` for hosting
+- Use `raw.githubusercontent.com` URLs -- they 404 on private repos
+- Put the Excalidraw edit link as a bare clickable link -- it shows a scary "Loading external drawing will replace your existing content" warning to anyone who clicks it
+
+**If `gh-attach` has no browser cookies** (e.g., headless CI or remote dev machine), SSH to a machine that has them:
+```bash
+scp /tmp/diagram.png user@laptop:/tmp/diagram.png
+ssh laptop "gh-attach --repo owner/repo --md /tmp/diagram.png"
+```
 
 ## Element format reference
 
