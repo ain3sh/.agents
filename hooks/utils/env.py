@@ -31,17 +31,16 @@ def get_droid_env_file() -> Path | None:
     return None
 
 
-# Regex for parsing env file lines: KEY=value or KEY="value" or KEY='value'
+# Regex for parsing dotenv lines: KEY=value or KEY="value" or KEY='value'
 ENV_LINE_PATTERN = re.compile(
-    r'^(?:export\s+)?'
-    r'([A-Za-z_][A-Za-z0-9_]*)'
+    r'^([A-Za-z_][A-Za-z0-9_]*)'
     r'='
     r'(.*)$'
 )
 
 
 def parse_env_text(text: str) -> dict[str, str]:
-    """Parse .env-formatted text into environment variables."""
+    """Parse dotenv-formatted text into environment variables."""
     env_vars: dict[str, str] = {}
 
     for line in text.splitlines():
