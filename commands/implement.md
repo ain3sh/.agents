@@ -3,7 +3,7 @@ description: Implement a Linear ticket -- explore, plan, spec, then code
 argument-hint: <TICKET-ID or pasted ticket content>
 ---
 
-Load skills: **linear-cli**, **quality-ship**. Bug-fix tickets also load: **root-cause-finder**, **step-through**, **consolidate-test-suites**.
+Load skills: **linear-cli**, **worktree-setup**, **quality-ship**. Bug-fix tickets also load: **root-cause-finder**, **step-through**, **consolidate-test-suites**.
 
 ## 1. Understand the Ticket
 
@@ -107,11 +107,27 @@ Record the skip in the PR's **Root Cause Analysis** section (see pr-description)
 
 ## 5. Validate
 
-After implementation is complete and working, **re-load the quality-ship skill** and strictly follow its guidance:
+After the draft implementation is complete and before running any validators:
+
+### 5a. Worktree pre-check (mandatory, runs first)
+
+**Re-load the worktree-setup skill** and check for worktree context:
+
+```bash
+MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
+[ "$(git rev-parse --show-toplevel)" != "$MAIN_REPO" ] && echo "WORKTREE -- follow worktree-setup before validators"
+```
+
+If in a worktree (or the working directory path contains `worktree`), follow the skill to mirror `node_modules` / repoint workspace packages / symlink `.venv` **before** touching any lint, typecheck, knip, or test command. Validators run in a bare worktree will either fail with missing-module errors or quietly resolve to stale main-repo sources -- both waste a full cycle and leave a botched symlink state for `/open-pr` to clean up later.
+
+Do not treat this as optional. Running it here means `/open-pr` can trust the environment is already correct.
+
+### 5b. Quality-ship
+
+Once the environment is ready, **re-load the quality-ship skill** and strictly follow its guidance:
 
 - Detect and run **every** applicable validator (format, lint, knip, typecheck, tests).
 - Scope correctly in monorepos (turbo or per-package).
-- Check for worktree context and symlink dependencies if needed.
 - Fix all issues and re-run until clean.
 
 Do not skip this step or defer it to a follow-up command. The implementation is not done until validators pass.
