@@ -7,11 +7,25 @@ description: Create hand-drawn style diagrams using Excalidraw JSON format. Gene
 
 Create diagrams by writing standard Excalidraw element JSON and saving as `.excalidraw` files. These files can be drag-and-dropped onto [excalidraw.com](https://excalidraw.com) for viewing and editing. No accounts, no API keys, no rendering libraries -- just JSON.
 
+## Defaults you must apply
+
+- **Dark mode is the default.** Every diagram ships with a full-canvas dark background rectangle as element 0 (see `references/dark-mode.md`) and dark-mode fills/strokes. Only drop dark mode if the user explicitly asks for light -- never "because it's simpler".
+- **Always render to PNG with `excalirender`** before shipping a diagram anywhere a human will read it (PR body, Slack, docs, Notion). An editable-link on its own is not a deliverable -- GitHub, Slack, and most doc surfaces will not inline-render it.
+- **Always render at `-s 2`** (2x scale). 1x looks mushy on retina displays.
+
+The canonical render command, which you should be able to type from memory:
+
+```bash
+excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2
+```
+
 ## Workflow
 
-1. Write the elements JSON -- an array of Excalidraw element objects
-2. Save the file as `.excalidraw` wrapped in the envelope below
-3. Optionally upload for a shareable link using `scripts/upload.py`
+1. Write the elements JSON -- an array of Excalidraw element objects (element 0 = dark background rect).
+2. Save the file as `.excalidraw` wrapped in the envelope below.
+3. Render to PNG with `excalirender --dark -s 2`.
+4. Embed the PNG (via `gh-attach` for GitHub, or direct upload for Slack/Notion).
+5. Optionally upload the raw `.excalidraw` for an editable companion link tucked in a `<details>` block.
 
 ### Saving a diagram
 
@@ -39,22 +53,25 @@ Uploads to excalidraw.com (no account needed) and prints a shareable URL.
 
 **Note:** This produces a shareable *editing* link, not an embeddable image. GitHub markdown will not render it inline -- it's just a clickable URL. Use the rendering workflow below to get an inline image.
 
-### Rendering to PNG/SVG (excalirender)
+### Rendering to PNG/SVG (excalirender) -- required step
 
-Use `excalirender` to render `.excalidraw` files directly to PNG, SVG, or PDF without a browser.
+Use `excalirender` to render `.excalidraw` files directly to PNG, SVG, or PDF without a browser. This is not an optional polish step -- a diagram that never gets rendered to PNG does not count as delivered.
 
 **Install** (native Linux binary, no dependencies):
 ```bash
 curl -fsSL https://raw.githubusercontent.com/JonRC/excalirender/main/install.sh | PREFIX=$HOME/.local sh
 ```
 
-**Render** (always use `--dark -s 2` unless explicitly asked for light mode):
+**Render.** Dark mode at 2x is the default on every command -- deviate only when the user explicitly requests otherwise:
+
 ```bash
-excalirender diagram.excalidraw -o output.png --dark -s 2   # Default: dark mode, 2x (recommended)
-excalirender diagram.excalidraw -o output.png -s 2          # Light mode, 2x
-excalirender diagram.excalidraw -o output.svg --dark        # SVG, dark mode
-excalirender diagram.excalidraw --transparent --dark        # Transparent background, dark mode
+excalirender diagram.excalidraw -o output.png --dark -s 2   # DEFAULT -- use this
+excalirender diagram.excalidraw -o output.svg --dark -s 2   # SVG, dark mode
+excalirender diagram.excalidraw --transparent --dark -s 2   # Transparent, dark (overlays)
+excalirender diagram.excalidraw -o output.png -s 2          # Light mode -- only when explicitly requested
 ```
+
+If you catch yourself typing `excalirender` without `--dark -s 2`, stop and add both flags.
 
 ### Embedding in GitHub PRs
 

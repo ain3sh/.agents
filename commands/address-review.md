@@ -84,6 +84,10 @@ gh api graphql -f query='
 
 ## 7. Re-request Review
 
+Use REST -- `gh pr edit --add-reviewer` currently fails on the Projects-classic GraphQL deprecation (see `pr-context` skill):
+
 ```bash
-gh pr edit <number> --add-reviewer <reviewer-login>
+gh api "repos/$REPO/pulls/<number>/requested_reviewers" \
+  --method POST \
+  -f "reviewers[]=<reviewer-login>"
 ```
