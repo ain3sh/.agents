@@ -6,6 +6,34 @@ user-invocable: false
 
 # PR Description
 
+## 0. When this skill fires (auto-activation)
+
+**This skill is mandatory -- not optional -- for every one of the following actions.** If you recognize any of these intents, you MUST re-read this skill end-to-end before producing any PR text or calling any `gh` command. "I remember the structure" is not sufficient; load the skill every time.
+
+Triggering intents:
+
+- Opening a new PR (`gh pr create`, `/open-pr`, `/split-prs`, or any equivalent).
+- Editing or refreshing the body of an existing PR after pushing new commits.
+- Updating a PR title.
+- Adding the `Root Cause Analysis` section after a bug fix.
+- Attaching architecture diagrams or other artifacts to a PR body.
+- Producing a draft PR description for the user to paste manually.
+
+**Pre-flight ritual.** Before the first `gh` call, emit the following checklist in chat so the user can see you are following conventions:
+
+```
+pr-description checklist:
+- [ ] Analyzed diff (files, scope, change type)
+- [ ] Title in conventional-commit format
+- [ ] Four-section body: Description, Related Issue, Risk & Impact, Testing
+- [ ] Linked ticket(s) with Closes/Part of
+- [ ] RCA section for bug fixes
+- [ ] Architecture diagram (excalirender, dark mode) for structural changes
+- [ ] Using `gh api repos/$REPO/pulls/$N -X PATCH` for body/title updates (never `gh pr edit`)
+```
+
+Do not treat this as a ceremony. Tick each box as you work. A missing tick means the step is incomplete.
+
 ## 1. Analyze the Diff
 
 Before writing anything, understand what changed:
@@ -69,6 +97,37 @@ Closes TEAM-123
 - **Risk & Impact** must reflect actual thought about what could go wrong. "N/A" is acceptable only for truly zero-risk changes (typo fixes, comment-only changes).
 - **Testing** should be specific enough that a reviewer can reproduce or verify.
 
+## 3b. Writing and updating the PR body: use REST, never `gh pr edit`
+
+**Footgun:** `gh pr edit` currently fails on any repository whose org still has Projects (classic) enabled, even when you are not touching projects. The CLI issues a GraphQL query that the server rejects with:
+
+```
+GraphQL: Projects (classic) is being deprecated in favor of the new Projects experience, see: https://github.blog/changelog/...
+```
+
+This breaks `gh pr edit --body`, `gh pr edit --title`, `gh pr edit --add-reviewer`, and `gh pr edit --add-label`. **Do not retry it** -- it will not succeed until upstream `gh` ships a fix. Instead, go directly to REST.
+
+### Canonical REST replacements
+
+Set these once per session:
+
+```bash
+REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+PR_NUM=$(gh pr view --json number --jq '.number')
+```
+
+| Operation | Use this | Not this |
+|-----------|----------|----------|
+| Update body | `gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f body="$(cat /tmp/pr-body.md)"` | `gh pr edit --body` |
+| Update title | `gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f title="<new title>"` | `gh pr edit --title` |
+| Add reviewer | `gh api "repos/$REPO/pulls/$PR_NUM/requested_reviewers" --method POST -f "reviewers[]=<login>"` | `gh pr edit --add-reviewer` |
+| Add label | `gh api "repos/$REPO/issues/$PR_NUM/labels" --method POST -f "labels[]=<label>"` | `gh pr edit --add-label` |
+| Set draft/ready | `gh api graphql -f query='mutation{ markPullRequestReadyForReview(input:{pullRequestId:"<node-id>"}){ pullRequest{ isDraft } } }'` | `gh pr ready` (also GraphQL-affected in some orgs) |
+
+`gh pr create` and `gh pr view` are **not** affected -- keep using them for initial creation and reads.
+
+Writing the body to a file and passing `-f body="$(cat file)"` avoids shell-quoting bugs with multi-line markdown, backticks, and `$`-escapes.
+
 ## 4. Optional Supporting Artifacts
 
 When screenshots, videos, logs, or sample outputs would make the change easier to understand or verify, include them when practical.
@@ -85,28 +144,54 @@ If the current machine cannot access the needed browser-authenticated GitHub ses
 
 Keep any such mention generic in public PRs; describe the artifact itself, not your personal setup.
 
-### Architecture diagrams
+### Architecture diagrams (dark-mode PNGs via excalirender)
 
-When the PR introduces non-trivial architectural changes -- new components, altered data flows, changed service boundaries, new integration points, restructured modules -- generate a diagram using the **excalidraw** skill and link it in the PR body.
+When the PR introduces non-trivial architectural changes -- new components, altered data flows, changed service boundaries, new integration points, restructured modules -- generate a diagram using the **excalidraw** skill and embed it inline in the PR body.
 
-Use semantic colors for component types:
+**Non-negotiable defaults**:
 
-| Component Type | Excalidraw Fill | Stroke |
-|----------------|-----------------|--------|
-| Frontend / UI | `#a5d8ff` | `#4a9eed` |
-| Backend / API | `#b2f2bb` | `#22c55e` |
-| Database / Storage | `#d0bfff` | `#8b5cf6` |
-| Cloud / Infra | `#fff3bf` | `#f59e0b` |
-| Security / Auth | `#ffc9c9` | `#ef4444` |
-| Message Bus / Queue | `#ffd8a8` | `#fb923c` |
-| External / Generic | `#c3fae8` | `#94a3b8` |
+- **Always render with `excalirender`** (`excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`). A bare editable-link without an inline image does not count -- GitHub will not render it, and reviewers will not click through.
+- **Always use dark mode** (`--dark`). Our PR descriptions are dark-first: the diagram must match so it does not blind a reviewer viewing on GitHub's dark theme. Skip dark mode only when the user has explicitly asked for light.
+- **Always upload via `gh-attach`** so the PNG lives at `user-attachments.githubusercontent.com` -- never commit PNGs to the branch and never use `raw.githubusercontent.com` URLs.
+
+Use dark-mode fills from `~/.agents/skills/excalidraw/references/dark-mode.md` combined with the semantic categories below. The first element in the array MUST be the massive dark background rectangle (`#1e1e2e`) so the canvas reads as dark mode even when opened in someone's light-mode Excalidraw.
+
+| Component Type | Dark Fill | Stroke |
+|----------------|-----------|--------|
+| Frontend / UI | `#1e3a5f` | `#4a9eed` |
+| Backend / API | `#1a4d2e` | `#22c55e` |
+| Database / Storage | `#2d1b69` | `#8b5cf6` |
+| Cloud / Infra | `#5c3d1a` | `#f59e0b` |
+| Security / Auth | `#5c1a1a` | `#ef4444` |
+| Message Bus / Queue | `#5c3d1a` | `#fb923c` |
+| External / Generic | `#1a4d4d` | `#94a3b8` |
+
+Text on dark: `#e5e5e5` for primary, `#a0a0a0` for secondary. Never use the default `#1e1e1e` stroke on dark -- it is invisible.
 
 Workflow:
-1. Generate the `.excalidraw` file showing the relevant components and their relationships.
-2. Upload via `python ~/.agents/skills/excalidraw/scripts/upload.py <file>` to get a shareable link.
-3. Add the link to the PR body under a "Architecture" heading or inline in the Description.
 
-Skip this when the change is purely behavioral (logic fixes, config tweaks, test additions) with no structural impact.
+1. Write the `.excalidraw` file with the dark background rectangle as element 0.
+2. `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
+3. `gh-attach --repo "$REPO" --md /tmp/diagram.png` -- copy the returned markdown.
+4. Optional: `uv run --with cryptography python ~/.agents/skills/excalidraw/scripts/upload.py diagram.excalidraw` for an editable-link companion.
+5. Put the image in the PR body under an "## Architecture" heading. Nest the editable link inside a `<details>` block so it does not look like a phishing link:
+
+   ```markdown
+   ## Architecture
+
+   ![Architecture](https://github.com/user-attachments/assets/...)
+
+   <details>
+   <summary>Edit diagram</summary>
+
+   Source: https://excalidraw.com/#json=...
+
+   Rendered with: `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
+
+   </details>
+   ```
+
+Skip this only when the change is purely behavioral (logic fixes, config tweaks, test additions) with no structural impact. If you find yourself describing a new flow in prose across more than two sentences of the Description, that is a signal you should be drawing it instead.
 
 ## 5. Contextual Additions
 
@@ -165,10 +250,12 @@ Only runs if Phase 1 identified updates. The goal is a description that reads as
    - Preserves the four-section structure (Description, Related Issue, Risk & Impact, Testing).
    - Doesn't bloat: if the PR scope grew, the description should still be 2-4 sentences in the Description section, not a paragraph per commit.
    - Updates Risk & Impact to reflect the current full scope, not just the delta.
-3. Apply the update:
+3. Apply the update via the REST endpoint documented in section 3b (**not** `gh pr edit` -- it currently fails on the Projects-classic GraphQL deprecation):
    ```bash
    REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
    gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f body="$(cat /tmp/pr-updated-body.md)"
    ```
 
 **Do not** rewrite a description that is already accurate just because the phrasing could be marginally better. The bar for Phase 2 changes is: "a reviewer reading this description would get a wrong or incomplete picture of the PR."
+
+**Do not** skip this refresh because the user did not explicitly ask for it. Any `git push` that lands on a branch with an open PR triggers Phase 1 automatically. Workflow commands (`/open-pr`, `/split-prs`, `/address-review`, `quality-ship`) are expected to run this flow as part of their normal completion -- they do not get to opt out.
