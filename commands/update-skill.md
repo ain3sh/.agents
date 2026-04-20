@@ -49,16 +49,13 @@ Follow the **quality-ship** skill:
 - Commit with message: `docs(<skill-name>): update with learnings from <context>`.
 - Push.
 
-## 7. Open PR
+## 7. Open PR — pr-description hand-off (mandatory)
 
-Follow the **pr-description** skill to write the PR body. The Description section should cover: what was learned, what changed in the skill, and why it improves future agent success.
+Re-load `pr-description`, emit its section 0 checklist inline, and tick every box before `gh pr create`. The Description section should cover: what was learned, what changed in the skill, and why it improves future agent success.
 
 ```bash
 DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
-gh pr create \
-  --base "$DEFAULT_BRANCH" \
-  --title "docs(<skill-name>): update with learnings from <context>" \
-  --body-file /tmp/pr-body.md
+gh pr create --base "$DEFAULT_BRANCH" --title "docs(<skill-name>): update with learnings from <context>" --body-file /tmp/pr-body.md
 ```
 
 Report the PR URL.

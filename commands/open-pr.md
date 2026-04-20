@@ -3,7 +3,17 @@ description: Full PR workflow -- ticket, branch, verify/fix, lint/test, commit, 
 argument-hint: [TICKET-ID | description of work]
 ---
 
-Load skills: **linear-cli**, **ticket-branch**, **quality-ship**, **pr-description**, **worktree-setup**.
+Load skills: **linear-cli**, **ticket-branch**, **quality-ship**, **pr-description** (mandatory hand-off at step 4 — see below), **worktree-setup**.
+
+## Todo cadence (non-optional)
+
+At every `##` boundary:
+
+1. Mark the prior section `completed` (only after verification).
+2. Mark the incoming section `in_progress`.
+3. Append newly-discovered subtasks as todos immediately.
+
+Fire `TodoWrite` in parallel with the first tool call of each phase.
 
 ## 1. Ticket + Branch
 
@@ -35,19 +45,13 @@ Follow the **quality-ship** skill:
 - Commit (conventional format, referencing the ticket).
 - Push.
 
-## 4. Open PR
+## 4. Open PR — pr-description hand-off (mandatory)
 
-Follow the **pr-description** skill:
-- Analyze the diff to determine change type, scope, and motivation.
-- Format the PR title (conventional commits).
-- Write the full PR body (all four sections: Description, Related Issue, Risk & Impact, Testing).
+Re-load `pr-description`, emit its section 0 checklist inline, and tick every box before `gh pr create`. Drafting from memory is not allowed — "I remember the structure" is the exact failure mode this gate blocks.
 
 ```bash
 DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
-gh pr create \
-  --base "$DEFAULT_BRANCH" \
-  --title "<title>" \
-  --body-file /tmp/pr-body.md
+gh pr create --base "$DEFAULT_BRANCH" --title "<title>" --body-file /tmp/pr-body.md
 ```
 
 Report the PR URL.

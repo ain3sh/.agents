@@ -5,6 +5,16 @@ argument-hint: <TICKET-ID or pasted ticket content>
 
 Load skills: **linear-cli**, **worktree-setup**, **quality-ship**. Bug-fix tickets also load: **root-cause-finder**, **step-through**, **consolidate-test-suites**.
 
+## Todo cadence (non-optional)
+
+At every `##` boundary:
+
+1. Mark the prior section `completed` (only after verification).
+2. Mark the incoming section `in_progress`.
+3. Append newly-discovered subtasks as todos immediately.
+
+Fire `TodoWrite` in parallel with the first tool call of each phase.
+
 ## 1. Understand the Ticket
 
 - If `$ARGUMENTS` contains a ticket ID (e.g., `TEAM-123`), fetch it:
@@ -106,6 +116,8 @@ When skipping, fall back to the narrowest viable alternative: the next lower lay
 Record the skip in the PR's **Root Cause Analysis** section (see pr-description): what was attempted, why testing wasn't viable, and which fallback was used.
 
 ## 5. Validate
+
+> **Todo anchor**: before entering, add one todo per validator (worktree pre-check, format, lint, knip, typecheck, tests) so none silently slips.
 
 After the draft implementation is complete and before running any validators:
 

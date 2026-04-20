@@ -64,14 +64,12 @@ Replace `<owner>` with your branch namespace.
 ### Quality checks + push
 Follow the **quality-ship** skill: run detected checks, fix issues, commit any fixups, push.
 
-### Open PR
-Follow the **pr-description** skill to analyze the diff and write the PR body. Include the contextual additions for stacked/split PRs (part K of N, dependencies, scope).
+### Open PR — pr-description hand-off (mandatory)
+
+Re-load `pr-description`, emit its section 0 checklist inline, and tick every box before `gh pr create`. Include the stacked/split-PR context (part K of N, dependencies, scope) in the body.
 
 ```bash
-gh pr create \
-  --base "$TARGET" \
-  --title "<title>" \
-  --body-file /tmp/pr-body.md
+gh pr create --base "$TARGET" --title "<title>" --body-file /tmp/pr-body.md
 ```
 
 ## 4. Report

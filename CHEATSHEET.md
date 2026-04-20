@@ -14,6 +14,7 @@
 | `/address-review` | (new) read reviewer feedback, triage, fix, respond to threads | `/address-review 123` |
 | `/demo-pr` | tuistory before/after filming prompt | `/demo-pr 123` |
 | `/implement` | "exploration and planning, don't take ugly path" prompt | `/implement FAC-789` |
+| `/retrospective` | (new) reread your own diff as a stranger; catch dead weight, junk code, blatant perf wins | `/retrospective` |
 | `/update-skill` | "reflect + update skill + critique x2 + PR" prompt | `/update-skill linear-cli` |
 | `/split-prs` | (new) break a long-running branch into clean separate PRs | `/split-prs feat/big-branch` |
 
@@ -24,6 +25,8 @@
 `/split-prs` analyzes commit groupings, proposes a split plan, auto-decides stacked vs independent based on file overlap, then executes via cherry-pick/diff-apply (never manual re-typing).
 
 `/implement` presents a spec and waits for approval before writing code.
+
+`/retrospective` aggregates the current diff against the base branch, walks a named anti-pattern checklist (dead weight / junk code / optimization / drift / scope creep), triages findings by severity, and waits for user approval before applying.
 
 ## Background Atoms (Droid-only, not in `/` menu)
 
