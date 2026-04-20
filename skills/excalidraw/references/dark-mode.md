@@ -1,13 +1,21 @@
 # Excalidraw Dark Mode Diagrams
 
-Use a massive dark background rectangle as the **first element** in the array:
+Dark mode is produced by two things working together. Use both, nothing more:
+
+1. `appState.viewBackgroundColor: "#1e1e2e"` -- the canvas colour when the raw `.excalidraw` file is opened in excalidraw.com.
+2. `excalirender --dark -s 2` -- applies Excalidraw's dark theme at render time.
+
+**Do NOT add a full-canvas background rectangle** (e.g. a `10000x7500` filled rect as element 0). Excalirender renders the full scene bounding box, so such a rect turns a tight 400x200 diagram into a `20000x15000` PNG where the real content is a few-pixel speck, and `--dark` inverts the rect's dark fill to pale gray. `viewBackgroundColor` + `--dark` already deliver a dark canvas without either side-effect.
+
+Envelope for every dark-mode diagram:
 
 ```json
 {
-  "type": "rectangle", "id": "darkbg",
-  "x": -4000, "y": -3000, "width": 10000, "height": 7500,
-  "backgroundColor": "#1e1e2e", "fillStyle": "solid",
-  "strokeColor": "transparent", "strokeWidth": 0
+  "type": "excalidraw",
+  "version": 2,
+  "source": "droid",
+  "elements": [ ...your elements, no background rect... ],
+  "appState": { "viewBackgroundColor": "#1e1e2e" }
 }
 ```
 

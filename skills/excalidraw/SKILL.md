@@ -9,7 +9,8 @@ Create diagrams by writing standard Excalidraw element JSON and saving as `.exca
 
 ## Defaults you must apply
 
-- **Dark mode is the default.** Every diagram ships with a full-canvas dark background rectangle as element 0 (see `references/dark-mode.md`) and dark-mode fills/strokes. Only drop dark mode if the user explicitly asks for light -- never "because it's simpler".
+- **Dark mode is the default.** Achieve it with exactly two things: set `appState.viewBackgroundColor: "#1e1e2e"` in the file, and pass `--dark` to `excalirender`. Use dark-mode fills/strokes from `references/dark-mode.md`. Drop dark mode only if the user explicitly asks for light -- never "because it's simpler".
+- **Never add a full-canvas background rectangle** as element 0 (or anywhere). It inflates the scene bounding box so `excalirender` produces a giant near-empty PNG with your diagram as an unreadable speck, and `--dark` color-inverts the fill so the canvas reads as pale gray instead of dark. `viewBackgroundColor` + `--dark` are already doing that job; a manual rect fights both.
 - **Always render to PNG with `excalirender`** before shipping a diagram anywhere a human will read it (PR body, Slack, docs, Notion). An editable-link on its own is not a deliverable -- GitHub, Slack, and most doc surfaces will not inline-render it.
 - **Always render at `-s 2`** (2x scale). 1x looks mushy on retina displays.
 
@@ -21,7 +22,7 @@ excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2
 
 ## Workflow
 
-1. Write the elements JSON -- an array of Excalidraw element objects (element 0 = dark background rect).
+1. Write the elements JSON -- an array of Excalidraw element objects. No background rectangle; the canvas colour comes from `appState.viewBackgroundColor` and the `--dark` render flag.
 2. Save the file as `.excalidraw` wrapped in the envelope below.
 3. Render to PNG with `excalirender --dark -s 2`.
 4. Embed the PNG (via `gh-attach` for GitHub, or direct upload for Slack/Notion).
@@ -29,7 +30,7 @@ excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2
 
 ### Saving a diagram
 
-Wrap your elements array in the standard `.excalidraw` envelope:
+Wrap your elements array in the standard `.excalidraw` envelope. For dark mode, set `viewBackgroundColor` to `#1e1e2e` -- do NOT draw a background rectangle:
 
 ```json
 {
@@ -38,7 +39,7 @@ Wrap your elements array in the standard `.excalidraw` envelope:
   "source": "droid",
   "elements": [ ...your elements array here... ],
   "appState": {
-    "viewBackgroundColor": "#1e1e1e"
+    "viewBackgroundColor": "#1e1e2e"
   }
 }
 ```
@@ -72,6 +73,8 @@ excalirender diagram.excalidraw -o output.png -s 2          # Light mode -- only
 ```
 
 If you catch yourself typing `excalirender` without `--dark -s 2`, stop and add both flags.
+
+**DO NOT** pair `--dark` with a manual background rectangle in the scene. Excalirender renders the full scene bounding box, so a `10000x7500` background rect produces a `20000x15000` PNG with your actual diagram reduced to an unreadable speck, and `--dark` inverts the rect's dark fill to pale gray. The correct stack is `appState.viewBackgroundColor: "#1e1e2e"` + `--dark` + no background element.
 
 ### Embedding in GitHub PRs
 

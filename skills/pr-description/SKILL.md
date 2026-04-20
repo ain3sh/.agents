@@ -154,7 +154,7 @@ When the PR introduces non-trivial architectural changes -- new components, alte
 - **Always use dark mode** (`--dark`). Our PR descriptions are dark-first: the diagram must match so it does not blind a reviewer viewing on GitHub's dark theme. Skip dark mode only when the user has explicitly asked for light.
 - **Always upload via `gh-attach`** so the PNG lives at `user-attachments.githubusercontent.com` -- never commit PNGs to the branch and never use `raw.githubusercontent.com` URLs.
 
-Use dark-mode fills from `~/.agents/skills/excalidraw/references/dark-mode.md` combined with the semantic categories below. The first element in the array MUST be the massive dark background rectangle (`#1e1e2e`) so the canvas reads as dark mode even when opened in someone's light-mode Excalidraw.
+Use dark-mode fills from `~/.agents/skills/excalidraw/references/dark-mode.md` combined with the semantic categories below. Set `appState.viewBackgroundColor: "#1e1e2e"` on the envelope so the raw file opens dark in excalidraw.com, then let `--dark` at render time do the rest. **Do NOT add a manual background rectangle** as an element -- it inflates the scene bbox (excalirender produces a giant PNG with your diagram as an unreadable speck) and gets colour-inverted by `--dark`.
 
 | Component Type | Dark Fill | Stroke |
 |----------------|-----------|--------|
@@ -170,7 +170,7 @@ Text on dark: `#e5e5e5` for primary, `#a0a0a0` for secondary. Never use the defa
 
 Workflow:
 
-1. Write the `.excalidraw` file with the dark background rectangle as element 0.
+1. Write the `.excalidraw` file. Set `appState.viewBackgroundColor: "#1e1e2e"` -- do NOT add a background rectangle as an element.
 2. `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
 3. `gh-attach --repo "$REPO" --md /tmp/diagram.png` -- copy the returned markdown.
 4. Optional: `uv run --with cryptography python ~/.agents/skills/excalidraw/scripts/upload.py diagram.excalidraw` for an editable-link companion.
