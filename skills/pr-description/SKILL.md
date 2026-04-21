@@ -154,23 +154,13 @@ When the PR introduces non-trivial architectural changes -- new components, alte
 - **Always use dark mode** (`--dark`). Our PR descriptions are dark-first: the diagram must match so it does not blind a reviewer viewing on GitHub's dark theme. Skip dark mode only when the user has explicitly asked for light.
 - **Always upload via `gh-attach`** so the PNG lives at `user-attachments.githubusercontent.com` -- never commit PNGs to the branch and never use `raw.githubusercontent.com` URLs.
 
-Use dark-mode fills from `~/.agents/skills/excalidraw/references/dark-mode.md` combined with the semantic categories below. Set `appState.viewBackgroundColor: "#1e1e2e"` on the envelope so the raw file opens dark in excalidraw.com, then let `--dark` at render time do the rest. **Do NOT add a manual background rectangle** as an element -- it inflates the scene bbox (excalirender produces a giant PNG with your diagram as an unreadable speck) and gets colour-inverted by `--dark`.
+**Author the `.excalidraw` in light theme** -- pastel fills from `~/.agents/skills/excalidraw/references/colors.md`, `#1e1e1e` text, `"viewBackgroundColor": "#ffffff"` (or omit). `--dark` is Excalidraw's theme inverter and expects a light source; pre-coloring elements dark (`#1e3a5f` fills, `#e5e5e5` text, dark `viewBackgroundColor`) double-inverts into a washed-out render. See `~/.agents/skills/excalidraw/references/dark-mode.md` for the full list of failure modes. **Do NOT add a manual background rectangle** element -- it inflates the scene bbox so the PNG balloons with your diagram as a speck.
 
-| Component Type | Dark Fill | Stroke |
-|----------------|-----------|--------|
-| Frontend / UI | `#1e3a5f` | `#4a9eed` |
-| Backend / API | `#1a4d2e` | `#22c55e` |
-| Database / Storage | `#2d1b69` | `#8b5cf6` |
-| Cloud / Infra | `#5c3d1a` | `#f59e0b` |
-| Security / Auth | `#5c1a1a` | `#ef4444` |
-| Message Bus / Queue | `#5c3d1a` | `#fb923c` |
-| External / Generic | `#1a4d4d` | `#94a3b8` |
-
-Text on dark: `#e5e5e5` for primary, `#a0a0a0` for secondary. Never use the default `#1e1e1e` stroke on dark -- it is invisible.
+Map components to the pastel families in `colors.md`: Frontend/Input -> Light Blue (`#a5d8ff`), Backend/Success -> Light Green (`#b2f2bb`), Storage/Data -> Light Teal (`#c3fae8`), Processing/Middleware -> Light Purple (`#d0bfff`), Warning/External -> Light Orange (`#ffd8a8`), Error/Critical -> Light Red (`#ffc9c9`), Notes/Decisions -> Light Yellow (`#fff3bf`). `--dark` maps each to its matching dark variant at render time.
 
 Workflow:
 
-1. Write the `.excalidraw` file. Set `appState.viewBackgroundColor: "#1e1e2e"` -- do NOT add a background rectangle as an element.
+1. Write the `.excalidraw` file in light colors. No background rectangle element, no dark `viewBackgroundColor`.
 2. `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
 3. `gh-attach --repo "$REPO" --md /tmp/diagram.png` -- copy the returned markdown.
 4. Optional: `uv run --with cryptography python ~/.agents/skills/excalidraw/scripts/upload.py diagram.excalidraw` for an editable-link companion.

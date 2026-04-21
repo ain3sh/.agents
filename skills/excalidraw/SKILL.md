@@ -9,10 +9,10 @@ Create diagrams by writing standard Excalidraw element JSON and saving as `.exca
 
 ## Defaults you must apply
 
-- **Dark mode is the default.** Achieve it with exactly two things: set `appState.viewBackgroundColor: "#1e1e2e"` in the file, and pass `--dark` to `excalirender`. Use dark-mode fills/strokes from `references/dark-mode.md`. Drop dark mode only if the user explicitly asks for light -- never "because it's simpler".
-- **Never add a full-canvas background rectangle** as element 0 (or anywhere). It inflates the scene bounding box so `excalirender` produces a giant near-empty PNG with your diagram as an unreadable speck, and `--dark` color-inverts the fill so the canvas reads as pale gray instead of dark. `viewBackgroundColor` + `--dark` are already doing that job; a manual rect fights both.
+- **Author every file in light theme; render dark.** Use pastel fills from `references/colors.md`, `#1e1e1e` text, and either `"viewBackgroundColor": "#ffffff"` or no `appState` override. `--dark` is Excalidraw's own theme inverter -- it expects a light source file and emits a dark PNG. Pre-coloring elements dark (`#1e3a5f` fills, `#e5e5e5` text, `"viewBackgroundColor": "#1e1e2e"`, etc.) double-inverts to a washed-out pastel-on-pale-gray render. See `references/dark-mode.md` for the exact failure modes.
+- **Never add a full-canvas background rectangle** as element 0 (or anywhere). It inflates the scene bbox so `excalirender` produces a giant near-empty PNG with your diagram as an unreadable speck. `--dark` also inverts its fill, so the footgun compounds.
 - **Always render to PNG with `excalirender`** before shipping a diagram anywhere a human will read it (PR body, Slack, docs, Notion). An editable-link on its own is not a deliverable -- GitHub, Slack, and most doc surfaces will not inline-render it.
-- **Always render at `-s 2`** (2x scale). 1x looks mushy on retina displays.
+- **Always render at `-s 2 --dark`** (2x scale, dark output). Drop `--dark` only when the user explicitly asks for light; drop `-s 2` never (1x looks mushy on retina).
 
 The canonical render command, which you should be able to type from memory:
 
@@ -22,25 +22,23 @@ excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2
 
 ## Workflow
 
-1. Write the elements JSON -- an array of Excalidraw element objects. No background rectangle; the canvas colour comes from `appState.viewBackgroundColor` and the `--dark` render flag.
+1. Write the elements JSON -- an array of Excalidraw element objects authored in light theme (pastel fills, `#1e1e1e` text). No background rectangle element.
 2. Save the file as `.excalidraw` wrapped in the envelope below.
-3. Render to PNG with `excalirender --dark -s 2`.
+3. Render to dark PNG with `excalirender --dark -s 2`. `--dark` handles all theme inversion; the source stays light.
 4. Embed the PNG (via `gh-attach` for GitHub, or direct upload for Slack/Notion).
 5. Optionally upload the raw `.excalidraw` for an editable companion link tucked in a `<details>` block.
 
 ### Saving a diagram
 
-Wrap your elements array in the standard `.excalidraw` envelope. For dark mode, set `viewBackgroundColor` to `#1e1e2e` -- do NOT draw a background rectangle:
+Wrap your elements array in the standard `.excalidraw` envelope. Keep `viewBackgroundColor` light (or omit `appState` entirely); `--dark` inverts the canvas at render time:
 
 ```json
 {
   "type": "excalidraw",
   "version": 2,
   "source": "droid",
-  "elements": [ ...your elements array here... ],
-  "appState": {
-    "viewBackgroundColor": "#1e1e2e"
-  }
+  "elements": [ ...light-theme elements; no background rectangle... ],
+  "appState": { "viewBackgroundColor": "#ffffff" }
 }
 ```
 
@@ -63,18 +61,20 @@ Use `excalirender` to render `.excalidraw` files directly to PNG, SVG, or PDF wi
 curl -fsSL https://raw.githubusercontent.com/JonRC/excalirender/main/install.sh | PREFIX=$HOME/.local sh
 ```
 
-**Render.** Dark mode at 2x is the default on every command -- deviate only when the user explicitly requests otherwise:
+**Render.** Dark output at 2x is the default -- deviate only when the user explicitly requests otherwise:
 
 ```bash
 excalirender diagram.excalidraw -o output.png --dark -s 2   # DEFAULT -- use this
-excalirender diagram.excalidraw -o output.svg --dark -s 2   # SVG, dark mode
+excalirender diagram.excalidraw -o output.svg --dark -s 2   # SVG, dark
 excalirender diagram.excalidraw --transparent --dark -s 2   # Transparent, dark (overlays)
-excalirender diagram.excalidraw -o output.png -s 2          # Light mode -- only when explicitly requested
+excalirender diagram.excalidraw -o output.png -s 2          # Light -- only when explicitly requested
 ```
 
 If you catch yourself typing `excalirender` without `--dark -s 2`, stop and add both flags.
 
-**DO NOT** pair `--dark` with a manual background rectangle in the scene. Excalirender renders the full scene bounding box, so a `10000x7500` background rect produces a `20000x15000` PNG with your actual diagram reduced to an unreadable speck, and `--dark` inverts the rect's dark fill to pale gray. The correct stack is `appState.viewBackgroundColor: "#1e1e2e"` + `--dark` + no background element.
+**Authoring stays light even when output is dark.** `--dark` is Excalidraw's theme inverter; it expects light source colors. Dark fills, light text, or a dark `viewBackgroundColor` in the JSON get double-inverted into a washed-out pastel render on a pale-gray canvas -- see `references/dark-mode.md`. Don't pre-color for dark; `--dark` does it.
+
+**Also:** don't add a full-canvas background rectangle element. The bbox inflation alone turns a tight 400x200 diagram into a 20000x15000 PNG with the real content as a few-pixel speck -- `--dark` making the fill pale gray is just extra insult.
 
 ### Embedding in GitHub PRs
 
@@ -249,5 +249,5 @@ See `references/colors.md` for full tables. Quick reference:
 - Use the color palette consistently across the diagram
 - **Text contrast is CRITICAL** -- never use light gray on white. Minimum text color on white: `#757575`
 - Do NOT use emoji in text -- they don't render in Excalidraw's font
-- For dark mode diagrams, see `references/dark-mode.md`
+- For the render-time dark-mode gotchas (what *not* to do in the source file), see `references/dark-mode.md`
 - For larger examples, see `references/examples.md`

@@ -1,71 +1,31 @@
-# Excalidraw Dark Mode Diagrams
+# Dark-mode rendering
 
-Dark mode is produced by two things working together. Use both, nothing more:
+**Dark output is a render-time concern, not an authoring concern.** `excalirender --dark -s 2` applies Excalidraw's own theme inversion to a file that was authored in light colors. Your `.excalidraw` source stays light; the PNG comes out dark.
 
-1. `appState.viewBackgroundColor: "#1e1e2e"` -- the canvas colour when the raw `.excalidraw` file is opened in excalidraw.com.
-2. `excalirender --dark -s 2` -- applies Excalidraw's dark theme at render time.
+## What `--dark` actually does
 
-**Do NOT add a full-canvas background rectangle** (e.g. a `10000x7500` filled rect as element 0). Excalirender renders the full scene bounding box, so such a rect turns a tight 400x200 diagram into a `20000x15000` PNG where the real content is a few-pixel speck, and `--dark` inverts the rect's dark fill to pale gray. `viewBackgroundColor` + `--dark` already deliver a dark canvas without either side-effect.
+It runs every element's color through Excalidraw's light-to-dark theme mapping at render time:
 
-Envelope for every dark-mode diagram:
+- Light canvas (`#ffffff`) -> near-black
+- Pastel fills (`#a5d8ff`, `#b2f2bb`, `#ffd8a8`, ...) -> matching dark variants
+- Dark text/stroke (`#1e1e1e`) -> light
 
-```json
-{
-  "type": "excalidraw",
-  "version": 2,
-  "source": "droid",
-  "elements": [ ...your elements, no background rect... ],
-  "appState": { "viewBackgroundColor": "#1e1e2e" }
-}
+The source file is untouched. One file, two possible outputs:
+
+```bash
+excalirender diagram.excalidraw -o light.png -s 2          # light output
+excalirender diagram.excalidraw -o dark.png --dark -s 2    # dark output (our default)
 ```
 
-## Text Colors (on dark)
+## Failure modes (what droids keep doing wrong)
 
-| Color | Hex | Use |
-|-------|-----|-----|
-| White | `#e5e5e5` | Primary text, titles |
-| Muted | `#a0a0a0` | Secondary text, annotations |
-| NEVER | `#555` or darker | Invisible on dark bg |
+All four of these produce a **broken, washed-out, double-inverted** render when combined with `--dark`:
 
-## Shape Fills (on dark)
+- **Pre-colored dark fills** -- e.g. `#1e3a5f`, `#1a4d2e`, `#2d1b69`, `#5c3d1a`, `#5c1a1a`, `#1a4d4d`. `--dark` inverts them *again*, producing washed-out pastel shapes on a pale-gray canvas. Use the pastel palette in `colors.md` and let `--dark` do the mapping.
+- **`"viewBackgroundColor": "#1e1e2e"`** (or any dark hex). `--dark` inverts the canvas, so a dark source background renders as pale gray. Keep it `#ffffff` or omit.
+- **Light text colors in the source** -- e.g. `#e5e5e5`, `#a0a0a0`. They become dark after inversion, invisible on the rendered dark canvas. Use `#1e1e1e`.
+- **Full-canvas background rectangle element** -- inflates the scene bbox, so the PNG balloons with the real diagram as a speck. `--dark` inverts its fill to pale gray on top of that. Just don't add it.
 
-| Color | Hex | Good For |
-|-------|-----|----------|
-| Dark Blue | `#1e3a5f` | Primary nodes |
-| Dark Green | `#1a4d2e` | Success, output |
-| Dark Purple | `#2d1b69` | Processing, special |
-| Dark Orange | `#5c3d1a` | Warning, pending |
-| Dark Red | `#5c1a1a` | Error, critical |
-| Dark Teal | `#1a4d4d` | Storage, data |
+## The whole rule
 
-## Stroke and Arrow Colors (on dark)
-
-Use the standard Primary Colors -- they're bright enough on dark backgrounds:
-Blue `#4a9eed`, Amber `#f59e0b`, Green `#22c55e`, Red `#ef4444`, Purple `#8b5cf6`
-
-For subtle shape borders, use `#555555`.
-
-## Example: Dark mode labeled rectangle
-
-```json
-[
-  {
-    "type": "rectangle", "id": "r1",
-    "x": 100, "y": 100, "width": 200, "height": 80,
-    "backgroundColor": "#1e3a5f", "fillStyle": "solid",
-    "strokeColor": "#4a9eed", "strokeWidth": 2,
-    "roundness": { "type": 3 },
-    "boundElements": [{ "id": "t_r1", "type": "text" }]
-  },
-  {
-    "type": "text", "id": "t_r1",
-    "x": 105, "y": 120, "width": 190, "height": 25,
-    "text": "Dark Node", "fontSize": 20, "fontFamily": 1,
-    "strokeColor": "#e5e5e5",
-    "textAlign": "center", "verticalAlign": "middle",
-    "containerId": "r1", "originalText": "Dark Node", "autoResize": true
-  }
-]
-```
-
-Always set `"strokeColor": "#e5e5e5"` on standalone text elements on dark backgrounds. The default `#1e1e1e` is invisible.
+One source file in light theme; pass or drop `--dark` at render time to pick the output theme. Don't try to "compose" dark mode across the source and the flag -- you'll collide with Excalidraw's own inversion.
