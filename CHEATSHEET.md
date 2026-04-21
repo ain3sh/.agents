@@ -55,6 +55,8 @@ These binaries are expected on PATH; the workflow commands above assume they exi
 | `vulture` | `uv tool install vulture` | `quality-ship` (Python branch) |
 | `arxiv2md` | `uv tool install arxiv2md` | Ad-hoc: `arxiv2md <url>` for piping arXiv papers into context |
 | `tirith` | `curl -fsSL https://github.com/sheeki03/tirith/releases/latest/download/install.sh \| sh` (or download release tarball) | **Standalone shell hook only** — not wired into droids. Activate in your shell rc: `eval "$(tirith init --shell zsh)"` (or `--shell bash`). |
+| `witr` | `go install github.com/pranshuparmar/witr/cmd/witr@latest` | Standalone "why is this running?" process/supervisor tracer. No droid wiring. |
+| `nlsh` | `go install github.com/abakermi/nlsh@latest` | Standalone NL→shell CLI. Needs `OPENAI_API_KEY` or `GEMINI_API_KEY`. No droid wiring (droids already are the NL→shell layer). |
 | `paperclip` MCP | `paperclip login` (free account) after adding the HTTP MCP | Biomedical search, already in `~/.factory/mcp.json` |
 | `paper-search` MCP | No setup (auto-installs via `npx -y paper-search-mcp-nodejs`) | 14 academic platforms, already in `~/.factory/mcp.json` |
 
