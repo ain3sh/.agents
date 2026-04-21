@@ -55,8 +55,9 @@ Apply to all types (framing adapts to the type above):
 1. **Goal achievement** -- Do the changes accomplish what the PR claims?
 2. **Architectural brittleness** -- Fragile coupling, implicit dependencies, decisions that break under future change?
 3. **Code quality** -- Anti-patterns, poor naming, missing error handling, unnecessary complexity?
-4. **Broader impact** -- Missed edge cases, failure modes, race conditions, security concerns, regressions?
-5. **Test coverage** -- Adequate tests? Missing boundary/error/concurrent cases?
+4. **AI-slop (JS/TS only)** -- Run `slop-scan delta <base-sha> <head-sha> --format json` on any PR touching JS/TS and fold its findings into the review. Score the 15 deterministic rules (swallowed errors, placeholder comments, generic casts, pass-through wrappers, duplicate signatures, etc.) as real issues, not nits. Skip only if `slop-scan` is unavailable (recommend install: `npm install -g slop-scan`).
+5. **Broader impact** -- Missed edge cases, failure modes, race conditions, security concerns, regressions?
+6. **Test coverage** -- Adequate tests? Missing boundary/error/concurrent cases?
 
 For each finding, note:
 - **Severity**: critical / warning / suggestion / nit

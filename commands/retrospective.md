@@ -70,6 +70,10 @@ Walk each category. Record every finding as a triage candidate — severity come
 - Re-implementing something the codebase already provides as a canonical utility.
 - Mixing paradigms mid-module (e.g., callbacks beside promises, classes beside pure functions) without reason.
 
+### AI-slop signals (run `slop-scan`)
+
+For any JS/TS diff, run `slop-scan delta "$BASE" HEAD --format json` and fold the violations into your triage. Treat the structured rules (swallowed errors, placeholder comments, generic casts, pass-through wrappers, duplicate signatures) as hard finds; don't negotiate with them. If `slop-scan` isn't on PATH, note it and continue — but prefer to install it rather than skip (`npm install -g slop-scan`).
+
 ### Scope creep
 
 - Edits unrelated to the stated goal. Split into a separate PR, revert, or retain only with explicit justification in the PR body.

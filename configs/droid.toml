@@ -50,6 +50,22 @@ match_input.command = "\\bgrep\\b"
 type = "committed"
 max_chars = 6000
 
+[hooks.pre_tool_use.rtk]
+# Token-reduction proxy (https://github.com/rtk-ai/rtk). The hook calls
+# `rtk rewrite` and, on success, mutates the Execute command in-flight.
+# Transparent: if rtk is missing, slow, or has no rewrite for a command,
+# the hook exits cleanly and the original command runs unmodified.
+enabled = true
+
+# Per-surface toggles. Any absent key defaults to enabled (true). Flip a
+# single surface to `false` if its rewrite misbehaves in a real workflow —
+# no need to disable the whole hook. Common surfaces: git, grep, read, ls,
+# find, diff, gh, cargo, go, pytest, jest, vitest, playwright, rspec, rake,
+# tsc, next, prettier, eslint, biome, knip, lint, ruff, rubocop,
+# golangci-lint, docker, make, err, test, smart.
+[hooks.pre_tool_use.rtk.surfaces]
+# git = false   # e.g. keep raw git output if commit_review_guard needs it
+
 # ---
 [hooks.post_tool_use]
 

@@ -27,7 +27,9 @@ Detect the project's tooling from config files at the repo root, then run each a
 |-------|-------------------|-----------------|
 | Format | `.prettierrc*`, `biome.json`, `dprint.json` | `npm run format --write` or `npx prettier --write` or equivalent |
 | Lint fix | `eslint.config*`, `.eslintrc*`, `biome.json` | `npm run fix` or `npx eslint --fix` |
-| Dead code | `knip.*`, `knip` in package.json scripts | `npm run knip` or `npx knip` |
+| Dead code (JS/TS) | `knip.*`, `knip` in package.json scripts | `npm run knip` or `npx knip` |
+| Dead code (Python) | `*.py` in diff + `pyproject.toml` / `setup.py` | `vulture <changed-paths>` (or `uvx vulture`) |
+| AI-slop (JS/TS) | any `*.{js,jsx,ts,tsx}` in diff | `slop-scan delta <base> <head> --format json` |
 | Type check | `tsconfig.json` | `npm run typecheck` or `npx tsc --noEmit` |
 | Tests | `jest.config*`, `vitest.config*`, `pytest.ini` | Run relevant test subset for changed files |
 
@@ -41,11 +43,16 @@ quality-ship checklist:
 - format:    <ran | no signal> (evidence)
 - lint:      <ran | no signal> (evidence)
 - dead-code: <ran | no signal> (evidence)
+- ai-slop:   <ran | no signal> (evidence)
 - typecheck: <ran | no signal> (evidence)
 - tests:     <ran | no signal> (evidence)
 ```
 
 `evidence` = the command executed, or the missing config file. Do not commit until every line is filled. A CI pipeline gates on all of these; skipping one here means a failed check after push.
+
+### AI-slop detector (deterministic)
+
+For any PR touching JS/TS files, run `slop-scan delta <base-ref> <head-ref> --format json` and triage the findings alongside lint/typecheck output. It catches the 15 deterministic slop patterns (swallowed errors, placeholder comments, generic `Record<string, unknown>` casts, pass-through wrappers, duplicate signatures, etc.) that lint and typecheck miss. Treat any new violations as blocking — do not commit slop.
 
 ### Monorepo scoping: use turbo, not direct invocation
 

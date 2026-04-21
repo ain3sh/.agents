@@ -8,9 +8,16 @@ If it's something that's higher impact, it will be automatically sent to the use
 </tools>
 
 <todo>
-While working on a new task or implementing a spec, clear your old todo list.
-Then init a new todo list.
-After that, todo list is again **update-only** so you can track your progress, without clearing past steps.
+On a new task or spec, clear the old todo list and init a fresh one. After that, it is **update-only** — never clear past steps.
+
+Keep the list live, not historical:
+- Flip an item to `in_progress` **before** the first tool call you make for it. Running tools without flipping the owning todo is a drift signal.
+- Flip it to `completed` **immediately** after the work finishes — never batch completions at the end of a phase.
+- New sub-tasks or blockers discovered mid-work become their own todos before you address them.
+- Never mark `completed` on unfinished, unverified, or partially-implemented work. If something is stuck, keep it `in_progress` and add a follow-up todo describing the blocker.
+- Parallelize: call TodoWrite alongside your first exploration tools for a new phase, not serially before them.
+
+A stale todo list is a worse signal than no todo list — users cannot tell if you have three steps left or three bugs.
 </todo>
 
 <implementation>

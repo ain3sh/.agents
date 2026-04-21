@@ -43,3 +43,31 @@
 - **pr-description** owns: diff analysis, title formatting, PR body template (Description, Related Issue, Risk & Impact, Testing), contextual additions (stacked/split PR notes).
 - **ticket-branch** owns: ticket resolution or creation (with meaningful description, parent linking), branch checkout with naming conventions.
 - **pr-context** owns: fetching existing PR state (metadata, diff, comments, linked ticket) for review/response workflows.
+
+## Installed Tooling
+
+These binaries are expected on PATH; the workflow commands above assume they exist.
+
+| Tool | Install | Wired into |
+|---|---|---|
+| `rtk` | `curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh \| sh` | `hooks/pre_tool_use/rtk_rewrite.py` (mutates `Execute` commands via `rtk rewrite`). Per-surface toggles in `[hooks.pre_tool_use.rtk.surfaces]` of `configs/droid.toml`. |
+| `slop-scan` | `npm install -g slop-scan` | `/retrospective`, `/review-pr`, `quality-ship` |
+| `vulture` | `uv tool install vulture` | `quality-ship` (Python branch) |
+| `arxiv2md` | `uv tool install arxiv2md` | Ad-hoc: `arxiv2md <url>` for piping arXiv papers into context |
+| `tirith` | `curl -fsSL https://github.com/sheeki03/tirith/releases/latest/download/install.sh \| sh` (or download release tarball) | **Standalone shell hook only** — not wired into droids. Activate in your shell rc: `eval "$(tirith init --shell zsh)"` (or `--shell bash`). |
+| `paperclip` MCP | `paperclip login` (free account) after adding the HTTP MCP | Biomedical search, already in `~/.factory/mcp.json` |
+| `paper-search` MCP | No setup (auto-installs via `npx -y paper-search-mcp-nodejs`) | 14 academic platforms, already in `~/.factory/mcp.json` |
+
+### rtk hook — knobs
+
+`rtk` rewrites common shell commands to `rtk <cmd>` (token savings 60-90%). The hook is transparent: fails open when rtk is missing or has no rewrite. Toggle surfaces in `configs/droid.toml`:
+
+```toml
+[hooks.pre_tool_use.rtk]
+enabled = true            # master switch
+
+[hooks.pre_tool_use.rtk.surfaces]
+git = false               # disable only git rewrites; everything else still rewrites
+```
+
+Absent keys default to enabled. See the hook header for the full surface list.

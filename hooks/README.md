@@ -105,6 +105,7 @@ if __name__ == "__main__":
 ### PreToolUse
 - **`policy.py`**: rule-based tool policy with glob matching and `server:tool` pattern matching. Supports allow, ask, or deny decisions.
 - **`commit_review_guard.py`**: blocks `git push` if CodeRabbit CLI reports findings; runs on detected push commands.
+- **`rtk_rewrite.py`**: transparently rewrites `Execute` commands through [`rtk`](https://github.com/rtk-ai/rtk) (`rtk rewrite <cmd>`) to compress tool output and save 60-90% tokens. Fails open: missing rtk, unsupported command, or explicit surface disable → pass-through. Per-surface toggles live under `[hooks.pre_tool_use.rtk.surfaces]` in `configs/droid.toml`.
 
 ### PostToolUse
 - **`instructions.py`**: rule-based instruction injection by tool, with optional input/output matching (string, regex, or structured dict) and `${...}` interpolation for dynamic text.
