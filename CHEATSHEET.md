@@ -37,6 +37,6 @@
 | `arxiv2md` | `uv tool install arxiv2md` | Ad-hoc: pipe arXiv papers into context |
 | `tirith` | [release tarball](https://github.com/sheeki03/tirith/releases/latest) | Shell hook only (activated in `~/.zshrc`); not wired into droids |
 | `witr` | `go install github.com/pranshuparmar/witr/cmd/witr@latest` | Standalone "why is this running?" tracer |
-| `nlsh` | `go install github.com/abakermi/nlsh@latest` | Standalone NL→shell via OpenRouter; config in `~/.nlshrc`, shell wrapper in `~/.zshrc` scopes `OPENROUTER_API_KEY` to nlsh only |
+| `nlsh` | `go install github.com/abakermi/nlsh@latest` | Wrapper + inlined config in `~/.zshrc` (materializes `~/.nlshrc` on call); uses OpenRouter via `OPENROUTER_API_KEY` |
 | `paperclip` MCP | HTTP MCP + `paperclip login` | Biomedical lit (`~/.factory/mcp.json`) |
 | `paper-search` MCP | `npx -y paper-search-mcp-nodejs` | 14 academic platforms (`~/.factory/mcp.json`) |
