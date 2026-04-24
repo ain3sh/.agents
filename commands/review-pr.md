@@ -69,7 +69,7 @@ For each finding, note:
 Present all findings to the user before posting anything to GitHub:
 
 - List each finding grouped by file, with severity, line, and suggested fix.
-- State the intended verdict (`APPROVE` / `COMMENT` / `REQUEST_CHANGES`).
+- State the intended verdict (`APPROVE` / `COMMENT`).
 - Present this in normal chat prose; **do not use `AskUser`** for the review report. The goal is to let the user discuss, reword, drop, or re-severity findings naturally before anything is posted.
 - **Wait for explicit user confirmation** before proceeding to step 6.
 
@@ -108,13 +108,12 @@ gh api "repos/$REPO/pulls/<number>/comments" \
 
 After posting all line comments, submit a formal review:
 
-- **Critical/warning issues found** -> `REQUEST_CHANGES` with a summary.
-- **Only minor suggestions** -> `COMMENT` with a summary.
+- **Any issues found** -> `COMMENT` with a summary.
 - **No issues** -> `APPROVE` with a brief positive note.
 
 ```bash
 gh api "repos/$REPO/pulls/<number>/reviews" \
   --method POST \
-  -f event="<REQUEST_CHANGES|COMMENT|APPROVE>" \
+  -f event="<COMMENT|APPROVE>" \
   -f body="<summary>"
 ```
