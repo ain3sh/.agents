@@ -1,7 +1,7 @@
 ---
 name: pr-context
 description: Shared atom for gathering full PR context -- metadata, diff, conversation, linked Linear ticket. Background knowledge for workflow commands -- not invoked directly.
-user-invocable: false
+user-invocable: true
 ---
 
 # PR Context Gather

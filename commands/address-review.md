@@ -40,6 +40,8 @@ Present a summary of all feedback threads with a proposed action for each:
 - **Respond**: clarification or pushback -- draft the reply.
 - **Ack**: minor nit or style preference -- will fix or explain why not.
 
+Present this in normal chat prose; **do not use `AskUser`** for the triage report. Addressing review feedback often needs nuanced back-and-forth, rewording, pushback, and partial acceptance that does not fit a constrained multiple-choice flow.
+
 **Wait for user confirmation** before making changes.
 
 ## 3. Apply Fixes

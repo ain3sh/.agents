@@ -70,6 +70,7 @@ Present all findings to the user before posting anything to GitHub:
 
 - List each finding grouped by file, with severity, line, and suggested fix.
 - State the intended verdict (`APPROVE` / `COMMENT` / `REQUEST_CHANGES`).
+- Present this in normal chat prose; **do not use `AskUser`** for the review report. The goal is to let the user discuss, reword, drop, or re-severity findings naturally before anything is posted.
 - **Wait for explicit user confirmation** before proceeding to step 6.
 
 If the user edits, drops, or re-severities any findings, apply those changes before posting.
@@ -92,6 +93,16 @@ gh api "repos/$REPO/pulls/<number>/comments" \
 
 - Group closely-related findings into a single comment where it improves readability.
 - Include the relevant code snippet in the comment body for context.
+- When the user approves posting a suggestion and the fix is small, mechanical, and line-local, include a GitHub direct-apply suggestion block:
+
+  ````markdown
+  ```suggestion
+  <replacement code>
+  ```
+  ````
+
+  Use this only at posting time. Do not let the possibility of an applyable suggestion bias the review toward recommending changes; first decide whether the issue is worth raising, then decide whether a suggestion block would help the author apply it safely.
+- Prefer `--input /tmp/comment.json` for comments containing suggestion blocks, backticks, JSON, or other shell-sensitive text.
 
 ## 7. Verdict
 
