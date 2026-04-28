@@ -27,38 +27,93 @@ gh api graphql -f query='
   }'
 ```
 
-Group comments into threads. For each thread, identify:
+Group comments into threads. For each thread, capture:
 - **What the reviewer is asking for**: code change, clarification, or acknowledgment.
-- **File + line**: Where the feedback targets.
+- **File + line**: where the feedback targets.
 - **Whether it's blocking**: `REQUEST_CHANGES` reviews vs `COMMENT` suggestions.
-- **GraphQL thread ID**: Map each root comment's `databaseId` to its thread `id` for resolution.
+- **GraphQL thread ID**: map each root comment's `databaseId` to its thread `id` for resolution.
 
-## 2. Triage
+## 2. Classify
 
-Present a summary of all feedback threads with a proposed action for each:
-- **Fix**: code change needed -- describe what you'll change.
-- **Respond**: clarification or pushback -- draft the reply.
-- **Ack**: minor nit or style preference -- will fix or explain why not.
+Tag each thread with exactly one class:
+
+- **bug-report** -- reviewer reports broken behavior, missing data, regression, race, off-by-one, schema mismatch, or anything where the root cause is non-obvious from the comment alone.
+- **nit** -- naming, formatting, stylistic micro-preference. No behavior change.
+- **clarification** -- reviewer asks "why X?" or "should this also do Y?" -- a response is needed, not necessarily a code change.
+- **style** -- code organization, file placement, idiom. Behavior-equivalent.
+- **ack** -- typo, docstring polish, trivial agreement.
+
+Already-resolved threads keep their class but get the action `Resolved` in step 4.
+
+## 3. Root-Cause Analysis (bug-report items only)
+
+Do not skip to a fix. For every thread classified as **bug-report**, load the **root-cause-finder** skill and walk its workflow against the reviewer's report. If the bug involves multi-actor sequencing, async callbacks, background refreshes, recovery paths, retries, queues, or two pieces of state evolving together, additionally load the **step-through** skill and walk the broken flow before proposing anything.
+
+Output for each bug-report item, verbatim shape:
+
+```
+Symptom:        <what the reviewer saw>
+Trigger:        <action / sequence that reproduces it>
+Root cause:     <first unintended side effect, named with file + function/line>
+Correct layer:  <where to fix>
+Minimal patch:  <concrete code change, not a description>
+```
+
+If you cannot name a real file + symbol for the root cause after walking the flow, the item's action becomes `Investigate` in step 4, not `Fix`. Do not guess. Do not infer a fix from the symptom alone.
+
+## 4. Triage
+
+Produce two artifacts in this order.
+
+### 4a. Triage Table
+
+One row per thread. No prose, no rationale -- just the label.
+
+| # | Thread | File:line | Class | Action |
+|---|--------|-----------|-------|--------|
+| 1 | <short ref> | <path:line> | bug-report | Fix |
+| 2 | <short ref> | <path:line> | clarification | Respond |
+| 3 | <short ref> | <path:line> | nit | Ack |
+
+Permitted actions: `Fix`, `Respond`, `Ack`, `Investigate`, `Resolved`, `Decline`.
+
+### 4b. Approach (Fix and Decline items only)
+
+For each `Fix` row, write a concrete approach block:
+
+```
+File(s):     <real paths>
+Symbols:     <function/component/class/test names>
+Change:      <one paragraph or a short code snippet>
+Why here:    <one sentence on why this is the right layer>
+Verify:      <test/check that proves the fix>
+```
+
+For `Decline` rows, write a one-paragraph rationale citing the constraint or design decision that overrides the request.
+
+For `Respond`, `Ack`, `Resolved`, `Investigate` rows, draft the reply text inline under the table row (no block needed).
+
+**Hedging is forbidden in approach blocks.** Words like "likely", "probably", "should fix", "might be", "I think", "we may need to" indicate the RCA is incomplete. If you find yourself reaching for them, demote the row to `Investigate` and use that row to state what's still unknown and what you'd need to read or run next to know it. The user cannot approve a fix you yourself are unsure of.
 
 Present this in normal chat prose; **do not use `AskUser`** for the triage report. Addressing review feedback often needs nuanced back-and-forth, rewording, pushback, and partial acceptance that does not fit a constrained multiple-choice flow.
 
 **Wait for user confirmation** before making changes.
 
-## 3. Apply Fixes
+## 5. Apply Fixes
 
-For each thread marked "Fix":
-- Make the code change.
+For each thread marked `Fix`:
+- Make the code change exactly as specified in its approach block.
 - Keep changes minimal and scoped to what the reviewer asked for.
 - Do not refactor unrelated code in the same pass.
 
-## 4. Quality + Push
+## 6. Quality + Push
 
 Follow the **quality-ship** skill for quality checks, commit, and push:
 - Run detected quality checks. Fix issues until clean.
 - Commit: `fix(<scope>): address review feedback (<TICKET-ID>)`
 - Push to the existing PR branch.
 
-## 5. Respond to Threads
+## 7. Respond to Threads
 
 For each addressed thread, reply confirming the fix:
 ```bash
@@ -68,9 +123,9 @@ gh api "repos/$REPO/pulls/<number>/comments" \
   -F in_reply_to=<comment-id>
 ```
 
-For threads where the response is a clarification or disagreement, post the drafted reply from step 2.
+For threads where the response is a clarification or disagreement, post the drafted reply from step 4.
 
-## 6. Resolve Threads
+## 8. Resolve Threads
 
 Thread resolution is **GraphQL-only** (REST API has no endpoint for this).
 
@@ -84,7 +139,7 @@ gh api graphql -f query='
   }'
 ```
 
-## 7. Re-request Review
+## 9. Re-request Review
 
 Use REST -- `gh pr edit --add-reviewer` currently fails on the Projects-classic GraphQL deprecation (see `pr-context` skill):
 
