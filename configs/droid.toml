@@ -74,6 +74,13 @@ enabled   = true
 fail_mode = "open"     # "closed" → deny when tirith unavailable
 timeout   = 5
 tools     = ["Execute", "Bash"]
+# pipe_to_interpreter false-positive filter — LHS commands that don't fetch/eval remote content. [] to disable.
+pipe_to_interpreter_safe_lhs = [
+    "git", "gh", "linear", "jq", "yq",
+    "cat", "echo", "printf",
+    "head", "tail", "awk", "sed", "tr", "cut",
+    "ls", "find", "rg", "grep", "sort", "uniq",
+]
 
 # ---
 [hooks.post_tool_use]

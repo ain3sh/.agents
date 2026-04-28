@@ -30,6 +30,14 @@ DEFAULT_TIMEOUT = 5
 TIRITH_EXIT_OK = 0
 TIRITH_EXIT_WARN_ACK = 3
 
+# pipe_to_interpreter false-positive filter: LHS commands that don't fetch/eval remote content.
+DEFAULT_PIPE_TO_INTERPRETER_SAFE_LHS = (
+    "git", "gh", "linear", "jq", "yq",
+    "cat", "echo", "printf",
+    "head", "tail", "awk", "sed", "tr", "cut",
+    "ls", "find", "rg", "grep", "sort", "uniq",
+)
+
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(add_help=False)
@@ -125,6 +133,61 @@ def _extract_reason(detail: str) -> str:
     return "tirith blocked this command"
 
 
+def _safe_lhs(cfg: dict) -> frozenset[str]:
+    raw = cfg.get("pipe_to_interpreter_safe_lhs")
+    if isinstance(raw, list):
+        return frozenset(t for t in raw if isinstance(t, str) and t)
+    return frozenset(DEFAULT_PIPE_TO_INTERPRETER_SAFE_LHS)
+
+
+def _matched_lhs_token(finding: dict) -> str:
+    """Return the executable token on the left of the pipe in a tirith finding's evidence."""
+    evidence = finding.get("evidence")
+    if not isinstance(evidence, list) or not evidence:
+        return ""
+    first = evidence[0]
+    if not isinstance(first, dict):
+        return ""
+    matched = str(first.get("matched", ""))
+    if "|" not in matched:
+        return ""
+    lhs_segment = matched.split("|", 1)[0].strip()
+    if not lhs_segment:
+        return ""
+    return lhs_segment.split()[0]
+
+
+def _filter_findings(detail: str, safe_lhs: frozenset[str]) -> tuple[str, list[str]]:
+    """Drop pipe_to_interpreter findings with safe LHS. Returns (reduced_json, dropped_labels)."""
+    if not detail:
+        return detail, []
+    try:
+        data = json.loads(detail)
+    except (ValueError, TypeError):
+        return detail, []
+    if not isinstance(data, dict):
+        return detail, []
+    findings = data.get("findings")
+    if not isinstance(findings, list) or not findings:
+        return detail, []
+
+    kept: list[object] = []
+    dropped: list[str] = []
+    for f in findings:
+        if isinstance(f, dict) and f.get("rule_id") == "pipe_to_interpreter":
+            lhs = _matched_lhs_token(f)
+            if lhs and lhs in safe_lhs:
+                dropped.append(f"pipe_to_interpreter[lhs={lhs}]")
+                continue
+        kept.append(f)
+
+    if len(kept) == len(findings):
+        return detail, []
+
+    data["findings"] = kept
+    return json.dumps(data), dropped
+
+
 def main() -> int | None:
     args = _parse_args(sys.argv[1:])
     config_data = _load_config(args.config_file)
@@ -179,6 +242,26 @@ def main() -> int | None:
         exit(
             text=f"[tirith] soft-fail (fail_mode=open): {detail[:200]}",
             to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
+
+    # Filter known false positives before sealing the deny.
+    reduced_detail, dropped = _filter_findings(detail, _safe_lhs(config))
+    if dropped:
+        try:
+            data = json.loads(reduced_detail)
+            remaining = data.get("findings") if isinstance(data, dict) else None
+        except (ValueError, TypeError):
+            remaining = None
+        if not remaining:
+            exit(
+                text=f"[tirith] suppressed false positives: {', '.join(dropped)}",
+                to_stderr=True,
+                hook_event_name=HOOK_EVENT_NAME,
+            )
+        exit(
+            decision="deny",
+            reason=f"[tirith] {_extract_reason(reduced_detail)} (suppressed: {', '.join(dropped)})",
             hook_event_name=HOOK_EVENT_NAME,
         )
 
