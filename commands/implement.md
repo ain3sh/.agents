@@ -64,6 +64,14 @@ Do **not** take the easiest-but-ugly path. Evaluate the implementation against:
 
 If there are multiple viable approaches, evaluate trade-offs explicitly.
 
+### Feature tickets: grill on open decisions before spec
+
+Before locking the spec, walk the design tree with the user. For each unresolved branch (state ownership, extend-vs-create, edge-case behavior, naming, ordering of dependent changes), ask **one question at a time as a regular prose response** -- *not* via AskUser. Pair the question with your recommended answer and, if there are clear forks, 1-3 primary alternatives. Resolve decisions in dependency order; earlier answers often collapse later branches, so batching defeats that.
+
+Why prose, not AskUser: AskUser boxes the context, question, and answer into a fixed structure. Grilling is a conversation -- the user may want to redirect, reframe the question, or take a tangent. Prose keeps the channel open; AskUser forces them to cancel the tool call to do any of that.
+
+If a question can be answered by exploring the codebase, do that instead of asking. Two failure modes to avoid symmetrically: stopping before design questions are resolved (they leak into Step 4's **Open questions** bullet, which should hold only empirical unknowns the user can't resolve from a chair -- not unmade design choices), *and* grilling on choices you can defend in the spec yourself (those belong in **Key decisions**, not in the user's inbox).
+
 ## 4. Present Spec
 
 Present a structured implementation plan:
@@ -76,8 +84,6 @@ Present a structured implementation plan:
 - **Open questions**: Anything ambiguous that needs user input.
 
 **Wait for user approval before writing any code.**
-
-If questions arise during exploration, ask them immediately -- do not guess at requirements.
 
 ## 4b. Bug-fix: regression test (red-green)
 
