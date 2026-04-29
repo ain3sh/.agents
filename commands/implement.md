@@ -13,6 +13,11 @@ At every `##` boundary:
 2. Mark the incoming section `in_progress`.
 3. Append newly-discovered subtasks as todos immediately.
 
+After any approved spec or plan becomes ground truth (Phase 4 here, equivalents elsewhere):
+
+4. Rebuild the todo list against the spec -- one item per concrete deliverable (file edit, key decision, test, validator step). Structural placeholders give way to the atomic items they expand into.
+5. The **final todo** is always: *"Re-read the spec; repopulate todos for any remaining stage, or mark the implementation complete."* This recursion anchors against context drift on long runs and chains multi-stage specs naturally -- do not skip it because the bottom of the list "feels done".
+
 Fire `TodoWrite` in parallel with the first tool call of each phase.
 
 ## 1. Understand the Ticket
@@ -84,6 +89,8 @@ Present a structured implementation plan:
 - **Open questions**: Anything ambiguous that needs user input.
 
 **Wait for user approval before writing any code.**
+
+Once approved, the spec is ground truth: apply cadence rules 4 & 5 before any 4b / 5 work -- the recursive anchor is non-negotiable.
 
 ## 4b. Bug-fix: regression test (red-green)
 
