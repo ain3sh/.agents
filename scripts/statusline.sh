@@ -186,10 +186,6 @@ if [[ "$CONTEXT_TOKENS" =~ ^[0-9]+$ ]]; then
         printf " ${ACCENT_COLOR}[${RESET}${CONTEXT_COLOR}%s : %s${RESET}${ACCENT_COLOR}]${RESET}" "$context_display" "$(format_tokens "$CONTEXT_TOKENS")"
     fi
 fi
-if [[ -n "$CLI_VERSION" ]]; then
-    printf " ${ACCENT_COLOR}(v%s)${RESET}" "$CLI_VERSION"
-fi
-
 printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
 printf "📁 ${DIR_COLOR}%s${RESET}" "$DIR_NAME"
 if [[ -n "$PARENT_CONTEXT" ]]; then
@@ -217,6 +213,9 @@ printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
 printf "💻 ${HOST_COLOR}%s${RESET}" "$HOSTNAME"
 if [[ -n "$SESSION_ID" ]]; then
     printf "${ACCENT_COLOR}/${RESET}${SESSION_COLOR}%s${RESET}" "$SESSION_ID"
+fi
+if [[ -n "$CLI_VERSION" ]]; then
+    printf " ${ACCENT_COLOR}(v%s)${RESET}" "$CLI_VERSION"
 fi
 
 echo
