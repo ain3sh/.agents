@@ -183,7 +183,7 @@ if [[ "$CONTEXT_TOKENS" =~ ^[0-9]+$ ]]; then
         context_display="${CONTEXT_PERCENT}%"
     fi
     if [[ -n "$context_display" ]]; then
-        printf " ${ACCENT_COLOR}[${RESET}${CONTEXT_COLOR}%s:%s${RESET}${ACCENT_COLOR}]${RESET}" "$context_display" "$(format_tokens "$CONTEXT_TOKENS")"
+        printf " ${ACCENT_COLOR}[${RESET}${CONTEXT_COLOR}%s : %s${RESET}${ACCENT_COLOR}]${RESET}" "$context_display" "$(format_tokens "$CONTEXT_TOKENS")"
     fi
 fi
 if [[ -n "$CLI_VERSION" ]]; then
