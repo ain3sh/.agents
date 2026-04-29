@@ -95,6 +95,16 @@ For `Respond`, `Ack`, `Resolved`, `Investigate` rows, draft the reply text inlin
 
 **Hedging is forbidden in approach blocks.** Words like "likely", "probably", "should fix", "might be", "I think", "we may need to" indicate the RCA is incomplete. If you find yourself reaching for them, demote the row to `Investigate` and use that row to state what's still unknown and what you'd need to read or run next to know it. The user cannot approve a fix you yourself are unsure of.
 
+**A valid bug report does not validate the fix the reporter suggested.** The reviewer found a symptom; you did the RCA; you choose the patch. When a comment includes a specific fix proposal -- a `suggestion` block, an inline patch, "you should X", "what about Y", "wrap this in...", or any concrete code shape -- extend the Approach block with three extra fields *before* `Verify`:
+
+```
+Reviewer proposed:    <their suggested change in one line>
+Alternatives:         <at least one other credible fix: different layer, different fallback shape, different invariant ownership; one sentence each>
+Chosen because:       <one sentence justifying the picked option against those alternatives, citing the invariant or layering, not the reviewer's authority>
+```
+
+If after consideration the reviewer's suggestion *is* the right fix, say so explicitly with the alternatives still listed and explicitly rejected. The point is audited reasoning, not contrarianism. Bot reviewers especially tend to pair a real finding with a locally-correct but architecturally-wrong patch (wrong layer, hides the bug elsewhere, breaks an invariant the bot can't see) -- treat their suggested fix as one hypothesis among several, never as ratified by the finding.
+
 Present this in normal chat prose; **do not use `AskUser`** for the triage report. Addressing review feedback often needs nuanced back-and-forth, rewording, pushback, and partial acceptance that does not fit a constrained multiple-choice flow.
 
 **Wait for user confirmation** before making changes.
