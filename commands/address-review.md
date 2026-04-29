@@ -125,15 +125,26 @@ Follow the **quality-ship** skill for quality checks, commit, and push:
 
 ## 7. Respond to Threads
 
-For each addressed thread, reply confirming the fix:
+Pick endpoint by surface:
+
+**Inline thread** (from `pulls/<n>/comments`, anchor `#discussion_r...`) -- reply on the thread:
 ```bash
-gh api "repos/$REPO/pulls/<number>/comments" \
-  --method POST \
-  -f body="Fixed in <commit-sha-short>." \
-  -F in_reply_to=<comment-id>
+gh api "repos/$REPO/pulls/<n>/comments" --method POST \
+  -f body="Fixed in <sha>." -F in_reply_to=<comment-id>
 ```
 
-For threads where the response is a clarification or disagreement, post the drafted reply from step 4.
+**Review body** (from `pulls/<n>/reviews`, anchor `#pullrequestreview-...`) -- no thread to attach to. Quote-reply via PR issue comment, one per distinct point, quoting only the span you address:
+```bash
+gh api "repos/$REPO/issues/<n>/comments" --method POST \
+  -f body="$(cat <<'EOF'
+> <quoted snippet>
+
+Fixed in <sha>.
+EOF
+)"
+```
+
+For clarifications or disagreements, send the step-4 draft via the matching endpoint.
 
 ## 8. Resolve Threads
 
