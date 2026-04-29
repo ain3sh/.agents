@@ -6,7 +6,7 @@ input=$(cat)
 TIME_COLOR="\033[38;2;135;206;250m"
 HOST_COLOR="\033[38;2;106;159;181m"
 MODEL_COLOR="\033[38;2;186;133;232m"
-TOKENS_COLOR="\033[38;2;255;159;67m"
+CONTEXT_COLOR="\033[38;2;255;204;102m"
 DIR_COLOR="\033[38;2;255;179;71m"
 PARENTS_COLOR="\033[38;2;255;205;128m"
 GIT_COLOR="\033[38;2;152;195;121m"
@@ -28,63 +28,6 @@ format_tokens() {
     else
         printf "%d" "$tokens"
     fi
-}
-
-trim_spaces() {
-    local s="$1"
-    s="${s#${s%%[![:space:]]*}}"
-    s="${s%${s##*[![:space:]]}}"
-    printf '%s' "$s"
-}
-
-first_valid_dir() {
-    local d
-    for d in "$@"; do
-        if [[ -n "$d" && -d "$d" ]]; then
-            printf '%s' "$d"
-            return 0
-        fi
-    done
-    return 1
-}
-
-resolve_parent_cwd() {
-    local p
-    p=$(readlink -f "/proc/$PPID/cwd" 2>/dev/null || true)
-    [[ -n "$p" && -d "$p" ]] && printf '%s' "$p"
-}
-
-resolve_cwd_from_transcript() {
-    local transcript_path="$1"
-    local tail_text
-    local candidate
-
-    [[ -f "$transcript_path" ]] || return 0
-
-    tail_text=$(tail -c 65536 "$transcript_path" 2>/dev/null || true)
-    [[ -n "$tail_text" ]] || return 0
-
-    candidate=$(printf '%s' "$tail_text" | grep -oE '"command":"cd [^"]+"' | tail -n 1 | sed -E 's/^"command":"cd //; s/"$//')
-    if [[ -z "$candidate" ]]; then
-        candidate=$(printf '%s' "$tail_text" | grep -oE '\\"command\\":\\"cd [^\\"]+' | tail -n 1 | sed -E 's/^\\"command\\":\\"cd //')
-    fi
-    if [[ -z "$candidate" ]]; then
-        candidate=$(printf '%s' "$tail_text" | grep -oE 'Running: cd [^\n"]+' | tail -n 1 | sed -E 's/^Running: cd //')
-    fi
-
-    [[ -n "$candidate" ]] || return 0
-
-    candidate=$(trim_spaces "$candidate")
-    candidate="${candidate%%&&*}"
-    candidate="${candidate%%;*}"
-    candidate=$(trim_spaces "$candidate")
-
-    if [[ "$candidate" == ~/* ]]; then
-        candidate="$HOME/${candidate#~/}"
-    fi
-
-    [[ -d "$candidate" ]] || return 0
-    printf '%s' "$candidate"
 }
 
 git_in_cwd() {
@@ -126,7 +69,9 @@ get_pr_number() {
         fi
     fi
 
-    val=$(cd "$CWD" 2>/dev/null && GH_PAGER=cat gh pr view --json number --jq '.number' 2>/dev/null || true)
+    if ! val=$(cd "$CWD" 2>/dev/null && env GH_PAGER=cat gh pr view --json number --jq '.number' 2>/dev/null); then
+        val=""
+    fi
     [[ -z "$val" ]] && val="-"
     printf '%s %s\n' "$now" "$val" > "$cache_file" 2>/dev/null || true
 
@@ -134,56 +79,49 @@ get_pr_number() {
     printf '%s' "$val"
 }
 
-TIME=$(date '+%H:%M')
+TIME=$(TZ=America/Los_Angeles date '+%H:%M')
 HOSTNAME=$(hostname -s)
 
 MODEL="droid"
 CLI_VERSION=""
 SESSION_ID=""
-INPUT_CWD=""
-PROCESS_CWD=$(pwd -P 2>/dev/null || pwd)
-PARENT_CWD=$(resolve_parent_cwd)
 CWD=""
-TRANSCRIPT_PATH=""
+REASONING_EFFORT=""
+CONTEXT_DISPLAY=""
+CONTEXT_TOKENS=""
+CONTEXT_PERCENT=""
 
-if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && echo "$input" | jq -e . >/dev/null 2>&1; then
-    p_model=$(echo "$input" | jq -r '.model.display_name // .model.id // "droid"' 2>/dev/null)
-    p_version=$(echo "$input" | jq -r '.version // ""' 2>/dev/null)
-    p_session=$(echo "$input" | jq -r '.session_id // ""' 2>/dev/null)
-    p_cwd=$(echo "$input" | jq -r '.cwd // ""' 2>/dev/null)
-    p_transcript=$(echo "$input" | jq -r '.transcript_path // ""' 2>/dev/null)
+if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1 <<< "$input"; then
+    mapfile -t json_fields < <(
+        jq -r '[
+            .model.display_name // .model.id // "droid",
+            .version // "",
+            .session_id // "",
+            .cwd // "",
+            .model.reasoning_effort // "",
+            .context.display // "",
+            (.context.last_call_input_tokens // "" | tostring),
+            (.context.percentage // "" | tostring)
+        ][]' <<< "$input" 2>/dev/null
+    )
+
+    p_model=${json_fields[0]:-}
+    p_version=${json_fields[1]:-}
+    p_session=${json_fields[2]:-}
+    p_cwd=${json_fields[3]:-}
+    p_reasoning=${json_fields[4]:-}
+    p_context_display=${json_fields[5]:-}
+    p_context_tokens=${json_fields[6]:-}
+    p_context_percent=${json_fields[7]:-}
 
     [[ -n "$p_model" && "$p_model" != "null" ]] && MODEL="$p_model"
     [[ -n "$p_version" && "$p_version" != "null" ]] && CLI_VERSION="$p_version"
     [[ -n "$p_session" && "$p_session" != "null" ]] && SESSION_ID="$p_session"
-    [[ -n "$p_cwd" && "$p_cwd" != "null" ]] && INPUT_CWD="$p_cwd"
-    [[ -n "$p_transcript" && "$p_transcript" != "null" ]] && TRANSCRIPT_PATH="$p_transcript"
-fi
-
-CWD=$(first_valid_dir "$PROCESS_CWD" "$INPUT_CWD" "$PARENT_CWD" "${FACTORY_PROJECT_DIR:-}" || printf '%s' "$HOME")
-
-if [[ -n "$TRANSCRIPT_PATH" ]]; then
-    transcript_cwd=$(resolve_cwd_from_transcript "$TRANSCRIPT_PATH")
-    if [[ -n "$transcript_cwd" ]]; then
-        if [[ "$CWD" == "$INPUT_CWD" || "$CWD" == "${FACTORY_PROJECT_DIR:-}" || -z "$INPUT_CWD" ]]; then
-            CWD="$transcript_cwd"
-        fi
-    fi
-fi
-
-TOKENS_USED=""
-if [[ -n "$TRANSCRIPT_PATH" ]]; then
-    SETTINGS_PATH="${TRANSCRIPT_PATH%.jsonl}.settings.json"
-    if [[ -f "$SETTINGS_PATH" ]] && command -v jq >/dev/null 2>&1; then
-        tok_tuple=$(jq -r '[
-            (.tokenUsage.inputTokens // 0),
-            (.tokenUsage.thinkingTokens // 0),
-            (.tokenUsage.outputTokens // 0)
-        ] | @tsv' "$SETTINGS_PATH" 2>/dev/null)
-        IFS=$'\t' read -r input_tok thinking_tok output_tok <<< "$tok_tuple"
-        total_tok=$((input_tok + thinking_tok + output_tok))
-        [[ $total_tok -gt 0 ]] && TOKENS_USED=$(format_tokens "$total_tok")
-    fi
+    [[ -n "$p_cwd" && "$p_cwd" != "null" ]] && CWD="$p_cwd"
+    [[ -n "$p_reasoning" && "$p_reasoning" != "null" ]] && REASONING_EFFORT="$p_reasoning"
+    [[ -n "$p_context_display" && "$p_context_display" != "null" ]] && CONTEXT_DISPLAY="$p_context_display"
+    [[ -n "$p_context_tokens" && "$p_context_tokens" != "null" ]] && CONTEXT_TOKENS="$p_context_tokens"
+    [[ -n "$p_context_percent" && "$p_context_percent" != "null" ]] && CONTEXT_PERCENT="$p_context_percent"
 fi
 
 DIR_NAME=$(basename "$CWD")
@@ -234,12 +172,22 @@ fi
 printf "🕐 ${TIME_COLOR}%s${RESET}" "$TIME"
 
 printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
-printf "🤖 ${MODEL_COLOR}%s${RESET}" "$MODEL"
+printf "🤖 ${MODEL_COLOR}%s" "$MODEL"
+if [[ -n "$REASONING_EFFORT" ]]; then
+    printf -- "-%s" "$REASONING_EFFORT"
+fi
+printf "%b" "$RESET"
+if [[ "$CONTEXT_TOKENS" =~ ^[0-9]+$ ]]; then
+    context_display="$CONTEXT_DISPLAY"
+    if [[ "$CONTEXT_PERCENT" =~ ^[0-9]+$ ]]; then
+        context_display="${CONTEXT_PERCENT}%"
+    fi
+    if [[ -n "$context_display" ]]; then
+        printf " ${ACCENT_COLOR}[${RESET}${CONTEXT_COLOR}%s:%s${RESET}${ACCENT_COLOR}]${RESET}" "$(format_tokens "$CONTEXT_TOKENS")" "$context_display"
+    fi
+fi
 if [[ -n "$CLI_VERSION" ]]; then
     printf " ${ACCENT_COLOR}(v%s)${RESET}" "$CLI_VERSION"
-fi
-if [[ -n "$TOKENS_USED" ]]; then
-    printf " ${ACCENT_COLOR}[${RESET}${TOKENS_COLOR}%s${RESET}${ACCENT_COLOR}]${RESET}" "$TOKENS_USED"
 fi
 
 printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
