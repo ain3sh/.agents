@@ -269,6 +269,29 @@ def _normalize_output(stdout: str, stderr: str) -> str:
     return _strip_ansi(combined)
 
 
+_RATE_LIMIT_RE = re.compile(
+    r"(?i)\b429\b|too many requests|rate[-_\s]*limit(?:ed|s)?|quota exceeded"
+)
+_DIFF_TRANSPORT_FAILURE_RE = re.compile(
+    r"(?is)"
+    r"(failed to get file changes|failed to get committed diff|git diff .+ exit code 255)"
+    r".*"
+    r"(mux_client_request_session|session open refused by peer|kex_exchange_identification|connection reset by peer)"
+)
+
+
+def _is_rate_limit_failure(output: str) -> bool:
+    return _RATE_LIMIT_RE.search(output) is not None
+
+
+def _soft_failure_reason(output: str) -> str | None:
+    if _is_rate_limit_failure(output):
+        return "rate-limited"
+    if _DIFF_TRANSPORT_FAILURE_RE.search(output):
+        return "hit a transient git/ssh diff failure"
+    return None
+
+
 def _canonical_key(raw: str) -> str | None:
     k = raw.strip().lower()
     if k == "file":
@@ -542,14 +565,20 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
 
     if code != 0:
         excerpt = _truncate(combined_output or "(no output)", config.max_chars)
+        soft_failure_reason = _soft_failure_reason(combined_output)
+        heading = (
+            f"[coderabbit] CLI {soft_failure_reason} before push; allowing push."
+            if soft_failure_reason
+            else "[coderabbit] CLI failed before push."
+        )
         details = (
-            "[coderabbit] CLI failed before push.\n"
+            f"{heading}\n"
             f"Repo: {repo_root_path}\n"
             f"Branch: {branch}\n"
             f"Exit code: {code}{' (timeout)' if timed_out else ''}\n\n"
             f"Output:\n{excerpt}\n"
         )
-        if config.on_cli_failure == "allow":
+        if soft_failure_reason or config.on_cli_failure == "allow":
             exit(text=details, to_stderr=True, hook_event_name=HOOK_EVENT_NAME)
         exit(decision="deny", reason=details, hook_event_name=HOOK_EVENT_NAME)
 
