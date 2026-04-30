@@ -31,7 +31,7 @@ include = ["instructions/PRINCIPLES.md"]
 
 [hooks.pre_tool_use.policy]
 [hooks.pre_tool_use.policy.allow]
-tools = ["LS", "Read", "WebFetch", "ExitSpecMode", "codebase:warpgrep_*","context:ask_docs_agent","context:fetch_docs","vscode:get_*","vscode:list_*"]
+tools = ["LS", "Read", "WebFetch", "ExitSpecMode", "codebase:*_search","context:ask_docs_agent","context:fetch_docs","vscode:get_*","vscode:list_*"]
 message = "[policy] {tool_name} is allowlisted"
 [hooks.pre_tool_use.policy.ask]
 tools = ["review:*"]
