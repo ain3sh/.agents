@@ -25,7 +25,7 @@ Triggering intents:
 pr-description checklist:
 - [ ] Analyzed diff (files, scope, change type)
 - [ ] Title in conventional-commit format
-- [ ] Four-section body: Description, Related Issue, Risk & Impact, Testing
+- [ ] Four-section body: Description, Related Issue, Risk & Impact, Verification (outcome-first, not validator log)
 - [ ] Linked ticket(s) with Closes/Part of
 - [ ] RCA section for bug fixes
 - [ ] Architecture diagram (excalirender, dark mode) for structural changes
@@ -74,7 +74,7 @@ Mention any non-obvious design decisions.>
 Closes TEAM-123
 <!-- Use "Closes" for full fixes, "Part of" for incremental work -->
 
-## Potential Risk & Impact
+## Risk & Impact
 
 <List specific risks, not generic boilerplate. Examples:>
 <!-- - Changes the auth flow; existing sessions may need re-validation -->
@@ -82,20 +82,49 @@ Closes TEAM-123
 <!-- - Modifies a shared utility; downstream consumers should be tested -->
 <!-- Use "Low risk -- isolated change with no external dependencies" only when genuinely true -->
 
-## How Has This Been Tested?
+## Verification
 
-<Describe concretely what was tested:>
-<!-- - Unit tests added for X (describe coverage) -->
-<!-- - Manual testing: did Y, observed Z -->
-<!-- - Typecheck, lint, existing test suite passes -->
-<!-- - Regression: verified old behavior still works by doing W -->
+**Behavior verified.** <Concrete user-visible flows exercised. For each: what state, what action, what was observed. Tie back to the risks called out in Risk & Impact so the two sections check each other.>
+
+**Regression coverage.** <Which test file/suite, which invariant it pins, why this layer. For bug fixes, cite the consolidate-test-suites decision.>
+
+**Not tested.** <Anything deliberately skipped, with a one-line reason. "N/A" only when genuinely true.>
+
+**Standard validators.** <One line. e.g., "format/lint/knip/typecheck/full test suite clean." Note any unrelated pre-existing failures and how you triaged them.>
 ```
 
 ### Writing quality checklist
 
 - The **Description** should make sense to someone who hasn't seen the ticket. Don't just restate the title.
 - **Risk & Impact** must reflect actual thought about what could go wrong. "N/A" is acceptable only for truly zero-risk changes (typo fixes, comment-only changes).
-- **Testing** should be specific enough that a reviewer can reproduce or verify.
+- **Verification** is outcome-first: each of the four labeled blocks answers one reviewer question (behavior verified / regression coverage / not tested / standard validators). Tie each behavior-verified item back to a risk listed in **Risk & Impact** so the two sections check each other. See "What does NOT belong in Verification" below for what to keep out.
+
+### What does NOT belong in Verification
+
+CI status checks already show lint/typecheck/test results to reviewers; re-listing them per-tool in the PR body buries the actual signal (manual repros, regression coverage, deliberate skips) under a wall of "clean" status lines.
+
+The six-row validator-evidence checklist that `quality-ship` enforces is for **gating the commit**, not the PR body. The agent's context window will be full of that checklist by the time it writes the description; resist the temptation to copy it across.
+
+**Anti-pattern** -- representative bullets from real output that should NOT appear:
+
+- `ruff check, black --check, isort --check across the touched Python files - clean.`
+- `npm run typecheck -- --filter=@factory/cli and npm run fix -- --filter=@factory/cli - both clean.`
+- `mypy across the touched evals source files - clean (Success: no issues found in 7 source files).`
+- `npx prettier --check apps/cli/scripts/submit-eval.ts and bun build scripts/submit-eval.ts --outfile /tmp/submit-eval.js - clean.`
+
+These tell a reviewer nothing about whether the change works. Compress them into the single **Standard validators** line.
+
+**Pattern** -- what should appear instead (same PR, same evidence, reformatted):
+
+> **Behavior verified.** Re-ran the upgraded run-evals path against PR #12292 with `tb2_smoke`; submission went through SQS and posted GitHub/Slack status. The rerun proved the HTTP Toolkit setup no longer raises `URLError`, and surfaced a separate runtime-auth gap (stale/missing worker `FACTORY_API_KEY`) which is fixed in this PR by per-message secret refresh. Reference experiment TOML validated end-to-end: `resolve_profiles()` produced two profiles (baseline, feature) with correct templates, feature-flag snapshots, and computed results dirs.
+>
+> **Regression coverage.** New worker tests for per-eval secret refresh + failure handling (`src/eval_queue/tests/test_worker_update.py`, +20 cases). Targeted module coverage across status round-trip / `wait_for_pickup`, experiment submit validation, env ghost-state, and HTTP Toolkit observability -- 109 passed, 2 skipped across the touched suites.
+>
+> **Not tested.** Three pre-existing failures in the full pytest run (`test_ensure_http_toolkit_installs_and_starts`, `test_analyze_run_executes_successfully`, `test_default_s3_binary_download`) reproduce on base `dev` -- they depend on apt/curl fixtures, ipykernel, and AWS SSO access, none of which this PR touches. Not addressed here.
+>
+> **Standard validators.** Format, lint, knip, typecheck, full test suite clean across both Python (ruff/black/isort/mypy/pytest) and TS (prettier/lint/typecheck/knip/bun build) sides.
+
+Same evidence, ordered for a reviewer's eye, with validator chatter compressed to one line.
 
 ## 3b. Writing and updating the PR body: use REST, never `gh pr edit`
 
@@ -226,7 +255,7 @@ Determine whether the existing description still covers what the PR actually doe
    - **Missing scope**: new files, modules, or packages touched that the description doesn't mention.
    - **Changed intent**: the original description says "fix X" but the diff now also includes a refactor of Y.
    - **Stale claims**: the description references files, approaches, or risks that no longer apply after subsequent commits.
-   - **Testing gaps**: new code paths that aren't reflected in the "How Has This Been Tested?" section.
+   - **Verification gaps**: new code paths that aren't reflected in the Verification section -- new behavior with no listed manual repro, new modules with no regression test cited, broadened scope without an updated **Not tested** note.
 
 3. If none of the above apply, stop here -- no update needed. Do not rewrite for style or phrasing in this phase.
 
@@ -237,8 +266,8 @@ Only runs if Phase 1 identified updates. The goal is a description that reads as
 1. Draft the updated description incorporating the new material from Phase 1.
 2. Before writing, check that the result:
    - Reads as a single coherent narrative about what the PR does and why -- not a chronological list of commits.
-   - Preserves the four-section structure (Description, Related Issue, Risk & Impact, Testing).
-   - Doesn't bloat: if the PR scope grew, the description should still be 2-4 sentences in the Description section, not a paragraph per commit.
+   - Preserves the four-section structure (Description, Related Issue, Risk & Impact, Verification).
+   - Doesn't bloat: if the PR scope grew, the **Description** block should still be 2-4 sentences, not a paragraph per commit. Use **Verification** > **Behavior verified** to capture additional flows the broadened scope brought in.
    - Updates Risk & Impact to reflect the current full scope, not just the delta.
 3. Apply the update via the REST endpoint documented in section 3b (**not** `gh pr edit` -- it currently fails on the Projects-classic GraphQL deprecation):
    ```bash
