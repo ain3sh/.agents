@@ -1,166 +1,215 @@
 ---
 name: worktree-setup
-description: "Git worktree environment setup. ALWAYS check for worktree context before running any tooling (lint, test, build, dev server). Triggers on: working directory contains 'worktree', node_modules or .venv is missing, 'Cannot find module' errors, npm install fails with lockfile conflicts, pytest/jest can't find dependencies."
+description: "Repair git worktree dev environments before running tooling. Trigger when cwd is a worktree, dependencies are missing, module resolution points at main, generated artifacts are missing, installs fail, or a repo/worktree moved paths/hosts."
 ---
 
 # Worktree Setup
 
-## First Step: Always Check
+## Always check first
 
-**Before running any tooling** (lint, test, build, typecheck, dev server), check if you're in a worktree:
-
-```bash
-MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
-if [ "$(git rev-parse --show-toplevel)" != "$MAIN_REPO" ]; then
-  echo "WORKTREE DETECTED -- symlink deps before proceeding"
-fi
-```
-
-Path heuristic: if the working directory contains `worktree` (e.g., `factory-mono-worktrees/fac-17658`), assume worktree and symlink immediately.
-
-## Rule: Never Install Dependencies in a Worktree
-
-Worktrees share `.git` with the main repo but have their own working tree. Running `npm install` or `pip install` in a worktree is **always wrong** -- it's slow, creates lockfile/env conflicts, and duplicates large dependency trees.
-
-**Reuse the main repo's dependencies, but make workspace package resolution point at the worktree.**
-
-## JS/TS Monorepo Setup: Prefer a Symlink-Tree Mirror, Not a Root Symlink
-
-In JS/TS monorepos, a plain root symlink like this:
-
-```bash
-ln -sf "$MAIN_REPO/node_modules" node_modules
-```
-
-can still cause TypeScript/Jest/Bundlers to resolve workspace packages back to the **main repo source tree** instead of the worktree. That mixes main-repo and worktree sources and can surface stale exports or inconsistent types.
-
-Prefer a **local symlink-tree mirror** at the worktree root:
+Before any lint/test/build/typecheck/dev command:
 
 ```bash
 MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
 WORKTREE=$(git rev-parse --show-toplevel)
-
-rm -f "$WORKTREE/node_modules"
-mkdir -p "$WORKTREE/node_modules"
-cp -as "$MAIN_REPO/node_modules/." "$WORKTREE/node_modules/"
+[ "$WORKTREE" != "$MAIN_REPO" ] && echo "WORKTREE DETECTED -- repair deps first"
 ```
 
-This preserves the main repo's installed dependency tree, but gives you a local `node_modules` directory whose workspace links you can safely rewrite.
+If the path contains `worktree` (for example `factory-mono-worktrees/fac-123`), assume it needs setup.
 
-## Repoint Workspace Packages to the Worktree
+## Rules
 
-After creating the root symlink-tree mirror, repoint local workspace packages so imports resolve to the **current worktree**:
+- Do **not** run `npm install`, `bun install`, `pnpm install`, or create a fresh venv in a worktree.
+- Reuse main-repo dependencies.
+- Make workspace packages resolve to the **current worktree**, not main.
+- Prefer hardlink-tree mirrors: `cp -al`, not root `node_modules` symlinks and not `cp -as` absolute symlink mirrors.
+- Use relative symlinks for rewritten workspace package links so worktrees also work via SSHFS/alternate mount paths.
+- Discover workspace packages from the **worktree branch's** `package.json`, not main. Older branches may contain packages main no longer has, e.g. `@factory/models`.
+
+## Canonical Factory repair script
+
+Run from the main repo after main dependencies/generated artifacts are healthy (`npm install`, `npm run setup` as needed in main only):
 
 ```bash
-MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
-WORKTREE=$(git rev-parse --show-toplevel)
+cd /home/ain3sh/factory/factory-mono
+python3 - <<'PY'
+import json, os, shutil, subprocess
+from pathlib import Path
 
-mkdir -p "$WORKTREE/node_modules/@factory"
+MAIN = Path(subprocess.check_output(["git", "worktree", "list"], text=True).splitlines()[0].split()[0]).resolve()
+raw = subprocess.check_output(["git", "worktree", "list", "--porcelain"], cwd=MAIN, text=True)
+WORKTREES = [Path(l.split(" ", 1)[1]).resolve() for l in raw.splitlines() if l.startswith("worktree ")]
+WORKTREES = [p for p in WORKTREES if p != MAIN]
 
-# Example manual rewires
-ln -sfn "$WORKTREE/packages/common" "$WORKTREE/node_modules/@factory/common"
-ln -sfn "$WORKTREE/packages/logging" "$WORKTREE/node_modules/@factory/logging"
-ln -sfn "$WORKTREE/packages/frontend" "$WORKTREE/node_modules/@factory/frontend"
+
+def remove(path: Path):
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.exists():
+        shutil.rmtree(path)
+
+
+def mirror(src: Path, dst: Path):
+    remove(dst)
+    dst.mkdir(parents=True, exist_ok=True)
+    subprocess.check_call(["cp", "-al", str(src) + "/.", str(dst) + "/"])
+
+
+def workspaces(root: Path):
+    try:
+        patterns = json.loads((root / "package.json").read_text()).get("workspaces", [])
+    except Exception:
+        return {}
+    found = {}
+    for pattern in patterns:
+        for pkg_json in sorted(root.glob(pattern + "/package.json")):
+            try:
+                name = json.loads(pkg_json.read_text()).get("name")
+            except Exception:
+                continue
+            if isinstance(name, str) and name:
+                found[name] = pkg_json.parent.relative_to(root)
+    return found
+
+
+def rel_link(link: Path, target: Path):
+    if link.exists() or link.is_symlink():
+        remove(link)
+    link.parent.mkdir(parents=True, exist_ok=True)
+    link.symlink_to(os.path.relpath(target, link.parent))
+
+
+def rewire(nm: Path, wt: Path, pkgs: dict):
+    if not nm.exists():
+        return 0
+    count = 0
+    for name, rel in pkgs.items():
+        target = wt / rel
+        if not target.exists():
+            continue
+        if name.startswith("@"):
+            scope, pkg = name.split("/", 1)
+            scope_dir = nm / scope
+            if scope_dir.is_symlink() or scope_dir.is_file():
+                scope_dir.unlink()
+            scope_dir.mkdir(parents=True, exist_ok=True)
+            link = scope_dir / pkg
+        else:
+            link = nm / name
+        rel_link(link, target)
+        count += 1
+    return count
+
+
+MAIN_LOCAL_NODE_MODULES = sorted(
+    p.relative_to(MAIN)
+    for p in MAIN.glob("**/node_modules")
+    if p.is_dir()
+    and p != MAIN / "node_modules"
+    and ".git" not in p.parts
+    and "node_modules" not in p.relative_to(MAIN).parent.parts
+)
+
+for i, wt in enumerate(WORKTREES, 1):
+    pkgs = workspaces(wt)
+    print(f"[{i}/{len(WORKTREES)}] {wt.name}")
+
+    mirror(MAIN / "node_modules", wt / "node_modules")
+    root_links = rewire(wt / "node_modules", wt, pkgs)
+
+    local_mirrors = local_links = 0
+    for rel_nm in MAIN_LOCAL_NODE_MODULES:
+        if not (wt / rel_nm.parent).exists():
+            continue
+        mirror(MAIN / rel_nm, wt / rel_nm)
+        local_mirrors += 1
+        local_links += rewire(wt / rel_nm, wt, pkgs)
+
+    generated = "skipped"
+    if (MAIN / "apps/cli/src/generated").exists() and (wt / "apps/cli/src").exists():
+        mirror(MAIN / "apps/cli/src/generated", wt / "apps/cli/src/generated")
+        generated = "mirrored"
+
+    for env_name in (".venv", "venv"):
+        src, dst = MAIN / env_name, wt / env_name
+        if src.exists():
+            remove(dst)
+            dst.symlink_to(os.path.relpath(src, dst.parent))
+
+    print(f"  root_links={root_links}; local_mirrors={local_mirrors}; local_links={local_links}; generated={generated}")
+PY
 ```
 
-If the repo has many local workspace packages, generate these links automatically from `apps/*` and `packages/*` package.json files rather than patching them one-by-one.
+What this does:
 
-## Symlink Granularity
-
-Monorepos often also have **nested** `node_modules` per package. A worktree-root mirror is necessary, but it may still not be sufficient if validators run from a subpackage. Rewire at the level where the tooling expects to find dependencies:
-
-```bash
-MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
-WORKTREE=$(git rev-parse --show-toplevel)
-
-# Per-package: mirror or symlink the specific subpackage you're working in
-# e.g., if running tests in apps/my-package:
-rm -rf "$WORKTREE/apps/my-package/node_modules"
-mkdir -p "$WORKTREE/apps/my-package/node_modules"
-cp -as "$MAIN_REPO/apps/my-package/node_modules/." \
-  "$WORKTREE/apps/my-package/node_modules/"
-```
-
-**If subpackage tests fail with "Cannot find module" but root commands work, the subpackage needs its own local mirror or targeted links.** Start with the specific package you're working in; only broaden if needed.
-
-### Hoisted vs package-local dependencies
-
-In npm workspaces, a missing module in a worktree does **not** always mean the dependency is absent from the main repo. Some validator-only dependencies may exist only in the package-local tree (for example `apps/my-package/node_modules`) and not at the root.
-
-**Troubleshooting order:**
-
-1. Mirror root `node_modules`
-2. Run the validator
-3. If a module is missing, check whether it exists under the main repo's package-local `node_modules`
-4. Mirror or selectively link that package-level `node_modules`
-5. Re-run the validator
-
-Example:
-
-```bash
-MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
-WORKTREE=$(git rev-parse --show-toplevel)
-test -d "$MAIN_REPO/apps/my-package/node_modules/some-validator-dependency" && \
-  mkdir -p "$WORKTREE/apps/my-package/node_modules" && \
-  cp -as "$MAIN_REPO/apps/my-package/node_modules/." \
-    "$WORKTREE/apps/my-package/node_modules/"
-```
-
-### E2E caveat: full package symlinks can break some harnesses
-
-Some end-to-end tooling traverses or copies `node_modules` and can fail when the entire package-level tree is a symlink. If a full package symlink causes E2E failures, fall back to **targeted module symlinks** instead of linking the whole directory.
-
-Example:
-
-```bash
-MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
-mkdir -p apps/my-package/node_modules/@vendor
-ln -sf "$MAIN_REPO/apps/my-package/node_modules/@vendor/test-helper" \
-  apps/my-package/node_modules/@vendor/test-helper
-```
-
-## Transitive Workspace Dependency Caveat
-
-Even if you changed only one package, its **transitive workspace dependencies** may still resolve to the main repo unless their workspace links are also repointed. If type errors look impossible or exports appear stale, suspect mixed source resolution before changing code.
-
-Common example: `apps/cli` resolves `@factory/logging`, which then resolves `@factory/common`. If `@factory/logging` points at the main repo, `@factory/common` may also resolve there.
+- hardlink-mirrors root `node_modules`
+- hardlink-mirrors package-local `node_modules` (`apps/cli/node_modules`, etc.)
+- rewires workspace packages from each branch's own workspace list
+- uses relative workspace symlinks
+- mirrors Factory CLI generated artifacts (`apps/cli/src/generated`) for embedded `rg`, `keytar`, and agent-browser assets
+- links `.venv`/`venv` from main when present
 
 ## Verification
 
-Before trusting validator output, verify that resolution points at the worktree:
+For Factory CLI worktrees:
 
 ```bash
-tsc --noEmit --traceResolution -p apps/my-package/tsconfig.json | \
-  rg "@factory/common|@your-scope/"
+cd /home/ain3sh/factory/factory-mono
+python3 - <<'PY'
+import os, subprocess
+from pathlib import Path
+main = Path(subprocess.check_output(["git", "worktree", "list"], text=True).splitlines()[0].split()[0]).resolve()
+raw = subprocess.check_output(["git", "worktree", "list", "--porcelain"], cwd=main, text=True)
+fail = []
+for line in raw.splitlines():
+    if not line.startswith("worktree "):
+        continue
+    wt = Path(line.split(" ", 1)[1]).resolve()
+    if wt == main or not (wt / "apps/cli/src/index.ts").exists():
+        continue
+    try:
+        out = subprocess.check_output(["timeout", "20", str(wt / "node_modules/.bin/bun"), "src/index.ts", "--help"], cwd=wt / "apps/cli", text=True, stderr=subprocess.STDOUT, timeout=25)
+        common = wt / "node_modules/@factory/common"
+        ok = "Usage: droid" in out and common.is_symlink() and not os.readlink(common).startswith("/") and os.path.realpath(common) == str(wt / "packages/common")
+    except Exception as e:
+        ok = False
+        print(f"{wt.name}: FAIL {e!r}")
+    if ok:
+        print(f"{wt.name}: ok")
+    else:
+        fail.append(wt.name)
+print("failures", len(fail))
+if fail:
+    raise SystemExit(1)
+PY
+
+find /home/ain3sh/factory/factory-mono-worktrees -xtype l -lname '/mnt/dev/work/factory*' -print
+find /home/ain3sh/factory/factory-mono-worktrees -xtype l -lname '/home/ain3sh/factory*' -print
 ```
 
-You want resolved paths under the **worktree** root, not the main repo root.
+Expected: all CLI smoke tests pass, and both `find` commands print nothing.
 
-## Python / venv
-
-Same principle. Never `pip install` or `python -m venv` in a worktree.
+For general TS resolution, confirm workspace packages resolve under the worktree:
 
 ```bash
-MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
-
-# Symlink .venv
-[ -d "$MAIN_REPO/.venv" ] && [ ! -e ".venv" ] && ln -sf "$MAIN_REPO/.venv" .venv
-
-# Or if using a named venv directory
-[ -d "$MAIN_REPO/venv" ] && [ ! -e "venv" ] && ln -sf "$MAIN_REPO/venv" venv
+node -e 'console.log(require.resolve("@factory/common/package.json"))'
 ```
 
-Activate via the symlink as normal: `source .venv/bin/activate`.
+## Path migration warning
 
-## Failure Modes and Fixes
+After moving a repo/worktrees between hosts or paths, fix `.git/worktrees/*/gitdir` and each worktree's `.git` pointer before `git worktree prune`.
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| "Cannot find module X" | Missing root mirror, package-local mirror, or targeted link | Mirror or link the relevant `node_modules` location |
-| Validator sees stale exports or impossible type errors | Some workspace packages resolve to the main repo while others resolve to the worktree | Repoint workspace package links in `node_modules/@scope/*` to the worktree |
-| Validator can't find a package that exists in the main repo | Dependency is package-local, not hoisted to the root | Check `apps/<pkg>/node_modules` in the main repo and mirror or link that package tree |
-| `npm install` runs for minutes, lockfile conflicts | Ran install in worktree | Delete local `node_modules` + `package-lock.json`, symlink instead |
-| Tests pass at root but fail in subpackage | Root mirror exists but subpackage-local deps are missing | Add a package-local mirror or targeted links |
-| E2E tooling fails while traversing or copying `node_modules` | Full package-level symlink is incompatible with the harness | Replace the full package symlink with targeted module symlinks |
-| `ModuleNotFoundError` in Python | Missing `.venv` symlink | Symlink `.venv` from main repo |
-| Turbo cache misses every run | Turbo hashes `node_modules` path | Local mirrors/symlinks stabilize paths inside the worktree |
+`git worktree prune` will unregister valid worktrees if those pointers still reference the old path.
+
+## Failure map
+
+| Symptom | Fix |
+|---|---|
+| `Cannot find module X` | Run the canonical repair; ensure package-local mirrors and generated artifacts exist |
+| Missing `@factory/models` on older branch | Discover/rewrite workspace links from the worktree branch, not main |
+| Missing `@/generated/bin/keytar` or `@/generated/agent-browser/assets` | Mirror `apps/cli/src/generated` from main |
+| Stale exports/impossible type errors | Rewire workspace links in every mirrored `node_modules`, including package-local dirs |
+| Bin exists but fails relative imports | Use hardlink mirror; preserve `.bin` symlinks |
+| Works locally but fails through SSHFS/alternate path | Remove absolute symlink mirrors; use `cp -al` + relative workspace symlinks |
+| Install was run in worktree | Remove worktree deps and rebuild mirrors from main |
+| Valid worktrees disappeared after prune | Restore/fix `.git/worktrees/*/gitdir` and worktree `.git` pointer files |
