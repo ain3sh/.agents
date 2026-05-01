@@ -16,6 +16,15 @@ python3 ~/.agents/skills/worktree-setup/scripts/verify.py        # structural sa
 
 Both default to the cwd worktree and are idempotent. `WORKTREE_REPAIR_ALL=1` / `WORKTREE_VERIFY_ALL=1` opt into a host-wide sweep.
 
+After repair, for Bun-driven packages only, run declared package-local artifact scripts before retrying:
+
+```bash
+bun run setup       # only if package.json declares scripts.setup
+bun run generate    # only if package.json declares scripts.generate
+```
+
+Run from the package/app dir. Skip Python/non-JS/non-Bun projects and missing scripts.
+
 ## Detection
 
 If the cwd path contains `worktree` (e.g. `myrepo-worktrees/feat-123`), you're in one. Explicit check:
@@ -46,6 +55,8 @@ What it does, all idempotent:
 - rewires workspace packages to the worktree's own `packages/`, with relative symlinks
 - mirrors postinstall build outputs per workspace package (auto-detected from each `package.json`'s `main`/`module`/`types`/`exports` fields), so `packages/<pkg>/dist/` etc. populate without rebuilding
 - links `.venv`/`venv` from main when present
+
+After repair, Bun-driven packages may need declared `setup`/`generate` scripts to recreate git-ignored artifacts (e.g. `src/generated/bin/*`). Run only existing scripts from that package dir; never replace them with install commands.
 
 Optional env vars:
 
