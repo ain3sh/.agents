@@ -114,7 +114,8 @@ if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1
     p_context_tokens=${json_fields[6]:-}
     p_context_percent=${json_fields[7]:-}
 
-    [[ -n "$p_model" && "$p_model" != "null" ]] && MODEL="$p_model"
+    [[ -n "$p_model" && "$p_model" != "null" ]] && MODEL="${p_model,,}"
+    MODEL="${MODEL// /-}"
     [[ -n "$p_version" && "$p_version" != "null" ]] && CLI_VERSION="$p_version"
     [[ -n "$p_session" && "$p_session" != "null" ]] && SESSION_ID="$p_session"
     [[ -n "$p_cwd" && "$p_cwd" != "null" ]] && CWD="$p_cwd"
