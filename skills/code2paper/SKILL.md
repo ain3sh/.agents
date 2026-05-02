@@ -83,6 +83,8 @@ Exa MCP enables searches like:
 
 Then verify results with Semantic Scholar API and fetch BibTeX via DOI.
 
+**For biomedical, life-sciences, or arXiv-adjacent topics, prefer the `paperclip` skill** — it grounds citations in paper full text (not abstracts) via corpus-wide grep + parallel `map`, which materially reduces the placeholder-citation rate. Use Paperclip to find and verify candidate citations, then come back here for BibTeX retrieval. See `skills/paperclip/SKILL.md`.
+
 ---
 
 ## Workflow 0: Starting from a Research Repository

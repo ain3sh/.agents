@@ -46,6 +46,8 @@ Verify the outputs exist before proceeding. If extraction failed, follow the fal
 
 The script also searches for official code repositories (in the paper text and on the arxiv page) and saves any found links to `paper_metadata.json` under the `official_code` key. Verify these links before relying on them — see Step 8 in `pipeline/01_paper_acquisition.md`.
 
+**Optional but recommended**: run a `paperclip` pass before Stage 2 to surface comparable implementations the paper itself omits. A quick `paperclip search "{paper_title} {core_method}" -s arxiv` followed by `grep "github\.com" --from <handle>` reveals prior art and design decisions that comparable repos already settled. See `skills/paperclip/SKILL.md` recipe 6.
+
 ### Stage 2 — Contribution Identification
 Read and follow: `pipeline/02_contribution_identification.md`
 
