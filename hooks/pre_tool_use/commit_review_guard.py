@@ -270,7 +270,26 @@ def _normalize_output(stdout: str, stderr: str) -> str:
 
 
 _RATE_LIMIT_RE = re.compile(
-    r"(?i)\b429\b|too many requests|rate[-_\s]*limit(?:ed|s)?|quota exceeded"
+    r"(?i)"
+    r"\b429\b"
+    r"|too many requests"
+    r"|rate[-_\s]*limit(?:ed|s)?"
+    r"|quota exceeded"
+    r"|hourly cap"
+    r"|usage[-_\s]*based add[-_\s]*on"
+    r"|additional reviews beyond"
+    r"|review (?:limit|cap) (?:reached|exceeded)"
+)
+_AUTH_FAILURE_RE = re.compile(
+    r"(?i)"
+    r"\b401\b"
+    r"|\bunauthorized\b"
+    r"|not (?:logged in|authenticated|signed in)"
+    r"|authentication (?:required|failed)"
+    r"|please (?:run|use) ['`]?coderabbit auth"
+    r"|(?:api key|auth(?:entication)? token) (?:missing|invalid|expired|not (?:set|found|configured))"
+    r"|(?:invalid|expired|missing) (?:auth|api) (?:key|token)"
+    r"|sign in (?:required|to coderabbit)"
 )
 _DIFF_TRANSPORT_FAILURE_RE = re.compile(
     r"(?is)"
@@ -280,13 +299,11 @@ _DIFF_TRANSPORT_FAILURE_RE = re.compile(
 )
 
 
-def _is_rate_limit_failure(output: str) -> bool:
-    return _RATE_LIMIT_RE.search(output) is not None
-
-
 def _soft_failure_reason(output: str) -> str | None:
-    if _is_rate_limit_failure(output):
+    if _RATE_LIMIT_RE.search(output):
         return "rate-limited"
+    if _AUTH_FAILURE_RE.search(output):
+        return "not authenticated"
     if _DIFF_TRANSPORT_FAILURE_RE.search(output):
         return "hit a transient git/ssh diff failure"
     return None
