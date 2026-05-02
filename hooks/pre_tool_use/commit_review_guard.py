@@ -297,6 +297,15 @@ _DIFF_TRANSPORT_FAILURE_RE = re.compile(
     r".*"
     r"(mux_client_request_session|session open refused by peer|kex_exchange_identification|connection reset by peer)"
 )
+# Diff exceeds reviewer's structural cap — same ground truth as a rate-limit.
+_DIFF_SIZE_FAILURE_RE = re.compile(
+    r"(?i)"
+    r"\btoo many files\b"
+    r"|\bover the limit of \d+\b"
+    r"|(?:diff|pr|patch|changeset) is too (?:large|big)(?: to| for)? review"
+    r"|exceeds (?:the )?(?:file|review|diff|patch) (?:limit|size|count|cap)"
+    r"|file count exceeds"
+)
 
 
 def _soft_failure_reason(output: str) -> str | None:
@@ -306,6 +315,8 @@ def _soft_failure_reason(output: str) -> str | None:
         return "not authenticated"
     if _DIFF_TRANSPORT_FAILURE_RE.search(output):
         return "hit a transient git/ssh diff failure"
+    if _DIFF_SIZE_FAILURE_RE.search(output):
+        return "diff exceeds reviewer file/size cap"
     return None
 
 
