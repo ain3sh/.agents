@@ -36,10 +36,11 @@ Detect the project's tooling from config files at the repo root, then run each a
 - Inspect `package.json` scripts (or `pyproject.toml` / `Makefile` for Python) for canonical commands (`format`, `fix`, `lint`, `knip`, `test`, `typecheck`).
 - Fix any issues found. Re-run until clean.
 
-**Mandatory gate -- before committing, emit a checklist covering every row in the table above:**
+**Mandatory gate -- before committing, emit a checklist covering the worktree pre-check and every row in the table above:**
 
 ```
 quality-ship checklist:
+- worktree:  <main | repaired> (evidence)
 - format:    <ran | no signal> (evidence)
 - lint:      <ran | no signal> (evidence)
 - dead-code: <ran | no signal> (evidence)
@@ -48,7 +49,7 @@ quality-ship checklist:
 - tests:     <ran | no signal> (evidence)
 ```
 
-`evidence` = the command executed, or the missing config file. Do not commit until every line is filled. A CI pipeline gates on all of these; skipping one here means a failed check after push.
+`evidence` = command run or missing config (validators); detection output + `repair.py` invocation (worktree). Don't commit until every line is filled. CI gates each validator; the worktree row catches repair gaps that surface as `Cannot find module` mid-validator. When detection emits `WORKTREE`, `worktree: repaired` is the only valid tag -- not "looks fine, skipped".
 
 ### AI-slop detector (deterministic)
 
