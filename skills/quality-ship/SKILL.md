@@ -65,11 +65,11 @@ In monorepos without turbo, scope validators to the changed packages. Use `git d
 
 ```bash
 git add -A
-git commit -m "<type>(<scope>): <description> (<TICKET-ID>)"
+git commit -m "<type>(<scope>): <subject> (<TICKET-ID>)" -m "<body>"
 ```
 
-- Conventional commit format. Infer type from changes: `fix`, `feat`, `refactor`, `docs`, `chore`, `test`, etc.
-- Reference the Linear ticket ID in the message.
+- Conventional commit format. Type: `fix`, `feat`, `refactor`, `docs`, `chore`, `test`, etc. Subject <=72 chars, imperative ("add", not "added"). Reference the Linear ticket.
+- **Body required** unless the change is trivial (typo, formatting, single-name rename). The body explains *why* -- the diff shows *what*. For review-feedback or CI-fix commits, name the threads / failures the body addresses.
 
 ## Push
 
