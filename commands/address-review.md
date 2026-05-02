@@ -61,46 +61,51 @@ Minimal patch:  <concrete code change, not a description>
 
 If you cannot name a real file + symbol for the root cause after walking the flow, the item's action becomes `Investigate` in step 4, not `Fix`. Do not guess. Do not infer a fix from the symptom alone.
 
+## 3.5 Cross-Thread Coherence (before triage)
+
+If steps 1-3 produced **>=2 threads whose resolution requires editing code** (any bug-report, plus any nit / style / clarification thread that resolves into an edit), load the **patch-coherence** skill, run its audit, and emit the fix-locus map before step 4. Skip otherwise.
+
 ## 4. Triage
 
 Produce two artifacts in this order.
 
 ### 4a. Triage Table
 
-One row per thread. No prose, no rationale -- just the label.
+One row per thread. No prose, no rationale -- just the label. The `Locus` column references the step-3.5 map; non-Fix actions blank it; drop the column entirely if 3.5 was skipped.
 
-| # | Thread | File:line | Class | Action |
-|---|--------|-----------|-------|--------|
-| 1 | <short ref> | <path:line> | bug-report | Fix |
-| 2 | <short ref> | <path:line> | clarification | Respond |
-| 3 | <short ref> | <path:line> | nit | Ack |
+| # | Thread | File:line | Class | Action | Locus |
+|---|--------|-----------|-------|--------|-------|
+| 1 | <short ref> | <path:line> | bug-report | Fix | L1 |
+| 2 | <short ref> | <path:line> | clarification | Respond | -- |
+| 3 | <short ref> | <path:line> | nit | Ack | -- |
 
 Permitted actions: `Fix`, `Respond`, `Ack`, `Investigate`, `Resolved`, `Decline`.
 
-### 4b. Approach (Fix and Decline items only)
+### 4b. Approach (Fix loci and Decline rows)
 
-For each `Fix` row, write a concrete approach block:
+**One approach block per locus** (or per `Fix` thread when 3.5 was skipped). Each block's `Threads:` field lists every thread it resolves; the locus ID isn't repeated -- the triage table already maps thread → locus.
 
 ```
+Threads:     <#N, #M, ...>
 File(s):     <real paths>
 Symbols:     <function/component/class/test names>
 Change:      <one paragraph or a short code snippet>
-Why here:    <one sentence on why this is the right layer>
-Verify:      <test/check that proves the fix>
+Why here:    <one sentence on why this layer subsumes every thread above>
+Verify:      <test/check that proves the fix across every thread>
 ```
 
-For `Decline` rows, write a one-paragraph rationale citing the constraint or design decision that overrides the request.
+For `Decline` rows, write a one-paragraph rationale citing the constraint or design decision that overrides the request. Declines are per-thread, not aggregated.
 
 For `Respond`, `Ack`, `Resolved`, `Investigate` rows, draft the reply text inline under the table row (no block needed).
 
-**Hedging is forbidden in approach blocks.** Words like "likely", "probably", "should fix", "might be", "I think", "we may need to" indicate the RCA is incomplete. If you find yourself reaching for them, demote the row to `Investigate` and use that row to state what's still unknown and what you'd need to read or run next to know it. The user cannot approve a fix you yourself are unsure of.
+**Hedging is forbidden in approach blocks.** Words like "likely", "probably", "should fix", "might be", "I think", "we may need to" indicate the RCA is incomplete. If you reach for them, demote the **locus** to `Investigate`; every thread it would have addressed becomes an `Investigate` row stating what's unknown and what you'd need to read or run to know it. The user cannot approve a fix you yourself are unsure of.
 
-**A valid bug report does not validate the fix the reporter suggested.** The reviewer found a symptom; you did the RCA; you choose the patch. When a comment includes a specific fix proposal -- a `suggestion` block, an inline patch, "you should X", "what about Y", "wrap this in...", or any concrete code shape -- extend the Approach block with three extra fields *before* `Verify`:
+**A valid bug report does not validate the fix the reporter suggested.** The reviewer found a symptom; you did the RCA; you choose the patch. When **any thread under a locus** includes a specific fix proposal -- a `suggestion` block, an inline patch, "you should X", "what about Y", "wrap this in...", or any concrete code shape -- extend the locus's Approach block with three extra fields *before* `Verify`:
 
 ```
-Reviewer proposed:    <their suggested change in one line>
+Reviewer proposed:    <one line per thread that proposed a fix, prefixed with the thread #>
 Alternatives:         <at least one other credible fix: different layer, different fallback shape, different invariant ownership; one sentence each>
-Chosen because:       <one sentence justifying the picked option against those alternatives, citing the invariant or layering, not the reviewer's authority>
+Chosen because:       <one sentence justifying the picked locus-level change against those alternatives, citing the invariant or layering, not the reviewer's authority>
 ```
 
 If after consideration the reviewer's suggestion *is* the right fix, say so explicitly with the alternatives still listed and explicitly rejected. The point is audited reasoning, not contrarianism. Bot reviewers especially tend to pair a real finding with a locally-correct but architecturally-wrong patch (wrong layer, hides the bug elsewhere, breaks an invariant the bot can't see) -- treat their suggested fix as one hypothesis among several, never as ratified by the finding.
@@ -111,14 +116,16 @@ Present this in normal chat prose; **do not use `AskUser`** for the triage repor
 
 ## 5. Apply Fixes
 
-For each thread marked `Fix`:
-- Make the code change exactly as specified in its approach block.
-- Keep changes minimal and scoped to what the reviewer asked for.
+Apply the change for **each locus** (or each `Fix` thread when 3.5 was skipped):
+
+- Make the code change exactly as specified in the locus's approach block.
+- Keep changes minimal and scoped to the locus -- multi-thread loci are still one change at one layer, not several stitched together.
 - Do not refactor unrelated code in the same pass.
 
 ## 6. Quality + Push
 
 Follow the **quality-ship** skill for quality checks, commit, and push:
+- **Worktree pre-check first** -- if cwd is a git worktree, load **worktree-setup** and run its repair before any validator. Never `npm install` / `pip install` inside a worktree.
 - Run detected quality checks. Fix issues until clean.
 - Commit: `fix(<scope>): address review feedback (<TICKET-ID>)`
 - Push to the existing PR branch.
