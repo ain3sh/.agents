@@ -96,6 +96,8 @@ Verify:      <test/check that proves the fix across every thread>
 
 For `Decline` rows, write a one-paragraph rationale citing the constraint or design decision that overrides the request. Declines are per-thread, not aggregated.
 
+For `Fix` rows, draft the reply text inline under the table row alongside the locus's approach block: 1-3 sentences restating `Change` + `Why here` in the reviewer's frame, plus a pointer to where to look in the diff. The approach block is for the user; the reply is for the reviewer, whose context is only thread + diff -- not your locus blocks or this chat. Multi-thread loci produce one draft per thread, each in its reviewer's frame. **Bare `Fixed in <sha>.` is forbidden** -- it forces the reviewer to re-derive substance you produced upstream.
+
 For `Respond`, `Ack`, `Resolved`, `Investigate` rows, draft the reply text inline under the table row (no block needed).
 
 **Hedging is forbidden in approach blocks.** Words like "likely", "probably", "should fix", "might be", "I think", "we may need to" indicate the RCA is incomplete. If you reach for them, demote the **locus** to `Investigate`; every thread it would have addressed becomes an `Investigate` row stating what's unknown and what you'd need to read or run to know it. The user cannot approve a fix you yourself are unsure of.
@@ -132,12 +134,19 @@ Follow the **quality-ship** skill for quality checks, commit, and push:
 
 ## 7. Respond to Threads
 
-Pick endpoint by surface:
+Send the row's step-4 reply draft verbatim; append `Fixed in <sha>.` only when a commit landed against it. Do not improvise reply text at API time -- if a row has no draft, return to step 4.
+
+Pick endpoint by surface.
 
 **Inline thread** (from `pulls/<n>/comments`, anchor `#discussion_r...`) -- reply on the thread:
 ```bash
 gh api "repos/$REPO/pulls/<n>/comments" --method POST \
-  -f body="Fixed in <sha>." -F in_reply_to=<comment-id>
+  -f body="$(cat <<'EOF'
+<reply draft #N>
+
+Fixed in <sha>.
+EOF
+)" -F in_reply_to=<comment-id>
 ```
 
 **Review body** (from `pulls/<n>/reviews`, anchor `#pullrequestreview-...`) -- no thread to attach to. Quote-reply via PR issue comment, one per distinct point, quoting only the span you address:
@@ -146,12 +155,12 @@ gh api "repos/$REPO/issues/<n>/comments" --method POST \
   -f body="$(cat <<'EOF'
 > <quoted snippet>
 
+<reply draft #N>
+
 Fixed in <sha>.
 EOF
 )"
 ```
-
-For clarifications or disagreements, send the step-4 draft via the matching endpoint.
 
 ## 8. Resolve Threads
 
