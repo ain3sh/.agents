@@ -1,5 +1,5 @@
 ---
-description: Review a PR -- classify type, verify per type, analyze changes, post threaded review comments
+description: Review a PR -- typed verification + shared criteria, surface findings for approval; /post-review publishes.
 argument-hint: <PR-number-or-URL>
 ---
 
@@ -7,7 +7,7 @@ Load skills: **pr-context**, **linear-cli**.
 
 ## 1. Gather Context
 
-Follow the **pr-context** skill to fetch metadata, conversation, diff, linked Linear ticket, and derive repo identity / HEAD SHA from `$ARGUMENTS`.
+Follow **pr-context** to fetch metadata, conversation, diff, and linked Linear ticket; derive `REPO` and `HEAD_SHA` from `$ARGUMENTS`.
 
 ## 2. Classify PR Type
 
@@ -26,16 +26,16 @@ If ambiguous, default to **Feature**.
 
 ### Bug fix
 
-**Mandatory repro before code review.** This catches fixes that mask symptoms without addressing root cause.
+**Mandatory repro before code review** -- catches fixes that mask symptoms without addressing root cause.
 
-1. Checkout the base branch. Reproduce the bug using the steps from the ticket or PR description. Confirm the failure.
-2. Checkout the PR branch. Run the same steps. Confirm the bug is resolved.
-3. During code review, evaluate with a **root cause lens**: is this fixing the actual cause or papering over a symptom? Is the fix at the right layer?
+1. Checkout base. Reproduce per ticket/PR description. Confirm failure.
+2. Checkout PR branch. Re-run. Confirm fix.
+3. Code-review with a **root-cause lens**: actual cause, or papering over a symptom? Right layer?
 
 ### Feature
 
-1. Check the implementation against the ticket's acceptance criteria point by point. Flag any gaps.
-2. Evaluate API/UX design decisions -- are they consistent with existing patterns? Will they age well?
+1. Check against the ticket's acceptance criteria; flag gaps.
+2. Evaluate API/UX design -- consistent with existing patterns? Will it age well?
 
 ### Refactor/chore
 
@@ -44,76 +44,41 @@ If ambiguous, default to **Feature**.
 
 ### CI/Infra
 
-1. Check pipeline correctness and idempotency (safe to re-run?).
-2. Review secret handling, permissions scope, and exposed surfaces.
-3. De-emphasize code style criteria that don't apply to YAML/shell.
+1. Pipeline correctness and idempotency (safe to re-run?).
+2. Secret handling, permissions scope, exposed surfaces.
+3. Loosen code-style scrutiny on YAML/shell.
 
 ## 4. Shared Review Criteria
 
-Apply to all types (framing adapts to the type above):
+1. **Goal achievement** -- do the changes accomplish what the PR claims?
+2. **Architectural brittleness** -- fragile coupling, implicit dependencies, decisions that break under future change?
+3. **Code quality** -- anti-patterns, poor naming, missing error handling, unnecessary complexity?
+4. **AI-slop (JS/TS only)** -- run `slop-scan` against base vs head worktrees and fold findings in. Treat hits (swallowed errors, placeholder comments, generic casts, pass-through wrappers, duplicate signatures, etc.) as real issues.
 
-1. **Goal achievement** -- Do the changes accomplish what the PR claims?
-2. **Architectural brittleness** -- Fragile coupling, implicit dependencies, decisions that break under future change?
-3. **Code quality** -- Anti-patterns, poor naming, missing error handling, unnecessary complexity?
-4. **AI-slop (JS/TS only)** -- Run `slop-scan delta <base-sha> <head-sha> --format json` on any PR touching JS/TS and fold its findings into the review. Score the 15 deterministic rules (swallowed errors, placeholder comments, generic casts, pass-through wrappers, duplicate signatures, etc.) as real issues, not nits. Skip only if `slop-scan` is unavailable (recommend install: `npm install -g slop-scan`).
-5. **Broader impact** -- Missed edge cases, failure modes, race conditions, security concerns, regressions?
-6. **Test coverage** -- Adequate tests? Missing boundary/error/concurrent cases?
+   ```bash
+   BASE_REF=$(gh pr view <number> --json baseRefName --jq '.baseRefName')
+   git fetch origin "$BASE_REF"
+   BASE_SHA=$(git merge-base "origin/$BASE_REF" "$HEAD_SHA")
+   BASE_WT=$(mktemp -d); HEAD_WT=$(mktemp -d)
+   git worktree add --detach "$BASE_WT" "$BASE_SHA"
+   git worktree add --detach "$HEAD_WT" "$HEAD_SHA"
+   slop-scan delta "$BASE_WT" "$HEAD_WT" --json
+   git worktree remove --force "$BASE_WT" && git worktree remove --force "$HEAD_WT"
+   ```
 
-For each finding, note:
-- **Severity**: critical / warning / suggestion / nit
-- **File + line**: Exact location in the diff
-- **What/Why/How**: The issue, why it matters, suggested fix
+   Install if missing: `npm install -g slop-scan`. Otherwise skip.
+5. **Broader impact** -- missed edge cases, failure modes, race conditions, security, regressions?
+6. **Test coverage** -- adequate? Missing boundary/error/concurrent cases?
+
+For each finding record severity (`critical|warning|suggestion|nit`), file + line, and what/why/how.
 
 ## 5. User Approval Gate
 
-Present all findings to the user before posting anything to GitHub:
+Show every finding to the user before posting:
 
-- List each finding grouped by file, with severity, line, and suggested fix.
-- State the intended verdict (`APPROVE` / `COMMENT`).
-- Present this in normal chat prose; **do not use `AskUser`** for the review report. The goal is to let the user discuss, reword, drop, or re-severity findings naturally before anything is posted.
-- **Wait for explicit user confirmation** before proceeding to step 6.
+- Group by file; include severity, line, suggested fix.
+- State intended verdict (`APPROVE` / `COMMENT`).
+- Plain chat prose; **do not use `AskUser`** -- the user should be free to discuss, reword, drop, or re-severity findings.
+- **Wait for explicit confirmation.** Apply any user edits before handoff.
 
-If the user edits, drops, or re-severities any findings, apply those changes before posting.
-
-## 6. Post Threaded Review Comments
-
-Use `REPO` and `HEAD_SHA` from the **pr-context** skill.
-
-Post each finding as a **review comment on a specific line**:
-
-```bash
-gh api "repos/$REPO/pulls/<number>/comments" \
-  --method POST \
-  -f body="**[severity]** <comment>" \
-  -f commit_id="$HEAD_SHA" \
-  -f path="<file-path>" \
-  -F line=<line-number> \
-  -f side="RIGHT"
-```
-
-- Group closely-related findings into a single comment where it improves readability.
-- Include the relevant code snippet in the comment body for context.
-- When the user approves posting a suggestion and the fix is small, mechanical, and line-local, include a GitHub direct-apply suggestion block:
-
-  ````markdown
-  ```suggestion
-  <replacement code>
-  ```
-  ````
-
-  Use this only at posting time. Do not let the possibility of an applyable suggestion bias the review toward recommending changes; first decide whether the issue is worth raising, then decide whether a suggestion block would help the author apply it safely.
-- Prefer `--input /tmp/comment.json` for comments containing suggestion blocks, backticks, JSON, or other shell-sensitive text.
-
-## 7. Verdict
-
-After posting all line comments, submit a formal review:
-
-- **Any issues found** -> `COMMENT` with a summary.
-- **No issues** -> `APPROVE` with a brief positive note.
-
-```bash
-gh api "repos/$REPO/pulls/<number>/reviews" \
-  --method POST \
-  -f event="<COMMENT|APPROVE>" \
-  -f body="<summary>"
-```
+Once confirmed, hand off to `/post-review <PR-number-or-URL>`. Suggestion-block decisions live there -- review judgment must not be biased toward apply-clickable issues.
