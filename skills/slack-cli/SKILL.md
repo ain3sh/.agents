@@ -14,7 +14,7 @@ Search requires a user token (`xoxp-`). Set via `slack config set-token` or `SLA
 slack ch list                                      # All channels
 slack ch list --exclude-archived                   # Active only
 slack ch list --type public                        # Public only
-slack ch info C0123456789                          # Details
+slack ch get C0123456789                           # Details (channel metadata + member count)
 slack ch create "name" --public                    # Create
 slack ch archive C0123456789                       # Archive
 slack ch unarchive C0123456789                     # Unarchive (user token only)
@@ -23,9 +23,6 @@ slack ch invite C0123456789 -u U0123456789         # Invite user
 slack ch kick C0123456789 -u U0123456789           # Remove user
 slack ch set-topic C0123456789 "topic"             # Set topic
 slack ch set-purpose C0123456789 "purpose"         # Set purpose
-slack ch history C0123456789                       # Message history
-slack ch history C0123456789 --count 50            # With count
-slack ch history C0123456789 --oldest TS           # Since timestamp
 ```
 
 ## Messages
@@ -39,11 +36,10 @@ slack msg update C0123 TS "new text"               # Edit
 slack msg delete C0123 TS                          # Delete
 slack msg react C0123 TS thumbsup                  # React
 slack msg unreact C0123 TS thumbsup                # Remove reaction
-slack msg pin C0123 TS                             # Pin
-slack msg unpin C0123 TS                           # Unpin
-slack msg permalink C0123 TS                       # Get permalink
-slack msg schedule C0123 "text" --post-at UNIX     # Schedule
-slack msg unschedule SCHEDULED_ID                  # Cancel scheduled
+slack msg history C0123456789                      # Channel history
+slack msg history C0123456789 --limit 50           # With limit
+slack msg thread C0123 THREAD_TS                   # Thread replies (parent + all replies)
+slack msg thread C0123 THREAD_TS --limit 200       # Higher page size
 ```
 
 ## Users
@@ -138,8 +134,42 @@ slack completion bash > /etc/bash_completion.d/slck
 slack completion fish > ~/.config/fish/completions/slck.fish
 ```
 
+## Patterns
+
+### Read a thread from its URL
+
+URL shape: `https://<ws>.slack.com/archives/<CHANNEL_ID>/p<REPLY_TS>?thread_ts=<PARENT_TS>`.
+Use `thread_ts` (the parent). The `p<ts>` in the path is a reply id — using it misses the parent and any replies above it.
+
+```bash
+URL='https://factory-ai.slack.com/archives/C061CUZD66T/p1778021566609749?thread_ts=1778021504.738309'
+CH=${URL#*archives/}; CH=${CH%%/*}
+TS=${URL#*thread_ts=}; TS=${TS%%&*}
+slack msg thread "$CH" "$TS" -o json
+```
+
+### Resolve `not_in_channel`
+
+Reading messages requires channel membership; `channels:history` alone is not enough.
+
+- **Public** — bot self-joins via `conversations.join` (requires `channels:join` scope).
+- **Private** — a human must `/invite @slackcli`; bots cannot self-join.
+- **DM / MPIM** — use a user token (`SLACK_USER_TOKEN` / `--as-user`).
+
+Self-join guard for public channels (`conversations.join` is idempotent):
+
+```bash
+TOKEN=${SLACK_API_TOKEN:-$(cut -d= -f2 ~/.config/slack-chat-api/credentials)}
+curl -sS -H "Authorization: Bearer $TOKEN" -d "channel=$CH" \
+  https://slack.com/api/conversations.join >/dev/null
+slack msg thread "$CH" "$TS"
+```
+
+If `conversations.join` returns `missing_scope`, add `channels:join` at
+https://api.slack.com/apps/A0AN5RUFSNB/oauth and Reinstall to Workspace.
+
 ## Known Limitations
 
-- Bot tokens (`xoxb-`) cannot unarchive channels (Slack API limitation -- bot is removed on archive).
-- Workaround: use a user token or unarchive via Slack UI.
+- Bot tokens (`xoxb-`) cannot unarchive channels — bot is removed on archive. Use a user token or the Slack UI.
 - `channels invite` idempotency is limited to single-user invites.
+- Reading messages/threads requires channel membership — see Patterns → "Resolve `not_in_channel`".
