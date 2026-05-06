@@ -5,6 +5,8 @@ Transparent and fail-open by design:
 
 - Only acts on ``Execute`` tool calls.
 - Skips commands that already start with ``rtk `` (idempotent).
+- Skips ``git push`` commands because wrapping network writes adds latency with
+  little token-saving upside.
 - Consults ``rtk rewrite``; if rtk is absent, slow, or the command has no
   compressed form, the hook exits cleanly and the original command runs.
 - Per-surface toggles live under ``[hooks.pre_tool_use.rtk.surfaces]`` in
@@ -41,6 +43,48 @@ HOOK_EVENT_NAME = "PreToolUse"
 RTK_REWRITE_EXIT_OK = frozenset({0, 3})
 RTK_TIMEOUT_SEC = 5
 
+SHELL_SEPARATORS = frozenset({"&&", "||", ";", "|", "|&"})
+COMMAND_PREFIXES = frozenset({"command", "exec", "nohup", "time"})
+GIT_GLOBAL_OPTIONS_WITH_VALUE = frozenset(
+    {
+        "-C",
+        "-c",
+        "--config-env",
+        "--exec-path",
+        "--git-dir",
+        "--namespace",
+        "--super-prefix",
+        "--work-tree",
+    }
+)
+GIT_GLOBAL_OPTIONS_WITH_INLINE_VALUE = tuple(
+    f"{option}=" for option in GIT_GLOBAL_OPTIONS_WITH_VALUE if option.startswith("--")
+)
+WRAPPER_OPTIONS_WITH_VALUE = frozenset(
+    {
+        "-C",
+        "-g",
+        "-h",
+        "-p",
+        "-T",
+        "-t",
+        "-u",
+        "--chdir",
+        "--close-from",
+        "--command-timeout",
+        "--group",
+        "--host",
+        "--prompt",
+        "--role",
+        "--type",
+        "--unset",
+        "--user",
+    }
+)
+WRAPPER_OPTIONS_WITH_INLINE_VALUE = tuple(
+    f"{option}=" for option in WRAPPER_OPTIONS_WITH_VALUE if option.startswith("--")
+)
+
 
 def _extract_surface(rewritten: str) -> str | None:
     """Pull the rtk surface name (token after 'rtk') from a rewrite string."""
@@ -49,6 +93,83 @@ def _extract_surface(rewritten: str) -> str | None:
     except ValueError:
         return None
     return parts[1] if len(parts) >= 2 and parts[0] == "rtk" else None
+
+
+def _git_subcommand_at(tokens: list[str], git_index: int) -> str | None:
+    index = git_index + 1
+    while index < len(tokens):
+        token = tokens[index]
+        if token in SHELL_SEPARATORS:
+            return None
+        if token in GIT_GLOBAL_OPTIONS_WITH_VALUE:
+            index += 2
+            continue
+        if token.startswith(GIT_GLOBAL_OPTIONS_WITH_INLINE_VALUE):
+            index += 1
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        return token
+    return None
+
+
+def _is_shell_assignment(token: str) -> bool:
+    name, separator, _value = token.partition("=")
+    if not separator or not name or name[0].isdigit():
+        return False
+    return all(character.isalnum() or character == "_" for character in name)
+
+
+def _skip_wrapper_options(tokens: list[str], index: int) -> int:
+    while index < len(tokens) and tokens[index].startswith("-"):
+        token = tokens[index]
+        if token in WRAPPER_OPTIONS_WITH_VALUE:
+            index += 2
+        elif token.startswith(WRAPPER_OPTIONS_WITH_INLINE_VALUE):
+            index += 1
+        else:
+            index += 1
+    return index
+
+
+def _git_index_in_segment(tokens: list[str]) -> int | None:
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if _is_shell_assignment(token):
+            index += 1
+            continue
+        if token == "env":
+            index = _skip_wrapper_options(tokens, index + 1)
+            continue
+        if token == "sudo":
+            index = _skip_wrapper_options(tokens, index + 1)
+            continue
+        if token in COMMAND_PREFIXES:
+            index += 1
+            continue
+        return index if token == "git" else None
+    return None
+
+
+def _is_git_push_command(command: str) -> bool:
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        return False
+
+    segment: list[str] = []
+    for token in [*tokens, ";"]:
+        if token not in SHELL_SEPARATORS:
+            segment.append(token)
+            continue
+
+        git_index = _git_index_in_segment(segment)
+        if git_index is not None and _git_subcommand_at(segment, git_index) == "push":
+            return True
+        segment.clear()
+    return False
 
 
 def _rtk_rewrite(command: str) -> tuple[str, str | None]:
@@ -143,6 +264,7 @@ def main() -> None:
         not isinstance(command, str)
         or not command.strip()
         or command.lstrip().startswith("rtk ")
+        or _is_git_push_command(command)
     ):
         exit(hook_event_name=HOOK_EVENT_NAME)
 
