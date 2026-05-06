@@ -31,7 +31,7 @@ Detect the project's tooling from config files at the repo root, then run each a
 | Dead code (Python) | `*.py` in diff + `pyproject.toml` / `setup.py` | `vulture <changed-paths>` (or `uvx vulture`) |
 | AI-slop (JS/TS) | any `*.{js,jsx,ts,tsx}` in diff | `slop-scan delta <base> <head> --format json` |
 | Type check | `tsconfig.json` | `npm run typecheck` or `npx tsc --noEmit` |
-| Tests | `jest.config*`, `vitest.config*`, `pytest.ini` | Run relevant test subset for changed files |
+| Tests | `jest.config*`, `vitest.config*`, `pytest.ini` | Changed-file subset, serial workers (see below) |
 
 - Inspect `package.json` scripts (or `pyproject.toml` / `Makefile` for Python) for canonical commands (`format`, `fix`, `lint`, `knip`, `test`, `typecheck`).
 - Fix any issues found. Re-run until clean.
@@ -54,6 +54,31 @@ quality-ship checklist:
 ### AI-slop detector (deterministic)
 
 For any PR touching JS/TS files, run `slop-scan delta <base-ref> <head-ref> --format json` and triage the findings alongside lint/typecheck output. It catches the 15 deterministic slop patterns (swallowed errors, placeholder comments, generic `Record<string, unknown>` casts, pass-through wrappers, duplicate signatures, etc.) that lint and typecheck miss. Treat any new violations as blocking — do not commit slop.
+
+### Serial test execution
+
+Default to serial workers — no pool startup cost on subset runs, no OOM when droids share a host. Select the subset with positional paths (all runners); Jest also has `--findRelatedTests` for import-graph-aware selection.
+
+| Runner | Serial flag |
+|--------|-------------|
+| Jest | `--runInBand` (`-i`) |
+| Vitest | `--no-file-parallelism` |
+| Playwright | `--workers=1` |
+| pytest + xdist | `-p no:xdist` |
+
+Forward flags past the script/task boundary with `--`:
+
+```bash
+npm test -- --runInBand --findRelatedTests src/foo.ts
+pnpm vitest run --no-file-parallelism src/foo.test.ts
+turbo run test --filter=@app/web -- --runInBand
+```
+
+Additional mitigations when concurrent droid activity is likely:
+
+- **Mutex**: `flock -w 600 /tmp/droid-tests.lock <cmd>` — one test run at a time across droid instances.
+- **Heap cap**: `NODE_OPTIONS=--max-old-space-size=2048` — fail fast instead of swap-thrashing.
+- **Deprioritize**: prefix with `nice -n 10 ionice -c3` when another runner is already active.
 
 ### Monorepo scoping: use turbo, not direct invocation
 
