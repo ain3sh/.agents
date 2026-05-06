@@ -142,7 +142,7 @@ URL shape: `https://<ws>.slack.com/archives/<CHANNEL_ID>/p<REPLY_TS>?thread_ts=<
 Use `thread_ts` (the parent). The `p<ts>` in the path is a reply id — using it misses the parent and any replies above it.
 
 ```bash
-URL='https://factory-ai.slack.com/archives/C061CUZD66T/p1778021566609749?thread_ts=1778021504.738309'
+URL='https://example.slack.com/archives/CXXXXXXXXXX/p1700000000000000?thread_ts=1700000000.000000'
 CH=${URL#*archives/}; CH=${CH%%/*}
 TS=${URL#*thread_ts=}; TS=${TS%%&*}
 slack msg thread "$CH" "$TS" -o json
