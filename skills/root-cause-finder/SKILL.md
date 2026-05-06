@@ -11,6 +11,18 @@ Before fixing the error, prove whether the code path that produced it was intend
 
 Do not stop at the first contract, parsing, type, null, or schema error. Treat it as a possible symptom.
 
+## Inputs (pull before reasoning)
+
+RCA without the failure state is guesswork. Before stating expected behavior, pull every referenced artifact via project-local skills or MCP tools:
+
+- Bug reports, error logs, stack traces, trace IDs, core dumps
+- Sentry / Rollbar / DataDog / Axiom / CloudWatch payloads
+- Repro scripts, HAR files, screen recordings, session captures
+
+Read-only fetches don't violate spec mode -- skipping artifacts sabotages the RCA.
+
+If you cannot reproduce the failure or read its artifacts, **stop and surface the gap** rather than guessing. A guess phrased as a root cause is worse than "I don't have enough state to RCA this yet."
+
 ## Default workflow
 
 1. State the expected behavior in plain language.

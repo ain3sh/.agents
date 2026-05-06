@@ -28,6 +28,7 @@ Fire `TodoWrite` in parallel with the first tool call of each phase.
   ```
 - If pasted ticket content is provided, parse it directly.
 - Identify: the problem statement, acceptance criteria, constraints, linked issues/PRs, and any discussion context.
+- **Pull every referenced artifact** -- bug reports, Sentry, logs, attachments, linked PRs, design docs (see `linear-cli`'s **Attached Artifact Enrichment**). Read-only fetches don't violate spec mode.
 
 ## 2. Explore Current Code
 

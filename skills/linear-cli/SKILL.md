@@ -147,6 +147,21 @@ linear i get TEAM-123 --comments
 slack ch history C0123456789 --oldest 1234567890.123456 --count 50
 ```
 
+## Attached Artifact Enrichment
+
+Tickets often link artifacts holding the real failure state or design intent. Pull them when fetching the ticket, not later:
+
+- Bug-report IDs (project-local skills, e.g. `daily-cli-bug-report`)
+- Sentry / Rollbar / Bugsnag issues (matching MCP if configured)
+- Axiom / DataDog / CloudWatch / Loki / Grafana log queries
+- S3 zips, HAR files, screen recordings, screenshots
+- Stack traces, repro scripts, customer-attached logs
+- Linked PR diffs, commit SHAs, design docs
+
+**Default is pull, not skip.** A bug ticket without its bug report is empty; root-cause analysis runs on guesswork. Treat ticket + artifact as one comprehension step.
+
+**Read-only fetches are not spec-mode violations**, even when they cache to disk. Spec mode restricts repo/workspace mutations -- not network reads or cache writes. The "spec mode means no downloads" reading produces symptom-anchored specs.
+
 ## Agent Output Patterns
 
 Use these flags when consuming output programmatically:
