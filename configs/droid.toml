@@ -50,8 +50,6 @@ match_input.command = "\\bgrep\\b"
 [hooks.pre_tool_use.commit_review_guard]
 type = "committed"
 max_chars = 6000
-timeout_sec = 10
-on_cli_failure = "allow"
 
 [hooks.pre_tool_use.rtk]
 # Token-reduction proxy (https://github.com/rtk-ai/rtk). The hook calls

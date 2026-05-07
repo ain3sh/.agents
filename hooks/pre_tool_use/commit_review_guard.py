@@ -113,12 +113,7 @@ def _parse_args(argv: list[str]) -> Config:
 # Git / CodeRabbit helpers
 # ============================================================================
 
-def _run(
-    cmd: list[str],
-    cwd: Path | None = None,
-    timeout_sec: float | None = None,
-    env: dict[str, str] | None = None,
-) -> tuple[int, str, str, bool]:
+def _run(cmd: list[str], cwd: Path | None = None, timeout_sec: float | None = None) -> tuple[int, str, str, bool]:
     try:
         result = subprocess.run(
             cmd,
@@ -126,7 +121,6 @@ def _run(
             capture_output=True,
             text=True,
             timeout=timeout_sec,
-            env=env,
         )
         return result.returncode, result.stdout, result.stderr, False
     except subprocess.TimeoutExpired as exc:
@@ -594,12 +588,7 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
     elif base_branch:
         cmd.extend(["--base", base_branch])
 
-    code, stdout, stderr, timed_out = _run(
-        cmd,
-        cwd=repo_root_path,
-        timeout_sec=config.timeout_sec,
-        env={**os.environ, "GIT_CONFIG_GLOBAL": os.devnull},
-    )
+    code, stdout, stderr, timed_out = _run(cmd, cwd=repo_root_path, timeout_sec=config.timeout_sec)
     combined_output = _normalize_output(stdout, stderr)
 
     if code != 0:
