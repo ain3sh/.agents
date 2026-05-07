@@ -16,6 +16,7 @@ PY_COLOR="\033[38;2;97;214;214m"
 SESSION_COLOR="\033[38;2;169;169;169m"
 SEPARATOR_COLOR="\033[38;2;128;128;128m"
 ACCENT_COLOR="\033[38;2;180;180;180m"
+WHITE_COLOR="\033[38;2;255;255;255m"
 RESET="\033[0m"
 SEP_DOT="◦"
 
@@ -140,6 +141,7 @@ if [[ "$CWD" != "/" ]]; then
 fi
 
 GIT_INFO=""
+GIT_DIRTY_COUNT=""
 PR_INFO=""
 if [[ -d "$CWD" ]] && git_in_cwd rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     BRANCH=$(git_in_cwd symbolic-ref --quiet --short HEAD || true)
@@ -149,11 +151,11 @@ if [[ -d "$CWD" ]] && git_in_cwd rev-parse --is-inside-work-tree >/dev/null 2>&1
     fi
 
     if [[ -n "$BRANCH" ]]; then
-        DIRTY=""
-        if [[ -n "$(git_in_cwd status --porcelain --untracked-files=normal | head -n 1)" ]]; then
-            DIRTY="● "
+        GIT_DIRTY_COUNT=$(git_in_cwd status --porcelain --untracked-files=normal | wc -l | tr -d '[:space:]')
+        if [[ ! "$GIT_DIRTY_COUNT" =~ ^[1-9][0-9]*$ ]]; then
+            GIT_DIRTY_COUNT=""
         fi
-        GIT_INFO="${DIRTY}${BRANCH}"
+        GIT_INFO="$BRANCH"
 
         if [[ "$BRANCH" != detached@* ]]; then
             REPO_ROOT=$(git_in_cwd rev-parse --show-toplevel)
@@ -200,8 +202,9 @@ fi
 
 if [[ -n "$GIT_INFO" ]]; then
     printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
-    if [[ "$GIT_INFO" == "● "* ]]; then
-        printf "🌿 ${GIT_DIRTY_COLOR}%s${RESET}" "${GIT_INFO#● }"
+    if [[ -n "$GIT_DIRTY_COUNT" ]]; then
+        printf "🌿 ${GIT_DIRTY_COLOR}%s${RESET}" "$GIT_INFO"
+        printf " ${WHITE_COLOR}(${RESET}${GIT_DIRTY_COLOR}%s${RESET}${WHITE_COLOR})${RESET}" "$GIT_DIRTY_COUNT"
     else
         printf "🌿 ${GIT_COLOR}%s${RESET}" "$GIT_INFO"
     fi
