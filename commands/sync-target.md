@@ -1,15 +1,13 @@
 ---
 description: Merge this branch's target (PR base or repo default) into HEAD; resolve conflicts in branch context
-argument-hint: [--no-push] [<target-branch>]
+argument-hint: [--no-push] [--full-scope] [<target-branch>]
 ---
 
-Load skills: **pr-context**, **quality-ship**, **git-advanced**, **worktree-setup**.
+Load skills: **pr-context**, **quality-ship**, **git-advanced**. (**worktree-setup** is lazy — see §5.)
 
 ## 1. Resolve target
 
-Target is wherever this branch lands: PR base, parent of a stacked PR, or repo default. Never hardcode `dev`/`main`.
-
-Precedence: explicit arg → open PR's `baseRefName` → repo default (`origin/HEAD`).
+Target = where this branch lands. Precedence: explicit arg → open PR's `baseRefName` → repo default (`origin/HEAD`). Never hardcode `dev`/`main`.
 
 ```bash
 CURRENT=$(git rev-parse --abbrev-ref HEAD)
@@ -31,7 +29,7 @@ git log --oneline "$REMOTE/$TARGET".."$CURRENT"
 git diff --stat "$REMOTE/$TARGET".."$CURRENT"
 ```
 
-Note which files this branch owns, what it changes, what it should preserve from upstream.
+Note: files this branch owns, what it changes, what to preserve from upstream.
 
 ## 3. Merge
 
@@ -39,11 +37,17 @@ Note which files this branch owns, what it changes, what it should preserve from
 git merge "$REMOTE/$TARGET" --no-edit
 ```
 
-Clean? Skip to §5. Else: `git diff --name-only --diff-filter=U`.
+Clean? Skip to §5. Else capture the **targeted scope** for §4–§5:
+
+```bash
+CONFLICTS=$(git diff --name-only --diff-filter=U)
+```
+
+Hold in memory — the `U` filter empties after staging.
 
 ## 4. Resolve conflicts
 
-For each conflicted file, read both sides and classify. Tag each resolution **High** (mechanical, clear intent) or **Low** (judgment call on business logic) — §6 gates on these tags.
+For each file in `$CONFLICTS`, read both sides and classify. Tag each resolution **High** (mechanical, clear intent) or **Low** (judgment call on business logic) — §6 gates on these tags.
 
 | Type | Action |
 |------|--------|
@@ -54,9 +58,19 @@ For each conflicted file, read both sides and classify. Tag each resolution **Hi
 
 Stage resolutions, then `git commit --no-edit`.
 
-## 5. Quality checks
+## 5. Quality checks (scoped)
 
-Run **quality-ship**: detected checks → fix → re-run until clean. Separate commits for fixes.
+**Targeted scope = `$CONFLICTS`** — *not* the full merge diff. Upstream lines came in pre-validated; widening scope rebuilds packages this branch never touched.
+
+Run **quality-ship** with that scope:
+- Per-file validators (format, lint, slop-scan, vulture, …): pass `$CONFLICTS` paths.
+- Package-scoped validators (typecheck, tests, knip, …): scope to the packages owning `$CONFLICTS` (e.g. `turbo run … --filter={<pkg>…}`).
+
+Worktree repair is **lazy** — load **worktree-setup** only on `Cannot find module` / empty-`dist/` errors for an in-scope package. Don't run `verify.py` proactively; its full-workspace manifest will demand artifacts (electron-forge bundles, …) outside your scope.
+
+`$ARGUMENTS` may include `--full-scope` to opt back into whole-diff validation.
+
+Separate commits for fixes.
 
 ## 6. Push gate
 
