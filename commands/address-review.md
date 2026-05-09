@@ -9,12 +9,21 @@ Load skills: **pr-context**, **quality-ship**.
 
 Follow the **pr-context** skill to fetch full PR context from `$ARGUMENTS`.
 
-Fetch review comments, reviews, and **GraphQL thread IDs** (needed for resolving threads later):
+Fetch all three PR-comment surfaces plus **GraphQL thread IDs** (needed for resolving review threads later):
+
 ```bash
+# Line-level review threads (inline diff comments).
 gh api "repos/$REPO/pulls/<number>/comments" | jq '.[] | {id, path, line, body, user: .user.login, in_reply_to_id}'
+
+# Review summary bodies (REQUEST_CHANGES / APPROVE / COMMENT with body).
 gh api "repos/$REPO/pulls/<number>/reviews" | jq '.[] | {id, state, body, user: .user.login}'
 
-# Fetch thread node IDs upfront -- REST API cannot resolve threads
+# Conversation comments -- drop bots; bot review threads above stay (their findings can be actionable).
+gh api "repos/$REPO/issues/<number>/comments" \
+  | jq '.[] | select(.user.type != "Bot" and (.user.login | endswith("[bot]") | not))
+        | {id, body, user: .user.login}'
+
+# Fetch thread node IDs upfront -- REST API cannot resolve threads.
 gh api graphql -f query='
   query {
     repository(owner: "<owner>", name: "<repo>") {
@@ -29,9 +38,9 @@ gh api graphql -f query='
 
 Group comments into threads. For each thread, capture:
 - **What the reviewer is asking for**: code change, clarification, or acknowledgment.
-- **File + line**: where the feedback targets.
+- **File + line**: where the feedback targets (`--` for conversation comments).
 - **Whether it's blocking**: `REQUEST_CHANGES` reviews vs `COMMENT` suggestions.
-- **GraphQL thread ID**: map each root comment's `databaseId` to its thread `id` for resolution.
+- **GraphQL thread ID**: map each root review comment's `databaseId` to its thread `id` for step 8. Conversation comments have no thread and are closed by the reply itself.
 
 ## 2. Classify
 
@@ -162,11 +171,13 @@ EOF
 )"
 ```
 
+**Conversation comment** (from `issues/<n>/comments`, anchor `#issuecomment-...`) -- no thread, no `in_reply_to`. Use the review-body quote-reply pattern above.
+
 ## 8. Resolve Threads
 
-Thread resolution is **GraphQL-only** (REST API has no endpoint for this).
+Thread resolution is **GraphQL-only** and applies only to review threads -- REST has no endpoint, and conversation comments have no thread node.
 
-For each addressed thread, resolve it using the thread ID fetched in step 1:
+For each addressed review thread, resolve it using the thread ID fetched in step 1:
 ```bash
 gh api graphql -f query='
   mutation {
