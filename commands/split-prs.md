@@ -1,77 +1,16 @@
 ---
-description: Break a branch's commits into clean, separate PRs
+description: Break a branch's commits into clean, separate PRs (atomic or stacked)
 argument-hint: <branch-name> [--base <base-branch>]
 ---
 
-Load skills: **ticket-branch**, **quality-ship**, **pr-description**.
+Load skills: **split-pr** (primary -- drives the whole flow), **ticket-branch**, **quality-ship**, **pr-description**, **git-advanced**, **pr-context**.
 
-## 1. Analyze the Branch
+Follow the **split-pr** skill end-to-end:
 
-```bash
-DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
-BASE="${base:-$DEFAULT_BRANCH}"
-git log --oneline "$BASE".."$BRANCH"
-git diff --stat "$BASE".."$BRANCH"
-```
+1. **Analyze the diff** (skill section 1) -- build the concern map, classify commits, pull the flat file list.
+2. **Propose the plan** (skill section 2) -- write the full plan per the skill's format, apply the standalone-review test, and **wait for user approval** before touching any branch.
+3. **Pick the shape** (skill section 3) -- atomic by default; stacked only when the decision table forces it. Follow `references/atomic.md` or `references/stacked.md` for the chosen path.
+4. **Execute** (skill section 4) -- pre-split commit surgery if needed (4a), then the per-PR loop (4b) with quality-ship + pr-description hand-offs, handling cherry-pick conflicts per 4c.
+5. **Report** (skill section 5) -- URLs, shape, dependency graph, merge order.
 
-For each commit, collect:
-- Files changed and their packages/directories.
-- Whether it's a logical unit (single concern) or a grab-bag.
-- Dependencies on other commits (does commit B only make sense after commit A?).
-
-## 2. Propose Split Plan
-
-Group commits into proposed PRs by logical concern (feature area, package, layer). For each proposed PR, list:
-- **Title**: conventional commit style.
-- **Commits**: which commits (by SHA short) it includes.
-- **Files**: directories/packages touched.
-- **Dependencies**: which other proposed PRs must land first (if any).
-
-### Stacking Decision
-
-Evaluate file overlap between proposed PRs:
-- **No overlap** (each PR touches disjoint files): use **independent PRs** targeting the base branch. Can merge in any order.
-- **Overlap exists** (multiple PRs modify the same files): use **stacked PRs** where each targets the previous PR's branch. Must merge in order.
-
-Flag any commits that span multiple proposed PRs (conflict risk). Suggest rewriting or splitting those commits if feasible.
-
-**Present the plan and wait for user approval** before executing.
-
-## 3. Execute the Split
-
-For each proposed PR, in dependency order:
-
-### Create branch
-```bash
-# Independent: branch off base
-git checkout -b "<owner>/<prefix>-<number>-<stub>" "origin/$BASE"
-
-# Stacked: branch off previous PR's branch
-git checkout -b "<owner>/<prefix>-<number>-<stub>" "<previous-pr-branch>"
-```
-
-Replace `<owner>` with your branch namespace.
-
-### Apply commits
-
-**Always move code via git operations (cherry-pick, stash, diff-apply), never manually re-type changes.** Manual re-implementation risks introducing drift from the original work and wastes time. Only fall back to manual edits for edge cases where git operations genuinely can't produce the right result (e.g., a commit must be decomposed at the hunk level and cherry-pick -p isn't sufficient).
-
-- **Clean commits** (single concern, no overlap): `git cherry-pick <sha1> <sha2> ...`
-- **Tangled commits** (overlap across PRs): `git cherry-pick --no-commit`, then selectively stage relevant hunks with `git add -p`, discard the rest.
-- **Partial file moves**: `git diff <sha>~1..<sha> -- <paths> | git apply` to extract only specific file changes from a commit.
-- If cherry-pick conflicts arise, resolve them. If unresolvable, flag to the user.
-
-### Quality checks + push
-Follow the **quality-ship** skill: run detected checks, fix issues, commit any fixups, push.
-
-### Open PR — pr-description hand-off (mandatory)
-
-Re-load `pr-description`, emit its section 0 checklist inline, and tick every box before `gh pr create`. Include the stacked/split-PR context (part K of N, dependencies, scope) in the body.
-
-```bash
-gh pr create --base "$TARGET" --title "<title>" --body-file /tmp/pr-body.md
-```
-
-## 4. Report
-
-List all created PRs with their URLs, dependency graph, and recommended merge order.
+Re-read the relevant `references/*.md` when executing; do not work from memory on branch mechanics, restacking, or merge-strategy implications.
