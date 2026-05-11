@@ -30,6 +30,7 @@ Detect the project's tooling from config files at the repo root, then run each a
 | Dead code (JS/TS) | `knip.*`, `knip` in package.json scripts | `npm run knip` or `npx knip` |
 | Dead code (Python) | `*.py` in diff + `pyproject.toml` / `setup.py` | `vulture <changed-paths>` (or `uvx vulture`) |
 | AI-slop (JS/TS) | any `*.{js,jsx,ts,tsx}` in diff | `slop-scan delta <base> <head> --format json` |
+| React diagnostics (JS/TS) | `react`/`react-dom`/`next`/`@remix-run/*` in `package.json` | `npx -y react-doctor@latest . --diff <base> --verbose` |
 | Type check | `tsconfig.json` | `npm run typecheck` or `npx tsc --noEmit` |
 | Tests | `jest.config*`, `vitest.config*`, `pytest.ini` | Changed-file subset, serial workers (see below) |
 
@@ -45,6 +46,7 @@ quality-ship checklist:
 - lint:      <ran | no signal> (evidence)
 - dead-code: <ran | no signal> (evidence)
 - ai-slop:   <ran | no signal> (evidence)
+- react:     <ran | no signal> (evidence)
 - typecheck: <ran | no signal> (evidence)
 - tests:     <ran | no signal> (evidence)
 ```
@@ -54,6 +56,10 @@ quality-ship checklist:
 ### AI-slop detector (deterministic)
 
 For any PR touching JS/TS files, run `slop-scan delta <base-ref> <head-ref> --format json` and triage the findings alongside lint/typecheck output. It catches the 15 deterministic slop patterns (swallowed errors, placeholder comments, generic `Record<string, unknown>` casts, pass-through wrappers, duplicate signatures, etc.) that lint and typecheck miss. Treat any new violations as blocking — do not commit slop.
+
+### React diagnostics (rules-based)
+
+For any PR touching a React codebase (signal: `react`/`react-dom`/`next`/`@remix-run/*` in `package.json`), run `npx -y react-doctor@latest . --diff <base-ref> --verbose` and triage alongside the AI-slop output. Different axes: slop-scan flags structural noise, react-doctor flags concrete React correctness/perf bugs (effect chains, derived state, fetch-in-effect, missing Suspense around `useSearchParams`, server-fn input validation, etc.). See the **react-doctor** skill for category-gated triage policy, false-positive handling, and config. New errors are blocking; warnings are blocking when the category is `security`, `correctness`, `state-and-effects`, or `server` -- advisory for `design`.
 
 ### Serial test execution
 
