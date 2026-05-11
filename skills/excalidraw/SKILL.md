@@ -1,11 +1,20 @@
 ---
 name: excalidraw
-description: Create hand-drawn style diagrams using Excalidraw JSON format. Generate .excalidraw files for architecture diagrams, flowcharts, sequence diagrams, concept maps, and more. Files can be opened at excalidraw.com or uploaded for shareable links via scripts/upload.py.
+description: Create Excalidraw diagrams in two registers: clean technical (default, for architecture/sequence/flow diagrams) or hand-drawn conceptual (opt-in, for brainstorms/sketches). .excalidraw files render to PNG via excalirender or open at excalidraw.com.
 ---
 
 # Excalidraw Diagrams
 
 Create diagrams by writing standard Excalidraw element JSON and saving as `.excalidraw` files. These files can be drag-and-dropped onto [excalidraw.com](https://excalidraw.com) for viewing and editing. No accounts, no API keys, no rendering libraries -- just JSON.
+
+## Visual register
+
+Pick one register per diagram; mixing reads as broken.
+
+- **Technical** (default) -- `fontFamily: 2`, `roughness: 0`, `strokeWidth: 2`. Architecture, sequence, state, flow, ER, class; anything reviewer-grade (PRs, docs, specs).
+- **Conceptual** -- `fontFamily: 1`, `roughness: 1`, `strokeWidth: 1.5`. Brainstorms, concept maps, mind maps; pick when the user asks for "whiteboard", "sketch", or "hand-drawn" vibe.
+
+**Silent-default trap.** Excalidraw's element defaults are `fontFamily: 1`, `roughness: 1` (the conceptual register). Omit them and you get a hand-drawn render regardless of intent; set both explicitly on every text/shape element.
 
 ## Defaults you must apply
 
@@ -124,59 +133,58 @@ ssh laptop "gh-attach --repo owner/repo --md /tmp/diagram.png"
 - `backgroundColor`: `"transparent"`
 - `fillStyle`: `"solid"`
 - `strokeWidth`: `2`
-- `roughness`: `1` (hand-drawn look)
 - `opacity`: `100`
+
+`fontFamily` and `roughness` must be explicit per register (see Visual register). Conceptual also overrides `strokeWidth` to `1.5`.
 
 ### Element types
 
+Examples use the technical register. For conceptual, flip `roughness` to `1`, text `fontFamily` to `1`, and set `strokeWidth: 1.5`.
+
 **Rectangle**:
 ```json
-{ "type": "rectangle", "id": "r1", "x": 100, "y": 100, "width": 200, "height": 100 }
+{ "type": "rectangle", "id": "r1", "x": 100, "y": 100, "width": 200, "height": 100, "roughness": 0 }
 ```
 - `roundness: { "type": 3 }` for rounded corners
 - `backgroundColor: "#a5d8ff"`, `fillStyle: "solid"` for filled
 
 **Ellipse**:
 ```json
-{ "type": "ellipse", "id": "e1", "x": 100, "y": 100, "width": 150, "height": 150 }
+{ "type": "ellipse", "id": "e1", "x": 100, "y": 100, "width": 150, "height": 150, "roughness": 0 }
 ```
 
 **Diamond**:
 ```json
-{ "type": "diamond", "id": "d1", "x": 100, "y": 100, "width": 150, "height": 150 }
+{ "type": "diamond", "id": "d1", "x": 100, "y": 100, "width": 150, "height": 150, "roughness": 0 }
 ```
 
 **Labeled shape (container binding)** -- create a text element bound to the shape:
 
-> **WARNING:** Do NOT use `"label": { "text": "..." }` on shapes. This is NOT a valid
-> Excalidraw property and will be silently ignored, producing blank shapes. You MUST
-> use the container binding approach below.
+> **WARNING:** `"label"` is not a real Excalidraw property -- it is silently ignored and the shape renders blank. Use container binding (below).
 
-The shape needs `boundElements` listing the text, and the text needs `containerId` pointing back:
+Shape lists the text in `boundElements`; text points back via `containerId`:
 
 ```json
 { "type": "rectangle", "id": "r1", "x": 100, "y": 100, "width": 200, "height": 80,
-  "roundness": { "type": 3 }, "backgroundColor": "#a5d8ff", "fillStyle": "solid",
+  "roundness": { "type": 3 }, "backgroundColor": "#a5d8ff", "fillStyle": "solid", "roughness": 0,
   "boundElements": [{ "id": "t_r1", "type": "text" }] },
 { "type": "text", "id": "t_r1", "x": 105, "y": 110, "width": 190, "height": 25,
-  "text": "Hello", "fontSize": 20, "fontFamily": 1, "strokeColor": "#1e1e1e",
+  "text": "Hello", "fontSize": 20, "fontFamily": 2,
   "textAlign": "center", "verticalAlign": "middle",
   "containerId": "r1", "originalText": "Hello", "autoResize": true }
 ```
 
 - Works on rectangle, ellipse, diamond
-- Text is auto-centered by Excalidraw when `containerId` is set
-- `originalText` should match `text`
-- Always include `fontFamily: 1` (Virgil/hand-drawn font)
+- Text is auto-centered when `containerId` is set; `originalText` should match `text`
 
 **Labeled arrow** -- same container binding approach:
 
 ```json
 { "type": "arrow", "id": "a1", "x": 300, "y": 150, "width": 200, "height": 0,
-  "points": [[0,0],[200,0]], "endArrowhead": "arrow",
+  "points": [[0,0],[200,0]], "endArrowhead": "arrow", "roughness": 0,
   "boundElements": [{ "id": "t_a1", "type": "text" }] },
 { "type": "text", "id": "t_a1", "x": 370, "y": 130, "width": 60, "height": 20,
-  "text": "connects", "fontSize": 16, "fontFamily": 1, "strokeColor": "#1e1e1e",
+  "text": "connects", "fontSize": 16, "fontFamily": 2,
   "textAlign": "center", "verticalAlign": "middle",
   "containerId": "a1", "originalText": "connects", "autoResize": true }
 ```
@@ -185,14 +193,14 @@ The shape needs `boundElements` listing the text, and the text needs `containerI
 
 ```json
 { "type": "text", "id": "t1", "x": 150, "y": 138, "text": "Hello", "fontSize": 20,
-  "fontFamily": 1, "strokeColor": "#1e1e1e", "originalText": "Hello", "autoResize": true }
+  "fontFamily": 2, "originalText": "Hello", "autoResize": true }
 ```
 
 **Arrow**:
 
 ```json
 { "type": "arrow", "id": "a1", "x": 300, "y": 150, "width": 200, "height": 0,
-  "points": [[0,0],[200,0]], "endArrowhead": "arrow" }
+  "points": [[0,0],[200,0]], "endArrowhead": "arrow", "roughness": 0 }
 ```
 
 - `points`: `[dx, dy]` offsets from element `x`, `y`
@@ -204,7 +212,7 @@ The shape needs `boundElements` listing the text, and the text needs `containerI
 ```json
 {
   "type": "arrow", "id": "a1", "x": 300, "y": 150, "width": 150, "height": 0,
-  "points": [[0,0],[150,0]], "endArrowhead": "arrow",
+  "points": [[0,0],[150,0]], "endArrowhead": "arrow", "roughness": 0,
   "startBinding": { "elementId": "r1", "fixedPoint": [1, 0.5] },
   "endBinding": { "elementId": "r2", "fixedPoint": [0, 0.5] }
 }
