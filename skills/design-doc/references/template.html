@@ -1,0 +1,1634 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- TODO: title in form "<Doc Name> · Design Doc · <TICKET>" -->
+  <title>TODO Title · Design Doc · TODO-TICKET</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,30..100;1,9..144,300..700,30..100&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    /* =================================================================
+       DESIGN MONOGRAPH TEMPLATE
+       Cream paper · oxblood ink · Fraunces + JetBrains Mono
+       Edit only :root tokens to retheme. Leave structural CSS alone.
+       ================================================================= */
+
+    :root {
+      --bg: #f4eee4;
+      --bg-elevated: #fbf6ec;
+      --bg-sunk: #ede6d8;
+      --ink: #1b1714;
+      --ink-soft: #2e2722;
+      --graphite: #4a443e;
+      --fog: #8d847a;
+      --fog-soft: #b1a99d;
+      --line: #d7cebe;
+      --line-strong: #b9ad97;
+      --line-faint: #e5ddcc;
+      --code-bg: #ebe1cd;
+      --code-fg: #2b2420;
+
+      --accent: #8c2337;        /* oxblood */
+      --accent-ink: #fff7f2;
+      --accent-soft: #efd9db;
+      --accent-line: #bb6970;
+
+      --ochre: #a87618;
+      --ochre-soft: #f2e5c4;
+
+      --slate: #495b68;
+      --slate-soft: #dfe5ea;
+
+      --shadow-sm: 0 1px 0 rgba(27, 23, 20, 0.04);
+      --shadow-md:
+        0 1px 2px rgba(27, 23, 20, 0.05),
+        0 3px 12px rgba(27, 23, 20, 0.04);
+      --shadow-lg:
+        0 2px 4px rgba(27, 23, 20, 0.08),
+        0 14px 32px rgba(27, 23, 20, 0.09);
+
+      --serif: "Fraunces", "Iowan Old Style", "Constantia", "Palatino",
+        "Georgia", serif;
+      --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Menlo",
+        "Consolas", monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #171310;
+        --bg-elevated: #1f1a16;
+        --bg-sunk: #13100d;
+        --ink: #ede4d3;
+        --ink-soft: #d5cbba;
+        --graphite: #b1a795;
+        --fog: #8a8175;
+        --fog-soft: #6a6055;
+        --line: #332d26;
+        --line-strong: #4d463c;
+        --line-faint: #241f1a;
+        --code-bg: #221d18;
+        --code-fg: #e4dacb;
+
+        --accent: #e3828f;
+        --accent-ink: #1b0b0e;
+        --accent-soft: #2e171a;
+        --accent-line: #7d2d36;
+
+        --ochre: #d6ac66;
+        --ochre-soft: #302416;
+
+        --slate: #a0aeb9;
+        --slate-soft: #222830;
+
+        --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.3);
+        --shadow-md:
+          0 1px 2px rgba(0, 0, 0, 0.4),
+          0 4px 14px rgba(0, 0, 0, 0.3);
+        --shadow-lg:
+          0 2px 4px rgba(0, 0, 0, 0.5),
+          0 14px 32px rgba(0, 0, 0, 0.45);
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--serif);
+      font-optical-sizing: auto;
+      font-variation-settings: "opsz" 16, "SOFT" 40, "WONK" 0;
+      font-size: 17px;
+      line-height: 1.68;
+      color: var(--ink);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-feature-settings: "kern", "liga", "dlig", "onum";
+    }
+
+    /* Subtle atmospheric wash */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 56% 38% at 12% -4%,
+          color-mix(in oklab, var(--accent) 7%, transparent), transparent 62%),
+        radial-gradient(ellipse 44% 32% at 92% 104%,
+          color-mix(in oklab, var(--ochre) 8%, transparent), transparent 62%);
+    }
+
+    ::selection {
+      background: color-mix(in oklab, var(--accent) 22%, transparent);
+      color: var(--ink);
+    }
+
+    /* ---- Layout ---------------------------------------------------- */
+
+    .page {
+      display: grid;
+      grid-template-columns: minmax(0, 800px);
+      justify-content: center;
+      gap: 0;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 64px 56px 120px;
+    }
+
+    @media (max-width: 960px) {
+      .page {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 40px;
+        padding: 40px 24px 80px;
+      }
+    }
+
+    /* ---- Auto-hide table of contents ------------------------------ */
+
+    nav.toc {
+      position: fixed;
+      top: 40px;
+      left: 0;
+      width: 56px;
+      max-height: calc(100vh - 80px);
+      overflow: hidden;
+      align-self: start;
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 16, "wght" 400;
+      font-size: 14.5px;
+      line-height: 1.55;
+      padding: 24px 14px 24px 24px;
+      background: transparent;
+      border-radius: 0 6px 6px 0;
+      z-index: 5;
+      transition:
+        width 280ms cubic-bezier(0.2, 0.7, 0.2, 1),
+        background 220ms ease,
+        box-shadow 220ms ease,
+        padding 220ms ease;
+    }
+
+    nav.toc:hover, nav.toc:focus-within {
+      width: 248px;
+      background: color-mix(in oklab, var(--bg-elevated) 92%, var(--accent));
+      box-shadow:
+        0 1px 0 var(--line),
+        24px 24px 56px -28px color-mix(in oklab, var(--ink) 14%, transparent);
+      padding: 24px 22px 24px 28px;
+    }
+
+    @media (max-width: 960px) {
+      nav.toc {
+        position: static;
+        width: auto;
+        max-height: none;
+        overflow: visible;
+        border-bottom: 1px solid var(--line);
+        padding: 0 0 24px;
+        background: transparent;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      nav.toc:hover, nav.toc:focus-within {
+        width: auto;
+        background: transparent;
+        box-shadow: none;
+        padding: 0 0 24px;
+      }
+    }
+
+    nav.toc .toc-label {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--fog);
+      margin: 0 0 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--line);
+      opacity: 0;
+      transition: opacity 200ms ease 60ms;
+      white-space: nowrap;
+    }
+
+    nav.toc:hover .toc-label, nav.toc:focus-within .toc-label { opacity: 1; }
+
+    @media (max-width: 960px) {
+      nav.toc .toc-label { opacity: 1; }
+    }
+
+    nav.toc ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      counter-reset: toc;
+    }
+
+    nav.toc li {
+      margin: 5px 0;
+      counter-increment: toc;
+      position: relative;
+    }
+
+    nav.toc a {
+      color: transparent;
+      text-decoration: none;
+      display: block;
+      padding: 3px 0;
+      font-style: italic;
+      font-weight: 400;
+      letter-spacing: -0.003em;
+      border-bottom: none;
+      white-space: nowrap;
+      overflow: hidden;
+      transition: color 200ms ease, transform 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+
+    nav.toc:hover a, nav.toc:focus-within a { color: var(--graphite); }
+
+    @media (max-width: 960px) {
+      nav.toc a { color: var(--graphite); }
+    }
+
+    nav.toc a::before {
+      content: counter(toc, upper-roman);
+      font-family: var(--mono);
+      font-style: normal;
+      font-size: 10.5px;
+      font-weight: 500;
+      color: var(--fog);
+      margin-right: 16px;
+      display: inline-block;
+      min-width: 24px;
+      letter-spacing: 0;
+      transition: color 160ms ease;
+    }
+
+    nav.toc a:hover, nav.toc a:focus-visible {
+      color: var(--accent);
+      transform: translateX(3px);
+      outline: none;
+    }
+    nav.toc a:hover::before, nav.toc a:focus-visible::before { color: var(--accent); }
+
+    /* ---- Header --------------------------------------------------- */
+
+    header.doc {
+      margin-bottom: 96px;
+      position: relative;
+    }
+
+    header.doc > * {
+      opacity: 0;
+      animation: rise-in 0.75s cubic-bezier(0.22, 0.7, 0.2, 1) both;
+    }
+    header.doc > *:nth-child(1) { animation-delay: 0.04s; }
+    header.doc > *:nth-child(2) { animation-delay: 0.16s; }
+    header.doc > *:nth-child(3) { animation-delay: 0.28s; }
+    header.doc > *:nth-child(4) { animation-delay: 0.4s; }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 36px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 22px;
+      height: 1px;
+      background: var(--accent);
+      opacity: 0.55;
+    }
+
+    .eyebrow::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+      opacity: 0.75;
+    }
+
+    .eyebrow .dot { display: none; }
+
+    h1.title {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 144, "wght" 500, "SOFT" 30;
+      font-size: clamp(44px, 7.2vw, 78px);
+      line-height: 0.96;
+      letter-spacing: -0.028em;
+      font-weight: 500;
+      margin: 0 0 22px;
+      color: var(--ink);
+      text-wrap: balance;
+    }
+
+    h1.title code {
+      font-family: var(--mono);
+      font-size: 0.62em;
+      font-weight: 500;
+      background: transparent;
+      border: none;
+      padding: 0 0 0 2px;
+      color: var(--accent);
+      letter-spacing: -0.01em;
+      vertical-align: 0.1em;
+    }
+
+    .tagline {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 32, "wght" 380, "SOFT" 60;
+      font-size: clamp(18px, 2vw, 22px);
+      line-height: 1.45;
+      font-style: normal;             /* italic at body sizes hurts reading */
+      color: var(--graphite);
+      margin: 0 0 56px;
+      max-width: 32em;
+      text-wrap: balance;
+    }
+    .tagline em {
+      font-style: italic;
+      font-variation-settings: "opsz" 32, "wght" 380;
+    }
+    .tagline code {
+      font-style: normal;
+      font-family: var(--mono);
+      background: transparent;
+      border: none;
+      color: var(--ink-soft);
+      padding: 0 2px;
+      font-size: 0.82em;
+    }
+
+    /* ---- Metadata strip ------------------------------------------- */
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 24px 40px;
+      padding: 30px 0 24px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      position: relative;
+    }
+    .meta::before {
+      content: "§";
+      position: absolute;
+      top: -14px; left: 0;
+      background: var(--bg);
+      padding: 0 12px 0 0;
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 24, "wght" 400;
+      font-size: 18px;
+      font-style: italic;
+      color: var(--accent);
+    }
+    .meta::after {
+      content: "∎";
+      position: absolute;
+      bottom: -10px; right: 0;
+      background: var(--bg);
+      padding: 0 0 0 12px;
+      font-family: var(--serif);
+      font-size: 11px;
+      color: var(--fog);
+      letter-spacing: 0.1em;
+    }
+    .meta .field {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      gap: 4px;
+    }
+    .meta .field .k {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--fog);
+      font-weight: 500;
+    }
+    .meta .field .v {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 20, "wght" 500;
+      color: var(--ink);
+      font-size: 15.5px;
+      font-weight: 500;
+      letter-spacing: -0.004em;
+      line-height: 1.3;
+    }
+    .meta .field a {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px solid color-mix(in oklab, var(--accent) 38%, transparent);
+      transition: border-color 180ms ease, color 180ms ease;
+    }
+    .meta .field a:hover {
+      border-bottom-color: var(--accent);
+      color: color-mix(in oklab, var(--accent) 80%, var(--ink));
+    }
+
+    /* ---- Chips ---------------------------------------------------- */
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 3px 11px;
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      background: var(--ochre-soft);
+      color: var(--ochre);
+      border: 1px solid color-mix(in oklab, var(--ochre) 28%, transparent);
+      text-transform: uppercase;
+      line-height: 1.4;
+    }
+    .chip.accent { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+    .chip.slate  { background: var(--slate-soft); color: var(--slate); border-color: color-mix(in oklab, var(--slate) 20%, transparent); }
+    .chip .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor; display: inline-block; opacity: 0.85;
+    }
+
+    /* ---- Section headers ------------------------------------------ */
+
+    section.block {
+      margin-top: 88px;
+      scroll-margin-top: 40px;
+      position: relative;
+    }
+    section.block + section.block::before {
+      content: "⁂";
+      position: absolute;
+      top: -52px; left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 36, "wght" 400;
+      font-size: 18px;
+      color: var(--fog-soft);
+      letter-spacing: 0.25em;
+      user-select: none;
+    }
+    section.block > h2 {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 6px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding-bottom: 4px;
+    }
+    section.block > h2 .num {
+      font-family: var(--mono);
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      padding: 3px 9px;
+      background: var(--accent-soft);
+      border-radius: 3px;
+    }
+    section.block > h2::after {
+      content: ""; flex: 1; height: 1px;
+      background: var(--line); opacity: 0.7;
+    }
+    section.block > h3 {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 72, "wght" 500, "SOFT" 40;
+      font-size: clamp(30px, 3.3vw, 40px);
+      font-weight: 500;
+      letter-spacing: -0.024em;
+      line-height: 1.05;
+      margin: 16px 0 32px;
+      color: var(--ink);
+      max-width: 22ch;
+      text-wrap: balance;
+    }
+    section.block h4 {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 28, "wght" 600, "SOFT" 40;
+      font-size: 20px;
+      font-weight: 600;
+      margin: 40px 0 10px;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+      line-height: 1.28;
+    }
+    section.block p { margin: 0 0 16px; }
+    section.block > p:first-of-type, section.block > p.lede {
+      color: var(--ink-soft);
+      font-size: 17.5px;
+    }
+
+    /* ---- Drop cap & body typography ------------------------------- */
+
+    .lede { font-variation-settings: "opsz" 17, "wght" 400; }
+    .dropcap {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 144, "wght" 500, "SOFT" 80;
+      font-size: 5.4em;
+      line-height: 0.82;
+      float: left;
+      padding: 0.09em 0.14em 0 0;
+      margin: 0.04em 0 -0.05em 0;
+      color: var(--accent);
+      font-weight: 500;
+      font-feature-settings: "dlig", "swsh";
+      shape-outside: margin-box;
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 0.84em;
+      background: var(--code-bg);
+      color: var(--code-fg);
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid color-mix(in oklab, var(--code-bg) 60%, var(--line));
+      font-feature-settings: "cv02", "cv03", "zero";
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px solid color-mix(in oklab, var(--accent) 36%, transparent);
+      transition: border-color 180ms ease;
+    }
+    a:hover { border-bottom-color: var(--accent); }
+    em {
+      font-style: italic;
+      color: var(--ink-soft);
+      font-variation-settings: "opsz" 17, "wght" 400, "SOFT" 60;
+    }
+    strong {
+      font-weight: 600;
+      color: var(--ink);
+      font-variation-settings: "opsz" 17, "wght" 600;
+    }
+    hr { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+
+    /* ---- Lists ---------------------------------------------------- */
+
+    ul.bullets { list-style: none; padding-left: 0; margin: 10px 0 18px; }
+    ul.bullets li {
+      position: relative;
+      padding-left: 26px;
+      margin: 10px 0;
+      color: var(--ink-soft);
+    }
+    ul.bullets li::before {
+      content: "▸";
+      position: absolute;
+      left: 6px; top: 0.05em;
+      color: var(--accent);
+      font-size: 0.9em;
+      line-height: 1.7;
+    }
+    ol.numbered { counter-reset: num; list-style: none; padding-left: 0; margin: 16px 0; }
+    ol.numbered > li {
+      counter-increment: num;
+      position: relative;
+      padding-left: 58px;
+      margin: 14px 0;
+      color: var(--ink-soft);
+    }
+    ol.numbered > li::before {
+      content: counter(num, upper-roman) ".";
+      position: absolute;
+      left: 0; top: 2px;
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 22, "wght" 500;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--accent);
+      letter-spacing: 0.01em;
+      min-width: 42px;
+    }
+
+    /* ---- Goals / non-goals panels --------------------------------- */
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 26px 0; }
+    @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 22px 26px 24px;
+      position: relative;
+      box-shadow: var(--shadow-sm);
+    }
+    .panel::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--accent);
+    }
+    .panel.rose::before { background: var(--ochre); }
+    .panel h5 {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .panel h5::after {
+      content: ""; flex: 1; height: 1px;
+      background: currentColor; opacity: 0.25;
+    }
+    .panel.rose h5 { color: var(--ochre); }
+    .panel ul { margin: 0; padding-left: 0; list-style: none; }
+    .panel ul li {
+      position: relative;
+      padding-left: 22px;
+      margin: 10px 0;
+      color: var(--ink-soft);
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 15, "wght" 400;
+      font-size: 15.5px;
+      line-height: 1.55;
+    }
+    .panel ul li::before {
+      content: "";
+      position: absolute;
+      left: 6px; top: 11px;
+      width: 8px; height: 1.5px;
+      background: var(--accent); opacity: 0.8;
+    }
+    .panel.rose ul li::before { background: var(--ochre); }
+
+    /* ---- Code blocks ---------------------------------------------- */
+
+    pre.code {
+      background: var(--code-bg);
+      color: var(--code-fg);
+      border: 1px solid color-mix(in oklab, var(--code-bg) 60%, var(--line));
+      border-radius: 4px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.7;
+      margin: 20px 0 6px;
+      tab-size: 2;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+    pre.code::before {
+      content: "";
+      position: absolute;
+      top: 0; bottom: 0; left: 0;
+      width: 2px;
+      background: var(--accent); opacity: 0.7;
+    }
+    pre.code .comment { color: color-mix(in oklab, var(--code-fg) 48%, transparent); font-style: italic; }
+    pre.code .k  { color: color-mix(in oklab, var(--code-fg) 76%, var(--accent)); font-weight: 500; }
+    pre.code .s  { color: color-mix(in oklab, var(--code-fg) 58%, var(--accent)); }
+    pre.code .t  { color: color-mix(in oklab, var(--code-fg) 64%, var(--slate)); }
+    pre.code .fn { color: color-mix(in oklab, var(--code-fg) 54%, var(--accent)); font-weight: 500; }
+    pre.code .hl {
+      background: color-mix(in oklab, var(--ochre-soft) 85%, transparent);
+      margin: 0 -6px; padding: 0 6px; border-radius: 2px;
+    }
+    .code-caption {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      color: var(--fog);
+      margin: 0 0 32px;
+      padding-left: 14px;
+      border-left: 2px solid var(--line);
+    }
+
+    /* ---- Decision cards ------------------------------------------- */
+
+    .decision {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      gap: 32px;
+      padding: 40px 0 36px;
+      border-top: 1px solid var(--line);
+      transition: background-color 300ms ease;
+      position: relative;
+    }
+    .decision:first-of-type { border-top: 1.5px solid var(--line-strong); }
+    .decision:hover { background: color-mix(in oklab, var(--ochre-soft) 16%, transparent); }
+    .decision .num {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 144, "wght" 500, "SOFT" 70;
+      font-size: 64px;
+      line-height: 0.88;
+      letter-spacing: -0.045em;
+      color: var(--accent);
+      font-weight: 500;
+      font-feature-settings: "dlig", "tnum";
+      margin-top: -6px;
+      position: relative;
+      padding-top: 14px;
+    }
+    .decision .num::before {
+      content: "D";
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--fog);
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+      font-variation-settings: initial;
+      position: absolute;
+      top: 0; left: 0;
+      line-height: 1;
+    }
+    @media (max-width: 640px) {
+      .decision { grid-template-columns: 1fr; gap: 18px; padding: 32px 0 28px; }
+      .decision .num { font-size: 44px; }
+    }
+    .decision .title {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 36, "wght" 500, "SOFT" 40;
+      font-size: 25px;
+      font-weight: 500;
+      line-height: 1.18;
+      letter-spacing: -0.02em;
+      margin: -4px 0 10px;
+      color: var(--ink);
+      text-wrap: balance;
+    }
+    .decision .status-row {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin: 6px 0 22px;
+    }
+    .decision dl {
+      margin: 8px 0 0;
+      display: grid;
+      grid-template-columns: 116px 1fr;
+      gap: 18px 24px;
+    }
+    @media (max-width: 640px) {
+      .decision dl { grid-template-columns: 1fr; gap: 4px 0; }
+    }
+    .decision dt {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 500;
+      padding-top: 6px;
+      margin: 0;
+    }
+    @media (max-width: 640px) {
+      .decision dt { padding-top: 0; margin-top: 14px; }
+    }
+    .decision dd {
+      grid-column: 2;            /* CRITICAL — without this, dd falls under dt */
+      margin: 0;
+      color: var(--ink-soft);
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 16, "wght" 400;
+      font-size: 16px;
+      line-height: 1.62;
+    }
+    @media (max-width: 640px) { .decision dd { grid-column: 1; } }
+    .decision dd.sub { color: var(--graphite); font-size: 15px; }
+    .decision dd.sub strong { color: var(--ink); }
+    .decision dd + dd { margin-top: 2px; }
+
+    /* ---- Pull quote ----------------------------------------------- */
+
+    .pullquote {
+      margin: 48px 0 40px;
+      padding: 24px 0 24px 36px;
+      border-left: 2px solid var(--accent);
+      position: relative;
+    }
+    .pullquote::before {
+      content: "\201C";
+      position: absolute;
+      left: -18px; top: -42px;
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 144, "wght" 500, "SOFT" 80;
+      font-size: 112px;
+      line-height: 1;
+      color: var(--accent-soft);
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
+    }
+    .pullquote p {
+      position: relative;
+      z-index: 1;
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 48, "wght" 400, "SOFT" 50;
+      font-size: clamp(22px, 2.6vw, 28px);
+      line-height: 1.3;
+      letter-spacing: -0.018em;
+      color: var(--ink);
+      font-style: italic;
+      text-wrap: balance;
+      margin: 0 0 14px;
+    }
+    .pullquote p code {
+      font-style: normal;
+      font-size: 0.72em;
+      background: transparent;
+      color: var(--accent);
+      border: none;
+      padding: 0;
+      font-variation-settings: initial;
+    }
+    .pullquote .attrib {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-style: normal;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pullquote .attrib::before {
+      content: "";
+      width: 22px; height: 1px;
+      background: var(--accent); opacity: 0.5;
+    }
+
+    /* ---- Callouts ------------------------------------------------- */
+
+    .callout {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 4px 4px 0;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 16, "wght" 400;
+      font-size: 16px;
+      color: var(--ink-soft);
+      line-height: 1.6;
+    }
+    .callout.rose { border-left-color: var(--ochre); }
+    .callout .title {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 500;
+      display: block;
+      margin-bottom: 6px;
+    }
+    .callout.rose .title { color: var(--ochre); }
+
+    /* ---- Figures / diagrams --------------------------------------- */
+
+    figure.diagram {
+      margin: 30px 0 12px;
+      padding: 28px 24px 22px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+    figure.diagram::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--ochre) 100%);
+      opacity: 0.35;
+    }
+    figure.diagram svg {
+      width: 100%; height: auto; display: block;
+      color: var(--ink);
+    }
+    figure.diagram figcaption {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 18, "wght" 400;
+      font-size: 13.5px;
+      font-style: italic;
+      color: var(--graphite);
+      margin-top: 18px;
+      text-align: center;
+      line-height: 1.5;
+      letter-spacing: -0.003em;
+      text-wrap: balance;
+      padding: 0 8%;
+    }
+    figure.diagram figcaption code { font-style: normal; font-size: 0.88em; }
+
+    /* ---- Demo video poster card ----------------------------------- */
+
+    figure.demo {
+      margin: 8px 0 56px;
+      padding: 0;
+      position: relative;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    figure.demo::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--ochre) 100%);
+      opacity: 0.5;
+      z-index: 1;
+    }
+    figure.demo .demo-eyebrow {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--fog);
+      padding: 14px 20px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    figure.demo .demo-eyebrow .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); display: inline-block;
+    }
+    figure.demo a.demo-link {
+      display: block;
+      position: relative;
+      margin-top: 12px;
+      aspect-ratio: 16 / 9;
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 50%,
+          color-mix(in oklab, var(--accent) 22%, transparent), transparent 70%),
+        linear-gradient(180deg,
+          var(--bg-sunk) 0%,
+          color-mix(in oklab, var(--bg-sunk) 75%, var(--ink) 25%) 100%);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      text-decoration: none;
+      overflow: hidden;
+      transition: background 220ms ease, transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+    figure.demo a.demo-link::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: repeating-linear-gradient(0deg,
+        color-mix(in oklab, var(--ink) 6%, transparent) 0 1px,
+        transparent 1px 3px);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    figure.demo .play {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 84px; height: 84px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow:
+        0 6px 24px color-mix(in oklab, var(--accent) 35%, transparent),
+        0 0 0 8px color-mix(in oklab, var(--accent) 14%, transparent);
+      transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 220ms ease;
+      z-index: 1;
+    }
+    figure.demo a.demo-link:hover .play, figure.demo a.demo-link:focus-visible .play {
+      transform: translate(-50%, -50%) scale(1.06);
+      box-shadow:
+        0 8px 32px color-mix(in oklab, var(--accent) 42%, transparent),
+        0 0 0 12px color-mix(in oklab, var(--accent) 18%, transparent);
+    }
+    figure.demo .play svg {
+      width: 28px; height: 28px;
+      fill: var(--accent-ink);
+      margin-left: 4px;
+    }
+    figure.demo .demo-meta {
+      position: absolute;
+      bottom: 14px; left: 18px; right: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--fog);
+      z-index: 1;
+    }
+    figure.demo .demo-meta .duration { color: var(--ink-soft); }
+    figure.demo figcaption {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 16, "wght" 400;
+      font-size: 13.5px;
+      font-style: italic;
+      color: var(--graphite);
+      padding: 14px 20px 18px;
+      line-height: 1.5;
+      letter-spacing: -0.003em;
+      text-wrap: balance;
+    }
+    figure.demo figcaption code { font-style: normal; font-size: 0.88em; }
+
+    /* ---- SVG theming for inline diagrams -------------------------- */
+
+    svg text {
+      font-family: var(--mono);
+      fill: var(--ink);
+      font-feature-settings: "cv02", "cv03", "zero";
+    }
+    svg text.cap   { fill: var(--fog); font-size: 10.5px; letter-spacing: 0.05em; }
+    svg text.label { fill: var(--graphite); font-size: 11px; }
+    svg text.title { font-weight: 500; font-size: 12.5px; fill: var(--ink); }
+    svg .bg-fill { fill: var(--bg-elevated); }
+    svg .stroke  { stroke: var(--line-strong); }
+    svg .accent-stroke { stroke: var(--accent); }
+    svg .accent-fill   { fill: var(--accent); }
+    svg .accent-soft-fill { fill: var(--accent-soft); }
+
+    /* ---- Tables --------------------------------------------------- */
+
+    table.kv {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 22px 0;
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 14, "wght" 400;
+      font-size: 14.5px;
+    }
+    table.kv th, table.kv td {
+      text-align: left;
+      padding: 12px 16px 12px 0;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      line-height: 1.5;
+    }
+    table.kv th {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 500;
+      padding-top: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1.5px solid var(--line-strong);
+    }
+    table.kv tr:last-child td { border-bottom: none; }
+    table.kv code { font-size: 12.5px; }
+    table.kv tr:hover td {
+      background: color-mix(in oklab, var(--accent-soft) 18%, transparent);
+    }
+
+    /* ---- Section animation ---------------------------------------- */
+
+    main > section {
+      opacity: 0;
+      animation: rise-in 0.8s cubic-bezier(0.22, 0.7, 0.2, 1) both;
+    }
+    main > section:nth-of-type(1) { animation-delay: 0.52s; }
+    main > section:nth-of-type(2) { animation-delay: 0.62s; }
+    main > section:nth-of-type(n + 3) { animation-delay: 0.72s; }
+
+    @keyframes rise-in {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ---- Colophon & footer ---------------------------------------- */
+
+    .colophon {
+      margin-top: 128px;
+      padding-top: 52px;
+      position: relative;
+      text-align: center;
+    }
+    .colophon::before {
+      content: "⁂";
+      position: absolute;
+      top: -14px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg);
+      padding: 0 18px;
+      color: var(--accent);
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 36, "wght" 400;
+      font-size: 22px;
+      letter-spacing: 0.18em;
+    }
+    .colophon::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 8%; right: 8%;
+      height: 1px;
+      background: var(--line);
+    }
+    .colophon h4 {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 24px;
+    }
+    .colophon p {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 18, "wght" 400, "SOFT" 60;
+      font-size: 15px;
+      font-style: italic;
+      line-height: 1.62;
+      color: var(--graphite);
+      max-width: 540px;
+      margin: 0 auto 32px;
+      text-wrap: balance;
+    }
+    .colophon p strong { font-style: normal; font-weight: 500; color: var(--ink); }
+    .colophon dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 24px;
+      max-width: 380px;
+      margin: 0 auto;
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.7;
+      text-align: left;
+    }
+    .colophon dt {
+      color: var(--fog);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 500;
+      margin: 0;
+    }
+    .colophon dd { margin: 0; color: var(--ink-soft); }
+
+    footer.doc {
+      margin-top: 56px;
+      padding-top: 22px;
+      color: var(--fog);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      justify-content: space-between;
+      opacity: 0.8;
+    }
+    footer.doc code {
+      background: transparent; border: none;
+      color: var(--graphite);
+      font-size: 11px; letter-spacing: 0; padding: 0;
+    }
+    footer.doc a { color: var(--graphite); text-decoration: none; border: none; }
+    footer.doc a:hover { color: var(--accent); }
+
+    /* ---- Reduced motion + print ----------------------------------- */
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      header.doc > *, main > section { opacity: 1; }
+    }
+
+    @media print {
+      @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+      :root {
+        --bg: #ffffff; --bg-elevated: #ffffff; --bg-sunk: #ffffff;
+        --ink: #0a0806; --ink-soft: #1e1a17; --graphite: #3a342e; --fog: #6b6459;
+        --line: #c4baaa; --line-strong: #9a9080;
+        --accent: #6a1626; --accent-soft: #f3dddd; --ochre: #7a5410;
+        --code-bg: #f0e9da;
+      }
+      body::before { display: none; }
+      .page { grid-template-columns: minmax(0, 1fr); padding: 0; max-width: none; gap: 0; }
+      nav.toc { display: none; }
+      body { font-size: 10.5pt; line-height: 1.5; }
+      h1.title { font-size: 28pt; }
+      section.block > h3 { font-size: 18pt; }
+      .decision, figure.diagram, .panel, .pullquote, pre.code, .colophon {
+        break-inside: avoid; box-shadow: none;
+      }
+      section.block { margin-top: 28pt; }
+      pre.code { font-size: 8.5pt; }
+      footer.doc { break-inside: avoid; }
+    }
+
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- =========================================================== -->
+    <!--  TABLE OF CONTENTS — autohides to a 56px rail; expands on hover -->
+    <!-- =========================================================== -->
+    <nav class="toc" aria-label="Table of contents">
+      <p class="toc-label">Contents</p>
+      <ol>
+        <li><a href="#summary">Summary</a></li>
+        <li><a href="#context">Context</a></li>
+        <li><a href="#goals">Goals &amp; non-goals</a></li>
+        <li><a href="#proposal">Proposal</a></li>
+        <li><a href="#decisions">Key decisions</a></li>
+        <li><a href="#tradeoffs">Tradeoffs</a></li>
+        <li><a href="#rollout">Rollout &amp; verification</a></li>
+        <li><a href="#questions">Open questions</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+      <!-- ============================================================ -->
+      <!--  HEADER                                                     -->
+      <!-- ============================================================ -->
+      <header class="doc">
+        <p class="eyebrow"><span class="dot"></span> Design doc · TODO-AREA · TODO-TICKET</p>
+        <h1 class="title">TODO Title with optional <code>code</code></h1>
+        <p class="tagline">
+          TODO ≤25-word thesis. State the structural claim the doc is
+          making, plain and confident. Avoid italics here.
+        </p>
+        <div class="meta">
+          <div class="field">
+            <span class="k">Status</span>
+            <span class="v"><span class="chip"><span class="dot"></span> In review</span></span>
+          </div>
+          <div class="field">
+            <span class="k">Author</span>
+            <span class="v">TODO Author Name</span>
+          </div>
+          <div class="field">
+            <span class="k">Reviewers</span>
+            <span class="v">TODO · TODO · TODO</span>
+          </div>
+          <div class="field">
+            <span class="k">Linear</span>
+            <span class="v"><a href="#">TODO-TICKET</a></span>
+          </div>
+          <div class="field">
+            <span class="k">Pull request</span>
+            <span class="v"><a href="#">#TODO</a></span>
+          </div>
+          <div class="field">
+            <span class="k">Last updated</span>
+            <span class="v">YYYY-MM-DD</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ============================================================ -->
+      <!--  OPTIONAL: DEMO VIDEO POSTER CARD                           -->
+      <!--  GitHub user-attachment URLs need the user logged in to GH  -->
+      <!--  for playback; the card opens GitHub in a new tab.          -->
+      <!--  Delete this block if no demo.                              -->
+      <!-- ============================================================ -->
+      <figure class="demo" aria-label="Demo recording">
+        <p class="demo-eyebrow"><span class="dot"></span> Demo · walkthrough</p>
+        <a class="demo-link"
+           href="TODO-VIDEO-URL"
+           target="_blank" rel="noopener"
+           aria-label="Play demo video">
+          <span class="play" aria-hidden="true">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 5l13 7-13 7V5z"/></svg>
+          </span>
+          <span class="demo-meta">
+            <span>Click to play</span>
+            <span class="duration">github.com</span>
+          </span>
+        </a>
+        <figcaption>TODO one-sentence summary of what the demo shows.</figcaption>
+      </figure>
+
+      <!-- ============================================================ -->
+      <!--  §1 SUMMARY — lede with dropcap, then 1 supporting paragraph -->
+      <!-- ============================================================ -->
+      <section class="block" id="summary">
+        <h2><span class="num">§1</span> Summary</h2>
+        <h3>TODO 5–10 word thesis headline</h3>
+        <p class="lede">
+          <span class="dropcap">T</span>ODO opening paragraph. State the
+          problem in one sentence, then the proposed change in one
+          sentence. Use <strong>strong</strong> on the load-bearing claim.
+          Reference key components in <code>code</code> only — file paths
+          go in §4 or §5.
+        </p>
+        <p>
+          TODO one supporting paragraph: deletions, persistence model,
+          ownership change, or scope. Forward-reference detail to later
+          sections instead of stating it twice.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <!--  §2 CONTEXT — what breaks today and why now                  -->
+      <!-- ============================================================ -->
+      <section class="block" id="context">
+        <h2><span class="num">§2</span> Context</h2>
+        <h3>What breaks today</h3>
+        <p>
+          TODO frame the problem. Cite the ticket / bug / regression once
+          and don't relitigate. End with the structural cause, not a list
+          of symptoms.
+        </p>
+        <h4>Why now</h4>
+        <p>
+          TODO the trigger: a customer report, a regression, a new
+          requirement. Be specific (date, source) so the urgency is
+          legible.
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <!--  §3 GOALS & NON-GOALS — two-col panels                       -->
+      <!-- ============================================================ -->
+      <section class="block" id="goals">
+        <h2><span class="num">§3</span> Goals &amp; non-goals</h2>
+        <h3>What we are — and are not — trying to fix</h3>
+        <div class="two-col">
+          <div class="panel">
+            <h5>Goals</h5>
+            <ul>
+              <li>TODO goal 1 — single sentence, observable.</li>
+              <li>TODO goal 2.</li>
+              <li>TODO goal 3.</li>
+            </ul>
+          </div>
+          <div class="panel rose">
+            <h5>Non-goals</h5>
+            <ul>
+              <li>TODO explicitly out of scope; reference where it would belong.</li>
+              <li>TODO non-goal 2.</li>
+              <li>TODO non-goal 3.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!--  §4 PROPOSAL — pullquote thesis + diagram + prose            -->
+      <!-- ============================================================ -->
+      <section class="block" id="proposal">
+        <h2><span class="num">§4</span> Proposal</h2>
+        <h3>TODO 6–10 word architectural headline</h3>
+
+        <aside class="pullquote" aria-label="Mental model">
+          <p>
+            TODO ≤25 words. The thesis of the change in one sentence.
+            Reference one or two key components in <code>code</code>.
+          </p>
+          <p class="attrib">The mental model</p>
+        </aside>
+
+        <p>
+          TODO 1–2 paragraphs framing the proposal at the conceptual level.
+          The decision cards in §5 carry the detail; this section sets the
+          stage.
+        </p>
+
+        <figure class="diagram">
+          <!-- TODO inline SVG. Use viewBox so it scales.
+               Apply classes .bg-fill / .stroke / .accent-stroke / .accent-fill
+               / .accent-soft-fill on shapes; .cap / .label / .title on <text>. -->
+          <svg viewBox="0 0 780 200" role="img" aria-label="TODO diagram label">
+            <rect x="40" y="40" width="200" height="64" rx="8" class="bg-fill stroke" stroke-width="1"/>
+            <text x="140" y="68" text-anchor="middle" class="title">TODO Node A</text>
+            <text x="140" y="87" text-anchor="middle" class="cap">caption</text>
+            <line x1="240" y1="72" x2="540" y2="72" class="accent-stroke" stroke-width="1.5" marker-end="url(#arrow)"/>
+            <rect x="540" y="40" width="200" height="64" rx="8" class="accent-soft-fill stroke" stroke-width="1"/>
+            <text x="640" y="68" text-anchor="middle" class="title">TODO Node B</text>
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                <path d="M0,1 L9,5 L0,9 z" class="accent-fill"/>
+              </marker>
+            </defs>
+          </svg>
+          <figcaption>TODO one-sentence figure caption explaining what the diagram shows.</figcaption>
+        </figure>
+      </section>
+
+      <!-- ============================================================ -->
+      <!--  §5 KEY DECISIONS — D-cards. Usually 60–70% of the doc.      -->
+      <!--  Each card MUST have: Decision, Rationale, Alternatives, Consequence. -->
+      <!-- ============================================================ -->
+      <section class="block" id="decisions">
+        <h2><span class="num">§5</span> Key decisions</h2>
+        <h3>The choices worth defending in review</h3>
+        <p>
+          TODO one short framing paragraph. Each card stands alone — a
+          reviewer should be able to argue D3 without reading D1.
+        </p>
+
+        <!-- ============ D1 ============ -->
+        <article class="decision" id="d1">
+          <div class="num">1</div>
+          <div>
+            <p class="title">TODO Decision title — declarative, 6–14 words</p>
+            <div class="status-row">
+              <span class="chip accent"><span class="dot"></span> tag-1</span>
+              <span class="chip slate"><span class="dot"></span> tag-2</span>
+            </div>
+            <dl>
+              <dt>Decision</dt>
+              <dd>TODO state the choice. Active voice, one sentence.</dd>
+
+              <dt>Rationale</dt>
+              <dd>TODO why this choice and not the others. Cite the structural reason, not the symptom.</dd>
+
+              <dt>Alternatives rejected</dt>
+              <dd class="sub">
+                <strong>TODO Alternative A.</strong> Why we rejected it.
+              </dd>
+              <dd class="sub">
+                <strong>TODO Alternative B.</strong> Why we rejected it.
+              </dd>
+
+              <dt>Consequence</dt>
+              <dd>TODO what this commits us to (or rules out). Be honest about the trade.</dd>
+            </dl>
+          </div>
+        </article>
+
+        <!-- ============ D2 ============ -->
+        <article class="decision" id="d2">
+          <div class="num">2</div>
+          <div>
+            <p class="title">TODO Decision title</p>
+            <div class="status-row">
+              <span class="chip accent"><span class="dot"></span> tag</span>
+            </div>
+            <dl>
+              <dt>Decision</dt><dd>TODO</dd>
+              <dt>Rationale</dt><dd>TODO</dd>
+              <dt>Alternatives rejected</dt>
+              <dd class="sub"><strong>TODO Alternative.</strong> Why rejected.</dd>
+              <dt>Consequence</dt><dd>TODO</dd>
+            </dl>
+          </div>
+        </article>
+
+        <!-- TODO add D3…DN as needed. 3–8 cards is typical. -->
+      </section>
+
+      <!-- ============================================================ -->
+      <!--  §6 TRADEOFFS — table.kv or short prose                      -->
+      <!-- ============================================================ -->
+      <section class="block" id="tradeoffs">
+        <h2><span class="num">§6</span> Tradeoffs</h2>
+        <h3>What we give up to get what we want</h3>
+        <p>TODO frame the tradeoff axis.</p>
+        <table class="kv">
+          <thead>
+            <tr><th>Limit / behavior</th><th>Value</th><th>Why</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>TODO_CONSTANT</code></td>
+              <td><code>TODO value</code></td>
+              <td>TODO rationale; cite source file.</td>
+            </tr>
+            <tr>
+              <td><code>TODO_OTHER</code></td>
+              <td><code>TODO value</code></td>
+              <td>TODO rationale.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout">
+          <span class="title">Note</span>
+          TODO any caveat reviewers need to know — e.g. "values are
+          subject to change once we have telemetry from the first week."
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!--  §7 ROLLOUT & VERIFICATION                                   -->
+      <!-- ============================================================ -->
+      <section class="block" id="rollout">
+        <h2><span class="num">§7</span> Rollout &amp; verification</h2>
+        <h3>How we ship this safely</h3>
+        <h4>Feature-flag posture</h4>
+        <p>TODO flag name, default state, who can flip it. If unflagged, say so explicitly.</p>
+        <h4>Telemetry</h4>
+        <p>TODO what we'll watch — metric names, dashboards, alerting thresholds.</p>
+        <h4>Rollback</h4>
+        <p>TODO the exact revert plan. "Revert PR #N" is fine; "we'll figure it out" is not.</p>
+
+        <pre class="code"><span class="comment">// example: highlight the line that matters with .hl</span>
+<span class="k">function</span> <span class="fn">processAndRun</span>(prompt: <span class="t">string</span>) {
+  <span class="hl">scheduledTasks.tick(workingState);</span>
+  <span class="comment">// ...</span>
+}</pre>
+        <p class="code-caption">apps/cli/src/example.ts — TODO short caption explaining the snippet.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <!--  §8 OPEN QUESTIONS — Roman-numeral list ordered by leverage  -->
+      <!-- ============================================================ -->
+      <section class="block" id="questions">
+        <h2><span class="num">§8</span> Open questions</h2>
+        <h3>Decisions worth pressure-testing in the sync</h3>
+        <p>
+          The parts of the design where good engineers could disagree,
+          ordered by how much they would move the design if the answer
+          changes.
+        </p>
+        <ol class="numbered">
+          <li>
+            <strong>TODO highest-leverage question?</strong>
+            <br />
+            TODO context and current lean.
+          </li>
+          <li>
+            <strong>TODO next question?</strong>
+            <br />
+            TODO context.
+          </li>
+          <li>
+            <strong>TODO question 3?</strong>
+            <br />
+            TODO context.
+          </li>
+        </ol>
+      </section>
+
+      <!-- ============================================================ -->
+      <!--  COLOPHON & FOOTER                                          -->
+      <!-- ============================================================ -->
+      <section class="colophon" aria-labelledby="colophon-head">
+        <h4 id="colophon-head">Colophon</h4>
+        <p>
+          Set in <strong>Fraunces</strong>, a variable display &amp; text
+          serif by Phaedra Charles, Flavia Zimbardi, and Undercase Type,
+          with code and metadata in <strong>JetBrains Mono</strong>. Cream
+          paper and oxblood ink drawn from the visual language of
+          university-press technical monographs. Typeset as a single-file
+          HTML document.
+        </p>
+        <dl>
+          <dt>Filed</dt><dd>TODO area · TODO ticket</dd>
+          <dt>Source</dt><dd>PR #TODO · HEAD <code>TODO-sha</code></dd>
+          <dt>Author</dt><dd>TODO Name</dd>
+          <dt>Revised</dt><dd>YYYY-MM-DD</dd>
+        </dl>
+      </section>
+
+      <footer class="doc">
+        <div>
+          <a href="#">PR #TODO</a> &nbsp;·&nbsp;
+          <a href="#">TODO-TICKET</a> &nbsp;·&nbsp;
+          HEAD <code>TODO-sha</code>
+        </div>
+        <div>
+          <code>TODO/path/to/this/file.html</code>
+        </div>
+      </footer>
+
+    </main>
+  </div>
+</body>
+</html>
