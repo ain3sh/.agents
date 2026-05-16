@@ -15,7 +15,7 @@ Use `REPO` and `HEAD_SHA` from context if present (typical post-`/review-pr`); o
 
 In priority: the approved list from the current chat (`/review-pr` just completed) or pasted inline.
 
-Each finding: severity (`critical|warning|suggestion|nit`), file path, line(s), body prose, optionally a replacement snippet. Use `AskUser` once if anything's missing or ambiguous.
+Each finding: severity (`critical|warning|opinion|suggestion|nit`), file path, line(s), body prose, optionally a replacement snippet. Use `AskUser` once if anything's missing or ambiguous.
 
 ## 3. Per-Finding: Plain Comment vs. Suggestion Block
 
@@ -64,7 +64,7 @@ Add `--argjson start_line <N>` and emit `start_line:$start_line, start_side:"RIG
 
 ### Format rules
 
-- **Severity prefix always** -- begin `BODY` with `**[critical|warning|suggestion|nit]**`.
+- **Severity prefix always** -- begin `BODY` with `**[critical|warning|opinion|suggestion|nit]**`.
 - **Indent matches the file** -- tabs vs spaces; mismatch commits as-is and breaks formatting.
 - **Backtick collision** -- if the replacement contains triple backticks, escalate the suggestion fence to four (` ````suggestion `).
 - **Empty fence deletes the targeted lines** -- use only when deletion is the recommendation.
