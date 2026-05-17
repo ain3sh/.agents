@@ -18,12 +18,15 @@ prompts_dir = "~/.agents/prompts"
 # prompt composition rules (ordered, files relative to prompts_dir)
 [[hooks.session_start.instructions.rules]]
 when = ["startup", "clear"]
+include = ["SOUL.md"]
+[[hooks.session_start.instructions.rules]]
+when = ["startup", "clear"]
 include = ["instructions/OPERATOR.md"]
 [[hooks.session_start.instructions.rules]]
 when = ["compact"]
 include = ["instructions/POST_COMPACT.md"]
 [[hooks.session_start.instructions.rules]]
-when = ["*"]
+when = ["startup", "clear", "compact"]
 include = ["instructions/PRINCIPLES.md"]
 
 # ---
