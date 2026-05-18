@@ -8,35 +8,43 @@ user-invocable: false
 
 ## 0. When this skill fires (auto-activation)
 
-**This skill is mandatory -- not optional -- for every one of the following actions.** If you recognize any of these intents, you MUST re-read this skill end-to-end before producing any PR text or calling any `gh` command. "I remember the structure" is not sufficient; load the skill every time.
+Mandatory re-read **end-to-end** before any of: opening a PR (`gh pr create`, `/open-pr`, `/split-prs`); editing or refreshing a PR body/title; producing a draft for the user to paste manually. "I remember the structure" is not sufficient — load the skill every time.
 
-Triggering intents:
-
-- Opening a new PR (`gh pr create`, `/open-pr`, `/split-prs`, or any equivalent).
-- Editing or refreshing the body of an existing PR after pushing new commits.
-- Updating a PR title.
-- Adding the `Root Cause Analysis` section after a bug fix.
-- Attaching architecture diagrams or other artifacts to a PR body.
-- Producing a draft PR description for the user to paste manually.
-
-**Pre-flight ritual.** Before the first `gh` call, emit the following checklist in chat so the user can see you are following conventions:
+**Pre-flight ritual.** Before the first `gh` call, emit this checklist in chat:
 
 ```
 pr-description checklist:
-- [ ] Analyzed diff (files, scope, change type)
+- [ ] Diff analyzed (files, scope, change type)
 - [ ] Title in conventional-commit format
-- [ ] Four-section body: Description, Related Issue, Risk & Impact, Verification (outcome-first, not validator log)
-- [ ] Linked ticket(s) with Closes/Part of
-- [ ] RCA section for bug fixes
-- [ ] Architecture diagram (excalirender, dark mode) for structural changes
-- [ ] Using `gh api repos/$REPO/pulls/$N -X PATCH` for body/title updates (never `gh pr edit`)
+- [ ] Body has 5 required sections + ticket linked (Closes / Part of, context-chain if relevant)
+- [ ] Conditional sections from §0.5 catalog evaluated (each fired or skipped intentionally)
+- [ ] Verification outcome-first; length ~250-450w; voice present-tense, third-person
+- [ ] Using `gh api repos/$REPO/pulls/$N -X PATCH` for body/title (never `gh pr edit`)
 ```
 
-Do not treat this as a ceremony. Tick each box as you work. A missing tick means the step is incomplete.
+Tick each as you work. A missing tick means the step is incomplete.
+
+## 0.5. Section catalog
+
+The 5 required sections fire on every PR. Conditional sections are a **menu, not a checklist** — if the trigger doesn't fire, the section doesn't exist in the body (empty "N/A" headings teach reviewers to skip). Templates: Section 5; architecture workflow: Section 4.
+
+| Section | When |
+|---|---|
+| Description, Related Issue, Reviewer Guide, Risk & Impact, Verification | always |
+| Anti-goals one-liner | scope deliberately constrained |
+| Implementation Notes | `.agents/specs/<spec>.notes.md` exists |
+| Root Cause Analysis | bug fix |
+| Architecture diagram | structural change (new components, altered flows, changed boundaries) |
+| Schema / Contract Delta | DB / REST / GraphQL / protobuf / shared types touched |
+| Migration & Rollout | flag / migration / env var / breaking API |
+| Performance Evidence | perf-sensitive change |
+| Telemetry & Observability | new/removed metrics, logs, traces, alerts |
+| Repro Recipe | new feature / fixed bug — copy-pasteable verify steps |
+| Side Effects | any acknowledged regression |
+| Reverse Dependencies | >3 consumers of the changed surface |
+| PR lineage | stacked / split chain |
 
 ## 1. Analyze the Diff
-
-Before writing anything, understand what changed:
 
 ```bash
 DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
@@ -44,101 +52,99 @@ git log --oneline "origin/$DEFAULT_BRANCH"..HEAD
 git diff --stat "origin/$DEFAULT_BRANCH"..HEAD
 ```
 
-Determine:
-- **What changed**: Which directories, packages, or modules were modified.
-- **Change type**: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`, `perf`, `ci`, `build`, `revert`.
-- **Scope**: Primary area affected. In monorepos, use the package/app name. In single-project repos, use the module or layer name.
-- **Why it changed**: The motivation -- bug report, feature request, tech debt, performance issue.
+Extract **what** (touched dirs/packages), **type** (`feat`/`fix`/`refactor`/`docs`/`chore`/`test`/`perf`/`ci`/`build`/`revert`), **scope** (package/app in monorepos; module/layer otherwise), **why** (bug, feature, tech debt, perf).
 
 ## 2. Format PR Title
 
-Conventional Commits: `type(scope): description`
-
-- Keep the description concise and imperative ("add X", "fix Y", not "added X" or "fixes Y").
-- For multi-scope changes, comma-separate: `fix(auth, api): ...` or use a broader scope.
-- When the repo defines valid scopes (check CI config or contributing docs), use them exactly.
+Conventional Commits: `type(scope): description`. Imperative ("add X", not "added X"); ≤72 chars. Comma-separate multi-scope (`fix(auth, api): ...`) or use a broader scope. If the repo defines valid scopes (CI config, CONTRIBUTING), use them exactly.
 
 ## 3. Write PR Body
 
-Fill in **all four sections**. Do not skip any.
+Fill in **all five required sections**. Do not skip any.
 
 ```markdown
 ## Description
 
-<2-4 sentences: what changed, why, and the high-level approach.
-Focus on intent and context a reviewer wouldn't get from the diff alone.
-Mention any non-obvious design decisions.>
+<2-4 sentences: what changed, why, and the high-level approach — intent and context a reviewer can't get from the diff. Mention non-obvious design decisions. Optional trailing one-liner: "Out of scope: <X> — tracked in TEAM-456." when scope was deliberately constrained.>
 
 ## Related Issue
 
 Closes TEAM-123
-<!-- Use "Closes" for full fixes, "Part of" for incremental work -->
+<!-- "Closes" for full fixes, "Part of" for incremental work. Add a context chain (Slack thread, prior incident, design doc, related PR) only when prior art clarifies intent. -->
+
+## Reviewer Guide
+
+**Read order**: <file > file > file. Skip <noisy paths: snapshots, generated code>.>
+**Review depth**: <Skim OK | Standard | Deep — one-line justification.>
+**Open for pushback**: <one specific decision worth engaging, with a code anchor (`src/foo.ts:42`). Drop entirely if no live design call.>
 
 ## Risk & Impact
 
-<List specific risks, not generic boilerplate. Examples:>
-<!-- - Changes the auth flow; existing sessions may need re-validation -->
-<!-- - Adds a new DB index; migration will lock the table briefly -->
-<!-- - Modifies a shared utility; downstream consumers should be tested -->
-<!-- Use "Low risk -- isolated change with no external dependencies" only when genuinely true -->
+<Specific risks, not boilerplate. e.g., "Changes auth flow; existing sessions may need re-validation." or "New DB index; migration locks table briefly." "Low risk — isolated change" only when genuinely true.>
 
 ## Verification
 
-**Behavior verified.** <Concrete user-visible flows exercised. For each: what state, what action, what was observed. Tie back to the risks called out in Risk & Impact so the two sections check each other.>
-
-**Regression coverage.** <Which test file/suite, which invariant it pins, why this layer. For bug fixes, cite the consolidate-test-suites decision.>
-
-**Not tested.** <Anything deliberately skipped, with a one-line reason. "N/A" only when genuinely true.>
-
-**Standard validators.** <One line. e.g., "format/lint/knip/typecheck/full test suite clean." Note any unrelated pre-existing failures and how you triaged them.>
+**Behavior verified.** <User-visible flows exercised: state, action, observation. Tie back to listed risks.>
+**Regression coverage.** <Test file/suite, invariant it pins, why this layer. For bug fixes, cite the consolidate-test-suites decision.>
+**Not tested.** <Anything deliberately skipped + one-line reason. "N/A" only when genuinely true.>
+**Standard validators.** <One line. e.g., "format/lint/knip/typecheck/full test suite clean." Note unrelated pre-existing failures and how you triaged them.>
 ```
 
-### Writing quality checklist
+### Writing quality
 
-- The **Description** should make sense to someone who hasn't seen the ticket. Don't just restate the title.
-- **Risk & Impact** must reflect actual thought about what could go wrong. "N/A" is acceptable only for truly zero-risk changes (typo fixes, comment-only changes).
-- **Verification** is outcome-first: each of the four labeled blocks answers one reviewer question (behavior verified / regression coverage / not tested / standard validators). Tie each behavior-verified item back to a risk listed in **Risk & Impact** so the two sections check each other. See "What does NOT belong in Verification" below for what to keep out.
+- **Description** stands alone for someone who hasn't seen the ticket; don't restate the title.
+- **Reviewer Guide** is the highest-leverage block. Order files by causal importance (not diff stat); drop the pushback line entirely when there's no live design call (empty prompts read as performative).
+- **Risk & Impact** reflects actual thought about what could go wrong. `N/A` only for typo / comment-only changes.
+- **Verification** is outcome-first; each block answers one reviewer question, and behavior-verified items tie back to listed risks so the two sections check each other. For enumerable behavioral changes use a `| Scenario | Before | After |` table — the "unchanged" rows show what you deliberately preserved.
+- **Length** ~250-450 words baseline. Crossing 600 without an RCA / Architecture / Migration / Implementation Notes block in play usually means restating the diff — trim.
+- **Voice** present-tense, indicative, third-person on the code ("This PR adds…", not "I added…"). First-person dates immediately.
+
+### Stable searchable markers
+
+Inline conventions (not their own section) — make PR bodies grep-able years later:
+
+| Marker | Use when | Example |
+|---|---|---|
+| `Constraint from:` | external requirement imposed the design | `Constraint from: FAC-123 ("must work offline")` |
+| `Decision-maker:` | non-obvious call made by a specific person | `Decision-maker: @alice (design review 2026-05-12)` |
+| `As of:` | architecture-blame snapshot of the touched module | `As of: 2026-05-18 the cart module owns checkout redirects.` |
+| `Sentinel test:` | canary that will fail first on regression | `Sentinel test: apps/web/test/checkout.test.ts:42` |
 
 ### What does NOT belong in Verification
 
-CI status checks already show lint/typecheck/test results to reviewers; re-listing them per-tool in the PR body buries the actual signal (manual repros, regression coverage, deliberate skips) under a wall of "clean" status lines.
+CI already shows per-tool lint/typecheck/test status to reviewers. Re-listing it in the body buries the real signal (manual repros, regression coverage, deliberate skips). The `quality-ship` 6-row evidence checklist is for **gating the commit**, not for the PR body — resist copying it across.
 
-The six-row validator-evidence checklist that `quality-ship` enforces is for **gating the commit**, not the PR body. The agent's context window will be full of that checklist by the time it writes the description; resist the temptation to copy it across.
-
-**Anti-pattern** -- representative bullets from real output that should NOT appear:
+**Anti-pattern** (representative bullets that should NOT appear):
 
 - `ruff check, black --check, isort --check across the touched Python files - clean.`
 - `npm run typecheck -- --filter=@factory/cli and npm run fix -- --filter=@factory/cli - both clean.`
-- `mypy across the touched evals source files - clean (Success: no issues found in 7 source files).`
-- `npx prettier --check apps/cli/scripts/submit-eval.ts and bun build scripts/submit-eval.ts --outfile /tmp/submit-eval.js - clean.`
+- `npx prettier --check apps/cli/scripts/submit-eval.ts - clean.`
 
-These tell a reviewer nothing about whether the change works. Compress them into the single **Standard validators** line.
+Compress them all into the single **Standard validators** line.
 
-**Pattern** -- what should appear instead (same PR, same evidence, reformatted):
+**Pattern** (same evidence, ordered for a reviewer):
 
-> **Behavior verified.** Re-ran the upgraded run-evals path against PR #12292 with `tb2_smoke`; submission went through SQS and posted GitHub/Slack status. The rerun proved the HTTP Toolkit setup no longer raises `URLError`, and surfaced a separate runtime-auth gap (stale/missing worker `FACTORY_API_KEY`) which is fixed in this PR by per-message secret refresh. Reference experiment TOML validated end-to-end: `resolve_profiles()` produced two profiles (baseline, feature) with correct templates, feature-flag snapshots, and computed results dirs.
+> **Behavior verified.** Re-ran the upgraded run-evals path against PR #12292 with `tb2_smoke`; submission went through SQS and posted GitHub/Slack status. Surfaced a runtime-auth gap (stale worker `FACTORY_API_KEY`) which this PR fixes via per-message secret refresh.
 >
-> **Regression coverage.** New worker tests for per-eval secret refresh + failure handling (`src/eval_queue/tests/test_worker_update.py`, +20 cases). Targeted module coverage across status round-trip / `wait_for_pickup`, experiment submit validation, env ghost-state, and HTTP Toolkit observability -- 109 passed, 2 skipped across the touched suites.
+> **Regression coverage.** Worker tests for per-eval secret refresh + failure handling (`src/eval_queue/tests/test_worker_update.py`, +20 cases); 109 passed, 2 skipped across the touched suites.
 >
-> **Not tested.** Three pre-existing failures in the full pytest run (`test_ensure_http_toolkit_installs_and_starts`, `test_analyze_run_executes_successfully`, `test_default_s3_binary_download`) reproduce on base `dev` -- they depend on apt/curl fixtures, ipykernel, and AWS SSO access, none of which this PR touches. Not addressed here.
+> **Not tested.** Three pre-existing failures (`test_ensure_http_toolkit_installs_and_starts`, `test_analyze_run_executes_successfully`, `test_default_s3_binary_download`) reproduce on base `dev` — apt/curl/SSO fixtures this PR doesn't touch.
 >
-> **Standard validators.** Format, lint, knip, typecheck, full test suite clean across both Python (ruff/black/isort/mypy/pytest) and TS (prettier/lint/typecheck/knip/bun build) sides.
+> **Standard validators.** Format, lint, knip, typecheck, full test suite clean (Python + TS).
 
-Same evidence, ordered for a reviewer's eye, with validator chatter compressed to one line.
+## 3b. Writing/updating the PR body: use REST, never `gh pr edit`
 
-## 3b. Writing and updating the PR body: use REST, never `gh pr edit`
-
-**Footgun:** `gh pr edit` currently fails on any repository whose org still has Projects (classic) enabled, even when you are not touching projects. The CLI issues a GraphQL query that the server rejects with:
+**Footgun.** `gh pr edit` currently fails on any repo whose org still has Projects (classic) enabled — the CLI issues a deprecated GraphQL query the server rejects:
 
 ```
 GraphQL: Projects (classic) is being deprecated in favor of the new Projects experience, see: https://github.blog/changelog/...
 ```
 
-This breaks `gh pr edit --body`, `gh pr edit --title`, `gh pr edit --add-reviewer`, and `gh pr edit --add-label`. **Do not retry it** -- it will not succeed until upstream `gh` ships a fix. Instead, go directly to REST.
+Do not retry; it will not succeed until upstream `gh` ships a fix. Use the REST replacements below.
 
 ### Canonical REST replacements
 
-Set these once per session:
+Set once per session:
 
 ```bash
 REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
@@ -153,47 +159,31 @@ PR_NUM=$(gh pr view --json number --jq '.number')
 | Add label | `gh api "repos/$REPO/issues/$PR_NUM/labels" --method POST -f "labels[]=<label>"` | `gh pr edit --add-label` |
 | Set draft/ready | `gh api graphql -f query='mutation{ markPullRequestReadyForReview(input:{pullRequestId:"<node-id>"}){ pullRequest{ isDraft } } }'` | `gh pr ready` (also GraphQL-affected in some orgs) |
 
-`gh pr create` and `gh pr view` are **not** affected -- keep using them for initial creation and reads.
-
-Writing the body to a file and passing `-f body="$(cat file)"` avoids shell-quoting bugs with multi-line markdown, backticks, and `$`-escapes.
+`gh pr create` and `gh pr view` are not affected — keep using them for initial creation and reads. Always write the body to a file first and pass `-f body="$(cat file)"` to avoid shell-quoting bugs with multi-line markdown, backticks, and `$`-escapes.
 
 ## 4. Optional Supporting Artifacts
 
-When screenshots, videos, logs, or sample outputs would make the change easier to understand or verify, include them when practical.
-
-- If `gh-attach` is available, upload supporting artifacts and link them in the PR body or a follow-up comment.
-- Good candidates: UI screenshots, short repro videos, before/after outputs, and small log snippets that clarify behavior or make validation easier.
-- Keep artifact references focused and high-signal; do not dump large noisy outputs into the PR body.
-- Never include secrets, tokens, machine-specific paths, hostnames, or other private environment details in uploaded artifacts or PR text.
-
-If the current machine cannot access the needed browser-authenticated GitHub session, it is acceptable to:
-
-- run `gh-attach` from a trusted machine that does have that access, including over SSH, or
-- use an exported `gh-attach --session-file` flow.
-
-Keep any such mention generic in public PRs; describe the artifact itself, not your personal setup.
+Screenshots, short repro videos, before/after outputs, and small log snippets that clarify behavior or make validation easier. Upload via `gh-attach` when available; never include secrets, tokens, or machine-specific paths in uploaded artifacts or PR text. If the current machine lacks the browser-authenticated GitHub session, run `gh-attach` from a trusted machine (SSH is fine) or use `gh-attach --session-file`; keep the mention generic in public PRs.
 
 ### Architecture diagrams (dark-mode PNGs via excalirender)
 
-When the PR introduces non-trivial architectural changes -- new components, altered data flows, changed service boundaries, new integration points, restructured modules -- generate a diagram using the **excalidraw** skill and embed it inline in the PR body.
+When the PR adds/alters components, flows, service boundaries, integration points, or module structure, **draw it**. If you find yourself describing a new flow across more than two prose sentences of the Description, that's the signal.
 
-**Non-negotiable defaults**:
+**Non-negotiables**: render with `excalirender ... -o /tmp/diagram.png --dark -s 2` (bare editable-links don't embed and reviewers don't click); upload via `gh-attach` so the PNG lives at `user-attachments.githubusercontent.com` (never commit PNGs, never use `raw.githubusercontent.com`); skip `--dark` only when the user explicitly asks for light.
 
-- **Always render with `excalirender`** (`excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`). A bare editable-link without an inline image does not count -- GitHub will not render it, and reviewers will not click through.
-- **Always use dark mode** (`--dark`). Our PR descriptions are dark-first: the diagram must match so it does not blind a reviewer viewing on GitHub's dark theme. Skip dark mode only when the user has explicitly asked for light.
-- **Always upload via `gh-attach`** so the PNG lives at `user-attachments.githubusercontent.com` -- never commit PNGs to the branch and never use `raw.githubusercontent.com` URLs.
+**Authoring rules** (see `~/.agents/skills/excalidraw/references/dark-mode.md` for the full failure modes):
 
-**Author the `.excalidraw` in light theme** -- pastel fills from `~/.agents/skills/excalidraw/references/colors.md`, `#1e1e1e` text, `"viewBackgroundColor": "#ffffff"` (or omit). `--dark` is Excalidraw's theme inverter and expects a light source; pre-coloring elements dark (`#1e3a5f` fills, `#e5e5e5` text, dark `viewBackgroundColor`) double-inverts into a washed-out render. See `~/.agents/skills/excalidraw/references/dark-mode.md` for the full list of failure modes. **Do NOT add a manual background rectangle** element -- it inflates the scene bbox so the PNG balloons with your diagram as a speck.
+- Author the `.excalidraw` in **light** theme — pastel fills from `~/.agents/skills/excalidraw/references/colors.md`, `#1e1e1e` text, `"viewBackgroundColor": "#ffffff"` or omit. `--dark` is an inverter; pre-coloring elements dark double-inverts into a washed-out render.
+- **No manual background rectangle element** — it inflates the scene bbox and your diagram renders as a speck.
+- Map components to the pastel families: Frontend/Input → Light Blue, Backend/Success → Light Green, Storage/Data → Light Teal, Processing/Middleware → Light Purple, Warning/External → Light Orange, Error/Critical → Light Red, Notes/Decisions → Light Yellow. `--dark` maps each to its matching dark variant at render time.
 
-Map components to the pastel families in `colors.md`: Frontend/Input -> Light Blue (`#a5d8ff`), Backend/Success -> Light Green (`#b2f2bb`), Storage/Data -> Light Teal (`#c3fae8`), Processing/Middleware -> Light Purple (`#d0bfff`), Warning/External -> Light Orange (`#ffd8a8`), Error/Critical -> Light Red (`#ffc9c9`), Notes/Decisions -> Light Yellow (`#fff3bf`). `--dark` maps each to its matching dark variant at render time.
+**Workflow**:
 
-Workflow:
-
-1. Write the `.excalidraw` file in light colors. No background rectangle element, no dark `viewBackgroundColor`.
+1. Write the `.excalidraw` (light colors, no background rect).
 2. `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
-3. `gh-attach --repo "$REPO" --md /tmp/diagram.png` -- copy the returned markdown.
-4. Optional: `uv run --with cryptography python ~/.agents/skills/excalidraw/scripts/upload.py diagram.excalidraw` for an editable-link companion.
-5. Put the image in the PR body under an "## Architecture" heading. Nest the editable link inside a `<details>` block so it does not look like a phishing link:
+3. `gh-attach --repo "$REPO" --md /tmp/diagram.png` — copy the returned markdown.
+4. Optional editable-link companion: `uv run --with cryptography python ~/.agents/skills/excalidraw/scripts/upload.py diagram.excalidraw`
+5. Embed under `## Architecture`; nest the editable link in `<details>` so it doesn't read as a phishing link:
 
    ```markdown
    ## Architecture
@@ -204,35 +194,166 @@ Workflow:
    <summary>Edit diagram</summary>
 
    Source: https://excalidraw.com/#json=...
-
-   Rendered with: `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
+   Rendered: `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
 
    </details>
    ```
 
-Skip this only when the change is purely behavioral (logic fixes, config tweaks, test additions) with no structural impact. If you find yourself describing a new flow in prose across more than two sentences of the Description, that is a signal you should be drawing it instead.
+## 5. Conditional section templates
 
-## 5. Contextual Additions
+One template per catalog row. Use only the ones whose trigger fired; RCA and Implementation Notes live in `<details>` at the bottom so the body reads linearly.
 
-When the PR is part of a larger effort, add context:
+### Implementation Notes — when `.agents/specs/<spec>.notes.md` exists
 
-- **Stacked PRs**: "Part K of N. Depends on #X." or "Independent -- can merge in any order."
-- **Split from a branch**: "Splits `<original-branch>` into focused PRs. This one covers <scope>."
-- **Follow-up work**: "Follow-up: <brief description of what's next>."
-- **Bug fixes**: Append a collapsible "Root Cause Analysis" section to the PR body:
+The `/implement` hook auto-scaffolds a paired notes file on spec approval. Locate it via the branch's ticket ID, then ingest:
 
-  ```markdown
-  <details>
-  <summary>Root Cause Analysis</summary>
+```bash
+TICKET=$(linear context --output json 2>/dev/null | jq -r '.identifier // empty' | tr '[:upper:]' '[:lower:]')
+NOTES=$(ls .agents/specs/*.notes.md 2>/dev/null | rg -i "$TICKET" | head -1)
+[ -n "$NOTES" ] && cat "$NOTES"
+```
 
-  **How the bug was traced**: <Describe the repro path, the symptoms observed, and the
-  investigation steps that narrowed down the root cause.>
+Group entries by their `Type:` field. Also thread them back into the always-on sections so they're not siloed: `deviation` → Description, `tradeoff` → Risk & Impact, `surprise` → Verification (Behavior verified), `followup` → Verification (Not tested) when relevant.
 
-  **How root cause drove the fix**: <Explain why the chosen fix addresses the actual cause
-  rather than the symptom, and any alternatives considered.>
+```markdown
+<details>
+<summary>Implementation Notes</summary>
 
-  </details>
-  ```
+Source: `.agents/specs/<basename>.notes.md`
+
+**Deviations from spec**: <one bullet per `Type: deviation`>
+**Tradeoffs**: <one per `Type: tradeoff` — alternative rejected + reason>
+**Discovered constraints**: <one per `Type: surprise`>
+**Follow-ups not in this PR**: <one per `Type: followup` — link tickets if filed>
+
+</details>
+```
+
+If no notes file exists, this section does not appear.
+
+### Root Cause Analysis — bug fixes
+
+```markdown
+<details>
+<summary>Root Cause Analysis</summary>
+
+**Trace**: <repro path, symptoms, investigation; cite artifacts pulled (Sentry IDs, log queries, bug reports)>
+**Root cause**: <first unintended side effect — not the downstream error; name the broken invariant>
+**Fix path**: <why this addresses the cause, not the symptom; the rejected symptom-level fix>
+**Why this layer**: <if the fix isn't at the symptom's layer, justify; cite root-cause-finder if it shaped the call>
+
+</details>
+```
+
+### Anti-goals — scope deliberately constrained
+
+One-liner under Description; prevents drive-by "while you're here…" comments:
+
+```markdown
+**Out of scope**: refactoring the legacy `auth/` module — tracked in TEAM-456.
+```
+
+Stack multiples as sub-bullets. If every PR has anti-goals, the scope was never honest to begin with.
+
+### Architecture — structural changes
+
+See **Section 4** for the excalirender + dark + `gh-attach` workflow. Embed the rendered PNG under `## Architecture`; nest the editable link inside `<details>`.
+
+### Schema / Contract Delta — DB / API / type contract touched
+
+The 3 rows are a checklist; drop any that don't apply. Each row states the change + the backward-compat consequence in one line.
+
+```markdown
+## Contract Delta
+
+**API**: <endpoint/method change; backward-compat note>
+**DB**: <table/column/index change; migration safety>
+**Types/SDK**: <type/symbol change; consumer compat>
+```
+
+### Migration & Rollout — flag / migration / breaking change
+
+```markdown
+## Migration & Rollout
+
+**Order**: deploy (dark) → run `2026_05_18_add_redirected_to.sql` → flag `cart.redirect_v2` to 10% staging → verify dashboard → 100% staging → 10→100% prod over 24h.
+**Rollback**: flag flip is sufficient up to 100%; migration is additive, no rollback needed.
+**Coordination**: frontend `pr-1234` must merge first so the field is consumed before backend populates it.
+```
+
+### Performance Evidence — perf-sensitive changes
+
+Numbers without methodology are theatre. Include workload, hardware, rerun command.
+
+```markdown
+## Performance Evidence
+
+**Benchmark**: 10k `/checkout` requests, 100 concurrent, warm in-memory cart fixture (~500 items).
+**Before** (`main` @ abc1234): p50 42ms / p95 81ms / p99 134ms; 1.4 cores avg; 3.2 MB/req.
+**After** (this PR): p50 18ms / p95 31ms / p99 58ms; 0.6 cores avg; 0.8 MB/req.
+**Conditions**: c6a.2xlarge, Node 22.4, `--max-old-space-size=4096`. Rerun: `pnpm bench:checkout`.
+```
+
+### Telemetry & Observability — metric / log / trace changes
+
+```markdown
+## Telemetry & Observability
+
+**New**: <metric name + type (counter / histogram / gauge); what it measures>
+**Changed**: <metric name + tag; impact on existing dashboards / alerts that filter on it>
+**Logs**: <structured field + level + when emitted>
+**Alerts**: <existing alert impact + any new alert candidate>
+```
+
+### Repro Recipe — new feature / fixed bug
+
+The bar: a reviewer who has never touched this repo can run it as-is and observe the expected behavior.
+
+```markdown
+## Repro Recipe
+
+```bash
+pnpm dev
+# Visit http://localhost:3000/cart, add 2 items, click checkout while logged out
+# Expected: 302 redirect to /login?return_to=%2Fcheckout
+```
+
+Or: `pnpm test apps/web/e2e/checkout-redirect.spec.ts`.
+```
+
+### Side Effects — any acknowledged regression
+
+Honest acknowledgment beats discovery six weeks later. If you genuinely can't think of any, the section does not appear — do not fabricate.
+
+```markdown
+## Side Effects
+
+- Empty-cart users now see a ~50ms flash of the cart page before redirect (was an immediate 500). Acceptable per @alice — UX threshold 200ms.
+- `cart_events` grows by ~1 row per checkout (was ~0 on the 500'd path). Est. +0.5% storage on the table over 90d.
+```
+
+### Reverse Dependencies — >3 consumers of the changed surface
+
+✓ marks verified consumers (reviewers can stop reading); ⚠ marks owners to ping.
+
+```markdown
+## Reverse Dependencies
+
+**Surface**: `@scope/sdk` `CheckoutClient.complete()` — added optional `onRedirect` callback.
+**Consumers** (via `rg "CheckoutClient" -t ts`):
+- ✓ `apps/web` — wired to new callback in this PR
+- ✓ `apps/mobile` — ignores callback (optional)
+- ✓ `services/order-worker` — ignores callback (server context)
+- ⚠ `apps/admin` — owner @bob, not verified locally; optional callback preserves compat by type
+- ⚠ `vendor-integration-x` — external; type-only change so compile-only consumers are safe
+```
+
+### PR lineage — stacked / split chain
+
+```markdown
+**PR lineage**: Part 3 of 5. Previous: #1234. Next: #1236. Tracks epic FAC-100.
+**Type**: stacked (merge in order) | split (atomic — any order)
+```
 
 ## 6. Post-Push Refresh
 
@@ -251,30 +372,27 @@ Determine whether the existing description still covers what the PR actually doe
    git diff --stat "origin/$DEFAULT_BRANCH"..HEAD
    ```
 
-2. Compare the description against the actual diff. Check for:
-   - **Missing scope**: new files, modules, or packages touched that the description doesn't mention.
-   - **Changed intent**: the original description says "fix X" but the diff now also includes a refactor of Y.
-   - **Stale claims**: the description references files, approaches, or risks that no longer apply after subsequent commits.
-   - **Verification gaps**: new code paths that aren't reflected in the Verification section -- new behavior with no listed manual repro, new modules with no regression test cited, broadened scope without an updated **Not tested** note.
+2. Compare description against actual diff. Check for:
+   - **Missing scope** — new files/modules/packages not mentioned
+   - **Changed intent** — original says "fix X" but diff also refactors Y
+   - **Stale claims** — references to files/approaches/risks no longer applicable
+   - **Verification gaps** — new code paths with no manual repro, no regression test cited, or unupdated **Not tested** note
 
-3. If none of the above apply, stop here -- no update needed. Do not rewrite for style or phrasing in this phase.
+3. If none apply, stop — no update needed. Do not rewrite for style or phrasing here.
 
 ### Phase 2: Coherence pass
 
-Only runs if Phase 1 identified updates. The goal is a description that reads as one authored piece, not a log of patches.
+Only runs if Phase 1 identified updates. The result should read as one authored piece, not a log of patches.
 
-1. Draft the updated description incorporating the new material from Phase 1.
-2. Before writing, check that the result:
-   - Reads as a single coherent narrative about what the PR does and why -- not a chronological list of commits.
-   - Preserves the four-section structure (Description, Related Issue, Risk & Impact, Verification).
-   - Doesn't bloat: if the PR scope grew, the **Description** block should still be 2-4 sentences, not a paragraph per commit. Use **Verification** > **Behavior verified** to capture additional flows the broadened scope brought in.
-   - Updates Risk & Impact to reflect the current full scope, not just the delta.
-3. Apply the update via the REST endpoint documented in section 3b (**not** `gh pr edit` -- it currently fails on the Projects-classic GraphQL deprecation):
+1. Draft the updated description incorporating Phase 1 material.
+2. Before writing, verify:
+   - Reads as a single narrative; Description still 2-4 sentences even on scope growth (use **Verification > Behavior verified** for added flows, not paragraph-per-commit).
+   - Risk & Impact reflects current full scope, not just the delta.
+   - Conditional sections re-evaluated — new commits may have crossed a threshold (e.g., >3 consumers → Reverse Dependencies; added a metric → Telemetry).
+3. Apply via REST (see §3b — `gh pr edit` is broken):
    ```bash
    REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
    gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f body="$(cat /tmp/pr-updated-body.md)"
    ```
 
-**Do not** rewrite a description that is already accurate just because the phrasing could be marginally better. The bar for Phase 2 changes is: "a reviewer reading this description would get a wrong or incomplete picture of the PR."
-
-**Do not** skip this refresh because the user did not explicitly ask for it. Any `git push` that lands on a branch with an open PR triggers Phase 1 automatically. Workflow commands (`/open-pr`, `/split-prs`, `/address-review`, `quality-ship`) are expected to run this flow as part of their normal completion -- they do not get to opt out.
+**Bar**: a reviewer reading the current description would get a wrong or incomplete picture. Don't rewrite for marginal phrasing wins. **Don't skip the refresh** because the user didn't ask — any `git push` onto a branch with an open PR triggers Phase 1, and `/open-pr`, `/split-prs`, `/address-review`, `quality-ship` run it as part of normal completion.

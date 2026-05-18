@@ -93,6 +93,8 @@ Present a structured implementation plan:
 
 Once approved, the spec is ground truth: apply cadence rules 4 & 5 before any 4b / 5 work -- the recursive anchor is non-negotiable.
 
+On spec approval, a paired `.agents/specs/<spec>.notes.md` is auto-scaffolded for spec-time-unknown decisions. Append to it in the same turn as each decision, deviation, tradeoff, surprise, or followup — not later, not in batches. The file feeds the **Implementation Notes** section of the eventual PR body (see `pr-description` Section 5).
+
 ## 4b. Bug-fix: regression test (red-green)
 
 After spec approval, before implementing the fix, apply the **consolidate-test-suites** skill to decide where the test belongs, then write it.

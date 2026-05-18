@@ -105,8 +105,12 @@ include = ["instructions/IMPLEMENT_SPEC.md"]
 [[hooks.post_tool_use.instructions.rules]]
 match.tool = "ExitSpecMode"
 match.output = { approved = true, isEdited = true }
-include = ["instructions/IMPLEMENT_SPEC.md"]
-include_text = ["Read ${filePath} fully to make a mental note of all changes made first."]
+include = ["instructions/IMPLEMENT_SPEC.md", "instructions/READ_EDITED_SPEC.md"]
+
+[[hooks.post_tool_use.instructions.rules]]
+match.tool = "ExitSpecMode"
+match.output = { approved = true }
+include = ["instructions/INIT_NOTES.md"]
 
 # ---
 [hooks.notification]
