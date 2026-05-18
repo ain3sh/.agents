@@ -17,7 +17,7 @@ TIRITH_INTEGRATION = "droid-cli"
 prompts_dir = "~/.agents/prompts"
 # prompt composition rules (ordered, files relative to prompts_dir)
 [[hooks.session_start.instructions.rules]]
-when = ["startup", "clear"]
+when = ["clear"]
 include = ["SOUL.md"]
 [[hooks.session_start.instructions.rules]]
 when = ["startup", "clear"]
