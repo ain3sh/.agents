@@ -21,6 +21,7 @@ linear i get TEAM-1 TEAM-2 TEAM-3                 # Batch
 
 linear i create "Title" -t TEAM -p 1               # Create (1=urgent,2=high,3=med,4=low)
 linear i create "Title" -t TEAM -d -               # Pipe description from stdin
+linear i create "Title" -t TEAM --parent PARENT-ID # Nest under parent/epic
 
 linear i update TEAM-123 -s "In Progress"          # Status
 linear i update TEAM-123 -l bug -l urgent          # Labels
@@ -38,6 +39,16 @@ linear i archive TEAM-123                          # Archive
 linear i open TEAM-123                             # Open in browser
 linear i link TEAM-123                             # Print URL
 ```
+
+### Ticket description hygiene
+
+Unless trivial (typo, formatting), descriptions should cover:
+
+- **What** — 1–2 sentences on the problem or feature.
+- **Why** — context (bug report, user feedback, tech debt, regression).
+- **Acceptance criteria** — concrete conditions for "done" when knowable.
+
+Pipe long bodies via stdin (`-d -`) to avoid shell-quoting pain. For parents/epics, search via `linear i search "<keywords>" --output json --compact --fields id,identifier,title` then pass `--parent <ID>` at create.
 
 ## Relations
 

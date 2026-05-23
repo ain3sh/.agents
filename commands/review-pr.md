@@ -9,6 +9,8 @@ Load skills: **pr-context**, **linear-cli**, **worktree-setup**, **quality-ship*
 
 **Workers in flight.** If a subagent is still making progress (output / tool calls visible), **let it finish**. Don't `TaskStop` over resource-usage or token-budget worries — review quality outranks both. Stop only if genuinely stalled or off-task.
 
+**Worker complexity.** Any `Task` dispatched from this flow — coverage sweeps, slop scans, repro runs, per-area reviewers — **must** pass `complexity: "heavy"`. The default `medium` is too weak for review judgment (root-cause tracing, architecture critique, slop discrimination) and produces shallow findings. Don't omit `complexity` or downgrade to save tokens. If a sweep is genuinely trivial (one-file typo PR), do it inline rather than dispatching.
+
 ## 1. Gather context
 
 Follow **pr-context** to fetch metadata, conversation, diff, and linked Linear ticket; derive `REPO` and `HEAD_SHA` from `$ARGUMENTS`.

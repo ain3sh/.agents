@@ -8,7 +8,6 @@
 
 | Command | Replaces | Usage |
 |---|---|---|
-| `/open-ticket` | linear skill load + `.env.local` source | `/open-ticket Fix tooltip` |
 | `/open-pr` | ticket + branch + verify + lint + ship mega-prompt (handles fresh + mid-fix) | `/open-pr FAC-456` |
 | `/review-pr` | per-type verification (repro for bugs), threaded line comments, verdict | `/review-pr 123` |
 | `/address-review` | read reviewer feedback → triage → fix → respond to threads | `/address-review 123` |
@@ -16,15 +15,15 @@
 | `/implement` | spec-first exploration + planning; waits for approval before coding | `/implement FAC-789` |
 | `/retrospective` | stranger-review your own diff for entropy (dead weight / junk / perf / drift / scope) | `/retrospective` |
 | `/update-skill` | reflect → update skill → critique ×2 → PR | `/update-skill linear-cli` |
-| `/split-prs` | split long branch into stacked or independent PRs via cherry-pick | `/split-prs feat/big-branch` |
+| `/split-pr` | split long branch into stacked or independent PRs via cherry-pick | `/split-pr feat/big-branch` |
 
 ## Background Atoms (composed by commands, not in `/` menu)
 
 | Atom | Owns | Composed by |
 |---|---|---|
-| **ticket-branch** | Ticket resolve/create (with parent search), branch checkout | `/open-pr`, `/update-skill`, `/split-prs` |
-| **quality-ship** | Quality checks, commit, push. Not PR creation. | `/open-pr`, `/update-skill`, `/split-prs`, `/address-review` |
-| **pr-description** | Diff analysis, conventional-commit title, 4-section PR body | `/open-pr`, `/update-skill`, `/split-prs` |
+| **ticket-branch** | Ticket resolve/create (with parent search), branch checkout | `/open-pr`, `/update-skill`, `/split-pr` |
+| **quality-ship** | Quality checks, commit, push. Not PR creation. | `/open-pr`, `/update-skill`, `/split-pr`, `/address-review` |
+| **pr-description** | Diff analysis, conventional-commit title, 4-section PR body | `/open-pr`, `/update-skill`, `/split-pr` |
 | **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review`, `/demo-pr` |
 
 ## Installed Tooling

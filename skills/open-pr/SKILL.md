@@ -1,5 +1,6 @@
 ---
-description: Full PR workflow -- ticket, branch, verify/fix, lint/test, commit, push, open PR
+name: open-pr
+description: Full PR workflow -- ticket, branch, verify, lint, test, commit, push, open PR. Use when the user asks to open, ship, or land a PR; handles fresh work, mid-fix state, and changes already verified in the session.
 argument-hint: [TICKET-ID | description of work]
 ---
 
@@ -23,7 +24,7 @@ Fire `TodoWrite` in parallel with the first tool call of each phase.
 ## 1. Ticket + Branch
 
 Follow the **ticket-branch** skill:
-- If `$ARGUMENTS` contains a ticket ID, resolve it. Otherwise create one via `/open-ticket`.
+- If `$ARGUMENTS` contains a ticket ID, resolve it. Otherwise create one inline (ticket-branch handles both paths).
 - Check out a new branch off the default remote branch.
 
 ## 2. Apply Changes

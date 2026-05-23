@@ -1,5 +1,6 @@
 ---
-description: Retrospective on aggregate changes -- dead weight, junk code, optimization opportunities before you ship
+name: retrospective
+description: Self-review your aggregate diff before shipping to catch dead weight, junk code, perf misses, pattern drift, AI slop, and scope creep. Use when the user asks to scrub, stranger-review, or clean up changes prior to opening a PR.
 argument-hint: [<base-ref>]
 ---
 

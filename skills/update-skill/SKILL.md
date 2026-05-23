@@ -1,5 +1,6 @@
 ---
-description: Reflect on session learnings, update a skill, then open a PR
+name: update-skill
+description: Reflect on session learnings and update a skill so future agents succeed without prior context. Use when the user asks to update or refine a skill, or when this session surfaced dead ends, correct pathways, or coverage gaps worth capturing.
 argument-hint: <skill-name> [context about what was learned]
 ---
 

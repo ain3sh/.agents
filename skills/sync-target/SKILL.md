@@ -1,5 +1,6 @@
 ---
-description: Merge this branch's target (PR base or repo default) into HEAD; resolve conflicts in branch context
+name: sync-target
+description: Merge this branch's target (open PR's base or repo default) into HEAD, resolve conflicts in branch context, push unless held. Use when the user asks to sync, merge main/dev/target into HEAD, or resolve merge conflicts.
 argument-hint: [--no-push] [--full-scope] [<target-branch>]
 ---
 

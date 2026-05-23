@@ -8,7 +8,7 @@ user-invocable: false
 
 ## 0. When this skill fires (auto-activation)
 
-Mandatory re-read **end-to-end** before any of: opening a PR (`gh pr create`, `/open-pr`, `/split-prs`); editing or refreshing a PR body/title; producing a draft for the user to paste manually. "I remember the structure" is not sufficient — load the skill every time.
+Mandatory re-read **end-to-end** before any of: opening a PR (`gh pr create`, `/open-pr`, `/split-pr`); editing or refreshing a PR body/title; producing a draft for the user to paste manually. "I remember the structure" is not sufficient — load the skill every time.
 
 **Pre-flight ritual.** Before the first `gh` call, emit this checklist in chat:
 
@@ -395,4 +395,4 @@ Only runs if Phase 1 identified updates. The result should read as one authored 
    gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f body="$(cat /tmp/pr-updated-body.md)"
    ```
 
-**Bar**: a reviewer reading the current description would get a wrong or incomplete picture. Don't rewrite for marginal phrasing wins. **Don't skip the refresh** because the user didn't ask — any `git push` onto a branch with an open PR triggers Phase 1, and `/open-pr`, `/split-prs`, `/address-review`, `quality-ship` run it as part of normal completion.
+**Bar**: a reviewer reading the current description would get a wrong or incomplete picture. Don't rewrite for marginal phrasing wins. **Don't skip the refresh** because the user didn't ask — any `git push` onto a branch with an open PR triggers Phase 1, and `/open-pr`, `/split-pr`, `/address-review`, `quality-ship` run it as part of normal completion.
