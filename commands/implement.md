@@ -3,7 +3,7 @@ description: Implement a Linear ticket -- explore, plan, spec, then code
 argument-hint: <TICKET-ID or pasted ticket content>
 ---
 
-Load skills: **linear-cli**, **worktree-setup**, **quality-ship**. Bug-fix tickets also load: **root-cause-finder**, **step-through**, **consolidate-test-suites**.
+Load skills: **linear-cli**, **worktree-setup**, **quality-ship**. Bug-fix tickets also load: **root-cause-analysis**, **step-through**, **consolidate-test-suites**.
 
 ## Todo cadence (non-optional)
 
@@ -41,11 +41,11 @@ Fire `TodoWrite` in parallel with the first tool call of each phase.
 
 ### Bug-fix tickets: root-cause analysis before proposing a fix
 
-When the ticket describes a bug, apply the **root-cause-finder** methodology before moving to Step 3:
+When the ticket describes a bug, apply the **root-cause-analysis** methodology before moving to Step 3:
 
 1. **Reproduce**: Identify or write a minimal repro (test case, script, or manual steps) that demonstrates the failure on the current base branch. If reproduction fails, revisit exploration -- a bug you can't trigger is a bug you don't yet understand.
 
-2. **Trace root cause**: Do not stop at the first error. Follow the root-cause-finder workflow:
+2. **Trace root cause**: Do not stop at the first error. Follow the root-cause-analysis workflow:
    - State the expected behavior and invariant in plain language.
    - Trace the causal chain from intended action to observed effect.
    - Ask whether the request or mutation should have happened at all.

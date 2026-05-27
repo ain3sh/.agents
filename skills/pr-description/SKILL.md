@@ -240,7 +240,7 @@ If no notes file exists, this section does not appear.
 **Trace**: <repro path, symptoms, investigation; cite artifacts pulled (Sentry IDs, log queries, bug reports)>
 **Root cause**: <first unintended side effect — not the downstream error; name the broken invariant>
 **Fix path**: <why this addresses the cause, not the symptom; the rejected symptom-level fix>
-**Why this layer**: <if the fix isn't at the symptom's layer, justify; cite root-cause-finder if it shaped the call>
+**Why this layer**: <if the fix isn't at the symptom's layer, justify; cite root-cause-analysis if it shaped the call>
 
 </details>
 ```
