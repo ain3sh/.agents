@@ -576,10 +576,7 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
 
     cmd = [
         coderabbit_cmd,
-        "--prompt-only",
-        "--no-color",
-        "--cwd",
-        str(repo_root_path),
+        "--agent",
         "--type",
         config.review_type,
     ]
