@@ -127,6 +127,8 @@ def _run(cmd: list[str], cwd: Path | None = None, timeout_sec: float | None = No
         stdout = exc.stdout or ""
         stderr = exc.stderr or ""
         return 124, stdout, stderr, True
+    except OSError as exc:
+        return 127, "", str(exc), False
 
 
 def _run_git(args: list[str], cwd: Path) -> tuple[int, str, str]:
@@ -135,48 +137,70 @@ def _run_git(args: list[str], cwd: Path) -> tuple[int, str, str]:
 
 
 _SHELL_SEPARATORS = {"&&", ";", "|", "||", "&"}
+_PERSISTING_SEPARATORS = {"&&", ";", "||"}
+_SHELL_ASSIGNMENT_RE = re.compile(r"^(?P<name>[A-Za-z_][A-Za-z0-9_]*)=(?P<value>.*)$")
+_SHELL_VAR_RE = re.compile(r"\$(?:\{(?P<braced>[A-Za-z_][A-Za-z0-9_]*)\}|(?P<plain>[A-Za-z_][A-Za-z0-9_]*))")
+PushContext = tuple[tuple[str, ...], dict[str, str]]
 
 
-def _is_git_push_command(command: str) -> bool:
+def _expand_shell_path(raw_dir: str, shell_vars: dict[str, str]) -> Path | None:
+    expanded_dir = _SHELL_VAR_RE.sub(
+        lambda match: shell_vars.get(match.group("braced") or match.group("plain"), match.group(0)),
+        raw_dir,
+    )
+    if "$" in expanded_dir:
+        return None
+    return Path(expanded_dir).expanduser()
+
+
+def _parse_git_push_command(command: str) -> PushContext | None:
     if not command:
-        return False
+        return None
     try:
         tokens = shlex.split(command)
     except ValueError:
-        return re.search(r"(^|\s)git(\s+[^;&|]+)*\s+push(\s|$)", command) is not None
+        if re.search(r"(^|\s)git(\s+[^;&|]+)*\s+push(\s|$)", command):
+            return (), dict(os.environ)
+        return None
 
-    last_sep = -1
-    for i, tok in enumerate(tokens):
-        if tok in _SHELL_SEPARATORS:
-            last_sep = i
-            continue
-        if tok != "git":
-            continue
-
-        # `VAR=... git push` prefixes are common; treat them as part of the command start.
-        prefix = tokens[last_sep + 1 : i]
-        if prefix and not all(re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", p) for p in prefix):
+    shell_vars = dict(os.environ)
+    start = 0
+    for end in range(len(tokens) + 1):
+        if end < len(tokens) and tokens[end] not in _SHELL_SEPARATORS:
             continue
 
-        j = i + 1
-        while j < len(tokens) and tokens[j] not in _SHELL_SEPARATORS:
-            if tokens[j] == "push":
-                return True
-            j += 1
-    return False
+        segment = tokens[start:end]
+        separator = tokens[end] if end < len(tokens) else None
+        start = end + 1
+
+        assignments: dict[str, str] = {}
+        command_index = 0
+        while command_index < len(segment):
+            match = _SHELL_ASSIGNMENT_RE.fullmatch(segment[command_index])
+            if match is None:
+                break
+            assignments[match.group("name")] = match.group("value")
+            command_index += 1
+
+        if command_index == len(segment):
+            if separator is None or separator in _PERSISTING_SEPARATORS:
+                shell_vars.update(assignments)
+            continue
+
+        if segment[command_index] == "git":
+            args = tuple(segment[command_index + 1 :])
+            if "push" in args:
+                return args, shell_vars
+    return None
 
 
-def _extract_git_cwd(command: str, fallback_cwd: str) -> Path:
-    try:
-        tokens = shlex.split(command)
-    except ValueError:
-        return Path(fallback_cwd)
-
-    for i, token in enumerate(tokens):
-        if token == "-C" and i + 1 < len(tokens):
-            return Path(tokens[i + 1]).expanduser()
+def _extract_git_cwd(command: str, fallback_cwd: str, push_context: PushContext) -> Path | None:
+    args, shell_vars = push_context
+    for i, token in enumerate(args):
+        if token == "-C" and i + 1 < len(args):
+            return _expand_shell_path(args[i + 1], shell_vars)
         if token.startswith("-C") and len(token) > 2:
-            return Path(token[2:]).expanduser()
+            return _expand_shell_path(token[2:], shell_vars)
 
     # Best-effort: `(cd /path && git push)` style commands.
     m = re.search(
@@ -187,7 +211,7 @@ def _extract_git_cwd(command: str, fallback_cwd: str) -> Path:
         raw_dir = m.group("dir").strip()
         if (raw_dir.startswith("\"") and raw_dir.endswith("\"")) or (raw_dir.startswith("'") and raw_dir.endswith("'")):
             raw_dir = raw_dir[1:-1]
-        return Path(raw_dir).expanduser()
+        return _expand_shell_path(raw_dir, shell_vars)
 
     return Path(fallback_cwd)
 
@@ -533,7 +557,8 @@ def _store_cache(path: Path, entry: CacheEntry) -> None:
 
 def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
     command = str(hook_input.tool_input.get("command", ""))
-    if not _is_git_push_command(command):
+    push_context = _parse_git_push_command(command)
+    if push_context is None:
         exit(hook_event_name=HOOK_EVENT_NAME)
 
     coderabbit_bin = _resolve_coderabbit_binary()
@@ -545,7 +570,13 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
         )
     coderabbit_cmd = coderabbit_bin
 
-    git_cwd = _extract_git_cwd(command, hook_input.cwd)
+    git_cwd = _extract_git_cwd(command, hook_input.cwd, push_context)
+    if git_cwd is None:
+        exit(
+            decision="deny",
+            reason="[coderabbit] Could not resolve the repository path used by `git push`; use a literal path or assign shell path variables in the same command.",
+            hook_event_name=HOOK_EVENT_NAME,
+        )
     repo_root = _get_repo_root(git_cwd)
     if repo_root is None:
         exit(hook_event_name=HOOK_EVENT_NAME)
