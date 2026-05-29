@@ -90,7 +90,14 @@ Additional mitigations when concurrent droid activity is likely:
 
 In monorepos with `turbo.json`, **always** use `turbo run <task> --filter=<package>` instead of direct tool invocation for **all** checks: `format`, `lint`, `knip`, `typecheck`, and `test`. Direct invocation misses workspace-level configuration (path aliases, package-scoped configs) and runs against the entire repo unnecessarily.
 
-In monorepos without turbo, scope validators to the changed packages. Use `git diff --name-only` against the base branch to identify affected packages, then run checks from within those package directories.
+In monorepos without turbo, scope validators to the changed packages by **run scope**, not output filtering. Use `git diff --name-only` against the base branch to identify affected packages, then constrain execution to them:
+
+- **npm**: `npm run <task> --workspace=<pkg>` (or `-w <pkg>`). Do **not** use `--filter` — npm's `--filter` only narrows reporter output while still executing every workspace, which causes pointlessly slow runs.
+- **pnpm**: `pnpm --filter <pkg> run <task>` (pnpm `--filter` *does* scope the run).
+- **yarn**: `yarn workspace <pkg> <task>`.
+- **Fallback**: `cd` into the package directory and run the check there.
+
+The rule: pick the flag that limits *what executes* to the changed packages, not one that merely filters the logs of a full-repo run.
 
 ## Commit
 
