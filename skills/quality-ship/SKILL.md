@@ -39,15 +39,15 @@ Detect the project's tooling from config files at the repo root, then run each a
 
 ### Fix the cause, don't suppress the validator
 
-A failing validator is signal, not noise. The fix is almost **never** to silence it — suppressing it just hides a real problem and ships it. Treat the following as last-resort escape hatches that require an explicit, written justification (and ideally user sign-off), not a default move:
+A failing validator is signal: assume it's right and fix the underlying code — remove the dead export knip found, narrow the type instead of casting, handle the swallowed error. Silencing it just ships the problem.
 
-- `eslint-disable` / `eslint-disable-next-line` (or per-rule overrides in config)
-- adding entries to knip's `ignore` / `ignoreDependencies`
-- `// @ts-ignore`, `// @ts-expect-error`, or loosening `tsconfig` strictness
-- `# noqa`, `# type: ignore`, vulture whitelists, or `# pragma: no cover`
-- skipping/`.only`-ing tests, or marking them `xfail`/`skip` to get green
+These escape hatches are last resorts, not default moves — reach for one only when the rule is a genuine false positive on that specific line, then scope it as narrowly as possible with a comment justifying *why* it's safe:
 
-If a validator flags something, assume it's right and fix the underlying code: remove the dead export knip found, narrow the type instead of casting, handle the swallowed error, etc. Reach for suppression only when the rule is genuinely a false positive for that specific line — and when you do, leave a comment explaining *why* it's safe, scoped as narrowly as possible.
+- `eslint-disable[-next-line]` or per-rule config overrides
+- knip `ignore` / `ignoreDependencies` entries
+- `// @ts-ignore`, `// @ts-expect-error`, looser `tsconfig` strictness
+- `# noqa`, `# type: ignore`, vulture whitelists, `# pragma: no cover`
+- skipping / `.only` / `xfail` on tests to force green
 
 **Mandatory gate -- before committing, emit a checklist covering the worktree pre-check and every row in the table above:**
 
@@ -102,14 +102,12 @@ Additional mitigations when concurrent droid activity is likely:
 
 In monorepos with `turbo.json`, **always** use `turbo run <task> --filter=<package>` instead of direct tool invocation for **all** checks: `format`, `lint`, `knip`, `typecheck`, and `test`. Direct invocation misses workspace-level configuration (path aliases, package-scoped configs) and runs against the entire repo unnecessarily.
 
-In monorepos without turbo, scope validators to the changed packages by **run scope**, not output filtering. Use `git diff --name-only` against the base branch to identify affected packages, then constrain execution to them:
+In monorepos without turbo, scope validators by **run scope**, not output filtering — pick the flag that limits *what executes*, not one that just filters logs of a full-repo run. Use `git diff --name-only` against the base to find affected packages, then:
 
-- **npm**: `npm run <task> --workspace=<pkg>` (or `-w <pkg>`). Do **not** use `--filter` — npm's `--filter` only narrows reporter output while still executing every workspace, which causes pointlessly slow runs.
+- **npm**: `npm run <task> --workspace=<pkg>` (`-w`). Not `--filter` — npm's `--filter` only narrows reporter output while still running every workspace (pointlessly slow).
 - **pnpm**: `pnpm --filter <pkg> run <task>` (pnpm `--filter` *does* scope the run).
 - **yarn**: `yarn workspace <pkg> <task>`.
-- **Fallback**: `cd` into the package directory and run the check there.
-
-The rule: pick the flag that limits *what executes* to the changed packages, not one that merely filters the logs of a full-repo run.
+- **Fallback**: `cd` into the package dir and run there.
 
 ## Commit
 
