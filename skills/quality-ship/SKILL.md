@@ -73,9 +73,12 @@ For any PR touching JS/TS files, run `slop-scan delta <base-ref> <head-ref> --fo
 
 For any PR touching a React codebase (signal: `react`/`react-dom`/`next`/`@remix-run/*` in `package.json`), run `npx -y react-doctor@latest . --diff <base-ref> --verbose` and triage alongside the AI-slop output. Different axes: slop-scan flags structural noise, react-doctor flags concrete React correctness/perf bugs (effect chains, derived state, fetch-in-effect, missing Suspense around `useSearchParams`, server-fn input validation, etc.). See the **react-doctor** skill for category-gated triage policy, false-positive handling, and config. New errors are blocking; warnings are blocking when the category is `security`, `correctness`, `state-and-effects`, or `server` -- advisory for `design`.
 
-### Serial test execution
+### Test scoping: package scope is NOT enough
 
-Default to serial workers — no pool startup cost on subset runs, no OOM when droids share a host. Select the subset with positional paths (all runners); Jest also has `--findRelatedTests` for import-graph-aware selection.
+Tests have **two** scope axes and you need both. The package filter (`--workspace` / turbo `--filter`) picks *which suite*; it does **not** narrow *which tests* — `run test` on a package still executes that package's entire suite (wiki, unrelated parsers, everything). Running the whole suite to validate a small diff is the mistake: slow, noisy, irrelevant. Always append a changed-file subset.
+
+- **Subset (mandatory)**: positional test paths (all runners), or Jest `--findRelatedTests <changed src files>` for import-graph-aware selection. Derive paths from `git diff --name-only` vs the base.
+- **Serial workers (default)**: no pool startup cost on subset runs, no OOM when droids share a host.
 
 | Runner | Serial flag |
 |--------|-------------|
@@ -84,13 +87,15 @@ Default to serial workers — no pool startup cost on subset runs, no OOM when d
 | Playwright | `--workers=1` |
 | pytest + xdist | `-p no:xdist` |
 
-Forward flags past the script/task boundary with `--`:
+Forward flags + paths past the script/task boundary with `--`:
 
 ```bash
 npm test -- --runInBand --findRelatedTests src/foo.ts
 pnpm vitest run --no-file-parallelism src/foo.test.ts
-turbo run test --filter=@app/web -- --runInBand
+turbo run test --filter=@app/web -- --runInBand src/foo.test.ts
 ```
+
+Full-suite runs are CI's job, not a per-diff validation step. Run the whole package suite only when the change is genuinely cross-cutting (shared util, config, types touched by most of the package).
 
 Additional mitigations when concurrent droid activity is likely:
 
@@ -100,7 +105,7 @@ Additional mitigations when concurrent droid activity is likely:
 
 ### Monorepo scoping: use turbo, not direct invocation
 
-In monorepos with `turbo.json`, **always** use `turbo run <task> --filter=<package>` instead of direct tool invocation for **all** checks: `format`, `lint`, `knip`, `typecheck`, and `test`. Direct invocation misses workspace-level configuration (path aliases, package-scoped configs) and runs against the entire repo unnecessarily.
+In monorepos with `turbo.json`, **always** use `turbo run <task> --filter=<package>` instead of direct tool invocation for **all** checks: `format`, `lint`, `knip`, `typecheck`, and `test`. Direct invocation misses workspace-level configuration (path aliases, package-scoped configs) and runs against the entire repo unnecessarily. For `test`, the `--filter` only picks the package — append the changed-file subset after `--` (see Test scoping), or you'll run the package's whole suite.
 
 In monorepos without turbo, scope validators by **run scope**, not output filtering — pick the flag that limits *what executes*, not one that just filters logs of a full-repo run. Use `git diff --name-only` against the base to find affected packages, then:
 
