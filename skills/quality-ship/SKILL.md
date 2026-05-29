@@ -37,6 +37,18 @@ Detect the project's tooling from config files at the repo root, then run each a
 - Inspect `package.json` scripts (or `pyproject.toml` / `Makefile` for Python) for canonical commands (`format`, `fix`, `lint`, `knip`, `test`, `typecheck`).
 - Fix any issues found. Re-run until clean.
 
+### Fix the cause, don't suppress the validator
+
+A failing validator is signal, not noise. The fix is almost **never** to silence it — suppressing it just hides a real problem and ships it. Treat the following as last-resort escape hatches that require an explicit, written justification (and ideally user sign-off), not a default move:
+
+- `eslint-disable` / `eslint-disable-next-line` (or per-rule overrides in config)
+- adding entries to knip's `ignore` / `ignoreDependencies`
+- `// @ts-ignore`, `// @ts-expect-error`, or loosening `tsconfig` strictness
+- `# noqa`, `# type: ignore`, vulture whitelists, or `# pragma: no cover`
+- skipping/`.only`-ing tests, or marking them `xfail`/`skip` to get green
+
+If a validator flags something, assume it's right and fix the underlying code: remove the dead export knip found, narrow the type instead of casting, handle the swallowed error, etc. Reach for suppression only when the rule is genuinely a false positive for that specific line — and when you do, leave a comment explaining *why* it's safe, scoped as narrowly as possible.
+
 **Mandatory gate -- before committing, emit a checklist covering the worktree pre-check and every row in the table above:**
 
 ```
