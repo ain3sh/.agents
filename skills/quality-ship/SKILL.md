@@ -65,6 +65,8 @@ quality-ship checklist:
 
 `evidence` = command run or missing config (validators); detection output + `repair.py` invocation (worktree). Don't commit until every line is filled. CI gates each validator; the worktree row catches repair gaps that surface as `Cannot find module` mid-validator. When detection emits `WORKTREE`, `worktree: repaired` is the only valid tag -- not "looks fine, skipped".
 
+`no signal` means the tool is **genuinely not configured** in the repo — not that a convenient scoped script is missing. The absence of a pre-wired `knip:cli` task is never a reason to skip knip; scope it yourself with the tool's own flags (`knip --workspace <pkg>`, `eslint <paths>`, `tsc -p <pkg>`, `vulture <paths>`) or by running from the package dir. Skipping a configured validator because no scoped task exists is a bug, not a pass.
+
 ### AI-slop detector (deterministic)
 
 For any PR touching JS/TS files, run `slop-scan delta <base-ref> <head-ref> --format json` and triage the findings alongside lint/typecheck output. It catches the 15 deterministic slop patterns (swallowed errors, placeholder comments, generic `Record<string, unknown>` casts, pass-through wrappers, duplicate signatures, etc.) that lint and typecheck miss. Treat any new violations as blocking — do not commit slop.
