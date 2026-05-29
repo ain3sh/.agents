@@ -101,7 +101,7 @@ if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1
             .cwd // "",
             .model.reasoning_effort // "",
             .context.display // "",
-            (.context.last_call_input_tokens // "" | tostring),
+            (.context.last_call_compaction_tokens // "" | tostring),
             (.context.percentage // "" | tostring)
         ][]' <<< "$input" 2>/dev/null
     )
