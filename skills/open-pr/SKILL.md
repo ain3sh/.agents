@@ -25,7 +25,7 @@ Fire `TodoWrite` in parallel with the first tool call of each phase.
 
 Follow the **ticket-branch** skill:
 - If `$ARGUMENTS` contains a ticket ID, resolve it. Otherwise create one inline (ticket-branch handles both paths).
-- Check out a new branch off the default remote branch.
+- Check out a new branch off the default remote branch. Ensure idiomatic name and fix if current local branch name isn't correct.
 
 ## 2. Apply Changes
 
