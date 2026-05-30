@@ -77,7 +77,9 @@ For any PR touching a React codebase (signal: `react`/`react-dom`/`next`/`@remix
 
 ### Test scoping: package scope is NOT enough
 
-Tests have **two** scope axes and you need both. The package filter (`--workspace` / turbo `--filter`) picks *which suite*; it does **not** narrow *which tests* — `run test` on a package still executes that package's entire suite (wiki, unrelated parsers, everything). Running the whole suite to validate a small diff is the mistake: slow, noisy, irrelevant. Always append a changed-file subset.
+**HARD RULE: never run a full test suite to validate a diff. No exceptions without an explicit reason logged in the checklist.** A bare `npm test` / `run test` / `turbo run test` with no path argument is a defect — stop and re-scope before it runs. If you catch yourself about to execute an unscoped suite, that is the bug the user keeps yelling about.
+
+Tests have **two** scope axes and you need both. The package filter (`--workspace` / turbo `--filter`) picks *which suite*; it does **not** narrow *which tests* — `run test` on a package still executes that package's entire suite (wiki, unrelated parsers, everything). Running the whole suite to validate a small diff is the mistake: slow, noisy, irrelevant. **Every test invocation MUST carry a changed-file subset.** No path argument = wrong command.
 
 - **Subset (mandatory)**: positional test paths (all runners), or Jest `--findRelatedTests <changed src files>` for import-graph-aware selection. Derive paths from `git diff --name-only` vs the base.
 - **Serial workers (default)**: no pool startup cost on subset runs, no OOM when droids share a host.
@@ -97,7 +99,7 @@ pnpm vitest run --no-file-parallelism src/foo.test.ts
 turbo run test --filter=@app/web -- --runInBand src/foo.test.ts
 ```
 
-Full-suite runs are CI's job, not a per-diff validation step. Run the whole package suite only when the change is genuinely cross-cutting (shared util, config, types touched by most of the package).
+Full-suite runs are **CI's job, never yours**. The only time you run a whole package suite locally is a genuinely cross-cutting change (shared util, config, or types imported by most of the package) — and when you do, you must say so explicitly in the checklist evidence (`tests: full-suite (reason: <why>)`). Absent that logged justification, a full-suite run is wrong.
 
 Additional mitigations when concurrent droid activity is likely:
 
