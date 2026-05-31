@@ -56,7 +56,7 @@ Already-resolved threads keep their class but get the action `Resolved` in step 
 
 ## 3. Root-Cause Analysis (bug-report items only)
 
-Do not skip to a fix. For every thread classified as **bug-report**, load the **root-cause-finder** skill and walk its workflow against the reviewer's report. If the bug involves multi-actor sequencing, async callbacks, background refreshes, recovery paths, retries, queues, or two pieces of state evolving together, additionally load the **step-through** skill and walk the broken flow before proposing anything.
+Do not skip to a fix. For every thread classified as **bug-report**, load the **root-cause-analysis** skill and walk its workflow against the reviewer's report. If the bug involves multi-actor sequencing, async callbacks, background refreshes, recovery paths, retries, queues, or two pieces of state evolving together, additionally load the **step-through** skill and walk the broken flow before proposing anything.
 
 Output for each bug-report item, verbatim shape:
 
