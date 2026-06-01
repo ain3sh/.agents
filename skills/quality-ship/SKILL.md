@@ -59,6 +59,7 @@ quality-ship checklist:
 - dead-code: <ran | no signal> (evidence)
 - ai-slop:   <ran | no signal> (evidence)
 - react:     <ran | no signal> (evidence)
+- conventions: <applied | no signal> (evidence)
 - typecheck: <ran | no signal> (evidence)
 - tests:     <ran | no signal> (evidence)
 ```
@@ -74,6 +75,10 @@ For any PR touching JS/TS files, run `slop-scan delta <base-ref> <head-ref> --fo
 ### React diagnostics (rules-based)
 
 For any PR touching a React codebase (signal: `react`/`react-dom`/`next`/`@remix-run/*` in `package.json`), run `npx -y react-doctor@latest . --diff <base-ref> --verbose` and triage alongside the AI-slop output. Different axes: slop-scan flags structural noise, react-doctor flags concrete React correctness/perf bugs (effect chains, derived state, fetch-in-effect, missing Suspense around `useSearchParams`, server-fn input validation, etc.). See the **react-doctor** skill for category-gated triage policy, false-positive handling, and config. New errors are blocking; warnings are blocking when the category is `security`, `correctness`, `state-and-effects`, or `server` -- advisory for `design`.
+
+### Repo conventions (documented)
+
+Validators cover mechanics; they're blind to the idioms a repo documents in prose (error handling, file organization, test placement, flags) -- the rules reviewers flag once the gate is green. Follow the **repo-conventions** skill: discover, diff-scope, apply, emit the `conventions:` row. `no signal` only when the repo documents none -- not when reading was inconvenient.
 
 ### Test scoping: package scope is NOT enough
 

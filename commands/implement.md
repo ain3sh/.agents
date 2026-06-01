@@ -3,7 +3,7 @@ description: Implement a Linear ticket -- explore, plan, spec, then code
 argument-hint: <TICKET-ID or pasted ticket content>
 ---
 
-Load skills: **linear-cli**, **worktree-setup**, **quality-ship**. Bug-fix tickets also load: **root-cause-analysis**, **step-through**, **consolidate-test-suites**.
+Load skills: **linear-cli**, **worktree-setup**, **quality-ship**, **repo-conventions**. Bug-fix tickets also load: **root-cause-analysis**, **step-through**, **consolidate-test-suites**.
 
 ## Todo cadence (non-optional)
 
@@ -35,7 +35,7 @@ Fire `TodoWrite` in parallel with the first tool call of each phase.
 - Use search tools (Grep, Glob, codebase_search) to find all relevant code areas.
 - Read the key files: entry points, data models, services, components, tests.
 - Map the current behavior and data flow in the area of change.
-- Identify existing patterns, conventions, and abstractions to follow.
+- Identify existing patterns and abstractions to follow -- from the surrounding code **and** the repo's written standards (follow **repo-conventions**, steps 1-2): surface the docs governing this area so the spec conforms from the start, not retrofitted at the gate.
 - When the ticket names specific flows or commands to reuse, trace each one end-to-end and note exactly where the new feature's behavior diverges.
 - Note tests, types, configs, and documentation that will need updating.
 
@@ -61,7 +61,7 @@ The fix approach in Step 3 should flow directly from the root-cause analysis: ex
 Do **not** take the easiest-but-ugly path. Evaluate the implementation against:
 
 - **Clean architecture**: Proper separation of concerns, single responsibility.
-- **Pattern consistency**: Matches how the rest of the codebase does similar things.
+- **Pattern consistency**: Matches how the rest of the codebase does similar things, and the conventions surfaced in Step 2 -- treat those docs as binding design constraints.
 - **Error handling**: Covers failure modes, provides useful error messages.
 - **Edge cases**: Boundary conditions, empty states, concurrent access.
 - **Testability**: Changes are easy to unit/integration test.
