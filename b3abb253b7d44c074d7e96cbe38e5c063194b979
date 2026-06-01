@@ -1,0 +1,25 @@
+skills/pr-description/SKILL.md
+  279d2fb8d020a800 35,96-99,174-175,262-276
+skills/design-doc/SKILL.md
+  279d2fb8d020a800 51-52,63-69,79-80,167-178,196-207,216-219,238
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.2",
+  "base_commit_sha": "b3abb253b7d44c074d7e96cbe38e5c063194b979",
+  "prompts": {
+    "279d2fb8d020a800": {
+      "agent_id": {
+        "tool": "droid",
+        "id": "e928e2ec-44fd-41a1-8a97-f207da46c859",
+        "model": "almond-05-27"
+      },
+      "human_author": "ain3sh",
+      "messages": [],
+      "total_additions": 62,
+      "total_deletions": 5,
+      "accepted_lines": 62,
+      "overriden_lines": 0
+    }
+  }
+}
