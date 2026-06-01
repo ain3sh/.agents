@@ -48,8 +48,8 @@ Filling top-down keeps prose honest with structure:
 
 1. `<title>`, eyebrow, `h1.title`, `.tagline`, `.meta` strip.
 2. **Optional** `figure.demo` if there's a demo video — see [Embedding video](#embedding-video).
-3. §1 Summary — `.lede` with `.dropcap` + 1 supporting paragraph.
-4. §2 Context — what breaks today, why now.
+3. §1 Summary — `.lede` with `.dropcap` + 1 supporting paragraph (zero-context rules below).
+4. §2 Context — reader primer first, then what breaks today (tickets spelled out), why now.
 5. §3 Goals & non-goals — `.two-col > .panel`.
 6. §4 Proposal — `.pullquote` thesis + `figure.diagram` SVG + prose.
 7. §5 Key decisions — `article.decision` × N. **Usually 60–70% of the doc by length.**
@@ -60,6 +60,13 @@ Filling top-down keeps prose honest with structure:
 
 Skip a section only if it's genuinely empty for this change — don't pad.
 
+**Write for a reader with zero context (review-tested — violating these draws "hard to read, context implicit and out of order" feedback):**
+
+- **§1 Summary lede = 1–2 sentences a completely new reader understands**: the user-visible problem in plain words, then the fix in plain words. No internal vocabulary that only makes sense after §4 ("separate liveness from commit"-style taglines read as meaningless), and never open with a non-goal ("the visual shape is unchanged") — it buries the why.
+- **§2 Context opens with a basics primer** before any deep-dive: define the system being changed and its load-bearing primitives, and define terms the rest of the doc leans on ("monotonic", "idempotent", …) — what they mean *here* and why they matter. Goals/Non-goals must read cleanly using only words the primer introduced.
+- **Spell out every motivating ticket in-doc**: bold `ID — symptom` title, then 2–3 sentences of user-visible failure + mechanism. A bare tracker link is not context; the reader must never need to open Linear to follow the argument.
+- **Order = how a stranger builds context**: problem → primer → mechanism of failure → concrete failures → goals → proposal. When revising a published doc against reviewer feedback, keep it a controlled change — touch only the sections the feedback targets.
+
 ### 5. Iteration loop (mandatory)
 
 Write → capture → inspect → fix:
@@ -68,6 +75,8 @@ Write → capture → inspect → fix:
 node ~/.agents/skills/design-doc/references/screenshot.js <abs-path-to-html>
 # → /tmp/doc-previews/scroll-light-NN.png + hero-dark-v2.png
 ```
+
+Run from a directory whose `node_modules` resolves `playwright` (a repo root that ships it works); from `/tmp` it dies with `ERR_MODULE_NOT_FOUND`.
 
 **Read each PNG with the `Read` tool at `image_quality="high"`.** Fix layout, contrast, and overflow bugs visually before tightening prose. Bugs you will only catch this way:
 - `dl > dd` falling under `dt` instead of into column 2 → the template pins `grid-column: 2`; if you copied a card and removed it, restore it.
@@ -155,6 +164,18 @@ Share: `https://gistpreview.github.io/?<gist-id>`
 
 Update: `gh gist edit <gist-id> <path>/<slug>-design.html`
 
+**Revising an already-published doc** — keep the same gist id and filename so the gistpreview link already shared in PRs/Slack stays valid:
+
+```bash
+# pull the live copy to revise against (strip tags to a text outline if you only need structure)
+gh api gists/<gist-id> --jq '.files["<slug>-design.html"].content' > current.html
+# push: content is too large for -f flags; build {"description": ..., "files": {"<name>": {"content": ...}}}
+# with a short python script, then
+gh api gists/<gist-id> -X PATCH --input /tmp/gist-patch.json
+```
+
+The API path also updates the gist description and handles multi-MB files (a ~2 MB doc with inlined images PATCHes and previews fine).
+
 ### Publishing dead ends (verified failures)
 
 | Endpoint | Status |
@@ -172,6 +193,18 @@ GitHub `user-attachments/assets/...` URLs are **session-gated**: they only resol
 
 The template ships a poster-card pattern (`figure.demo`) that opens the asset in a new tab where the user's GitHub session resolves it. Use that. For embeddable playback, host the file on a CDN (S3, Cloudflare R2) or convert to GIF — or accept the poster card.
 
+## Embedding diagrams (raster)
+
+Default to the template's inline-`<svg>` `figure.diagram` — it inherits both themes via CSS classes. When a polished excalidraw diagram already exists (e.g., built for the PR), embed its renders instead of redrawing, but never hotlink: GitHub `user-attachments` image URLs are session-gated like video and 404 from gistpreview. Inline as base64 `data:` URIs:
+
+1. Render two transparent variants so the diagram inherits the doc's paper/dark background:
+   `excalirender d.excalidraw -o light.png --transparent -s 2` and `… -o dark.png --transparent --dark -s 2`.
+2. Inside `figure.diagram`, swap themes with `<picture>`:
+   `<picture><source srcset="data:image/png;base64,DARK" media="(prefers-color-scheme: dark)"><img src="data:image/png;base64,LIGHT" alt="…"></picture>` + a `<figcaption>`.
+3. Add `figure.diagram img, figure.diagram picture { width: 100%; height: auto; display: block; }` beside the existing `svg` rule.
+4. Author the HTML with placeholder tokens and inject the base64 with a small python pass — don't paste megabyte strings through editor tools.
+5. Size: base64 inflates ~33%; render at the smallest scale that stays crisp and verify both themes with the screenshot loop.
+
 ## Verification checklist
 
 Before declaring done:
@@ -179,6 +212,10 @@ Before declaring done:
 **Facts**
 - [ ] Every cited constant / file path / function signature was verified with `rg` against source.
 - [ ] PR description and code agree on numerics; if not, code wins and the discrepancy is flagged.
+
+**Reader**
+- [ ] §1 lede passes the zero-context test (plain-words problem + fix, no internal jargon, no leading non-goal).
+- [ ] §2 opens with the primer; every motivating ticket is described in-doc — the reader never needs to open the tracker.
 
 **Structure**
 - [ ] All eight standard sections present (or skip is justified).
@@ -198,6 +235,7 @@ Before declaring done:
 - ⚠️ **Don't put the same enumeration in §3 Goals AND §5 Decisions.** Pick the canonical home (usually a decision card) and forward-reference from elsewhere.
 - ⚠️ **Don't remove `.decision dd { grid-column: 2 }`.** Without it, `dd` falls under `dt` instead of into column 2. Most browsers won't warn.
 - ⚠️ **Don't revert the auto-hide TOC** (`nav.toc` → 56px rail expanding to 248px on hover) **to a sticky 220px sidebar.** Content reads worse with the sidebar always present.
+- ⚠️ **Don't hotlink auth-gated assets** (GitHub `user-attachments` images, private CDNs) — they 404 from gistpreview. Inline base64 per [Embedding diagrams (raster)](#embedding-diagrams-raster).
 - ⚠️ **Don't make a secret-gist URL public-shareable** without confirming with the user. The doc may reference internal Linear tickets, employees, or unmerged architecture.
 
 ## References

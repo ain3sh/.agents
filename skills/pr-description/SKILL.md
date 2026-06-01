@@ -32,6 +32,7 @@ The 5 required sections fire on every PR. Conditional sections are a **menu, not
 |---|---|
 | Description, Related Issue, Reviewer Guide, Risk & Impact, Verification | always |
 | Anti-goals one-liner | scope deliberately constrained |
+| Scope map + Out of scope | large or multi-concern diff where a reviewer could ask "why is this bundled?" (long-lived branch carrying merge alignment, plumbing + behavior + tests in one PR) |
 | Implementation Notes | `.agents/specs/<spec>.notes.md` exists |
 | Root Cause Analysis | bug fix |
 | Architecture diagram | structural change (new components, altered flows, changed boundaries) |
@@ -92,9 +93,10 @@ Closes TEAM-123
 
 ### Writing quality
 
-- **Description** stands alone for someone who hasn't seen the ticket; don't restate the title.
-- **Reviewer Guide** is the highest-leverage block. Order files by causal importance (not diff stat); drop the pushback line entirely when there's no live design call (empty prompts read as performative).
-- **Risk & Impact** reflects actual thought about what could go wrong. `N/A` only for typo / comment-only changes.
+- **Description** stands alone for someone who hasn't seen the ticket; don't restate the title. Lead with the user-visible problem in plain words → why the current design can't simply be patched → what the PR does. Never open with internal vocabulary that only makes sense after reading the diff ("separate liveness from commit"-style one-liners draw "this needs a clear WHY" review comments) and never open with a non-goal ("the visual model is unchanged"). For large structural PRs the 2-4 sentence rule relaxes into a short **Why / What this PR does** pair (numbered mechanism steps are fine) plus a one-line net effect. If a design doc exists, link it at the end of the Description ("Full design rationale: [design doc](…)"), not only buried in Related Issue.
+- **Naming**: title/prose terms must not collide with existing product surfaces (e.g., "stabilize transcript rendering" collided with the CLI's actual transcript alt-view → renamed to "stabilize chat rendering"). Use the product-accurate word in prose; reserve module/symbol names for code references.
+- **Reviewer Guide** is the highest-leverage block. Order files by causal importance (not diff stat); drop the pushback line entirely when there's no live design call (empty prompts read as performative). When the diff contains intentional behavior changes that could read as drive-by edits or merge noise, add a **"Deliberate behavior changes (not merge noise):"** list — one line per change stating why the core change requires it.
+- **Risk & Impact** reflects actual thought about what could go wrong. `N/A` only for typo / comment-only changes. For higher-risk PRs follow the risk bullets with a **"How risk is contained"** list (test counts, e2e matrix, before/after recordings, "no persistence/protocol change", single-revert restorability). Never claim a mitigation the diff doesn't contain — no "gated behind a flag" unless the flag exists in this PR; future rollout intent goes in Migration & Rollout, clearly marked as a plan.
 - **Verification** is outcome-first; each block answers one reviewer question, and behavior-verified items tie back to listed risks so the two sections check each other. For enumerable behavioral changes use a `| Scenario | Before | After |` table — the "unchanged" rows show what you deliberately preserved.
 - **Length** ~250-450 words baseline. Crossing 600 without an RCA / Architecture / Migration / Implementation Notes block in play usually means restating the diff — trim.
 - **Voice** present-tense, indicative, third-person on the code ("This PR adds…", not "I added…"). First-person dates immediately.
@@ -168,6 +170,8 @@ Screenshots, short repro videos, before/after outputs, and small log snippets th
 ### Architecture diagrams (dark-mode PNGs via excalirender)
 
 When the PR adds/alters components, flows, service boundaries, integration points, or module structure, **draw it**. If you find yourself describing a new flow across more than two prose sentences of the Description, that's the signal.
+
+**Quality bar — a diagram must carry information the prose can't.** Generic box-and-arrow renderings of the section headings get called out by reviewers as net-zero. What earns its place: real symbol/file names in the boxes, the data passed labeled on each arrow, and — for behavior changes — a concrete before/after timeline showing the old failure mode vs the new invariant across renders/requests, with example rows. After rendering, `Read` the PNG and check it: excalirender glyphs run wider than naive width estimates, so size boxes/label gaps generously and re-render until nothing overflows or collides.
 
 **Non-negotiables**: render with `excalirender ... -o /tmp/diagram.png --dark -s 2` (bare editable-links don't embed and reviewers don't click); upload via `gh-attach` so the PNG lives at `user-attachments.githubusercontent.com` (never commit PNGs, never use `raw.githubusercontent.com`); skip `--dark` only when the user explicitly asks for light.
 
@@ -254,6 +258,21 @@ One-liner under Description; prevents drive-by "while you're here…" comments:
 ```
 
 Stack multiples as sub-bullets. If every PR has anti-goals, the scope was never honest to begin with.
+
+### Scope map — large or multi-concern diffs
+
+When a reviewer could reasonably ask "are unrelated changes bundled into this PR?", add a scope map at the end of the Description. One bullet per bucket: what it covers and why it must ship in this PR; close with an explicit Out of scope line.
+
+```markdown
+### Scope map — what is bundled and why
+
+- **<bucket>** — <files/areas>. <one line: why the core change requires it.>
+- **<bucket>** — …
+
+**Out of scope:** <explicitly excluded work + where it's tracked / when it lands.>
+```
+
+Typical buckets: core change · metadata/plumbing it requires · deliberate behavior changes (cross-link the Reviewer Guide list) · tests/e2e · target-branch merge alignment ("no behavior of its own"). Bullets read better than a table when the "why" runs to a full sentence.
 
 ### Architecture — structural changes
 
