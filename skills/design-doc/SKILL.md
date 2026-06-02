@@ -174,7 +174,7 @@ gh api gists/<gist-id> --jq '.files["<slug>-design.html"].content' > current.htm
 gh api gists/<gist-id> -X PATCH --input /tmp/gist-patch.json
 ```
 
-The API path also updates the gist description and handles multi-MB files (a ~2 MB doc with inlined images PATCHes and previews fine).
+The API path also updates the gist description. **Keep the file under ~1 MB.** The gist *contents* API truncates files past roughly that size: `GET gists/<id>` returns only the first ~1 MB and sets `"truncated": true`, and gistpreview renders through that API — so an oversized doc renders only partway through (the tail sections and footer silently vanish) even though the PATCH succeeded and the source is intact. A PATCH that bloats the file past the limit therefore *breaks* the preview without any error. After any PATCH, verify: `gh api gists/<id> --jq '.files["<name>"].truncated'` must be `false`. Almost always the bloat is inlined base64 images — see [Embedding diagrams (raster)](#embedding-diagrams-raster) for the SVG-not-PNG fix.
 
 ### Publishing dead ends (verified failures)
 
@@ -197,13 +197,15 @@ The template ships a poster-card pattern (`figure.demo`) that opens the asset in
 
 Default to the template's inline-`<svg>` `figure.diagram` — it inherits both themes via CSS classes. When a polished excalidraw diagram already exists (e.g., built for the PR), embed its renders instead of redrawing, but never hotlink: GitHub `user-attachments` image URLs are session-gated like video and 404 from gistpreview. Inline as base64 `data:` URIs:
 
-1. Render two transparent variants so the diagram inherits the doc's paper/dark background:
-   `excalirender d.excalidraw -o light.png --transparent -s 2` and `… -o dark.png --transparent --dark -s 2`.
-2. Inside `figure.diagram`, swap themes with `<picture>`:
-   `<picture><source srcset="data:image/png;base64,DARK" media="(prefers-color-scheme: dark)"><img src="data:image/png;base64,LIGHT" alt="…"></picture>` + a `<figcaption>`.
+⚠️ **Render diagrams to SVG, not PNG.** excalirender emits SVG (`-o name.svg`), and excalidraw vector diagrams are an order of magnitude smaller as SVG than as base64 PNG — typically ~20–40 KB vs ~300–500 KB *each*. Four base64 PNGs at `-s 2` blew one doc past 2 MB, which the gist API truncated and gistpreview rendered only halfway (the SVG re-do landed the same doc at ~290 KB). Reach for PNG only when the source is itself raster (a real screenshot/photo); for excalidraw/vector content, SVG is mandatory.
+
+1. Render two transparent theme variants so the diagram inherits the doc's paper/dark background:
+   `excalirender d.excalidraw -o light.svg --transparent -s 2` and `… -o dark.svg --transparent --dark -s 2`.
+2. Inside `figure.diagram`, swap themes with `<picture>` and base64-`data:image/svg+xml` URIs:
+   `<picture><source srcset="data:image/svg+xml;base64,DARK" media="(prefers-color-scheme: dark)"><img src="data:image/svg+xml;base64,LIGHT" alt="…"></picture>` + a `<figcaption>`.
 3. Add `figure.diagram img, figure.diagram picture { width: 100%; height: auto; display: block; }` beside the existing `svg` rule.
-4. Author the HTML with placeholder tokens and inject the base64 with a small python pass — don't paste megabyte strings through editor tools.
-5. Size: base64 inflates ~33%; render at the smallest scale that stays crisp and verify both themes with the screenshot loop.
+4. Author the HTML with placeholder tokens and inject the base64 with a small python pass — don't paste large strings through editor tools.
+5. After publishing, confirm the gist is not truncated (see [Publishing](#publishing)) and verify both themes with the screenshot loop.
 
 ## Verification checklist
 
@@ -229,6 +231,9 @@ Before declaring done:
 - [ ] `scrollHeight` after Pass 2 is ≤ `scrollHeight` after Pass 1. If it grew, you bloated.
 - [ ] Tagline is `font-style: normal`. (Frequent regression — looks elegant in italic, reads worse.)
 
+**Publish**
+- [ ] After any gist create/PATCH, `gh api gists/<id> --jq '.files["<name>"].truncated'` is `false` (file under ~1 MB), and the live gistpreview renders through the footer — not just the first sections. Diagrams are SVG, not base64 PNG.
+
 ## Dead ends (warnings)
 
 - ⚠️ **Don't render only in light mode.** Half of reviewers use dark; the Playwright dark capture catches contrast bugs in 5 seconds.
@@ -236,6 +241,7 @@ Before declaring done:
 - ⚠️ **Don't remove `.decision dd { grid-column: 2 }`.** Without it, `dd` falls under `dt` instead of into column 2. Most browsers won't warn.
 - ⚠️ **Don't revert the auto-hide TOC** (`nav.toc` → 56px rail expanding to 248px on hover) **to a sticky 220px sidebar.** Content reads worse with the sidebar always present.
 - ⚠️ **Don't hotlink auth-gated assets** (GitHub `user-attachments` images, private CDNs) — they 404 from gistpreview. Inline base64 per [Embedding diagrams (raster)](#embedding-diagrams-raster).
+- ⚠️ **Don't inline excalidraw/vector diagrams as base64 PNG.** A handful at `-s 2` push the doc past the gist API's ~1 MB truncation limit; gistpreview then renders only partway through with no error. Use SVG renders — see [Embedding diagrams (raster)](#embedding-diagrams-raster).
 - ⚠️ **Don't make a secret-gist URL public-shareable** without confirming with the user. The doc may reference internal Linear tickets, employees, or unmerged architecture.
 
 ## References
