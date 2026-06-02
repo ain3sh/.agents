@@ -3,9 +3,9 @@ description: Review a PR -- typed verification + shared criteria, surface findin
 argument-hint: <PR-number-or-URL>
 ---
 
-Load skills: **pr-context**, **linear-cli**, **worktree-setup**, **quality-ship**, **review-voice**.
+Load skills: **pr-context**, **linear-cli**, **worktree-setup**, **quality-ship**, **review-voice**, **repo-conventions**.
 
-**Targeted scope = the PR's changed files** (`gh pr diff <PR> --name-only`, or via **pr-context**). Reviewer's job is judgment (architecture, root cause, broader impact, slop), not re-running what PR CI already covers. When a step below needs setup or a validator (repro in §3, slop-scan in §4), use **worktree-setup**'s `repair.py` (never `verify.py` — its full-workspace manifest demands out-of-scope artifacts) and **quality-ship**'s validator patterns; don't wing it — that derails focus.
+**Targeted scope = the PR's changed files** (`gh pr diff <PR> --name-only`, or via **pr-context**). Reviewer's job is judgment (architecture, root cause, broader impact, convention adherence, slop), not re-running what PR CI already covers. When a step below needs setup or a validator (repro in §3, slop-scan in §4), use **worktree-setup**'s `repair.py` (never `verify.py` — its full-workspace manifest demands out-of-scope artifacts) and **quality-ship**'s validator patterns; don't wing it — that derails focus.
 
 **Workers in flight.** If a subagent is still making progress (output / tool calls visible), **let it finish**. Don't `TaskStop` over resource-usage or token-budget worries — review quality outranks both. Stop only if genuinely stalled or off-task.
 
@@ -57,6 +57,8 @@ If ambiguous, default to **Feature**.
 ## 4. Shared review criteria
 
 See **review-voice** for criteria, severity taxonomy (`critical|warning|opinion|suggestion|nit`), and the mandatory unprompted-opinion sweep.
+
+Plus the repo's **own documented conventions** -- hold the author to the same standard we hold ourselves. Follow the **repo-conventions** skill (discover + diff-scope against the PR's changed files, then read the selected docs) and reconcile the diff against them. Here you **flag, not fix**: fold each deviation into findings at `warning` (a clear written rule -- error handling, file organization, test placement, flags -- broken) or `suggestion` (softer guidance). A repo-provided pre-PR checklist is itself review criteria -- check the diff against each item.
 
 Plus the **AI-slop validator** (JS/TS only):
 
