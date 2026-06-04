@@ -385,16 +385,20 @@ Determine whether the existing description still covers what the PR actually doe
 1. Fetch the current PR body and the new diff:
    ```bash
    PR_NUM=$(gh pr view --json number --jq '.number')
-   gh pr view "$PR_NUM" --json body --jq '.body' > /tmp/pr-current-body.md
+   gh pr view "$PR_NUM" --json title,body > /tmp/pr-current.json
+   jq -r '.body' /tmp/pr-current.json > /tmp/pr-current-body.md
    DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
    git log --oneline "origin/$DEFAULT_BRANCH"..HEAD
    git diff --stat "origin/$DEFAULT_BRANCH"..HEAD
    ```
 
 2. Compare description against actual diff. Check for:
+   - **Title drift** — title no longer matches the complete diff, violates `type(scope): description`, or exceeds 72 characters
    - **Missing scope** — new files/modules/packages not mentioned
    - **Changed intent** — original says "fix X" but diff also refactors Y
-   - **Stale claims** — references to files/approaches/risks no longer applicable
+   - **Stale claims** — references to files/approaches/risks no longer applicable. Search absolute wording (`only`, `exact`, `complete`, `always`, `unchanged`, `lossless`) first: these claims decay fastest after follow-up commits.
+   - **Evidence drift** — recordings, throwaway endpoints, fixtures, or pasted outputs are still described as proving the current behavior after their schema or source changed. Revalidate the artifact or weaken the claim to the narrower observation it actually proves.
+   - **Generated appendix drift** — machine-generated or pasted appendices still match the latest diff. Search stable markers such as `<!-- *_START --> ... <!-- *_END -->`, semantic-diff `<details>` blocks, embedded snippets, diagrams, and generated file lists; regenerate or remove stale blocks rather than updating only the human-written summary.
    - **Verification gaps** — new code paths with no manual repro, no regression test cited, or unupdated **Not tested** note
 
 3. If none apply, stop — no update needed. Do not rewrite for style or phrasing here.
@@ -408,10 +412,16 @@ Only runs if Phase 1 identified updates. The result should read as one authored 
    - Reads as a single narrative; Description still 2-4 sentences even on scope growth (use **Verification > Behavior verified** for added flows, not paragraph-per-commit).
    - Risk & Impact reflects current full scope, not just the delta.
    - Conditional sections re-evaluated — new commits may have crossed a threshold (e.g., >3 consumers → Reverse Dependencies; added a metric → Telemetry).
+   - Every retained evidence claim is either revalidated against the current source or deliberately narrowed to a historically accurate observation.
+   - Every retained generated appendix is regenerated from the current diff. If regeneration adds bulk without helping review, remove the appendix and replace it with a concise Reviewer Guide.
 3. Apply via REST (see §3b — `gh pr edit` is broken):
    ```bash
    REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
    gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f body="$(cat /tmp/pr-updated-body.md)"
+   ```
+   If the title drifted, update it in the same pass:
+   ```bash
+   gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f title="<type(scope): description>"
    ```
 
 **Bar**: a reviewer reading the current description would get a wrong or incomplete picture. Don't rewrite for marginal phrasing wins. **Don't skip the refresh** because the user didn't ask — any `git push` onto a branch with an open PR triggers Phase 1, and `/open-pr`, `/split-pr`, `/address-review`, `quality-ship` run it as part of normal completion.
