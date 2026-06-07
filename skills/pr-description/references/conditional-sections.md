@@ -164,6 +164,23 @@ Source: `.agents/specs/<basename>.notes.md`
 **Type**: stacked (merge in order) | split (atomic — any order)
 ```
 
+### Stack block — `stack`-managed chains
+
+When the branch is part of a `stack`-managed chain (see the **stack-cli** skill), the CLI owns a marker-delimited checklist in the body, rendered inside Related Issue right after the prose lineage line. The two are complementary, not redundant: the lineage line is the human narrative (part N of M, epic, merge order); the stack block is the live state — every PR a `#NNN` link (GitHub auto-links them; branch paths dropped), boxes checked as each lands.
+
+```markdown
+<!-- stack:links:start -->
+
+### Stack
+
+- [x] #101
+- [ ] #102
+- [ ] **#103** 👈 current
+<!-- stack:links:end -->
+```
+
+**Never hand-edit it** — `stack sync` (and `stack merge --apply/--auto`) write it, infer order from PR bases, and preserve landed checkmarks. Your only job: keep the `stack:links:start`…`:end` markers intact when you PATCH the body, then `stack sync` to refresh (refresh.md handles it as generated-appendix drift). Don't hand-author one either: no `stack` chain, no block — a lone lineage line is right.
+
 ---
 
 Catalog row 15 (**Changes since last review**) is refresh-only — its template lives in `refresh.md` (Phase 2, the revision-log carve-out), not here.

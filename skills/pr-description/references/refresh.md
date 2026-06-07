@@ -68,7 +68,7 @@ Check the description against both:
 - **Stale claims** — search absolute wording first (`only`, `exact`, `complete`, `always`, `unchanged`, `lossless`); these decay fastest after follow-up commits.
 - **Verification staleness** — intersect the incremental diff with paths cited in **Behavior verified** / `Sentinel test:`. A verified path touched since its `verified @ <sha>` anchor is unproven: re-verify or downgrade.
 - **Evidence drift** — recordings/fixtures/pasted output still described as proving current behavior after their source changed. Revalidate or narrow to what they still prove.
-- **Generated-appendix drift** — regenerate machine blocks (`<!-- *_START --> … *_END -->`, semantic-diff `<details>`, embedded snippets, diagrams, file lists); don't update only the human summary.
+- **Generated-appendix drift** — regenerate machine blocks (`<!-- *_START --> … *_END -->`, the `stack` CLI's `<!-- stack:links:start … :end -->` chain block, semantic-diff `<details>`, embedded snippets, diagrams, file lists); don't update only the human summary. The stack block is refreshed by `stack sync`, never by hand (conditional-sections.md, Lineage).
 - **Verification gaps** — new code paths with no repro, no regression test, or a stale **Not tested** note.
 
 **Size advisory (non-gating)**: if the full `--stat` shows the PR has outgrown reviewability — mixed concerns, sprawling file count, a diff a reviewer can't hold in their head — surface `split-pr` (decompose) or `retrospective` (scrub).

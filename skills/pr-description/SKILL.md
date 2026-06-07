@@ -57,7 +57,7 @@ The 5 required sections fire on every PR. Conditional sections are a **menu, not
 |---|---|---|
 | 1 | Description | always — inline anti-goals / scope-map / design-doc link as needed |
 | 2 | Architecture | structural change → `references/artifacts.md` (renders right after Description) |
-| 3 | Related Issue (+ PR lineage) | always; lineage line if stacked/split |
+| 3 | Related Issue (+ PR lineage / stack block) | always; lineage line if stacked/split; stack block if `stack`-managed |
 | 4 | Reviewer Guide | always |
 | 5 | Risk & Impact | always |
 | 6 | Contract Delta | DB / REST / GraphQL / protobuf / shared types touched |
