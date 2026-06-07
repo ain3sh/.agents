@@ -11,7 +11,7 @@ Definitions:
 
 - **Invariant**: the rule that must stay true.
 - **Owning layer**: the lowest layer that truly owns and can prove that rule.
-- **Canonical suite**: the normal existing suite for that owning layer.
+- **Canonical suite**: the normal existing suite for that owning layer, including its existing harness, fixtures, and mocks.
 
 Default: reuse an existing canonical suite. Do not create a new standalone regression test unless the exception rule allows it.
 
@@ -24,6 +24,8 @@ Default: reuse an existing canonical suite. Do not create a new standalone regre
 - You MUST NOT add the same invariant in multiple layers unless each layer covers a different failure mode. If you keep more than one layer, name the distinct failure mode for each.
 - You MUST NOT add tests that lock in implementation details unless that implementation unit itself owns the invariant.
 - You MUST NOT create a standalone regression test because it is faster or easier.
+- You MUST reuse the owning layer's existing harness, fixtures, and mocks. Do not build a parallel assertion mechanism for evidence the canonical suite already produces (e.g. scraping a log/state file when the harness already captures the boundary).
+- You MUST ensure each placed test can fail. Assert the specific expected value, not that work merely happened. Gate any absence/negative assertion behind a positive completion signal so it cannot pass vacuously (e.g. an absence check that is trivially true because the awaited work has not run yet).
 - If you cannot name the invariant and the owning layer, STOP. Report that placement is not justified.
 
 ## Required decision order
@@ -53,6 +55,15 @@ Tie-breakers:
 - Never choose end-to-end to compensate for uncertainty.
 - Never choose a higher layer just because it is easier to reproduce there.
 
+### Wiring / discovery invariants (the common two-layer case)
+
+When the rule is "X is derived correctly AND X reaches runtime", it has two genuinely distinct failure modes. Split it deliberately; do not duplicate:
+
+- **unit** owns the derivation: the pure resolver that produces X (e.g. which paths, values, or config are computed).
+- the **highest harness that observes the wired effect** owns the contract that X actually takes effect (reaches the process, model, request, or UI).
+
+Name both failure modes explicitly. Assert each layer on its own evidence — unit on the returned value, the higher layer on the observable effect captured at the boundary — never the same assertion in both.
+
 ## Exception rule for standalone regression tests
 
 A standalone regression-style test is allowed only if ALL are true:
@@ -79,8 +90,9 @@ After placing coverage:
 Before finishing:
 
 1. Run the narrowest relevant test target first.
-2. Run required typecheck, build, or lint steps for touched code.
-3. Report exactly what was run and whether it passed.
+2. Confirm each new or edited test can fail — invert the expectation or break the code path once, see it go red, then revert.
+3. Run required typecheck, build, or lint steps for touched code.
+4. Report exactly what was run and whether it passed.
 
 ## Default output format
 
