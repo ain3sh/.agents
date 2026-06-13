@@ -204,7 +204,13 @@ def main() -> None:
             output={"decision": "block", "reason": reason},
             hook_event_name=HOOK_EVENT_NAME,
         )
-    exit(hook_event_name=HOOK_EVENT_NAME)
+    exit(
+        output={
+            "hookSpecificOutput": {"hookEventName": HOOK_EVENT_NAME},
+            "suppressOutput": True,
+        },
+        hook_event_name=HOOK_EVENT_NAME,
+    )
 
 
 if __name__ == "__main__":
