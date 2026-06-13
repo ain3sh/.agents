@@ -135,6 +135,10 @@ def read_input_as(input_type: type[T]) -> T:
 # Output + Exit
 # ============================================================================
 
+# Events where stdout on exit 0 is injected as context, so a bare
+# {"suppressOutput": true} would leak into the conversation.
+_STDOUT_AS_CONTEXT_EVENTS = frozenset({"UserPromptSubmit", "SessionStart"})
+
 def _emit(
     *,
     text: str | None = None,
@@ -200,7 +204,8 @@ def exit(
         decision: Permission decision ("allow", "deny", "ask")
         reason: Reason for permission decision
         updated_input: Modified tool input (for allow decisions)
-        suppress_output: Suppress tool output in UI (default True for decisions)
+        suppress_output: Hide the hook block from the chat view on exit 0
+            (applies to decisions and silent pass-throughs; default True)
         to_stderr: Send text to stderr instead of stdout
     """
     if decision is not None:
@@ -218,4 +223,17 @@ def exit(
             to_stderr=to_stderr,
             hook_event_name=hook_event_name,
         )
+    elif (
+        code == 0
+        and suppress_output
+        and hook_event_name not in _STDOUT_AS_CONTEXT_EVENTS
+    ):
+        # Silent pass-through: hide the hook block from the chat view.
+        # No permissionDecision here on purpose: pass-throughs defer to the
+        # permission system rather than auto-allowing the tool call.
+        # Non-zero exits and stderr warnings stay visible.
+        data = {"suppressOutput": True}
+        if hook_event_name is not None:
+            data["hookSpecificOutput"] = {"hookEventName": hook_event_name}
+        print(json.dumps(data), flush=True)
     sys.exit(code)
