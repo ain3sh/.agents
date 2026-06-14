@@ -48,8 +48,10 @@ def _extract_base_fields(data: dict[str, Any]) -> dict[str, Any]:
         "hook_event_name": data.get("hookEventName", ""),
     }
 
+
 def _extras_from(data: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:
     return {key: data.get(key, default) for key, default in defaults.items()}
+
 
 def _build_input(
     input_type: type[T],
@@ -58,6 +60,7 @@ def _build_input(
 ) -> T:
     base = _extract_base_fields(data)
     return input_type(**base, **_extras_from(data, defaults))
+
 
 _EVENT_DEFAULTS: dict[HookEventName, tuple[type[BaseHookInput], dict[str, Any]]] = {
     "PreToolUse": (PreToolUseInput, {"tool_name": "", "tool_input": {}}),
@@ -76,6 +79,7 @@ _EVENT_DEFAULTS: dict[HookEventName, tuple[type[BaseHookInput], dict[str, Any]]]
     "SessionStart": (SessionStartInput, {"source": "startup"}),
     "SessionEnd": (SessionEndInput, {"reason": "other"}),
 }
+
 
 def read_input() -> HookInput:
     """Read and parse hook input from stdin.
@@ -111,6 +115,7 @@ def read_input() -> HookInput:
     input_type, defaults = event_config
     return _build_input(input_type, data, defaults)
 
+
 def read_input_as(input_type: type[T]) -> T:
     """Read hook input and validate it matches the expected type.
 
@@ -138,6 +143,7 @@ def read_input_as(input_type: type[T]) -> T:
 # Events where stdout on exit 0 is injected as context, so a bare
 # {"suppressOutput": true} would leak into the conversation.
 _STDOUT_AS_CONTEXT_EVENTS = frozenset({"UserPromptSubmit", "SessionStart"})
+
 
 def _emit(
     *,
@@ -172,7 +178,10 @@ def _emit(
             data = dict(output)
             if hook_event_name is not None:
                 hook_specific = data.get("hookSpecificOutput")
-                if isinstance(hook_specific, dict) and "hookEventName" not in hook_specific:
+                if (
+                    isinstance(hook_specific, dict)
+                    and "hookEventName" not in hook_specific
+                ):
                     hook_specific["hookEventName"] = hook_event_name
         print(json.dumps(data))
     if text is not None:

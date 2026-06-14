@@ -7,6 +7,7 @@ saves the prompt to /tmp/prompt-conflicts/, and instructs the user to
 submit a short slash command instead that will ask the agent to analyze
 the saved prompt for conflicts using the built-in Edit/ApplyPatch tool.
 """
+
 from __future__ import annotations
 import argparse
 import hashlib
@@ -36,6 +37,7 @@ HOOK_EVENT_NAME = "UserPromptSubmit"
 # Configuration
 # ============================================================================
 
+
 @dataclass(slots=True, frozen=True)
 class Config:
     """Runtime configuration loaded from CLI flags."""
@@ -52,7 +54,9 @@ def load_config(argv: list[str]) -> Config:
     parser.add_argument("--config-file", default="", help="Path to TOML config file")
     parser.add_argument("--token-threshold", type=int, default=None)
     parser.add_argument("--cache-dir", default="")
-    parser.add_argument("--skip-prefix", default=None, help="Optional prefix to skip conflict checking")
+    parser.add_argument(
+        "--skip-prefix", default=None, help="Optional prefix to skip conflict checking"
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -72,7 +76,9 @@ def load_config(argv: list[str]) -> Config:
             hook_event_name=HOOK_EVENT_NAME,
         )
 
-    config = get_toml_section(config_data, "hooks", "user_prompt_submit", "conflict_guard")
+    config = get_toml_section(
+        config_data, "hooks", "user_prompt_submit", "conflict_guard"
+    )
 
     token_threshold = (
         args.token_threshold
@@ -99,6 +105,7 @@ def load_config(argv: list[str]) -> Config:
 # ============================================================================
 # Prompt Storage
 # ============================================================================
+
 
 @dataclass(slots=True, frozen=True)
 class StoredPrompt:
@@ -139,6 +146,7 @@ def store_prompt(prompt: str, config: Config, session_id: str) -> StoredPrompt:
 # Main Hook Logic
 # ============================================================================
 
+
 def get_block_reason(
     hook_input: UserPromptSubmitInput,
     config: Config,
@@ -148,7 +156,9 @@ def get_block_reason(
     stripped = prompt.lstrip()
 
     # Optional override: skip conflict checking with special prefix
-    if config.skip_prefix_lower and stripped.lower().startswith(config.skip_prefix_lower):
+    if config.skip_prefix_lower and stripped.lower().startswith(
+        config.skip_prefix_lower
+    ):
         return None
 
     token_count = count_tokens(prompt)

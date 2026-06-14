@@ -15,6 +15,7 @@ import re
 # DROID_ENV_FILE Helpers
 # ============================================================================
 
+
 def get_droid_env_file() -> Path | None:
     """Get the DROID_ENV_FILE path if available.
 
@@ -33,9 +34,9 @@ def get_droid_env_file() -> Path | None:
 
 # Regex for parsing dotenv lines: KEY=value or KEY="value" or KEY='value'
 ENV_LINE_PATTERN = re.compile(
-    r'^([A-Za-z_][A-Za-z0-9_]*)'
-    r'='
-    r'(.*)$'
+    r"^([A-Za-z_][A-Za-z0-9_]*)"
+    r"="
+    r"(.*)$"
 )
 
 
@@ -209,6 +210,7 @@ def activate_venv(venv_path: str | Path) -> bool:
 # ============================================================================
 # Droid-Specific Environment Variables
 # ============================================================================
+
 
 def get_project_dir() -> Path | None:
     """Get the Factory project directory.

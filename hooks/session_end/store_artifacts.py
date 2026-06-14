@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """SessionEnd hook to store session tail and latest todos."""
+
 from __future__ import annotations
 import argparse
 import json
@@ -34,7 +35,12 @@ class Config:
 def _parse_args(argv: list[str]) -> Config:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--config-file", default="", help="Path to TOML config file")
-    parser.add_argument("--tail", type=int, default=None, help="Number of user prompts to include in tail")
+    parser.add_argument(
+        "--tail",
+        type=int,
+        default=None,
+        help="Number of user prompts to include in tail",
+    )
     parser.add_argument(
         "--tail-when",
         default="",
@@ -67,8 +73,12 @@ def _parse_args(argv: list[str]) -> Config:
     config = get_toml_section(config_data, "hooks", "session_end", "store_artifacts")
 
     tail_count = args.tail if args.tail is not None else config.get("tail", 0)
-    tail_when = _parse_reasons(args.tail_when) or _parse_reasons(config.get("tail_when"))
-    todo_when = _parse_reasons(args.todo_when) or _parse_reasons(config.get("todo_when"))
+    tail_when = _parse_reasons(args.tail_when) or _parse_reasons(
+        config.get("tail_when")
+    )
+    todo_when = _parse_reasons(args.todo_when) or _parse_reasons(
+        config.get("todo_when")
+    )
 
     return Config(
         tail_count=int(tail_count),
@@ -104,6 +114,7 @@ def _as_str_dict(value: object) -> dict[str, object] | None:
     if isinstance(value, dict):
         return {str(key): val for key, val in value.items()}
     return None
+
 
 def _stringify_content(content: object) -> str:
     if isinstance(content, str):
@@ -152,6 +163,7 @@ def _extract_role_content(item: dict[str, object]) -> tuple[str | None, str | No
             return role_value, _stringify_content(content_value)
 
     return None, None
+
 
 def _format_tail(messages: list[tuple[str, str]]) -> str:
     lines = ["# Session Tail", ""]
@@ -249,7 +261,9 @@ def _scan_transcript_reverse(
     tail_content: str | None = None
     if capture_tail and tail_count > 0 and user_count > 0 and tail_messages_rev:
         messages = list(reversed(tail_messages_rev))
-        start_index = next((i for i, (role, _) in enumerate(messages) if role == "user"), 0)
+        start_index = next(
+            (i for i, (role, _) in enumerate(messages) if role == "user"), 0
+        )
         messages = messages[start_index:]
         if messages:
             tail_content = _format_tail(messages)

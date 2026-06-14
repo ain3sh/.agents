@@ -34,6 +34,7 @@ Usage in ~/.factory/settings.json:
       }
     }
 """
+
 from __future__ import annotations
 import argparse
 import os
@@ -61,6 +62,7 @@ HOOK_EVENT_NAME = "SessionStart"
 # Configuration
 # ============================================================================
 
+
 def apply_env_vars(env_vars: dict[str, str]) -> int:
     """Persist a set of environment variables into the agent session env file."""
     env_file = get_droid_env_file()
@@ -84,12 +86,24 @@ def apply_env_vars(env_vars: dict[str, str]) -> int:
 # CLI
 # ============================================================================
 
+
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--config-file", default="", help="Path to TOML config file")
-    parser.add_argument("--vars-file", action="append", default=[], help="Path to secrets .env file (repeatable)")
-    parser.add_argument("--strict", action="store_true", help="Fail if a specified file is missing/unreadable")
-    parser.add_argument("--verbose", action="store_true", help="Print which source was used")
+    parser.add_argument(
+        "--vars-file",
+        action="append",
+        default=[],
+        help="Path to secrets .env file (repeatable)",
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Fail if a specified file is missing/unreadable",
+    )
+    parser.add_argument(
+        "--verbose", action="store_true", help="Print which source was used"
+    )
     return parser.parse_args(argv)
 
 
@@ -100,7 +114,9 @@ def _resolve_sources(config: dict[str, object]) -> set[str]:
     return {"startup", "resume", "clear"}
 
 
-def _resolve_secrets_files(config: dict[str, object], args: argparse.Namespace) -> list[Path]:
+def _resolve_secrets_files(
+    config: dict[str, object], args: argparse.Namespace
+) -> list[Path]:
     if args.vars_file:
         return [Path(p).expanduser() for p in args.vars_file]
 
@@ -125,6 +141,7 @@ def _config_env_vars(config: dict[str, object]) -> dict[str, str]:
 # ============================================================================
 # Main Hook Logic
 # ============================================================================
+
 
 def main():
     """Entry point for the hook script."""
@@ -184,7 +201,9 @@ def main():
         if secrets_files:
             sources = ", ".join(str(p) for p in secrets_files)
             if args.vars_file or verbose:
-                print(f"[env_vars] Loaded {count} environment variable(s) from {sources}")
+                print(
+                    f"[env_vars] Loaded {count} environment variable(s) from {sources}"
+                )
         elif verbose:
             print(f"[env_vars] Loaded {count} environment variable(s) from config")
 

@@ -1,4 +1,5 @@
 """Shared helpers for instruction-style hooks."""
+
 from __future__ import annotations
 
 import fnmatch
@@ -101,7 +102,9 @@ def _match_dict(pattern: dict[str, object], value: dict[str, object]) -> bool:
         if isinstance(expected, dict):
             if not isinstance(actual, dict):
                 return False
-            if not _match_dict(cast(dict[str, object], expected), cast(dict[str, object], actual)):
+            if not _match_dict(
+                cast(dict[str, object], expected), cast(dict[str, object], actual)
+            ):
                 return False
             continue
         if actual != expected:
@@ -125,7 +128,11 @@ def match_value(pattern: object | None, value: object) -> bool:
         return _match_dict(pattern_dict, cast(dict[str, object], candidate))
     if not isinstance(pattern, str):
         return False
-    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, sort_keys=True)
+    text = (
+        value
+        if isinstance(value, str)
+        else json.dumps(value, ensure_ascii=False, sort_keys=True)
+    )
     if pattern.startswith("re:"):
         try:
             return re.search(pattern[3:], text) is not None
@@ -140,7 +147,9 @@ def _stringify_value(value: object) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
-def _resolve_placeholder(key: str, context: dict[str, object]) -> tuple[bool, str | None, bool]:
+def _resolve_placeholder(
+    key: str, context: dict[str, object]
+) -> tuple[bool, str | None, bool]:
     path = [part for part in key.split(".") if part]
     if not path:
         return False, None, False
@@ -173,7 +182,9 @@ def _resolve_placeholder(key: str, context: dict[str, object]) -> tuple[bool, st
     return True, _stringify_value(value), ambiguous
 
 
-def interpolate(text: str, context: dict[str, object]) -> tuple[str, set[str], set[str]]:
+def interpolate(
+    text: str, context: dict[str, object]
+) -> tuple[str, set[str], set[str]]:
     missing: set[str] = set()
     ambiguous: set[str] = set()
 

@@ -41,6 +41,7 @@ def is_linux() -> bool:
 # Clipboard Operations
 # ============================================================================
 
+
 def copy_to_clipboard(text: str) -> bool:
     """Copy text to system clipboard.
 

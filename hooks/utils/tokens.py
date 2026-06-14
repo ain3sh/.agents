@@ -39,6 +39,7 @@ def _init_tiktoken() -> bool:
 # Token Counting Functions
 # ============================================================================
 
+
 def count_tokens(text: str) -> int:
     """Count tokens in text using tiktoken o200k_base encoding.
 

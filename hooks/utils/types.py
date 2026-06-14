@@ -46,6 +46,7 @@ BlockDecision = Literal["block"]
 # Base Hook Input
 # ============================================================================
 
+
 @dataclass(slots=True)
 class BaseHookInput:
     """Common fields present in all hook inputs."""
@@ -60,6 +61,7 @@ class BaseHookInput:
 # ============================================================================
 # Event-Specific Hook Inputs
 # ============================================================================
+
 
 @dataclass(slots=True)
 class PreToolUseInput(BaseHookInput):
@@ -172,6 +174,7 @@ HookInput = (
 # ============================================================================
 # Hook Output Types
 # ============================================================================
+
 
 @dataclass(slots=True)
 class HookSpecificOutput:
@@ -303,6 +306,7 @@ class HookOutput:
 # ============================================================================
 # Convenience Type Aliases
 # ============================================================================
+
 
 # For hooks that can block (PostToolUse, UserPromptSubmit, Stop, SubagentStop)
 @dataclass(slots=True, frozen=True)

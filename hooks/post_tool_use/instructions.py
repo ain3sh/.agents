@@ -7,6 +7,7 @@ input/output matchers, then adds the combined instructions as context.
 Trigger: PostToolUse (settings.json matcher should be "*")
 Output: Adds additional context via hookSpecificOutput
 """
+
 from __future__ import annotations
 
 import argparse
@@ -42,6 +43,7 @@ from utils.instructions import (  # type: ignore
 # ============================================================================
 # Configuration
 # ============================================================================
+
 
 @dataclass(slots=True, frozen=True)
 class Matchers:
@@ -96,14 +98,18 @@ def _parse_rules(value: object) -> tuple[Rule, ...]:
         matchers = _parse_matchers(item_dict.get("match"))
         if matchers is None:
             matchers = Matchers(tool="*", input_pattern=None, output_pattern=None)
-        rules.append(Rule(matchers=matchers, include=include, include_text=include_text))
+        rules.append(
+            Rule(matchers=matchers, include=include, include_text=include_text)
+        )
     return tuple(rules)
 
 
 def _parse_args(argv: list[str]) -> Config:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--config-file", default="", help="Path to TOML config file")
-    parser.add_argument("--prompts-dir", default="", help="Base directory for instruction files")
+    parser.add_argument(
+        "--prompts-dir", default="", help="Base directory for instruction files"
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -148,7 +154,10 @@ def _parse_args(argv: list[str]) -> Config:
 # Content loading
 # ============================================================================
 
-def _resolve_includes(config: Config, hook_input: PostToolUseInput) -> tuple[tuple[str, ...], tuple[str, ...]]:
+
+def _resolve_includes(
+    config: Config, hook_input: PostToolUseInput
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
     if not config.rules:
         return (), ()
 
@@ -171,6 +180,7 @@ def _resolve_includes(config: Config, hook_input: PostToolUseInput) -> tuple[tup
 # Main Hook Logic
 # ============================================================================
 
+
 def handle_post_tool_use(hook_input: PostToolUseInput, config: Config) -> str | None:
     include_files, include_text = _resolve_includes(config, hook_input)
     if not include_files and not include_text:
@@ -187,7 +197,10 @@ def handle_post_tool_use(hook_input: PostToolUseInput, config: Config) -> str | 
             warning_parts.append(f"missing={sorted(missing)}")
         if ambiguous:
             warning_parts.append(f"ambiguous={sorted(ambiguous)}")
-        print(f"[post_tool_use] Unresolved placeholders: {', '.join(warning_parts)}", file=sys.stderr)
+        print(
+            f"[post_tool_use] Unresolved placeholders: {', '.join(warning_parts)}",
+            file=sys.stderr,
+        )
     return content
 
 

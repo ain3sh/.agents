@@ -9,6 +9,7 @@ This hook runs before Droid compresses the session. It can be used to:
 When manual compression is triggered without custom instructions, this hook
 loads default instructions from ~/.factory/commands/compress.md.
 """
+
 from __future__ import annotations
 import argparse
 import sys
@@ -34,6 +35,7 @@ HOOK_EVENT_NAME = "PreCompact"
 # ============================================================================
 # Configuration
 # ============================================================================
+
 
 @dataclass(slots=True, frozen=True)
 class Config:
@@ -67,6 +69,7 @@ def _parse_args(argv: list[str]) -> Config:
     path = Path(path_value).expanduser() if isinstance(path_value, str) else None
     return Config(instructions_path=path)
 
+
 def get_default_instructions_path(config: Config) -> Path:
     """Get path to the default compression instructions file.
 
@@ -83,7 +86,9 @@ def get_default_instructions_path(config: Config) -> Path:
             return workspace_path
 
     # Fall back to user-level commands
-    user_path = env_path("FACTORY_USER_DIR", Path.home() / ".factory") or (Path.home() / ".factory")
+    user_path = env_path("FACTORY_USER_DIR", Path.home() / ".factory") or (
+        Path.home() / ".factory"
+    )
     return user_path / "commands" / "compress.md"
 
 

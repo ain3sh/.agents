@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """PreToolUse hook to auto-manage tool permissions."""
+
 from __future__ import annotations
 import argparse
 import re
@@ -27,11 +28,14 @@ HOOK_EVENT_NAME = "PreToolUse"
 # Configuration
 # ============================================================================
 
+
 @dataclass(slots=True, frozen=True)
 class Override:
     decision: str | None
     message: str | None
     match_input: dict[str, str] | None
+
+
 @dataclass(slots=True, frozen=True)
 class Config:
     allow: tuple[str, ...]
@@ -58,6 +62,7 @@ def _parse_tools(value: object) -> tuple[str, ...]:
     parts = (part.strip() for entry in entries for part in entry.split(","))
     return tuple(p for p in parts if p)
 
+
 def _parse_overrides(section: object) -> tuple[tuple[str, Override], ...]:
     valid = {"allow", "ask", "deny"}
     if not isinstance(section, dict):
@@ -73,20 +78,28 @@ def _parse_overrides(section: object) -> tuple[tuple[str, Override], ...]:
         message = raw_dict.get("message")
         match_input_raw = raw_dict.get("match_input")
         match_input = (
-            {k: v for k, v in match_input_raw.items() if isinstance(k, str) and isinstance(v, str)}
-            if isinstance(match_input_raw, dict) else None
+            {
+                k: v
+                for k, v in match_input_raw.items()
+                if isinstance(k, str) and isinstance(v, str)
+            }
+            if isinstance(match_input_raw, dict)
+            else None
         )
         overrides.append(
             (
                 pattern,
                 Override(
-                    decision=decision if isinstance(decision, str) and decision in valid else None,
+                    decision=decision
+                    if isinstance(decision, str) and decision in valid
+                    else None,
                     message=message if isinstance(message, str) else None,
                     match_input=match_input or None,
                 ),
             )
         )
     return tuple(overrides)
+
 
 def _parse_args(argv: list[str]) -> Config:
     parser = argparse.ArgumentParser(add_help=False)
@@ -114,12 +127,21 @@ def _parse_args(argv: list[str]) -> Config:
             )
 
     base_path = ("hooks", "pre_tool_use", "policy")
-    sections = {k: get_toml_section(config_data, *base_path, k) for k in ("allow", "ask", "deny")}
+    sections = {
+        k: get_toml_section(config_data, *base_path, k)
+        for k in ("allow", "ask", "deny")
+    }
     overrides_section = get_toml_section(config_data, *base_path, "overrides")
 
-    tools_from_config = {k: _parse_tools(sections[k].get("tools")) for k in ("allow", "ask", "deny")}
-    tools_from_cli = {k: _parse_tools(getattr(args, k)) for k in ("allow", "ask", "deny")}
-    tools = {k: tools_from_config[k] + tools_from_cli[k] for k in ("allow", "ask", "deny")}
+    tools_from_config = {
+        k: _parse_tools(sections[k].get("tools")) for k in ("allow", "ask", "deny")
+    }
+    tools_from_cli = {
+        k: _parse_tools(getattr(args, k)) for k in ("allow", "ask", "deny")
+    }
+    tools = {
+        k: tools_from_config[k] + tools_from_cli[k] for k in ("allow", "ask", "deny")
+    }
 
     def _msg(section: dict[str, object]) -> str:
         m = section.get("message")
@@ -140,12 +162,13 @@ def _parse_args(argv: list[str]) -> Config:
 # Main hook logic
 # ============================================================================
 
+
 def _match_tool(tool_name: str, pattern: str) -> bool:
     p = pattern.strip()
     if not p:
         return False
 
-    if ":" not in p: # fallback: glob on full tool name
+    if ":" not in p:  # fallback: glob on full tool name
         return fnmatch.fnmatch(tool_name, p)
 
     # parse `server:tool` pattern with wildcard defaults for empty sides
@@ -153,20 +176,25 @@ def _match_tool(tool_name: str, pattern: str) -> bool:
 
     # parse MCP-style tool name: split on 2+ underscores
     parts = re.split(r"_{2,}", tool_name.strip(), maxsplit=2)
-    if parts and parts[0] == "mcp": # strip optional leading `mcp`
+    if parts and parts[0] == "mcp":  # strip optional leading `mcp`
         parts = parts[1:]
     if len(parts) < 2 or not all(parts):
         return False
     server, tool = parts[0], parts[-1]
 
     # server match: wildcard, glob, or substring (flexible server naming)
-    if server_pattern != "*" and not (fnmatch.fnmatch(server, server_pattern) or server_pattern in server):
+    if server_pattern != "*" and not (
+        fnmatch.fnmatch(server, server_pattern) or server_pattern in server
+    ):
         return False
 
     # tool match: glob on the tool portion
     return fnmatch.fnmatch(tool, tool_pattern)
 
-def _match_input(tool_input: dict[str, object], conditions: dict[str, str] | None) -> bool:
+
+def _match_input(
+    tool_input: dict[str, object], conditions: dict[str, str] | None
+) -> bool:
     if conditions is None:
         return True
     return all(
@@ -174,11 +202,16 @@ def _match_input(tool_input: dict[str, object], conditions: dict[str, str] | Non
         for field, pattern in conditions.items()
     )
 
+
 def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
     tool_name = hook_input.tool_name
     override = next(
-        (ov for pat, ov in config.overrides
-         if _match_tool(tool_name, pat) and _match_input(hook_input.tool_input, ov.match_input)),
+        (
+            ov
+            for pat, ov in config.overrides
+            if _match_tool(tool_name, pat)
+            and _match_input(hook_input.tool_input, ov.match_input)
+        ),
         None,
     )
     base_decision = next(
@@ -193,9 +226,7 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
         ),
         None,
     )
-    decision = override.decision\
-        if (override and override.decision)\
-        else base_decision
+    decision = override.decision if (override and override.decision) else base_decision
 
     if decision is None:  # defer to system by default
         exit(hook_event_name=HOOK_EVENT_NAME)
@@ -225,6 +256,7 @@ def main() -> None:
 
     _handle_pre_tool_use(hook_input, _parse_args(sys.argv[1:]))
     exit(hook_event_name=HOOK_EVENT_NAME)
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

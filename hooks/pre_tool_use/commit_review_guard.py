@@ -5,6 +5,7 @@ This hook blocks pushes when the CodeRabbit CLI reports findings.
 It detects findings structurally (file/line/type blocks) instead of relying on
 fragile "no issues found" phrasing.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -39,6 +40,7 @@ HOOK_EVENT_NAME = "PreToolUse"
 # Configuration
 # ============================================================================
 
+
 @dataclass(slots=True, frozen=True)
 class Config:
     max_chars: int
@@ -53,7 +55,12 @@ def _parse_args(argv: list[str]) -> Config:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--config-file", default="", help="Path to TOML config file")
     parser.add_argument("--max-chars", type=int, default=None)
-    parser.add_argument("--type", dest="review_type", choices=["all", "committed", "uncommitted"], default=None)
+    parser.add_argument(
+        "--type",
+        dest="review_type",
+        choices=["all", "committed", "uncommitted"],
+        default=None,
+    )
     parser.add_argument("--timeout-sec", type=float, default=None)
     parser.add_argument("--on-cli-failure", choices=["deny", "allow"], default=None)
     parser.add_argument("--cache-dir", default=None)
@@ -77,11 +84,17 @@ def _parse_args(argv: list[str]) -> Config:
             hook_event_name=HOOK_EVENT_NAME,
         )
 
-    config = get_toml_section(config_data, "hooks", "pre_tool_use", "commit_review_guard")
+    config = get_toml_section(
+        config_data, "hooks", "pre_tool_use", "commit_review_guard"
+    )
     review_type = args.review_type or config.get("type") or "committed"
-    max_chars = args.max_chars if args.max_chars is not None else config.get("max_chars", 6000)
+    max_chars = (
+        args.max_chars if args.max_chars is not None else config.get("max_chars", 6000)
+    )
 
-    raw_timeout = args.timeout_sec if args.timeout_sec is not None else config.get("timeout_sec")
+    raw_timeout = (
+        args.timeout_sec if args.timeout_sec is not None else config.get("timeout_sec")
+    )
     timeout_sec: float | None
     if isinstance(raw_timeout, (int, float)):
         timeout_sec = float(raw_timeout)
@@ -91,13 +104,23 @@ def _parse_args(argv: list[str]) -> Config:
         timeout_sec = None
 
     raw_failure = args.on_cli_failure or config.get("on_cli_failure") or "deny"
-    on_cli_failure: Literal["deny", "allow"] = "allow" if str(raw_failure) == "allow" else "deny"
+    on_cli_failure: Literal["deny", "allow"] = (
+        "allow" if str(raw_failure) == "allow" else "deny"
+    )
 
-    raw_cache_dir = args.cache_dir if args.cache_dir is not None else config.get("cache_dir")
+    raw_cache_dir = (
+        args.cache_dir if args.cache_dir is not None else config.get("cache_dir")
+    )
     cache_dir = Path(str(raw_cache_dir)).expanduser() if raw_cache_dir else None
 
-    raw_ttl = args.cache_ttl_sec if args.cache_ttl_sec is not None else config.get("cache_ttl_sec")
-    cache_ttl_sec = int(raw_ttl) if isinstance(raw_ttl, int) and raw_ttl >= 0 else 6 * 60 * 60
+    raw_ttl = (
+        args.cache_ttl_sec
+        if args.cache_ttl_sec is not None
+        else config.get("cache_ttl_sec")
+    )
+    cache_ttl_sec = (
+        int(raw_ttl) if isinstance(raw_ttl, int) and raw_ttl >= 0 else 6 * 60 * 60
+    )
 
     return Config(
         max_chars=int(max_chars),
@@ -113,7 +136,10 @@ def _parse_args(argv: list[str]) -> Config:
 # Git / CodeRabbit helpers
 # ============================================================================
 
-def _run(cmd: list[str], cwd: Path | None = None, timeout_sec: float | None = None) -> tuple[int, str, str, bool]:
+
+def _run(
+    cmd: list[str], cwd: Path | None = None, timeout_sec: float | None = None
+) -> tuple[int, str, str, bool]:
     try:
         result = subprocess.run(
             cmd,
@@ -139,13 +165,17 @@ def _run_git(args: list[str], cwd: Path) -> tuple[int, str, str]:
 _SHELL_SEPARATORS = {"&&", ";", "|", "||", "&"}
 _PERSISTING_SEPARATORS = {"&&", ";", "||"}
 _SHELL_ASSIGNMENT_RE = re.compile(r"^(?P<name>[A-Za-z_][A-Za-z0-9_]*)=(?P<value>.*)$")
-_SHELL_VAR_RE = re.compile(r"\$(?:\{(?P<braced>[A-Za-z_][A-Za-z0-9_]*)\}|(?P<plain>[A-Za-z_][A-Za-z0-9_]*))")
+_SHELL_VAR_RE = re.compile(
+    r"\$(?:\{(?P<braced>[A-Za-z_][A-Za-z0-9_]*)\}|(?P<plain>[A-Za-z_][A-Za-z0-9_]*))"
+)
 PushContext = tuple[tuple[str, ...], dict[str, str]]
 
 
 def _expand_shell_path(raw_dir: str, shell_vars: dict[str, str]) -> Path | None:
     expanded_dir = _SHELL_VAR_RE.sub(
-        lambda match: shell_vars.get(match.group("braced") or match.group("plain"), match.group(0)),
+        lambda match: shell_vars.get(
+            match.group("braced") or match.group("plain"), match.group(0)
+        ),
         raw_dir,
     )
     if "$" in expanded_dir:
@@ -194,7 +224,9 @@ def _parse_git_push_command(command: str) -> PushContext | None:
     return None
 
 
-def _extract_git_cwd(command: str, fallback_cwd: str, push_context: PushContext) -> Path | None:
+def _extract_git_cwd(
+    command: str, fallback_cwd: str, push_context: PushContext
+) -> Path | None:
     args, shell_vars = push_context
     for i, token in enumerate(args):
         if token == "-C" and i + 1 < len(args):
@@ -209,7 +241,9 @@ def _extract_git_cwd(command: str, fallback_cwd: str, push_context: PushContext)
     )
     if m:
         raw_dir = m.group("dir").strip()
-        if (raw_dir.startswith("\"") and raw_dir.endswith("\"")) or (raw_dir.startswith("'") and raw_dir.endswith("'")):
+        if (raw_dir.startswith('"') and raw_dir.endswith('"')) or (
+            raw_dir.startswith("'") and raw_dir.endswith("'")
+        ):
             raw_dir = raw_dir[1:-1]
         return _expand_shell_path(raw_dir, shell_vars)
 
@@ -259,7 +293,9 @@ def _get_default_base_branch(cwd: Path) -> str | None:
         return out.split("refs/remotes/origin/", 1)[1]
 
     for candidate in ("main", "master", "develop"):
-        code, _, _ = _run_git(["show-ref", "--verify", f"refs/remotes/origin/{candidate}"], cwd=cwd)
+        code, _, _ = _run_git(
+            ["show-ref", "--verify", f"refs/remotes/origin/{candidate}"], cwd=cwd
+        )
         if code == 0:
             return candidate
 
@@ -279,7 +315,9 @@ class Finding:
 
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
-_KV_RE = re.compile(r"^\s*(?P<key>[A-Za-z][A-Za-z0-9 _/-]{0,64})\s*:\s*(?P<value>.*)\s*$")
+_KV_RE = re.compile(
+    r"^\s*(?P<key>[A-Za-z][A-Za-z0-9 _/-]{0,64})\s*:\s*(?P<value>.*)\s*$"
+)
 _SEPARATOR_RE = re.compile(r"^\s*={8,}\s*$")
 
 
@@ -361,7 +399,11 @@ def _clean_file_ref(value: str) -> str:
     v = value.strip()
     if v.startswith("@"):
         v = v[1:]
-    if (v.startswith("\"") and v.endswith("\"")) or (v.startswith("'") and v.endswith("'")) or (v.startswith("`") and v.endswith("`")):
+    if (
+        (v.startswith('"') and v.endswith('"'))
+        or (v.startswith("'") and v.endswith("'"))
+        or (v.startswith("`") and v.endswith("`"))
+    ):
         v = v[1:-1]
     return v.strip()
 
@@ -528,7 +570,13 @@ def _load_cache(path: Path) -> CacheEntry | None:
         return None
     if status not in {"clean", "findings"}:
         return None
-    return CacheEntry(head_sha=head_sha, base_sha=base_sha, review_type=review_type, status=status, timestamp=timestamp)
+    return CacheEntry(
+        head_sha=head_sha,
+        base_sha=base_sha,
+        review_type=review_type,
+        status=status,
+        timestamp=timestamp,
+    )
 
 
 def _store_cache(path: Path, entry: CacheEntry) -> None:
@@ -554,6 +602,7 @@ def _store_cache(path: Path, entry: CacheEntry) -> None:
 # ============================================================================
 # Main hook logic
 # ============================================================================
+
 
 def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
     command = str(hook_input.tool_input.get("command", ""))
@@ -587,7 +636,9 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
     base_branch = None if base_commit else _get_default_base_branch(repo_root_path)
     base_sha = base_commit
     if base_sha is None and base_branch:
-        base_sha = _rev_parse(repo_root_path, f"refs/remotes/origin/{base_branch}") or _rev_parse(repo_root_path, base_branch)
+        base_sha = _rev_parse(
+            repo_root_path, f"refs/remotes/origin/{base_branch}"
+        ) or _rev_parse(repo_root_path, base_branch)
 
     branch = _get_branch(repo_root_path)
     head_sha = _get_head_sha(repo_root_path)
@@ -602,7 +653,12 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
         cached = _load_cache(cache_path)
         if cached and cached.status == "clean":
             fresh = (time.time() - cached.timestamp) <= config.cache_ttl_sec
-            if fresh and cached.review_type == config.review_type and cached.head_sha == head_sha and cached.base_sha == base_sha:
+            if (
+                fresh
+                and cached.review_type == config.review_type
+                and cached.head_sha == head_sha
+                and cached.base_sha == base_sha
+            ):
                 exit(hook_event_name=HOOK_EVENT_NAME)
 
     cmd = [
@@ -616,7 +672,9 @@ def _handle_pre_tool_use(hook_input: PreToolUseInput, config: Config) -> None:
     elif base_branch:
         cmd.extend(["--base", base_branch])
 
-    code, stdout, stderr, timed_out = _run(cmd, cwd=repo_root_path, timeout_sec=config.timeout_sec)
+    code, stdout, stderr, timed_out = _run(
+        cmd, cwd=repo_root_path, timeout_sec=config.timeout_sec
+    )
     combined_output = _normalize_output(stdout, stderr)
 
     if code != 0:

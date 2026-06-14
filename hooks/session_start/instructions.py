@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """SessionStart hook to inject default instructions from a base directory."""
+
 from __future__ import annotations
 
 import argparse
@@ -114,7 +115,9 @@ def _parse_args(argv: list[str]) -> Config:
     )
 
 
-def _resolve_includes(config: Config, source: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+def _resolve_includes(
+    config: Config, source: str
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
     if not config.rules:
         return (), ()
 
@@ -159,7 +162,10 @@ def main():
             warning_parts.append(f"missing={sorted(missing)}")
         if ambiguous:
             warning_parts.append(f"ambiguous={sorted(ambiguous)}")
-        print(f"[session_start] Unresolved placeholders: {', '.join(warning_parts)}", file=sys.stderr)
+        print(
+            f"[session_start] Unresolved placeholders: {', '.join(warning_parts)}",
+            file=sys.stderr,
+        )
     if content:
         exit(
             output=HookOutput(

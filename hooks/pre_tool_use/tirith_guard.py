@@ -4,6 +4,7 @@
 Configurable under [hooks.pre_tool_use.tirith] in droid.toml. Fail-open by
 default so a missing binary / timeout doesn't block legitimate work.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,10 +33,26 @@ TIRITH_EXIT_WARN_ACK = 3
 
 # pipe_to_interpreter false-positive filter: LHS commands that don't fetch/eval remote content.
 DEFAULT_PIPE_TO_INTERPRETER_SAFE_LHS = (
-    "git", "gh", "linear", "jq", "yq",
-    "cat", "echo", "printf",
-    "head", "tail", "awk", "sed", "tr", "cut",
-    "ls", "find", "rg", "grep", "sort", "uniq",
+    "git",
+    "gh",
+    "linear",
+    "jq",
+    "yq",
+    "cat",
+    "echo",
+    "printf",
+    "head",
+    "tail",
+    "awk",
+    "sed",
+    "tr",
+    "cut",
+    "ls",
+    "find",
+    "rg",
+    "grep",
+    "sort",
+    "uniq",
 )
 
 
@@ -51,9 +68,19 @@ def _load_config(path: str) -> dict:
     try:
         return load_toml(path)
     except OSError as exc:
-        exit(1, text=f"[tirith] config error: {exc}", to_stderr=True, hook_event_name=HOOK_EVENT_NAME)
+        exit(
+            1,
+            text=f"[tirith] config error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
     except Exception as exc:
-        exit(1, text=f"[tirith] config parse error: {exc}", to_stderr=True, hook_event_name=HOOK_EVENT_NAME)
+        exit(
+            1,
+            text=f"[tirith] config parse error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
 
 def _tools_set(cfg: dict) -> set[str]:
@@ -81,7 +108,10 @@ def _resolve_tirith() -> str | None:
 
 def _tirith_check(command: str, timeout: int) -> tuple[int, str]:
     """Return (exit_code, detail). exit_code < 0 signals exec failure."""
-    env = {**os.environ, "TIRITH_INTEGRATION": os.environ.get("TIRITH_INTEGRATION", "droid-cli")}
+    env = {
+        **os.environ,
+        "TIRITH_INTEGRATION": os.environ.get("TIRITH_INTEGRATION", "droid-cli"),
+    }
     binary = _resolve_tirith()
     if not binary:
         return -1, "tirith binary not found"
@@ -119,7 +149,13 @@ def _extract_reason(detail: str) -> str:
                 continue
             rule = f.get("rule_id") or f.get("rule") or "?"
             sev = f.get("severity", "?")
-            msg = f.get("title") or f.get("message") or f.get("description") or f.get("reason") or ""
+            msg = (
+                f.get("title")
+                or f.get("message")
+                or f.get("description")
+                or f.get("reason")
+                or ""
+            )
             msg = " ".join(msg.split()) if isinstance(msg, str) else ""
             parts.append(f"[{sev}] {rule}: {msg}")
         if parts:
@@ -210,7 +246,12 @@ def main() -> int | None:
     try:
         hook_input = read_input_as(PreToolUseInput)
     except HookInputError as exc:
-        exit(1, text=f"[tirith] hook input error: {exc}", to_stderr=True, hook_event_name=HOOK_EVENT_NAME)
+        exit(
+            1,
+            text=f"[tirith] hook input error: {exc}",
+            to_stderr=True,
+            hook_event_name=HOOK_EVENT_NAME,
+        )
 
     if hook_input.tool_name not in supported_tools:
         exit(hook_event_name=HOOK_EVENT_NAME)

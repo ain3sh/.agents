@@ -17,6 +17,7 @@ The hook emits only ``hookSpecificOutput.updatedInput`` (no
 ``permissionDecision``), so downstream PreToolUse hooks (policy,
 commit_review_guard, etc.) still run on the rewritten command.
 """
+
 from __future__ import annotations
 
 import argparse
