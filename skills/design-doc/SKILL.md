@@ -94,7 +94,8 @@ It dumps bounding rects + computed styles for the first 12 matches.
 After visual layout is clean:
 
 - **Pass 1 — structural cuts.** If a fact appears in §1 and §5, delete it from §1 and link forward ("full list: D7"). The doc gets *shorter* in this pass, not longer.
-- **Pass 2 — polish.** Read aloud (literally — your inner voice catches bumps). Replace neologisms ("due-times" → "task that came due three times"), kill "actually", strip "we can", tighten cross-references. Each Edit should remove or replace text, rarely add.
+- **Pass 2 — polish.** Read aloud (literally, your inner voice catches bumps). Replace neologisms ("due-times" → "task that came due three times"), kill "actually", strip "we can", tighten cross-references. Each edit should remove or replace text, rarely add.
+- **Pass 2.5 — voice sweep.** Run a quick `voice` craft pass focused on anti-slop, false agency, and filler. Keep edits surgical and preference-light so this reads as an independent quality gate, not a rewrite.
 
 ### 7. Re-verify
 
