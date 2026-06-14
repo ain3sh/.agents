@@ -40,6 +40,7 @@ WT_ROOT=$(git rev-parse --show-toplevel)
 - Don't run `npm install` / `bun install` / `pnpm install` or create a venv in a worktree -- the worktree links to main's instead.
 - Workspace packages must resolve to the **current worktree**, via relative symlinks (so SSHFS and alternate mount paths still work).
 - Workspace discovery reads the **worktree branch's** `package.json`, not main's.
+- A workspace package whose name also matches a real third-party dependency (e.g. an app literally named `storybook` that also depends on the `storybook` npm package) keeps the **real dependency** in its own `node_modules/<name>` slot. Repair/verify treat that self-reference slot specially and never overwrite it with a self-link, so it still needs **no install**.
 
 ## Repair
 
@@ -83,7 +84,7 @@ python3 ~/.agents/skills/worktree-setup/scripts/verify.py
 
 Structural checks:
 
-1. Workspace package entries in `node_modules` are symlinks, not real directories.
+1. Workspace package entries in `node_modules` are symlinks, not real directories (self-reference slots are skipped: when a workspace owns a `node_modules` and a real dependency shares its name, that slot legitimately stays a real dir).
 2. Those symlinks are relative.
 3. Those symlinks resolve under the worktree.
 4. Each workspace package's declared entry points (`main`, `module`, `types`, `exports`) actually exist (catches missing postinstall builds -- empty `dist/` etc.).
@@ -113,7 +114,8 @@ After moving a repo or its worktrees between hosts/paths, fix `.git/worktrees/*/
 | `Cannot find module '@scope/pkg/dist/...'` or workspace package's `dist/` is empty | Postinstall build not mirrored. Repair auto-detects build dirs from entry points; if your build dir isn't referenced there, set `WORKTREE_PACKAGE_BUILD_DIRS=...` and rerun |
 | Verify reports a workspace entry point not found | Same -- rerun repair, or extend `WORKTREE_PACKAGE_BUILD_DIRS` |
 | Missing files under a repo-root generated artifact dir | Add the path to `WORKTREE_MIRROR_DIRS` and rerun repair |
-| Verify reports a workspace package is a real directory, not a symlink | An install materialized it -- `rm -rf` that path inside `node_modules` and rerun repair |
+| Verify reports a workspace package is a real directory, not a symlink | An install materialized it -- `rm -rf` that path inside `node_modules` and rerun repair (exception: a self-reference slot whose name matches a real dependency is supposed to be a real dir -- see next row) |
+| `<app>/node_modules/.bin/<tool>` is a dangling symlink / `spawn ... ENOENT` for a tool whose name equals a workspace package name (e.g. `storybook`) | Name collision: the workspace and a third-party dep share a name, and an older repair clobbered the real package with a `<name> -> ..` self-link. Current repair/verify leave self-reference slots to the mirror, so just rerun repair. If the bad self-link persists, `rm <app>/node_modules/<name>` then rerun repair to restore the real package from main (build it in **main** first if main's copy is also missing) |
 | Install was run inside the worktree | `rm -rf` the worktree's `node_modules` and rerun repair |
 | Works locally, fails through SSHFS or an alternate mount path | Run repair (relative symlinks survive remount) |
 | Sibling worktree also looks broken | Re-run with `WORKTREE_REPAIR_ALL=1` from a quiet shell |

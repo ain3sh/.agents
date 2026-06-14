@@ -75,6 +75,12 @@ def check_workspace_links(wt: Path, pkgs: dict[str, Path]) -> list[tuple[str, st
     for nm in all_node_modules(wt):
         for name in pkgs:
             link = package_link(nm, name)
+            # Self-reference slot (see repair.py rewire): when a workspace owns
+            # this node_modules, the slot named after it may legitimately hold a
+            # real third-party dependency of the same name (or be absent), so it
+            # is not a broken workspace link.
+            if (wt / pkgs[name]).resolve() == nm.parent.resolve():
+                continue
             if not link.exists() and not link.is_symlink():
                 continue
             if not link.is_symlink():

@@ -133,6 +133,14 @@ def rewire(nm: Path, wt: Path, pkgs: dict[str, Path]) -> tuple[int, int]:
         target = wt / rel
         if not target.exists():
             continue
+        # Self-reference slot: this workspace owns `nm`, so its name would link
+        # to its own dir. Never create a `<pkg>/node_modules/<own-name>` self-link.
+        # If a third-party dependency shares the workspace's name (e.g. an app
+        # named "storybook" that also depends on the "storybook" package), the
+        # real dependency lives in this slot and a self-link would clobber it.
+        # Defer to whatever the node_modules mirror placed from main.
+        if target.resolve() == nm.parent.resolve():
+            continue
         if name.startswith("@"):
             scope, pkg = name.split("/", 1)
             scope_dir = nm / scope
