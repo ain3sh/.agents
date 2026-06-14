@@ -5,8 +5,7 @@ Guidance for coding agents working in this repo.
 ## Project shape
 
 Personal, runtime-agnostic **agent-config repo**: the single source of truth for
-skills, slash commands, lifecycle hooks, prompts, and configs, distributed to
-the agents listed in `.skill-lock.json`.
+skills, slash commands, lifecycle hooks, prompts, and configs.
 
 - `skills/<name>/SKILL.md` (+ optional `references/`, `templates/`, `agents/`,
   `data/`) — skill packages. Many are composable **atoms** (`pr-context`,
@@ -58,9 +57,6 @@ push → `gh auth switch --user factory-ain3sh`.
 
 ## Conventions
 
-- **Stay runtime-agnostic.** Skills and commands must work across agents;
-  agent-specific behavior goes in `prompts/overrides/` or `configs/`, never baked
-  into a shared skill.
 - **One concern per skill.** Keep `SKILL.md` a lean entrypoint and push depth
   into `references/*.md` loaded on demand. Atoms compose into commands; see
   `CHEATSHEET.md` for the map.
@@ -74,7 +70,4 @@ push → `gh auth switch --user factory-ain3sh`.
 
 ## Next ideas
 
-- Harness-agnostic, project-local **context system** under `./.agent/context/`
-  (handoff/pickup packets + iteration loops) unifying the `/handoff` and pickup
-  flows. Notes:
-  `2026-01-02-unify-handoff-pickup-loops-via-project-local-context-packets.md`.
+- 
