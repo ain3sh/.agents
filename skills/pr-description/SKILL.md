@@ -106,6 +106,8 @@ Closes TEAM-123   <!-- "Closes" full fix; "Part of" incremental. Add a context c
 
 ## 4. Writing quality
 
+Load **voice** and apply it to every line here (specifics, named actors, no slop); the rules below are the PR-specific additions.
+
 - **Reviewer Guide is the highest-leverage block.** Order files by causal importance, not diff stat. Drop the pushback line when there's no live call — empty prompts read as performative. If intentional behavior changes could look like drive-by edits or merge noise, add a "Deliberate behavior changes (not merge noise):" list, one line each on why the core change requires it.
 - **Description leads with the problem, not the mechanism.** "separate liveness from commit"-style openers draw "needs a clear WHY" comments; a non-goal opener ("the visual model is unchanged") buries the lede.
 - **Naming**: prose terms must not collide with existing product surfaces (e.g., "transcript rendering" already meant the CLI's alt-view → use "chat rendering"). Reserve module/symbol names for code references.

@@ -3,7 +3,7 @@ description: Post a reviewed PR's findings to GitHub -- threaded line comments +
 argument-hint: [<PR-number-or-URL>]
 ---
 
-Load skills: **pr-context**.
+Load skills: **pr-context**, **voice**.
 
 The posting half of the review workflow. Findings come from an upstream `/review-pr` (typical) or fresh paste.
 
@@ -15,7 +15,7 @@ Use `REPO` and `HEAD_SHA` from context if present (typical post-`/review-pr`); o
 
 In priority: the approved list from the current chat (`/review-pr` just completed) or pasted inline.
 
-Each finding: severity (`critical|warning|opinion|suggestion|nit`), file path, line(s), body prose, optionally a replacement snippet. Use `AskUser` once if anything's missing or ambiguous.
+Each finding: severity (one of the **voice** tiers), file path, line(s), body prose, optionally a replacement snippet. Use `AskUser` once if anything's missing or ambiguous.
 
 ## 3. Per-Finding: Plain Comment vs. Suggestion Block
 

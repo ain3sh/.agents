@@ -109,6 +109,8 @@ For `Fix` rows, draft the reply text inline under the table row alongside the lo
 
 For `Respond`, `Ack`, `Resolved`, `Investigate` rows, draft the reply text inline under the table row (no block needed).
 
+Write every reply draft with the **voice** skill: specifics and named actors, no slop, and treat declines and chosen-alternative rationale as `opinion`-grade pushback (state the position and the *why*).
+
 **Hedging is forbidden in approach blocks.** Words like "likely", "probably", "should fix", "might be", "I think", "we may need to" indicate the RCA is incomplete. If you reach for them, demote the **locus** to `Investigate`; every thread it would have addressed becomes an `Investigate` row stating what's unknown and what you'd need to read or run to know it. The user cannot approve a fix you yourself are unsure of.
 
 **A valid bug report does not validate the fix the reporter suggested.** The reviewer found a symptom; you did the RCA; you choose the patch. When **any thread under a locus** includes a specific fix proposal -- a `suggestion` block, an inline patch, "you should X", "what about Y", "wrap this in...", or any concrete code shape -- extend the locus's Approach block with three extra fields *before* `Verify`:

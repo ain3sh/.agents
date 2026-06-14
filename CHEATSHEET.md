@@ -25,6 +25,7 @@
 | **quality-ship** | Quality checks, commit, push. Not PR creation. | `/open-pr`, `/update-skill`, `/split-pr`, `/address-review` |
 | **pr-description** | Diff analysis, conventional-commit title, 4-section PR body | `/open-pr`, `/update-skill`, `/split-pr` |
 | **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review`, `/demo-pr` |
+| **voice** | Craft (specifics, named actors, anti-slop) for any authored/reviewed content + the canonical review severity taxonomy | `/review-pr`, `/post-review`, pr-description, linear-cli |
 
 ## Installed Tooling
 
