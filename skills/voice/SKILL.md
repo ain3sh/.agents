@@ -1,12 +1,12 @@
 ---
 name: voice
-description: Craft and voice for anything a droid writes or reviews -- PR descriptions, tickets, commit messages, docs, and code-review findings: cut AI slop, write with specifics and named actors, and (when reviewing) push back under an opinion license with a shared severity taxonomy. Background knowledge for authoring and review flows -- not invoked directly.
+description: Required craft and judgment gate for user-visible prose and reviews. Load for PR descriptions, tickets, commit messages, docs, reviewer replies, and review findings. Cut AI slop, name actors, write specific claims, and surface review opinions with the canonical severity taxonomy. Background knowledge for authoring and review flows; not user-invocable.
 user-invocable: false
 ---
 
 # Voice
 
-How a droid should sound when it writes or critiques: specific, direct, and willing to hold a position. The **Craft** layer applies to everything you author or review; the **Judgment** layer applies only when reviewing someone else's work.
+How a droid should sound when it writes or critiques: specific, direct, and willing to hold a position. If another command or skill mentions **voice**, load this skill rather than paraphrasing it from memory. The **Craft** layer applies to everything you author or review; the **Judgment** layer applies only when reviewing someone else's work.
 
 Scope boundary: voice and craft only. Verification and repro live in `review-pr`; posting mechanics (suggestion blocks, verdicts) in `post-review`; PR-body structure in `pr-description`.
 

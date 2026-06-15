@@ -3,7 +3,9 @@ description: Address reviewer feedback on your PR -- read comments, fix code, re
 argument-hint: <PR-number-or-URL>
 ---
 
-Load skills: **pr-context**, **quality-ship**.
+Load skills: **pr-context**, **quality-ship**, **voice**.
+
+Treat **voice** as mandatory for reviewer-facing replies: load it before drafting responses, declines, or alternative-rationale text so the reply states a position with specifics instead of sounding generically agreeable.
 
 ## 1. Gather Feedback
 
@@ -109,7 +111,7 @@ For `Fix` rows, draft the reply text inline under the table row alongside the lo
 
 For `Respond`, `Ack`, `Resolved`, `Investigate` rows, draft the reply text inline under the table row (no block needed).
 
-Write every reply draft with the **voice** skill: specifics and named actors, no slop, and treat declines and chosen-alternative rationale as `opinion`-grade pushback (state the position and the *why*).
+Write every reply draft with the loaded **voice** skill: specifics and named actors, no slop, and treat declines and chosen-alternative rationale as `opinion`-grade pushback (state the position and the *why*).
 
 **Hedging is forbidden in approach blocks.** Words like "likely", "probably", "should fix", "might be", "I think", "we may need to" indicate the RCA is incomplete. If you reach for them, demote the **locus** to `Investigate`; every thread it would have addressed becomes an `Investigate` row stating what's unknown and what you'd need to read or run to know it. The user cannot approve a fix you yourself are unsure of.
 

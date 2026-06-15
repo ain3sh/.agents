@@ -5,6 +5,8 @@ argument-hint: <PR-number-or-URL>
 
 Load skills: **pr-context**, **linear-cli**, **worktree-setup**, **quality-ship**, **voice**, **repo-conventions**.
 
+Treat **voice** as a required review gate, not optional polish: load it before drafting findings so severity, phrasing, and the unprompted-opinion sweep come from the canonical skill.
+
 **Targeted scope = the PR's changed files** (`gh pr diff <PR> --name-only`, or via **pr-context**). Reviewer's job is judgment (architecture, root cause, broader impact, convention adherence, slop), not redundantly re-running green CI — but red and inconclusive checks are yours to triage to root cause (§3). When a step below needs setup or a validator (repro in §3, slop-scan in §4), use **worktree-setup**'s `repair.py` (never `verify.py` — its full-workspace manifest demands out-of-scope artifacts) and **quality-ship**'s validator patterns; don't wing it — that derails focus.
 
 **Workers in flight.** If a subagent is still making progress (output / tool calls visible), **let it finish**. Don't `TaskStop` over resource-usage or token-budget worries — review quality outranks both. Stop only if genuinely stalled or off-task.
@@ -80,7 +82,7 @@ If CI was **inconclusive** (e.g. typecheck OOM'd before reaching the relevant pa
 
 ## 4. Shared review criteria
 
-See **voice** for the judgment criteria, the canonical severity taxonomy, and the mandatory unprompted-opinion sweep.
+Load **voice** here if it is not already active. It owns the judgment criteria, canonical severity taxonomy, and mandatory unprompted-opinion sweep; do not invent local tiers or soften findings to checklist language.
 
 Plus the repo's **own documented conventions** -- hold the author to the same standard we hold ourselves. Follow the **repo-conventions** skill (discover + diff-scope against the PR's changed files, then read the selected docs) and reconcile the diff against them. Here you **flag, not fix**: fold each deviation into findings at `warning` (a clear written rule -- error handling, file organization, test placement, flags -- broken) or `suggestion` (softer guidance). A repo-provided pre-PR checklist is itself review criteria -- check the diff against each item.
 

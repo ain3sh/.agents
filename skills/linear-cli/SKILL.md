@@ -42,7 +42,7 @@ linear i link TEAM-123                             # Print URL
 
 ### Ticket description hygiene
 
-Write descriptions with the **voice** skill (specifics, named actors, no slop). Unless trivial (typo, formatting), cover:
+Load **voice** before writing non-trivial ticket descriptions; it is the gate for specifics, named actors, and no slop. Unless trivial (typo, formatting), cover:
 
 - **What** — 1–2 sentences on the problem or feature.
 - **Why** — context (bug report, user feedback, tech debt, regression).

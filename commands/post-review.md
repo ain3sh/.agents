@@ -5,6 +5,8 @@ argument-hint: [<PR-number-or-URL>]
 
 Load skills: **pr-context**, **voice**.
 
+**voice** is required here: use its severity taxonomy and craft rules for every posted body instead of rephrasing approved findings into generic review-speak.
+
 The posting half of the review workflow. Findings come from an upstream `/review-pr` (typical) or fresh paste.
 
 ## 1. Resolve PR Identity
@@ -15,7 +17,7 @@ Use `REPO` and `HEAD_SHA` from context if present (typical post-`/review-pr`); o
 
 In priority: the approved list from the current chat (`/review-pr` just completed) or pasted inline.
 
-Each finding: severity (one of the **voice** tiers), file path, line(s), body prose, optionally a replacement snippet. Use `AskUser` once if anything's missing or ambiguous.
+Each finding: severity (one of the loaded **voice** tiers; do not invent or remap tiers), file path, line(s), body prose, optionally a replacement snippet. Use `AskUser` once if anything's missing or ambiguous.
 
 ## 3. Per-Finding: Plain Comment vs. Suggestion Block
 
