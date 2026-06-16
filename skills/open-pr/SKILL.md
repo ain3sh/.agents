@@ -25,7 +25,7 @@ Fire `TodoWrite` in parallel with the first tool call of each phase.
 
 Follow the **ticket-branch** skill:
 - If `$ARGUMENTS` contains a ticket ID, resolve it. Otherwise create one inline (ticket-branch handles both paths).
-- Check out a new branch off the default remote branch. Ensure idiomatic name and fix if current local branch name isn't correct.
+- Check out a new branch off the default remote branch. Ensure the current branch exactly matches the idiomatic ticket branch name. Worktree-created/default-derived names must be renamed, not carried into the PR.
 
 ## 2. Apply Changes
 
@@ -46,6 +46,23 @@ First, determine the **entry state** -- does working code already exist from thi
 
 If in a git worktree, follow the **worktree-setup** skill to symlink dependencies before running any checks.
 
+### Branch-name gate (hard stop)
+
+Before committing, pushing, or opening the PR, derive the expected branch name from the resolved ticket using the `ticket-branch` format: `<owner>/<prefix>-<number>-<stub>` (lowercase, hyphenated, ASCII-only, full name <= 32 chars).
+
+```bash
+CURRENT_BRANCH=$(git branch --show-current)
+DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
+EXPECTED_BRANCH="<owner>/<prefix>-<number>-<stub>"
+test "$CURRENT_BRANCH" = "$EXPECTED_BRANCH"
+```
+
+If the check fails, fix it before proceeding. Worktree-created/default-derived branch names are not exempt.
+
+- If `CURRENT_BRANCH` is the default branch, create the idiomatic branch at the current HEAD: `git switch -c "$EXPECTED_BRANCH"`.
+- Otherwise rename the local branch: `git branch -m "$EXPECTED_BRANCH"`.
+- If the bad branch was already pushed, do not PR from it. The later push step must push the idiomatic branch with upstream: `git push -u origin "$EXPECTED_BRANCH"`. Do not delete the old remote branch unless the user explicitly asks.
+
 Follow the **quality-ship** skill:
 - Run all detected quality checks. Fix issues and re-run until clean.
 - Commit (conventional format, referencing the ticket).
@@ -54,6 +71,8 @@ Follow the **quality-ship** skill:
 ## 4. Open PR — pr-description hand-off (mandatory)
 
 Re-load `pr-description`, emit its section 0 checklist inline, and tick every box before `gh pr create`. Drafting from memory is not allowed — "I remember the structure" is the exact failure mode this gate blocks.
+
+Re-run the branch-name gate immediately before `gh pr create`. Do not open a PR from any branch except the exact expected idiomatic branch.
 
 ```bash
 DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
