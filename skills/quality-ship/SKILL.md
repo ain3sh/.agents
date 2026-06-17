@@ -82,6 +82,8 @@ Validators cover mechanics; they're blind to the idioms a repo documents in pros
 
 ### Test scoping: package scope is NOT enough
 
+**This is about how you *run* tests to validate a diff (execution scope), not how broad the tests you *author* should be (coverage).** A feature's acceptance test or a bug's contract-level regression can legitimately span components or run under stress (see **consolidate-test-suites**); never let "run narrow" leak into "write narrow."
+
 **HARD RULE: never run a full test suite to validate a diff. No exceptions without an explicit reason logged in the checklist.** A bare `npm test` / `run test` / `turbo run test` with no path argument is a defect — stop and re-scope before it runs. If you catch yourself about to execute an unscoped suite, that is the bug the user keeps yelling about.
 
 Tests have **two** scope axes and you need both. The package filter (`--workspace` / turbo `--filter`) picks *which suite*; it does **not** narrow *which tests* — `run test` on a package still executes that package's entire suite (wiki, unrelated parsers, everything). Running the whole suite to validate a small diff is the mistake: slow, noisy, irrelevant. **Every test invocation MUST carry a changed-file subset.** No path argument = wrong command.

@@ -1,6 +1,6 @@
 ---
 name: consolidate-test-suites
-description: Decide exactly where bug-fix test coverage belongs. Use before adding, moving, or deleting tests after a bug fix or architectural change. Select one owning layer, reuse existing canonical suites, block redundant or weakly placed tests, and remove weaker duplicates. Also loaded by /implement during the regression test step.
+description: Decide where test coverage belongs for bug fixes and features. Use before adding, moving, or deleting tests after a fix, feature, or architectural change. Select one owning layer, reuse existing canonical suites, preserve distinct stress/adversarial coverage, block weakly placed tests, and remove weaker duplicates. Also loaded by /implement during the coverage step.
 ---
 
 # Consolidate Test Suites
@@ -21,7 +21,7 @@ Default: reuse an existing canonical suite. Do not create a new standalone regre
 - You MUST identify one primary owning layer: unit, integration, or end-to-end.
 - You MUST first try to place coverage in an existing canonical suite for that layer.
 - You MUST prefer editing an existing test file over creating a new test file.
-- You MUST NOT add the same invariant in multiple layers unless each layer covers a different failure mode. If you keep more than one layer, name the distinct failure mode for each.
+- You MUST NOT add the same invariant in multiple layers unless each layer covers a different failure mode; name the distinct failure mode for each you keep. A stress, concurrency, replay, or boundary-input condition counts as distinct from the nominal path, so its test is owned coverage in its own right.
 - You MUST NOT add tests that lock in implementation details unless that implementation unit itself owns the invariant.
 - You MUST NOT create a standalone regression test because it is faster or easier.
 - You MUST reuse the owning layer's existing harness, fixtures, and mocks. Do not build a parallel assertion mechanism for evidence the canonical suite already produces (e.g. scraping a log/state file when the harness already captures the boundary).
@@ -48,7 +48,8 @@ Choose **integration** when:
 - the bug depends on serialization, persistence, ordering, replay, retries, IPC, process lifecycle, or multi-component coordination.
 
 Choose **end-to-end** only when:
-- the user-visible contract cannot be trusted from lower-layer tests alone.
+- the user-visible contract cannot be trusted from lower-layer tests alone, or
+- the contract only holds under conditions lower layers cannot reproduce faithfully (real concurrency, cross-process ordering, full transport/serialization round-trips, load).
 
 Tie-breakers:
 - If torn between unit and integration, choose integration.
@@ -82,7 +83,7 @@ After placing coverage:
 1. Search for tests that assert the same invariant.
 2. Keep the strongest owned location.
 3. Merge any unique assertions into that location.
-4. Delete or simplify weaker duplicates.
+4. Delete or simplify weaker duplicates (a distinct stress/adversarial case is not a duplicate).
 5. Rename tests by behavior and owner, not by ticket number or bug history.
 
 ## Verification

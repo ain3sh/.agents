@@ -3,7 +3,7 @@ description: Implement a Linear ticket -- explore, plan, spec, then code
 argument-hint: <TICKET-ID or pasted ticket content>
 ---
 
-Load skills: **linear-cli**, **worktree-setup**, **quality-ship**, **repo-conventions**. Bug-fix tickets also load: **root-cause-analysis**, **step-through**, **consolidate-test-suites**.
+Load skills: **linear-cli**, **worktree-setup**, **quality-ship**, **repo-conventions**, **consolidate-test-suites**. Bug-fix tickets also load: **root-cause-analysis**, **step-through**.
 
 ## Todo cadence (non-optional)
 
@@ -95,41 +95,33 @@ Once approved, the spec is ground truth: apply cadence rules 4 & 5 before any 4b
 
 On spec approval, a paired `.agents/specs/<spec>.notes.md` is auto-scaffolded for spec-time-unknown decisions. Append to it in the same turn as each decision, deviation, tradeoff, surprise, or followup — not later, not in batches. The file feeds the **Implementation Notes** section of the eventual PR body (see `pr-description` Section 5).
 
-## 4b. Bug-fix: regression test (red-green)
+## 4b. Coverage step (non-optional, bug fixes and features)
 
-After spec approval, before implementing the fix, apply the **consolidate-test-suites** skill to decide where the test belongs, then write it.
+After spec approval, before implementing the change, apply **consolidate-test-suites** to place the test, then write it. Only *what it proves* and *how you confirm it can fail* differ by type.
 
 ### Place the test
 
-Before writing any test code, run the consolidate-test-suites decision process:
-
-1. **Name the invariant** -- the rule that must stay true.
-2. **Pick the owning layer** -- the lowest layer (unit, integration, or e2e) that truly owns and can prove the invariant. If torn between unit and integration, choose integration. Never choose e2e to compensate for uncertainty.
-3. **Find the canonical suite** -- prefer adding to an existing test file in the owning layer over creating a new file. Follow the decision order: existing test > new test in existing file > new file in canonical suite > standalone regression (exception rule only).
+Run the consolidate-test-suites decision: name the invariant (bug: the behavior that broke; feature: the acceptance criterion the ticket promises), pick the lowest owning layer (integration over unit when torn; never e2e to compensate), find the canonical suite (prefer an existing file over a new one).
 
 ### Write the test
 
-- The test should exercise the **real user-facing flow** that broke -- informed by root cause and fix path from the spec, not just the surface symptom.
-- Test the **behavior**, not the implementation detail. This makes it a durable regression guard rather than something coupled to today's code.
-- Place it in the canonical suite identified above.
-- Confirm the test **fails** on the current (unfixed) code.
+- Exercise the **real user-facing flow** -- the behavior that broke (from the spec's root cause and fix path) or the flow the ticket promises (tied to acceptance criteria) -- not the surface symptom or a synthetic happy path.
+- Test **behavior, not implementation detail**, so it stays a durable guard.
+- If the contract must hold under stress (concurrency, replay, malformed input, scale), that is its **own case** -- write it separately (see consolidate-test-suites).
 
-### After implementing the fix
+### Confirm it can fail (red)
 
-- Re-run the test. Confirm it **passes**.
-- Search for tests that assert the same invariant. Keep the strongest owned location, merge unique assertions, delete or simplify weaker duplicates.
+A test that cannot fail proves nothing.
+- **Bug fix:** it must **fail on the unfixed code** for the bug's stated reason (not an import/compile error).
+- **Feature:** no pre-existing broken state, so invert the expectation or stub the new behavior once, see it go **red**, then restore.
 
-### When to skip
+### After implementing
 
-Not every bug has a testable surface. If a test isn't feasible, you must justify the skip:
+Re-run; confirm it passes (**green**), then run consolidate-test-suites' duplicate cleanup.
 
-- No test harness exists in the project for the owning layer.
-- The bug is in a layer tests can't reach (race conditions, infra, build-time issues).
-- A test would be contrived -- testing an artificial scenario rather than a real flow.
+### When to skip (justified exception, not an easy out)
 
-When skipping, fall back to the narrowest viable alternative: the next lower layer, or the ad-hoc repro from step 2. State which fallback was used and why.
-
-Record the skip in the PR's **Root Cause Analysis** section (see pr-description): what was attempted, why testing wasn't viable, and which fallback was used.
+Skip only when one holds: no harness exists for the owning layer; the change lives where tests can't reach (prod-only races, build-time); or a test would be **genuinely contrived** (an artificial scenario -- "slow" or "hard to set up" doesn't count). Then fall back to the narrowest alternative (next lower layer, or the step-2 repro), state which and why, and record it in the PR (bug: **Root Cause Analysis**; feature: **Verification -> Not tested**).
 
 ## 5. Validate
 

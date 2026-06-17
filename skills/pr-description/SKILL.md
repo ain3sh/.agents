@@ -100,8 +100,8 @@ Closes TEAM-123   <!-- "Closes" full fix; "Part of" incremental. Add a context c
 ## Verification
 
 **Behavior verified.** <flows exercised: state -> action -> observation; tie back to the listed risks. Anchor each claim to the commit checked (`verified @ <sha>`) so a refresh can detect staleness.>
-**Regression coverage.** <test/suite, the invariant it pins, why this layer; bug fixes cite the consolidate-test-suites decision.>
-**Not tested.** <deliberate skips + one-line reason; "N/A" only when true.>
+**Regression coverage.** <test/suite + the invariant it pins + the failure mode(s) it proves (incl. any stress / adversarial / boundary case) + why this layer owns it; bug fixes and features both cite the consolidate-test-suites decision. Name the case that goes red on regression.>
+**Not tested.** <deliberate skips, one reason **each**, held to a real skip bar (no harness / unreachable layer / genuinely contrived -- not "slow" or "hard to set up"); "N/A" only when true.>
 **Standard validators.** <one line: "format/lint/typecheck/tests clean"; note unrelated pre-existing failures + how you triaged them.>
 ```
 
