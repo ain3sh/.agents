@@ -54,8 +54,6 @@ push → `gh auth switch --user factory-ain3sh`.
 - Commits: Conventional Commits scoped by component: the generic type
   (`feat(skill)`, `fix(hooks)`, `feat(command)`) or the specific name
   (`fix(worktree-setup)`).
-- Edits to a skill/command are picked up directly from this repo on the next
-  droid session; no install or sync step.
 
 ## Conventions
 

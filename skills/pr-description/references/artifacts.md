@@ -8,7 +8,7 @@ A before/after **recording** earns its place with a caption: capture conditions 
 
 ## Diagrams
 
-Draw when the PR adds/alters components, flows, service boundaries, integration points, or module structure. Signal: you're describing a new flow across more than two sentences of the Description. **Excalidraw is the primary path** — the toolchain is installed (`~/.local/bin/`; a missing piece self-installs, see the **excalidraw** skill), so it almost always applies. Mermaid (below) is the fallback only when you truly can't install it on this host, or for a throwaway flow.
+Draw when the PR adds/alters components, flows, service boundaries, integration points, or module structure. Signal: you're describing a new flow across more than two sentences of the Description. **Excalidraw is the primary path**; Mermaid (below) is the fallback only when you truly can't install the toolchain on this host, or for a throwaway flow.
 
 ### Primary: excalidraw
 
@@ -16,7 +16,7 @@ Draw when the PR adds/alters components, flows, service boundaries, integration 
 
 **A diagram must carry what prose can't.** Box-and-arrow renderings of the section headings are net-zero and reviewers call them out. Earn the space with real symbol/file names in the boxes, the data labeled on each arrow, and — for behavior changes — a before/after timeline (old failure mode vs new invariant, with example rows).
 
-**Two diagrams often beat one for a complex behavior change**: a component/data-flow pipeline *and* a before/after timeline of the observable effect. Embed both under `## Architecture`, each with its own editable-link `<details>`.
+**Two diagrams often beat one for a complex behavior change**: a component/data-flow pipeline *and* a before/after timeline of the observable effect, each with its own editable-link `<details>`.
 
 ### Fallback: Mermaid
 

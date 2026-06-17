@@ -17,7 +17,7 @@ The entrypoint is self-sufficient for a simple PR. Load a reference only when it
 | Read | When |
 |---|---|
 | `references/conditional-sections.md` | filling any non-required (conditional) text section |
-| `references/artifacts.md` | **structural change** (new/altered components, flows, boundaries) — load *before* deciding whether a diagram is warranted, not after; also any screenshot/recording |
+| `references/artifacts.md` | a structural change (§3 row 2) — load *before* deciding a diagram isn't warranted, not after; also any screenshot/recording |
 | `references/refresh.md` | the PR already exists and you're refreshing after a push |
 
 **Pre-flight** (emit in chat, tick as you go):

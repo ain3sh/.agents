@@ -67,7 +67,7 @@ Uploads to excalidraw.com (no account needed) and prints a shareable URL.
 
 Use `excalirender` to render `.excalidraw` files directly to PNG, SVG, or PDF without a browser. This is not an optional polish step -- a diagram that never gets rendered to PNG does not count as delivered.
 
-**Install if missing** (native binary, no deps; normally already at `~/.local/bin/excalirender`):
+**Install if missing** (native binary, no deps):
 ```bash
 curl -fsSL https://raw.githubusercontent.com/JonRC/excalirender/main/install.sh | PREFIX=$HOME/.local sh
 ```
