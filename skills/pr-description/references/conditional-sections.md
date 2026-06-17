@@ -93,7 +93,7 @@ Honest acknowledgment beats discovery six weeks later. No regression → omit; d
 
 ### Repro Recipe — new feature / fixed bug
 
-Bar: a reviewer who's never touched the repo runs it as-is and sees the expected behavior. Use an indented (not fenced) command block so it nests cleanly inside the body.
+**Manual, human-run steps**: `setup -> action -> observed result`, each line something a reviewer *types or clicks* by hand, closing on a result they can eyeball. Bar: someone who's never touched the repo runs it as-is and sees the behavior. Indented (not fenced) block so it nests cleanly.
 
 ```markdown
 ## Repro Recipe
@@ -101,9 +101,9 @@ Bar: a reviewer who's never touched the repo runs it as-is and sees the expected
     pnpm dev
     # /cart -> add 2 items -> checkout while logged out
     # Expect: 302 -> /login?return_to=%2Fcheckout
-
-Or: `pnpm test apps/web/e2e/checkout-redirect.spec.ts`.
 ```
+
+**A test-runner command is not a repro recipe.** `pnpm test apps/web/e2e/checkout-redirect.spec.ts` reproduces nothing the reviewer doesn't already get from CI, which runs it on every push — pasting it as the recipe is dead weight, and it's the single most common failure here. Write the by-hand steps. If the change genuinely has no manual surface to exercise, drop this section rather than fake a recipe with a suite command — the automated coverage already has one home, Verification -> Regression coverage (with the `Sentinel test:` marker for the exact spec), not here.
 
 ## Bottom of body (`<details>`)
 

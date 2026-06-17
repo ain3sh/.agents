@@ -68,7 +68,7 @@ The 5 required sections fire on every PR. Conditional sections are a **menu, not
 | 10 | Reverse Dependencies | >3 consumers of the changed surface |
 | 11 | Side Effects | acknowledged regression |
 | 12 | Verification | always |
-| 13 | Repro Recipe | new feature / fixed bug |
+| 13 | Repro Recipe | new feature / fixed bug — **manual steps a human runs by hand, never a CI-run test command** |
 | 14 | Implementation map | `<details>`; large multi-subsystem diff (~20+ files) |
 | 15 | Changes since last review | `<details>`; refresh under active review → `references/refresh.md` |
 | 16 | Root Cause Analysis | `<details>`; bug fix |
