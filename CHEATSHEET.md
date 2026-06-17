@@ -38,5 +38,7 @@
 | `tirith` | [release tarball](https://github.com/sheeki03/tirith/releases/latest) | Shell hook only (activated in `~/.zshrc`); not wired into droids |
 | `witr` | `go install github.com/pranshuparmar/witr/cmd/witr@latest` | Standalone "why is this running?" tracer |
 | `nlsh` | `go install github.com/abakermi/nlsh@latest` | Wrapper + inlined config in `~/.zshrc` (materializes `~/.nlshrc` on call); uses OpenRouter via `OPENROUTER_API_KEY` |
+| `excalirender` | At `~/.local/bin/`; if missing: `curl -fsSL https://raw.githubusercontent.com/JonRC/excalirender/main/install.sh \| PREFIX=$HOME/.local sh` | Renders `.excalidraw` → PNG/SVG/PDF, no browser. Excalidraw is a *format*, not an app — nothing else to install. `pr-description` (artifacts.md), `excalidraw` skill |
+| `gh-attach` | At `~/.local/bin/` | Uploads images to GitHub's CDN for PR bodies. `pr-description` (artifacts.md), `excalidraw` skill |
 | `paperclip` MCP | HTTP MCP + `paperclip login` | Biomedical lit (`~/.factory/mcp.json`) |
 | `paper-search` MCP | `npx -y paper-search-mcp-nodejs` | 14 academic platforms (`~/.factory/mcp.json`) |

@@ -7,6 +7,8 @@ description: Create Excalidraw diagrams in two registers: clean technical (defau
 
 Create diagrams by writing standard Excalidraw element JSON and saving as `.excalidraw` files. These files can be drag-and-dropped onto [excalidraw.com](https://excalidraw.com) for viewing and editing. No accounts, no API keys, no rendering libraries -- just JSON.
 
+**"Excalidraw" is a file format, not an app -- there's nothing by that name to install.** The only runtime tools are `excalirender` (render) and `gh-attach` (upload), both normally at `~/.local/bin/`; if `command -v` shows one missing, self-install it (below) and continue. A missing or unchecked tool is never a reason to skip the diagram or drop to plain markdown/Mermaid.
+
 ## Visual register
 
 Pick one register per diagram; mixing reads as broken.
@@ -65,7 +67,7 @@ Uploads to excalidraw.com (no account needed) and prints a shareable URL.
 
 Use `excalirender` to render `.excalidraw` files directly to PNG, SVG, or PDF without a browser. This is not an optional polish step -- a diagram that never gets rendered to PNG does not count as delivered.
 
-**Install** (native Linux binary, no dependencies):
+**Install if missing** (native binary, no deps; normally already at `~/.local/bin/excalirender`):
 ```bash
 curl -fsSL https://raw.githubusercontent.com/JonRC/excalirender/main/install.sh | PREFIX=$HOME/.local sh
 ```

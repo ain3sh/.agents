@@ -8,7 +8,7 @@ A before/after **recording** earns its place with a caption: capture conditions 
 
 ## Diagrams
 
-Draw when the PR adds/alters components, flows, service boundaries, integration points, or module structure. Signal: you're describing a new flow across more than two sentences of the Description. **Excalidraw (dark-mode PNGs via excalirender) is the primary path**; Mermaid is a fallback (below) for when the excalirender/`gh-attach` toolchain isn't available or a quick flow is all the change warrants.
+Draw when the PR adds/alters components, flows, service boundaries, integration points, or module structure. Signal: you're describing a new flow across more than two sentences of the Description. **Excalidraw is the primary path** — the toolchain is installed (`~/.local/bin/`; a missing piece self-installs, see the **excalidraw** skill), so it almost always applies. Mermaid (below) is the fallback only when you truly can't install it on this host, or for a throwaway flow.
 
 ### Primary: excalidraw (dark-mode PNGs via excalirender)
 
@@ -48,7 +48,7 @@ Rendered with: `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
 
 ### Fallback: Mermaid
 
-Reach for Mermaid only when the excalidraw path is blocked — no `excalirender`, no browser-authed `gh-attach` — or when a quick flow/sequence is all the change warrants. It renders natively in the GitHub body (no upload, editable in-PR, diffable), but you trade away layout control and the pastel/dark theming, and wide labels wrap awkwardly. Prefer excalidraw for anything multi-subsystem or carrying a before/after timeline.
+A tool you *could* install is never a reason to land here — Mermaid is for hosts where you genuinely can't (locked-down/headless), or a throwaway flow. It renders natively in the GitHub body (no upload, editable in-PR, diffable) but trades away layout control, pastel/dark theming, and clean wrapping of wide labels; prefer excalidraw for anything multi-subsystem or with a before/after timeline.
 
 The same quality bar applies: real symbol/file names in the nodes, data labeled on each edge — never box-and-arrow restatements of the section headings. Embed the fenced block directly under `## Architecture` (no upload, no `<details>`):
 
