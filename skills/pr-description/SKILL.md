@@ -17,7 +17,7 @@ The entrypoint is self-sufficient for a simple PR. Load a reference only when it
 | Read | When |
 |---|---|
 | `references/conditional-sections.md` | filling any non-required (conditional) text section |
-| `references/artifacts.md` | attaching a diagram, screenshot, or recording |
+| `references/artifacts.md` | **structural change** (new/altered components, flows, boundaries) — load *before* deciding whether a diagram is warranted, not after; also any screenshot/recording |
 | `references/refresh.md` | the PR already exists and you're refreshing after a push |
 
 **Pre-flight** (emit in chat, tick as you go):
@@ -27,6 +27,7 @@ pr-description checklist:
 - [ ] Diff analyzed three-dot (§1); type/scope/why extracted
 - [ ] Title: type(scope): imperative, <=72 chars
 - [ ] 5 required sections present + ticket linked; catalog (§3) walked row by row
+- [ ] Structural change? Architecture diagram drawn (references/artifacts.md) — default is *draw*, not skip
 - [ ] Verification outcome-first; CI status compressed to one line; length scaled to complexity
 - [ ] Written via `gh api ... -X PATCH` (never `gh pr edit` — §5)
 - [ ] Refresh only: base resolved + marker re-stamped (references/refresh.md)
@@ -56,7 +57,7 @@ The 5 required sections fire on every PR. Conditional sections are a **menu, not
 | # | Section | Fires when |
 |---|---|---|
 | 1 | Description | always — inline anti-goals / scope-map / design-doc link as needed |
-| 2 | Architecture | structural change → `references/artifacts.md` (renders right after Description) |
+| 2 | Architecture | structural change (new/altered components, flows, boundaries) → **draw** via `references/artifacts.md`; skip only when the diagram would add nothing prose can't (renders right after Description) |
 | 3 | Related Issue (+ PR lineage / stack block) | always; lineage line if stacked/split; stack block if `stack`-managed |
 | 4 | Reviewer Guide | always |
 | 5 | Risk & Impact | always |

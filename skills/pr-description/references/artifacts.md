@@ -6,9 +6,11 @@ Attach anything that clarifies behavior or eases validation. **Upload via `gh-at
 
 A before/after **recording** earns its place with a caption: capture conditions (tool, dimensions, playback speed), what to watch, and a quantified delta (e.g., terminal-write bytes/events, request count, p95 latency). A bare clip with no caption is net-zero — the reviewer can't tell what changed or by how much.
 
-## Diagrams (dark-mode PNGs via excalirender)
+## Diagrams
 
-Draw when the PR adds/alters components, flows, service boundaries, integration points, or module structure. Signal: you're describing a new flow across more than two sentences of the Description.
+Draw when the PR adds/alters components, flows, service boundaries, integration points, or module structure. Signal: you're describing a new flow across more than two sentences of the Description. **Excalidraw (dark-mode PNGs via excalirender) is the primary path**; Mermaid is a fallback (below) for when the excalirender/`gh-attach` toolchain isn't available or a quick flow is all the change warrants.
+
+### Primary: excalidraw (dark-mode PNGs via excalirender)
 
 **A diagram must carry what prose can't.** Box-and-arrow renderings of the section headings are net-zero and reviewers call them out. Earn the space with: real symbol/file names in the boxes, the data labeled on each arrow, and — for behavior changes — a concrete before/after timeline (old failure mode vs new invariant, with example rows). After rendering, `Read` the PNG: excalirender glyphs run wider than naive estimates, so size boxes and label gaps generously and re-render until nothing overflows or collides.
 
@@ -43,3 +45,19 @@ Source: https://excalidraw.com/#json=...
 Rendered with: `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
 </details>
 ```
+
+### Fallback: Mermaid
+
+Reach for Mermaid only when the excalidraw path is blocked — no `excalirender`, no browser-authed `gh-attach` — or when a quick flow/sequence is all the change warrants. It renders natively in the GitHub body (no upload, editable in-PR, diffable), but you trade away layout control and the pastel/dark theming, and wide labels wrap awkwardly. Prefer excalidraw for anything multi-subsystem or carrying a before/after timeline.
+
+The same quality bar applies: real symbol/file names in the nodes, data labeled on each edge — never box-and-arrow restatements of the section headings. Embed the fenced block directly under `## Architecture` (no upload, no `<details>`):
+
+````markdown
+## Architecture
+
+```mermaid
+flowchart LR
+  Worker["eval_queue/worker.py"] -- "stale secret key" --> SQS[(SQS)]
+  SQS --> Status["github / slack status"]
+```
+````
