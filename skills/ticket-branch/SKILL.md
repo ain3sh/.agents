@@ -8,10 +8,20 @@ user-invocable: false
 
 ## Resolve or Create Ticket
 
-- **Ticket ID provided** (e.g., `TEAM-123`): fetch it.
+- **Ticket ID provided** (e.g., `TEAM-123`): fetch it with comments and direct
+  lineage.
   ```bash
-  linear i get <ID> --output json
+  linear i get <ID> --output json --comments
+  linear rel list <ID> --output json
   ```
+  If the ticket details or relation list names direct parent/child tickets, fetch
+  each one hop:
+  ```bash
+  linear i get <RELATED_ID> --output json --comments
+  ```
+  Extract parent goal, child scope boundaries, inherited acceptance criteria,
+  constraints, and discussion context. Do not chase deeper hierarchy unless the
+  ticket explicitly depends on it. Use the provided ticket for branch naming.
 - **No ticket**: create one.
   Discover teams with `linear t list --output json --compact --fields key,name`.
   Default priority: 3 (medium).

@@ -21,7 +21,7 @@
 
 | Atom | Owns | Composed by |
 |---|---|---|
-| **ticket-branch** | Ticket resolve/create (with parent search), branch checkout | `/open-pr`, `/update-skill`, `/split-pr` |
+| **ticket-branch** | Ticket resolve/create, direct parent/child context, branch checkout | `/open-pr`, `/update-skill`, `/split-pr` |
 | **quality-ship** | Quality checks, commit, push. Not PR creation. | `/open-pr`, `/update-skill`, `/split-pr`, `/address-review` |
 | **pr-description** | Diff analysis, conventional-commit title, 4-section PR body | `/open-pr`, `/update-skill`, `/split-pr` |
 | **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review`, `/demo-pr` |
