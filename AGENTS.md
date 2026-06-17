@@ -24,8 +24,10 @@ skills, slash commands, lifecycle hooks, prompts, and configs.
 
 Local-only (gitignored): `.agents/`, `logs/`, `*.env`, `__pycache__/`,
 `.ruff_cache/`. `hooks/session_end/store_artifacts.py` writes session tails and
-todo snapshots to `.agents/{MM_DD_YYYY}/`. Skills install into each agent's own
-location (for droid, as plugins), so `~/.factory/skills` stays empty.
+todo snapshots to `.agents/{MM_DD_YYYY}/`. The droid TUI auto-loads skills and
+commands straight from this `~/.agents/` entrypoint (the same way it does for
+`~/.factory/`), so there's no install/sync step and `~/.factory/skills` stays
+empty.
 
 ## Verify before committing
 
@@ -52,8 +54,8 @@ push → `gh auth switch --user factory-ain3sh`.
 - Commits: Conventional Commits scoped by component: the generic type
   (`feat(skill)`, `fix(hooks)`, `feat(command)`) or the specific name
   (`fix(worktree-setup)`).
-- After editing a skill/command, re-sync to the agents in `.skill-lock.json` so
-  the runtimes pick it up.
+- Edits to a skill/command are picked up directly from this repo on the next
+  droid session; no install or sync step.
 
 ## Conventions
 
