@@ -83,6 +83,8 @@ excalirender diagram.excalidraw -o output.png -s 2          # Light -- only when
 
 If you catch yourself typing `excalirender` without `--dark -s 2`, stop and add both flags.
 
+**After rendering, `Read` the PNG** and re-render if anything overflows or collides -- excalirender glyphs run wider than naive width estimates, so size boxes and label gaps generously.
+
 **Authoring stays light even when output is dark.** `--dark` is Excalidraw's theme inverter; it expects light source colors. Dark fills, light text, or a dark `viewBackgroundColor` in the JSON get double-inverted into a washed-out pastel render on a pale-gray canvas -- see `references/dark-mode.md`. Don't pre-color for dark; `--dark` does it.
 
 **Also:** don't add a full-canvas background rectangle element. The bbox inflation alone turns a tight 400x200 diagram into a 20000x15000 PNG with the real content as a few-pixel speck -- `--dark` making the fill pale gray is just extra insult.

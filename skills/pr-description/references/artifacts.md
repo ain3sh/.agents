@@ -10,41 +10,13 @@ A before/after **recording** earns its place with a caption: capture conditions 
 
 Draw when the PR adds/alters components, flows, service boundaries, integration points, or module structure. Signal: you're describing a new flow across more than two sentences of the Description. **Excalidraw is the primary path** — the toolchain is installed (`~/.local/bin/`; a missing piece self-installs, see the **excalidraw** skill), so it almost always applies. Mermaid (below) is the fallback only when you truly can't install it on this host, or for a throwaway flow.
 
-### Primary: excalidraw (dark-mode PNGs via excalirender)
+### Primary: excalidraw
 
-**A diagram must carry what prose can't.** Box-and-arrow renderings of the section headings are net-zero and reviewers call them out. Earn the space with: real symbol/file names in the boxes, the data labeled on each arrow, and — for behavior changes — a concrete before/after timeline (old failure mode vs new invariant, with example rows). After rendering, `Read` the PNG: excalirender glyphs run wider than naive estimates, so size boxes and label gaps generously and re-render until nothing overflows or collides.
+**Invoke the `excalidraw` skill for authoring, render, and embed** — it owns the visual register, colors, dark-mode, `excalirender --dark -s 2`, and the `gh-attach` + editable-link `<details>` workflow; don't re-derive any of it here. For a PR it's the **technical** register (reviewer-grade), embedded under `## Architecture`.
 
-**Two diagrams often beat one for a complex behavior change**: a component/data-flow pipeline *and* a before/after timeline of the observable effect (what the user or system sees across renders/requests). Embed both under `## Architecture`, each with its own editable-link `<details>`.
+**A diagram must carry what prose can't.** Box-and-arrow renderings of the section headings are net-zero and reviewers call them out. Earn the space with real symbol/file names in the boxes, the data labeled on each arrow, and — for behavior changes — a before/after timeline (old failure mode vs new invariant, with example rows).
 
-**Render** with `--dark -s 2` (skip `--dark` only if the user asks for light).
-
-**Authoring** (full failure modes: `~/.agents/skills/excalidraw/references/dark-mode.md`):
-
-- Author in **light** theme — pastel fills (`~/.agents/skills/excalidraw/references/colors.md`), `#1e1e1e` text, white or omitted `viewBackgroundColor`. `--dark` is an inverter; pre-coloring dark double-inverts into mush.
-- **No manual background rectangle** — it inflates the scene bbox and the diagram renders as a speck.
-- Pastel families map to dark at render time: Frontend/Input Blue · Backend/Success Green · Storage/Data Teal · Processing Purple · External/Warning Orange · Error Red · Notes Yellow.
-
-**Workflow**:
-
-```bash
-excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2
-gh-attach --repo "$REPO" --md /tmp/diagram.png        # copy the returned markdown
-uv run --with cryptography python ~/.agents/skills/excalidraw/scripts/upload.py diagram.excalidraw  # optional editable link
-```
-
-Embed under `## Architecture`; nest the editable link in `<details>` so it doesn't read as a phishing link:
-
-```markdown
-## Architecture
-
-![Architecture](https://github.com/user-attachments/assets/...)
-
-<details><summary>Edit diagram</summary>
-
-Source: https://excalidraw.com/#json=...
-Rendered with: `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
-</details>
-```
+**Two diagrams often beat one for a complex behavior change**: a component/data-flow pipeline *and* a before/after timeline of the observable effect. Embed both under `## Architecture`, each with its own editable-link `<details>`.
 
 ### Fallback: Mermaid
 
