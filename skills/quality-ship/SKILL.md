@@ -25,8 +25,8 @@ Detect the project's tooling from config files at the repo root, then run each a
 
 | Check | Detection signals | Typical command |
 |-------|-------------------|-----------------|
-| Format | `.prettierrc*`, `biome.json`, `dprint.json` | `npm run format --write` or `npx prettier --write` or equivalent |
-| Lint fix | `eslint.config*`, `.eslintrc*`, `biome.json` | `npm run fix` or `npx eslint --fix` |
+| Format | `.prettierrc*`, `biome.json`, `dprint.json` | `npx prettier --write <paths>` / `biome format --write <paths>` (prefer over a bundled `npm run format`) |
+| Lint fix | `eslint.config*`, `.eslintrc*`, `biome.json` | `npx eslint --fix <paths>` / `biome lint --apply <paths>` (prefer over a bundled `npm run fix`) |
 | Dead code (JS/TS) | `knip.*`, `knip` in package.json scripts | `npm run knip` or `npx knip` |
 | Dead code (Python) | `*.py` in diff + `pyproject.toml` / `setup.py` | `vulture <changed-paths>` (or `uvx vulture`) |
 | AI-slop (JS/TS) | any `*.{js,jsx,ts,tsx}` in diff | `slop-scan delta <base> <head> --format json` |
@@ -34,7 +34,8 @@ Detect the project's tooling from config files at the repo root, then run each a
 | Type check | `tsconfig.json` | `npm run typecheck` or `npx tsc --noEmit` |
 | Tests | `jest.config*`, `vitest.config*`, `pytest.ini` | Changed-file subset, serial workers (see below) |
 
-- Inspect `package.json` scripts (or `pyproject.toml` / `Makefile` for Python) for canonical commands (`format`, `fix`, `lint`, `knip`, `test`, `typecheck`).
+- Inspect `package.json` scripts (or `pyproject.toml` / `Makefile` for Python) to learn *which* tools the repo uses, but **prefer invoking each tool directly** (`npx prettier`, `npx eslint`, `npx tsc`, `npx knip`) scoped to changed paths.
+- **Avoid aggregate "fix everything" scripts.** A bundled task like `npm run fix` / `npm run check` (e.g. factory-mono's) chains formatter + linter + typecheck + more across the whole repo and can take many minutes. Run the individual tools you actually need, scoped to the diff, instead. Only fall back to the aggregate script if a tool genuinely can't be invoked directly (missing binary, wrapper-only config) — and note that reason in the checklist evidence.
 - Fix any issues found. Re-run until clean.
 
 ### Fix the cause, don't suppress the validator
