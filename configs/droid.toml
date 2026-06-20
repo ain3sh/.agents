@@ -6,6 +6,15 @@
 # ---
 [hooks.session_start]
 
+[hooks.session_start.tool_wrappers]
+when = ["startup", "resume", "clear"]
+tools = ["rg", "agent-browser", "cua-driver"]
+
+[hooks.session_start.tool_wrappers.targets]
+rg = ["path:/usr/bin/rg", "path:/bin/rg", "path:/usr/local/bin/rg"]
+agent-browser = ["npm:agent-browser"]
+cua-driver = ["path:~/.agents/scripts/cua-driver"]
+
 [hooks.session_start.environment]
 when = ["startup", "resume", "clear"]
 secrets = "~/.factory/.env" # .env secrets loaded by env vars session-start hook
