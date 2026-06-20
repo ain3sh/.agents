@@ -1,9 +1,9 @@
 ---
-name: record-desktop-linux
+name: record-wayland-desktop
 description: Capture full-screen video and screenshots on Linux Wayland (KDE/KWin Plasma) via PipeWire ScreenCast + gpu-screen-recorder and spectacle. Use when you need a full-desktop recording or screenshot on a Wayland session, when cua-driver's record_video produces a black frame (x11grab on Xwayland), when wf-recorder/grim fail with "compositor doesn't support wlr-screencopy", or when wiring up droid-control / desktop-control capture on this machine.
 ---
 
-# record-desktop-linux
+# record-wayland-desktop
 
 One wrapper script with `start` / `stop` / `status` / `shot` / `verify` /
 `doctor` subcommands. Picks the only capture path that actually works on
@@ -13,7 +13,7 @@ to silently produce a black recording.
 ## TL;DR
 
 ```bash
-S=~/.agents/skills/record-desktop-linux/scripts/record-desktop.sh
+S=~/.agents/skills/record-wayland-desktop/scripts/record-desktop.sh
 $S doctor                                  # one-time capability + token probe
 $S start -s demo -o /tmp/demo.mp4          # detached recording
 # ... drive the desktop / app ...
@@ -76,7 +76,7 @@ session (see bottom).
 ## Usage
 
 ```bash
-S=~/.agents/skills/record-desktop-linux/scripts/record-desktop.sh
+S=~/.agents/skills/record-wayland-desktop/scripts/record-desktop.sh
 
 # --- video ---
 $S start                                       # session "default", auto path, 30fps
@@ -109,8 +109,8 @@ distinct names for concurrent recordings, identical names to address the same
 recording across separate shells.
 
 State lives at `$RECORD_DESKTOP_STATE_DIR/<session>/` (default
-`$XDG_RUNTIME_DIR/record-desktop-linux/<session>/`, fallback
-`/tmp/record-desktop-linux-$UID/<session>/`). Files:
+`$XDG_RUNTIME_DIR/record-wayland-desktop/<session>/`, fallback
+`/tmp/record-wayland-desktop-$UID/<session>/`). Files:
 
 | File | Purpose |
 |---|---|

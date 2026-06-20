@@ -12,12 +12,12 @@
 #   doctor                # probe the environment for capability
 #
 # State (pidfile, output path, log) lives under:
-#   $RECORD_DESKTOP_STATE_DIR  (default: $XDG_RUNTIME_DIR/record-desktop-linux,
-#                               falling back to /tmp/record-desktop-linux-$UID)
+#   $RECORD_DESKTOP_STATE_DIR  (default: $XDG_RUNTIME_DIR/record-wayland-desktop,
+#                               falling back to /tmp/record-wayland-desktop-$UID)
 set -euo pipefail
 
-STATE_ROOT="${RECORD_DESKTOP_STATE_DIR:-${XDG_RUNTIME_DIR:-/tmp}/record-desktop-linux}"
-[ -n "${XDG_RUNTIME_DIR:-}" ] || STATE_ROOT="/tmp/record-desktop-linux-$(id -u)"
+STATE_ROOT="${RECORD_DESKTOP_STATE_DIR:-${XDG_RUNTIME_DIR:-/tmp}/record-wayland-desktop}"
+[ -n "${XDG_RUNTIME_DIR:-}" ] || STATE_ROOT="/tmp/record-wayland-desktop-$(id -u)"
 
 err()  { printf '%s\n' "$*" >&2; }
 die()  { err "error: $*"; exit 1; }
