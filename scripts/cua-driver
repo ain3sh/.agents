@@ -14,6 +14,7 @@ fi
 
 export CUA_DRIVER_RS_ENABLE_WAYLAND="${CUA_DRIVER_RS_ENABLE_WAYLAND:-1}"
 export CUA_DRIVER_CDP_PORT="${CUA_DRIVER_CDP_PORT:-9222}"
+export CUA_DRIVER_BROWSER_CDP_PORT="${CUA_DRIVER_BROWSER_CDP_PORT:-9333}"
 
 if [[ -z "${CUA_WAYLAND_NEST+x}" && "${XDG_SESSION_TYPE:-}" == "wayland" ]]; then
   case "${XDG_CURRENT_DESKTOP:-}" in
@@ -34,29 +35,45 @@ if [[ "${CUA_WAYLAND_NEST:-}" == "1" && -z "${CUA_WAYLAND_NEST_COMPOSITOR:-}" ]]
   fi
 fi
 
+rewrite_launch_json() {
+  jq -cer '
+    def with_flag($flag):
+      if contains($flag) then . else . + " " + $flag end;
+
+    if ((.launch_path // .name // "") | test("helium"; "i")) then
+      .launch_path = (
+        (.launch_path // "helium-browser")
+        | with_flag("--ozone-platform=x11")
+        | with_flag("--remote-debugging-port=" + (env.CUA_DRIVER_BROWSER_CDP_PORT // env.CUA_DRIVER_CDP_PORT // "9333"))
+        | with_flag("--no-first-run")
+      )
+      | del(.name)
+    else
+      .
+    end
+  ' 2>/dev/null || true
+}
+
 if [[ "${1:-}" == "call" && "${2:-}" == "launch_app" && $# -ge 3 ]] && command -v jq >/dev/null 2>&1; then
   rewritten_json="$(
-    jq -cer '
-      def with_flag($flag):
-        if contains($flag) then . else . + " " + $flag end;
-
-      if ((.launch_path // .name // "") | test("helium"; "i")) then
-        .launch_path = (
-          (.launch_path // "helium-browser")
-          | with_flag("--ozone-platform=x11")
-          | with_flag("--remote-debugging-port=" + (env.CUA_DRIVER_CDP_PORT // "9222"))
-          | with_flag("--no-first-run")
-        )
-        | del(.name)
-      else
-        .
-      end
-    ' <<< "$3" 2>/dev/null || true
+    rewrite_launch_json <<< "$3"
   )"
 
   if [[ -n "$rewritten_json" ]]; then
     args=("$@")
     args[2]="$rewritten_json"
+    exec "$REAL_CUA_DRIVER" "${args[@]}"
+  fi
+fi
+
+if [[ "${1:-}" == "launch_app" && $# -ge 2 ]] && command -v jq >/dev/null 2>&1; then
+  rewritten_json="$(
+    rewrite_launch_json <<< "$2"
+  )"
+
+  if [[ -n "$rewritten_json" ]]; then
+    args=("$@")
+    args[1]="$rewritten_json"
     exec "$REAL_CUA_DRIVER" "${args[@]}"
   fi
 fi
