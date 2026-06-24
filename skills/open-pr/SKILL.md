@@ -79,4 +79,4 @@ DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print 
 gh pr create --base "$DEFAULT_BRANCH" --title "<title>" --body-file /tmp/pr-body.md
 ```
 
-Report the PR URL.
+Report the opened PR as: `pr_title - pr_url`
