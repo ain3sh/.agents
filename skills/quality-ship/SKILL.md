@@ -81,6 +81,33 @@ For any PR touching a React codebase (signal: `react`/`react-dom`/`next`/`@remix
 
 Validators cover mechanics; they're blind to the idioms a repo documents in prose (error handling, file organization, test placement, flags) -- the rules reviewers flag once the gate is green. Follow the **repo-conventions** skill: discover, diff-scope, apply, emit the `conventions:` row. `no signal` only when the repo documents none -- not when reading was inconvenient.
 
+### Monorepo scoping: the right flag, in the right position
+
+Scope flags belong to the **runner**, so they go **before** `--`. Put one after and it gets silently handed to the underlying tool (which ignores it), and the validator runs against the whole repo. Each runner uses a different flag:
+
+| Runner | Scope flag |
+|--------|-----------|
+| npm    | `--workspace=<pkg>` (`-w <pkg>`) |
+| pnpm   | `--filter <pkg>` |
+| yarn   | positional: `yarn workspace <pkg> <task>` |
+| turbo  | `--filter=<pkg>` |
+
+**The trap that keeps biting**: droids borrow turbo's `--filter` for npm and stick it after `--`:
+
+```bash
+# WRONG: `--filter` isn't an npm flag; after `--` it's passed to tsc,
+# which ignores it and typechecks the WHOLE repo (looks scoped, isn't).
+npm run typecheck -- --filter=@factory/cli
+
+# RIGHT
+npm run typecheck --workspace=@factory/cli   # or: -w @factory/cli
+turbo run typecheck --filter=@factory/cli    # prefer when turbo.json exists
+```
+
+The failure is silent (exit 0 or timeout). If a "scoped" check runs unexpectedly long, suspect the flag is in the wrong place or wrong dialect before blaming the repo.
+
+Prefer turbo when `turbo.json` is present (it picks up workspace-level config that direct invocation misses); otherwise use the table. Last resort: `cd` into the package and run there. Derive affected packages from `git diff --name-only` vs the base.
+
 ### Test scoping: package scope is NOT enough
 
 **This is about how you *run* tests to validate a diff (execution scope), not how broad the tests you *author* should be (coverage).** A feature's acceptance test or a bug's contract-level regression can legitimately span components or run under stress (see **consolidate-test-suites**); never let "run narrow" leak into "write narrow."
@@ -114,17 +141,6 @@ Additional mitigations when concurrent droid activity is likely:
 - **Mutex**: `flock -w 600 /tmp/droid-tests.lock <cmd>` — one test run at a time across droid instances.
 - **Heap cap**: `NODE_OPTIONS=--max-old-space-size=2048` — fail fast instead of swap-thrashing.
 - **Deprioritize**: prefix with `nice -n 10 ionice -c3` when another runner is already active.
-
-### Monorepo scoping: use turbo, not direct invocation
-
-In monorepos with `turbo.json`, **always** use `turbo run <task> --filter=<package>` instead of direct tool invocation for **all** checks: `format`, `lint`, `knip`, `typecheck`, and `test`. Direct invocation misses workspace-level configuration (path aliases, package-scoped configs) and runs against the entire repo unnecessarily. For `test`, the `--filter` only picks the package — append the changed-file subset after `--` (see Test scoping), or you'll run the package's whole suite.
-
-In monorepos without turbo, scope validators by **run scope**, not output filtering — pick the flag that limits *what executes*, not one that just filters logs of a full-repo run. Use `git diff --name-only` against the base to find affected packages, then:
-
-- **npm**: `npm run <task> --workspace=<pkg>` (`-w`). Not `--filter` — npm's `--filter` only narrows reporter output while still running every workspace (pointlessly slow).
-- **pnpm**: `pnpm --filter <pkg> run <task>` (pnpm `--filter` *does* scope the run).
-- **yarn**: `yarn workspace <pkg> <task>`.
-- **Fallback**: `cd` into the package dir and run there.
 
 ## Commit
 
