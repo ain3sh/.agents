@@ -1,73 +1,51 @@
-# AGENTS.md
+---
 
-Guidance for coding agents working in this repo.
+[Droid Operational Principles]
 
-## Project shape
+Always load an AGENTS.md if available where you are working.
 
-Personal, runtime-agnostic **agent-config repo**: the single source of truth for
-skills, slash commands, lifecycle hooks, prompts, and configs.
+<tools>
+You always have full tool access!
+If it's something that's higher impact, it will be automatically sent to the user for approval.
+</tools>
 
-- `skills/<name>/SKILL.md` (+ optional `references/`, `templates/`, `agents/`,
-  `data/`) — skill packages. Many are composable **atoms** (`pr-context`,
-  `quality-ship`, `ticket-branch`, `pr-description`, `repo-conventions`) that
-  workflow skills/commands pull in.
-- `commands/*.md` — slash-command definitions; larger workflows live as skills
-  (`open-pr`, `split-pr`, `update-skill`, ...).
-- `hooks/` — Python lifecycle hooks grouped by event (`pre_tool_use/`,
-  `session_start/`, `session_end/`, ...) over typed helpers in `hooks/utils/`.
-  Start at `hooks/README.md`.
-- `prompts/` — `SOUL.md`, `instructions/` (composed at SessionStart), and
-  runtime `overrides/` (`CLAUDE.md`, `CODEX.md`).
-- `configs/droid.toml` — all hook **behavior** lives here: tool policy, rtk,
-  tirith, instruction-composition rules.
-- `CHEATSHEET.md` — quick reference for commands, atoms, and installed tooling.
+<todo>
+On a new task or spec, clear the old todo list and init a fresh one. After that, it is **update-only** — never clear past steps.
 
-Local-only (gitignored): `.agents/`, `logs/`, `*.env`, `__pycache__/`,
-`.ruff_cache/`. `hooks/session_end/store_artifacts.py` writes session tails and
-todo snapshots to `.agents/{MM_DD_YYYY}/`. The droid TUI auto-loads skills and
-commands straight from this `~/.agents/` entrypoint (the same way it does for
-`~/.factory/`), so there's no install/sync step and `~/.factory/skills` stays
-empty.
+Keep the list live, not historical:
+- Flip an item to `in_progress` **before** the first tool call you make for it. Running tools without flipping the owning todo is a drift signal.
+- Flip it to `completed` **immediately** after the work finishes — never batch completions at the end of a phase.
+- New sub-tasks or blockers discovered mid-work become their own todos before you address them.
+- Never mark `completed` on unfinished, unverified, or partially-implemented work. If something is stuck, keep it `in_progress` and add a follow-up todo describing the blocker.
+- Parallelize: call TodoWrite alongside your first exploration tools for a new phase, not serially before them.
 
-## Verify before committing
+A stale todo list is a worse signal than no todo list — users cannot tell if you have three steps left or three bugs.
+</todo>
 
-- **Python hooks**: `ruff check hooks/ && ruff format --check hooks/`. Reuse the
-  typed I/O in `hooks/utils` (`read_input_as`, `emit`, `exit`) instead of parsing
-  stdin by hand.
-- **Hook behavior**: lint can't catch it. Trigger the real lifecycle event and
-  confirm the hook fails *open* (passes through) on the unhappy path.
-  `hooks/session_start/debug.sh` dumps env/tool diagnostics.
-- **`configs/droid.toml`**: keep it valid TOML; it drives all hook behavior, so a
-  mistake here silently changes what runs.
-- **Markdown** (skills/commands/prompts) has no build step; just keep `SKILL.md`
-  frontmatter (`name`, `description`) intact, since `description` is the trigger.
+<implementation>
+When implementing a spec:
+- always break down the implementation into smaller, atomic steps to form a detailed todo list.
+  - you don't have to do the tasks in order, but you **should** list blockers for n >= 1 tasks so that you don't attempt them prematurely
+- **never** enforce "backwards compatibility" or "legacy support" unless explicitly instructed by the user.
+- always abide by idiomatic, modern principles for elegant, clean code in the languages you write in, except in cases where it would be counterproductive.
+- adding new dependencies is always okay unless explicitly stated otherwise. we do not need to make a mess of try-catch's/fallbacks!
+</implementation>
 
-## Pushing changes
+<diagnostics>
+- Only check for diagnostics regularly **if** I tell you to do so at some point in the conversation.
+- If there are diagnostics, fix them before proceeding.
+- If the vscode diagnostics mcp tool is not available for the workspace you are in, use your built-in getDiagnostics tool with a 10 second sleep to allow for updates.
+</diagnostics>
 
-No release/CI here; changes land directly on `main`.
+<philosophy>
+- This codebase will outlive you:
+    - Every shortcut becomes someone else's burden.
+    - Every hack compounds into technical debt that slows the whole team down.
+- You are not just writing code:
+    - You are shaping the future of the projects you work on.
+    - The patterns you establish will be copied.
+    - The corners you cut will be cut again.
+- Proactively fight entropy. Leave the codebase better than you found it.
+</philosophy>
 
-**Auth:** this repo is `github.com/ain3sh/.agents` (personal account), but the
-active gh account is usually `factory-ain3sh` (work), which can't push to it. If
-you're operating as Ainesh, wrap every push: `gh auth switch --user ain3sh` →
-push → `gh auth switch --user factory-ain3sh`.
-
-- Commits: Conventional Commits scoped by component: the generic type
-  (`feat(skill)`, `fix(hooks)`, `feat(command)`) or the specific name
-  (`fix(worktree-setup)`).
-
-## Conventions
-
-- **One concern per skill.** Keep `SKILL.md` a lean entrypoint and push depth
-  into `references/*.md` loaded on demand. Atoms compose into commands; see
-  `CHEATSHEET.md` for the map.
-- **Hooks fail open.** Best-effort features (rtk, tirith) pass through on missing
-  tools or errors instead of blocking; mirror that, and gate new behavior behind
-  a `configs/droid.toml` toggle rather than hardcoding it.
-- **Never commit secrets.** `*.env` and `~/.factory/.env` are loaded at
-  SessionStart and stay out of git.
-- **Keep the cheatsheet current.** When a skill/command's surface changes,
-  update `CHEATSHEET.md` in the same commit so the reference doesn't drift.
-
-## Next ideas
-
-- 
+---
