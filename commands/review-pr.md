@@ -108,11 +108,24 @@ Hits (swallowed errors, placeholder comments, generic casts, pass-through wrappe
 Show every finding to the user before posting:
 
 - Group by file; include severity, line, suggested fix.
-- State intended verdict (`APPROVE` / `COMMENT`).
+- State intended verdict (`APPROVE` / `COMMENT`) and draft the verdict body (below).
 - Plain chat prose; **do not use `AskUser`** -- the user should be free to discuss, reword, drop, or re-severity findings.
 - **Wait for explicit confirmation.** Apply any user edits before handoff.
 
-Once confirmed, hand off to `/post-review <PR-number-or-URL>`. Suggestion-block decisions live there -- review judgment must not be biased toward apply-clickable issues.
+### Draft the verdict body
+
+The verdict is the reviewer's standalone ruling; line comments are the evidence. Recapping "posted N comments on X, Y, Z" is the failure mode to kill -- GitHub renders the threads, restating them adds zero.
+
+Cover, roughly in order:
+
+1. **Disposition and why** -- one sentence: right change at the right layer, or symptom-patch / net-zero / collision with parallel art? Cite the §3 root cause, not the comment count.
+2. **Blockers** (`COMMENT` only) -- the one or two findings that actually gate. If it's all `opinion`/`nit`, justify `COMMENT` over `APPROVE` -- or flip.
+3. **What you verified** -- the §3 probes (repro, test-against-base, CI triage, slop-scan delta), one line each. Separates review from rubber-stamp.
+4. **Headline opinion** -- the unprompted call from **voice** (architecture, scope drift, missing invariant) that doesn't map to a line. Skip if none; don't pad.
+
+Short paragraph or 4-6 bullets; a verdict longer than the diff is its own smell.
+
+Once confirmed, hand off to `/post-review <PR-number-or-URL>` with findings and verdict body. Suggestion-block decisions live there -- review judgment must not be biased toward apply-clickable issues.
 
 ## Environment / tooling gotchas
 

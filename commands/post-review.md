@@ -78,7 +78,9 @@ Add `--argjson start_line <N>` and emit `start_line:$start_line, start_side:"RIG
 gh api "repos/$REPO/pulls/<number>/reviews" \
   --method POST \
   -f event="<COMMENT|APPROVE>" \
-  -f body="<summary>"
+  -f body="<verdict-body>"
 ```
 
 `COMMENT` if any line comments were posted; `APPROVE` only if `/review-pr` ended with zero findings.
+
+`<verdict-body>` is the standalone judgment from `/review-pr` §5 (disposition + root cause, blockers, what you verified, headline opinion) -- **not** a recap of the threads you just posted; GitHub renders those inline. If the upstream handoff omitted one, draft it against that structure before submitting -- don't fall back to "Posted N comments on X, Y, Z."
