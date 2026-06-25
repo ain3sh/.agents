@@ -27,11 +27,11 @@ Detect the project's tooling from config files at the repo root, then run each a
 |-------|-------------------|-----------------|
 | Format | `.prettierrc*`, `biome.json`, `dprint.json` | `npx prettier --write <paths>` / `biome format --write <paths>` (prefer over a bundled `npm run format`) |
 | Lint fix | `eslint.config*`, `.eslintrc*`, `biome.json` | `npx eslint --fix <paths>` / `biome lint --apply <paths>` (prefer over a bundled `npm run fix`) |
-| Dead code (JS/TS) | `knip.*`, `knip` in package.json scripts | `npm run knip` or `npx knip` |
+| Dead code (JS/TS) | `knip.*`, `knip` in package.json scripts | `npx knip --workspace <pkg>` (monorepo) / `npx knip` (single pkg) |
 | Dead code (Python) | `*.py` in diff + `pyproject.toml` / `setup.py` | `vulture <changed-paths>` (or `uvx vulture`) |
 | AI-slop (JS/TS) | any `*.{js,jsx,ts,tsx}` in diff | `slop-scan delta <base> <head> --format json` |
 | React diagnostics (JS/TS) | `react`/`react-dom`/`next`/`@remix-run/*` in `package.json` | `npx -y react-doctor@latest . --diff <base> --verbose` |
-| Type check | `tsconfig.json` | `npm run typecheck` or `npx tsc --noEmit` |
+| Type check | `tsconfig.json` | `npx tsc --noEmit -p <pkg>` (or runner-scoped per Monorepo scoping) |
 | Tests | `jest.config*`, `vitest.config*`, `pytest.ini` | Changed-file subset, serial workers (see below) |
 
 - Inspect `package.json` scripts (or `pyproject.toml` / `Makefile` for Python) to learn *which* tools the repo uses, but **prefer invoking each tool directly** (`npx prettier`, `npx eslint`, `npx tsc`, `npx knip`) scoped to changed paths.
@@ -67,7 +67,7 @@ quality-ship checklist:
 
 `evidence` = command run or missing config (validators); detection output + `repair.py` invocation (worktree). Don't commit until every line is filled. CI gates each validator; the worktree row catches repair gaps that surface as `Cannot find module` mid-validator. When detection emits `WORKTREE`, `worktree: repaired` is the only valid tag -- not "looks fine, skipped".
 
-`no signal` means the tool is **genuinely not configured** in the repo — not that a convenient scoped script is missing. The absence of a pre-wired `knip:cli` task is never a reason to skip knip; scope it yourself with the tool's own flags (`knip --workspace <pkg>`, `eslint <paths>`, `tsc -p <pkg>`, `vulture <paths>`) or by running from the package dir. Skipping a configured validator because no scoped task exists is a bug, not a pass.
+`no signal` means the tool is **genuinely not configured** in the repo, not that a convenient scoped script is missing. When the tool exists but the package.json has no pre-wired scoped task (`knip:cli`, `typecheck:web`), you have two equally wrong escape hatches: skipping it, or running it unscoped against the whole repo. Both ship as `no signal` lies. Scope it yourself with the tool's own flags (`knip --workspace <pkg>`, `eslint <paths>`, `tsc -p <pkg>`, `vulture <paths>`) or by `cd`ing into the package directory. A "scoped" validator that took minutes is the giveaway that you actually ran the full repo, see Monorepo scoping for why.
 
 ### AI-slop detector (deterministic)
 
