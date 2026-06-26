@@ -45,7 +45,7 @@ def _extract_base_fields(data: dict[str, Any]) -> dict[str, Any]:
         "transcript_path": data.get("transcript_path", ""),
         "cwd": data.get("cwd", ""),
         "permission_mode": data.get("permission_mode", "default"),
-        "hook_event_name": data.get("hookEventName", ""),
+        "hook_event_name": data.get("hookEventName") or data.get("hook_event_name", ""),
     }
 
 
@@ -105,7 +105,7 @@ def read_input() -> HookInput:
     if not isinstance(data, dict):
         raise HookInputError("Hook input must be a JSON object")
 
-    event_name = data.get("hookEventName")
+    event_name = data.get("hookEventName") or data.get("hook_event_name")
     if not event_name:
         raise HookInputError("Missing 'hookEventName' field")
 
