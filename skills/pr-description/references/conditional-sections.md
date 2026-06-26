@@ -1,6 +1,6 @@
 # Conditional sections
 
-Templates for the catalog's conditional rows (SKILL.md §3). Use only the ones whose trigger fired; each renders at its catalog position. `<details>`-wrapped sections sit at the body's bottom so it reads linearly.
+Templates for the catalog's conditional rows (SKILL.md §3). Use only the ones whose trigger fired; each renders at its catalog position.
 
 ## Inline to the Description
 
@@ -20,6 +20,19 @@ When a reviewer could ask "why are unrelated changes bundled?", append a scope m
 ### Scope map — what is bundled and why
 - **<bucket>** — <files/areas>. <why the core change requires it.>
 **Out of scope:** <excluded work + where it's tracked.>
+```
+
+### Root Cause Analysis — bug fixes
+
+```markdown
+<details><summary>Root Cause Analysis</summary>
+
+**Trace**: <repro, symptoms, investigation; cite Sentry IDs / log queries pulled>
+**Root cause**: <first unintended side effect — not the downstream error; name the broken invariant>
+**Fix path**: <why this addresses the cause not the symptom; the rejected symptom-level fix>
+**Why this layer**: <if the fix isn't at the symptom's layer, justify; cite root-cause-analysis if it shaped the call>
+
+</details>
 ```
 
 ## Between Risk & Impact and Verification
@@ -117,19 +130,6 @@ A reviewer-facing file tour — distinct from Implementation Notes, which record
 Current diff: `52 files changed, +3418 / -1650`.
 - **<subsystem>**: `path/a.ts`, `path/b.tsx` — <what changed + why grouped here>
 - **<subsystem>**: `path/c.ts` — <…>
-
-</details>
-```
-
-### Root Cause Analysis — bug fixes
-
-```markdown
-<details><summary>Root Cause Analysis</summary>
-
-**Trace**: <repro, symptoms, investigation; cite Sentry IDs / log queries pulled>
-**Root cause**: <first unintended side effect — not the downstream error; name the broken invariant>
-**Fix path**: <why this addresses the cause not the symptom; the rejected symptom-level fix>
-**Why this layer**: <if the fix isn't at the symptom's layer, justify; cite root-cause-analysis if it shaped the call>
 
 </details>
 ```

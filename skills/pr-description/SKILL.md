@@ -58,7 +58,7 @@ The 5 required sections fire on every PR. Conditional sections are a **menu, not
 
 | # | Section | Fires when |
 |---|---|---|
-| 1 | Description | always — inline anti-goals / scope-map / design-doc link as needed |
+| 1 | Description | always — inline anti-goals / scope-map / design-doc link / Root Cause Analysis as needed |
 | 2 | Architecture | structural change (new/altered components, flows, boundaries) → **draw** via `references/artifacts.md`; skip only when the diagram would add nothing prose can't (renders right after Description) |
 | 3 | Visual Evidence | concrete visual change (UI / TUI / CLI output / rendered media) → capture live proof via `references/visual-evidence.md`; renders right after Architecture (or Description if no diagram). **Produced after the PR is open** so capture never blocks the create |
 | 4 | Related Issue (+ PR lineage / stack block) | always; lineage line if stacked/split; stack block if `stack`-managed |
@@ -74,8 +74,7 @@ The 5 required sections fire on every PR. Conditional sections are a **menu, not
 | 14 | Repro Recipe | new feature / fixed bug — **manual steps a human runs by hand, never a CI-run test command** |
 | 15 | Implementation map | `<details>`; large multi-subsystem diff (~20+ files) |
 | 16 | Changes since last review | `<details>`; refresh under active review → `references/refresh.md` |
-| 17 | Root Cause Analysis | `<details>`; bug fix |
-| 18 | Implementation Notes | `<details>`; `.agents/specs/<spec>.notes.md` exists |
+| 17 | Implementation Notes | `<details>`; `.agents/specs/<spec>.notes.md` exists |
 
 **Length scales with complexity, not effort.** A one-file fix is ~150 words and three sections. A complex PR earns length only through *conditional sections that carry real content* — the five required sections stay disciplined regardless. If the always-on body crosses ~450 words with no conditional block in play, you're restating the diff — trim.
 
