@@ -155,7 +155,7 @@ Source: `.agents/specs/<basename>.notes.md`
 </details>
 ```
 
-## Lineage (renders with Related Issue, row 2)
+## Lineage (renders within the Related Issue row)
 
 ### PR lineage — stacked / split chain
 
@@ -183,4 +183,4 @@ When the branch is part of a `stack`-managed chain (see the **stack-cli** skill)
 
 ---
 
-Catalog row 15 (**Changes since last review**) is refresh-only — its template lives in `refresh.md` (Phase 2, the revision-log carve-out), not here.
+Catalog row 16 (**Changes since last review**) is refresh-only — its template lives in `refresh.md` (Phase 2, the revision-log carve-out), not here.

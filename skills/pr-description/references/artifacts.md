@@ -4,6 +4,8 @@ Attach anything that clarifies behavior or eases validation. **Upload via `gh-at
 
 ## Screenshots & recordings
 
+**Capturing** live proof of a concrete visual change is its own workflow — `references/visual-evidence.md` owns the decision tree (screenshot vs video, raw vs showcase, what to show, fail-loud-on-bug). This section owns what every artifact needs regardless of source: the caption discipline below, and the upload mechanics (top of file).
+
 A before/after **recording** earns its place with a caption: capture conditions (tool, dimensions, playback speed), what to watch, and a quantified delta (e.g., terminal-write bytes/events, request count, p95 latency). A bare clip with no caption is net-zero — the reviewer can't tell what changed or by how much.
 
 ## Diagrams
