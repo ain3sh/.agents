@@ -45,7 +45,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils import (  # type: ignore
     HookInputError,
+    HookOutput,
     SessionStartInput,
+    SessionStartOutput,
     exit,
     get_droid_env_file,
     get_toml_section,
@@ -138,6 +140,20 @@ def _config_env_vars(config: dict[str, object]) -> dict[str, str]:
     return env_vars
 
 
+def _exit_session_start(system_message: str | None = None) -> None:
+    if system_message:
+        exit(
+            output=HookOutput(
+                suppress_output=True,
+                system_message=system_message,
+                hook_specific_output=SessionStartOutput(),
+            ),
+            hook_event_name=HOOK_EVENT_NAME,
+        )
+
+    exit(hook_event_name=HOOK_EVENT_NAME)
+
+
 # ============================================================================
 # Main Hook Logic
 # ============================================================================
@@ -183,7 +199,7 @@ def main():
         )
 
     if hook_input.source not in sources:
-        exit(hook_event_name=HOOK_EVENT_NAME)
+        _exit_session_start()
 
     env_vars: dict[str, str] = {}
     if secrets_files:
@@ -192,22 +208,22 @@ def main():
     env_vars.update(_config_env_vars(config))
 
     if not env_vars:
-        exit(hook_event_name=HOOK_EVENT_NAME)
+        _exit_session_start()
 
     count = apply_env_vars(env_vars)
 
+    status: str | None = None
     if count > 0:
-        # Output is shown to user in transcript mode
         if secrets_files:
             sources = ", ".join(str(p) for p in secrets_files)
             if args.vars_file or verbose:
-                print(
+                status = (
                     f"[env_vars] Loaded {count} environment variable(s) from {sources}"
                 )
         elif verbose:
-            print(f"[env_vars] Loaded {count} environment variable(s) from config")
+            status = f"[env_vars] Loaded {count} environment variable(s) from config"
 
-    exit(hook_event_name=HOOK_EVENT_NAME)
+    _exit_session_start(status)
 
 
 if __name__ == "__main__":

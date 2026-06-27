@@ -169,7 +169,8 @@ def main():
     if content:
         exit(
             output=HookOutput(
-                hook_specific_output=SessionStartOutput(additional_context=content)
+                suppress_output=True,
+                hook_specific_output=SessionStartOutput(additional_context=content),
             ),
             hook_event_name=HOOK_EVENT_NAME,
         )

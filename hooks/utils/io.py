@@ -140,8 +140,9 @@ def read_input_as(input_type: type[T]) -> T:
 # Output + Exit
 # ============================================================================
 
-# Events where stdout on exit 0 is injected as context, so a bare
-# {"suppressOutput": true} would leak into the conversation.
+# Events where stdout on exit 0 is injected as context. These events must include
+# hookSpecificOutput when emitting suppressOutput, otherwise the raw JSON can
+# become injected context.
 _STDOUT_AS_CONTEXT_EVENTS = frozenset({"UserPromptSubmit", "SessionStart"})
 
 
@@ -235,7 +236,10 @@ def exit(
     elif (
         code == 0
         and suppress_output
-        and hook_event_name not in _STDOUT_AS_CONTEXT_EVENTS
+        and (
+            hook_event_name not in _STDOUT_AS_CONTEXT_EVENTS
+            or hook_event_name is not None
+        )
     ):
         # Silent pass-through: hide the hook block from the chat view.
         # No permissionDecision here on purpose: pass-throughs defer to the

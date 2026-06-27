@@ -14,7 +14,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils import (  # type: ignore
     HookInputError,
+    HookOutput,
     SessionStartInput,
+    SessionStartOutput,
     exit,
     get_toml_section,
     load_toml,
@@ -208,6 +210,20 @@ def _restore_wrapper(tool: str, target: Path) -> bool:
     return True
 
 
+def _exit_session_start(system_message: str | None = None) -> None:
+    if system_message:
+        exit(
+            output=HookOutput(
+                suppress_output=True,
+                system_message=system_message,
+                hook_specific_output=SessionStartOutput(),
+            ),
+            hook_event_name=HOOK_EVENT_NAME,
+        )
+
+    exit(hook_event_name=HOOK_EVENT_NAME)
+
+
 def main() -> None:
     args = _parse_args(sys.argv[1:])
     config = _parse_config(args)
@@ -223,7 +239,7 @@ def main() -> None:
         )
 
     if hook_input.source not in config.when and "*" not in config.when:
-        exit(hook_event_name=HOOK_EVENT_NAME)
+        _exit_session_start()
 
     changed: list[str] = []
     missing: list[str] = []
@@ -236,14 +252,13 @@ def main() -> None:
         if _restore_wrapper(tool, target):
             changed.append(f"{tool} -> {target}")
 
+    status: list[str] = []
     if changed and config.verbose:
-        print("[tool_wrappers] Restored " + ", ".join(changed))
+        status.append("[tool_wrappers] Restored " + ", ".join(changed))
     if missing and config.verbose:
-        print(
-            "[tool_wrappers] Missing target for " + ", ".join(missing), file=sys.stderr
-        )
+        status.append("[tool_wrappers] Missing target for " + ", ".join(missing))
 
-    exit(hook_event_name=HOOK_EVENT_NAME)
+    _exit_session_start("\n".join(status) if status else None)
 
 
 if __name__ == "__main__":
