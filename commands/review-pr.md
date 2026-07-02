@@ -3,7 +3,7 @@ description: Review a PR -- root-cause + typed verification, shared criteria, fi
 argument-hint: <PR-number-or-URL>
 ---
 
-Load skills: **pr-context**, **linear-cli**, **worktree-setup**, **quality-ship**, **voice**, **repo-conventions**.
+Load skills: **pr-context**, **linear-cli**, **worktree-setup**, **quality-ship**, **voice**, **repo-conventions**, **structural-review**.
 
 Treat **voice** as a required review gate, not optional polish: load it before drafting findings so severity, phrasing, and the unprompted-opinion sweep come from the canonical skill.
 
@@ -11,7 +11,7 @@ Treat **voice** as a required review gate, not optional polish: load it before d
 
 **Workers in flight.** If a subagent is still making progress (output / tool calls visible), **let it finish**. Don't `TaskStop` over resource-usage or token-budget worries — review quality outranks both. Stop only if genuinely stalled or off-task.
 
-**Worker complexity.** Any `Task` dispatched from this flow — coverage sweeps, slop scans, repro runs, per-area reviewers — **must** pass `complexity: "heavy"`. The default `medium` is too weak for review judgment (root-cause tracing, architecture critique, slop discrimination) and produces shallow findings. Don't omit `complexity` or downgrade to save tokens. If a sweep is genuinely trivial (one-file typo PR), do it inline rather than dispatching.
+**Worker complexity.** Any `Task` dispatched from this flow — coverage sweeps, slop scans, structural sweeps, repro runs, per-area reviewers — **must** pass `complexity: "heavy"`. The default `medium` is too weak for review judgment (root-cause tracing, architecture critique, slop discrimination) and produces shallow findings. Don't omit `complexity` or downgrade to save tokens. If a sweep is genuinely trivial (one-file typo PR), do it inline rather than dispatching.
 
 **Get to the crux — verify, don't trust.** The PR's description, claimed invariants, and green-elsewhere CI are hypotheses, not evidence; §3 is how you turn them into fact. A diff that's clean (passes CI, no slop) but doesn't move the root cause — or that a larger in-flight PR already subsumes — is net-zero churn; say so plainly. Rubber-stamping a tidy symptom-patch is the failure mode to avoid.
 
@@ -86,6 +86,8 @@ Load **voice** here if it is not already active. It owns the judgment criteria, 
 
 Plus the repo's **own documented conventions** -- hold the author to the same standard we hold ourselves. Follow the **repo-conventions** skill (discover + diff-scope against the PR's changed files, then read the selected docs) and reconcile the diff against them. Here you **flag, not fix**: fold each deviation into findings at `warning` (a clear written rule -- error handling, file organization, test placement, flags -- broken) or `suggestion` (softer guidance). A repo-provided pre-PR checklist is itself review criteria -- check the diff against each item.
 
+Plus the **structural sweep** (every PR): dispatch a heavy worker with the **structural-review** skill as its objective — the behavior-preserving reframing hunt that correctness review misses. Findings return in **voice** tiers; fold them in, dedupe against slop-scan hits on the same lines, and hold the flag-not-fix line. A one-file typo PR still gets the sweep, inline instead of dispatched.
+
 Plus the **AI-slop validator** (JS/TS only):
 
 ```bash
@@ -120,7 +122,7 @@ Cover, roughly in order:
 
 1. **Disposition and why** -- one sentence: right change at the right layer, or symptom-patch / net-zero / collision with parallel art? Cite the §3 root cause, not the comment count.
 2. **Blockers** (`COMMENT` only) -- the one or two findings that actually gate. If it's all `opinion`/`nit`, justify `COMMENT` over `APPROVE` -- or flip.
-3. **What you verified** -- the §3 probes (repro, test-against-base, CI triage, slop-scan delta), one line each. Separates review from rubber-stamp.
+3. **What you verified** -- the probes (repro, test-against-base, CI triage, slop-scan delta, structural sweep), one line each. Separates review from rubber-stamp.
 4. **Headline opinion** -- the unprompted call from **voice** (architecture, scope drift, missing invariant) that doesn't map to a line. Skip if none; don't pad.
 
 Short paragraph or 4-6 bullets; a verdict longer than the diff is its own smell.
