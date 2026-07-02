@@ -6,7 +6,7 @@ user-invocable: false
 
 # PR Description
 
-A PR description answers the reviewer's questions in the order they ask them, and front-loads what the diff can't give them: intent, the rejected alternative, the blast radius, and the proof it works. Every rule below derives from that.
+A reviewer triages on the first screen: *why does this matter, and what will it cost me?* — answered there, they help push the PR through; unanswered, it sits ("not my problem", "looks exhausting"). So the body answers the reviewer's questions in the order they ask them and front-loads what the diff can't give: intent, the rejected alternative, the blast radius, the proof it works. Every rule below derives from that.
 
 ## When this fires & how to load it
 
@@ -93,8 +93,13 @@ Closes TEAM-123   <!-- "Closes" full fix; "Part of" incremental. Add a context c
 
 ## Reviewer Guide
 
-**Read order**: file > file > file. Skip <snapshots, generated code>.
+**Diff shape**: <~% split of review *attention*, not lines: "~60% core logic (`oauth/core/`), ~30% tests, ~10% plumbing; skip: snapshots, lockfiles, generated". Noise never gets a % — a 3k-line lockfile is "skip", not 90%.>
 **Review depth**: Skim | Standard | Deep — one-line why.
+**Read order** (causal — not alphabetical, not diff-stat):
+1. `path/to/entry.ts` — <what to trace, one clause; symbols in backticks>
+2. `path/to/next.ts` — <one clause>
+3. tests — <invariant they pin>
+
 **Open for pushback**: <one live design call + code anchor (`src/foo.ts:42`); drop the line entirely if none.>
 
 ## Risk & Impact
@@ -113,7 +118,7 @@ Closes TEAM-123   <!-- "Closes" full fix; "Part of" incremental. Add a context c
 
 Load **voice** before drafting or editing this section and apply it to every line (specifics, named actors, no slop). Treat this as a required quality gate; the rules below are only the PR-specific additions.
 
-- **Reviewer Guide is the highest-leverage block.** Order files by causal importance, not diff stat. Drop the pushback line when there's no live call — empty prompts read as performative. If intentional behavior changes could look like drive-by edits or merge noise, add a "Deliberate behavior changes (not merge noise):" list, one line each on why the core change requires it.
+- **Reviewer Guide is the highest-leverage block — keep it scannable.** One file (or tight pair) per numbered read-order line; never collapse into an `a > b > c` run-on — that's where legibility dies on multi-file PRs (a 1-3 file PR may inline the read order on one line). Drop the pushback line when there's no live call — empty prompts read as performative. If intentional behavior changes could look like drive-by edits or merge noise, add a "Deliberate behavior changes (not merge noise):" list, one line each on why the core change requires it.
 - **Description leads with the problem, not the mechanism.** "separate liveness from commit"-style openers draw "needs a clear WHY" comments; a non-goal opener ("the visual model is unchanged") buries the lede.
 - **Naming**: prose terms must not collide with existing product surfaces (e.g., "transcript rendering" already meant the CLI's alt-view → use "chat rendering"). Reserve module/symbol names for code references.
 - **Risk & Impact never claims a mitigation the diff doesn't contain** — no "gated behind a flag" unless the flag is in this PR. Future rollout intent goes in Migration & Rollout, marked as a plan.
