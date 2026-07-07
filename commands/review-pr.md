@@ -13,7 +13,7 @@ Treat **voice** as a required review gate, not optional polish: load it before d
 
 **Worker complexity.** Any `Task` dispatched from this flow — coverage sweeps, slop scans, structural sweeps, repro runs, per-area reviewers — **must** pass `complexity: "heavy"`. The default `medium` is too weak for review judgment (root-cause tracing, architecture critique, slop discrimination) and produces shallow findings. Don't omit `complexity` or downgrade to save tokens. If a sweep is genuinely trivial (one-file typo PR), do it inline rather than dispatching.
 
-**Get to the crux — verify, don't trust.** The PR's description, claimed invariants, and green-elsewhere CI are hypotheses, not evidence; §3 is how you turn them into fact. A diff that's clean (passes CI, no slop) but doesn't move the root cause — or that a larger in-flight PR already subsumes — is net-zero churn; say so plainly. Rubber-stamping a tidy symptom-patch is the failure mode to avoid.
+**Get to the crux — verify, don't trust.** The PR's description, claimed invariants, and green-elsewhere CI are hypotheses, not evidence; §3 is how you turn them into fact. A diff that's clean (passes CI, no slop) but doesn't move the root cause — or that a larger in-flight PR already subsumes — is net-zero churn; say so plainly. Rubber-stamping a tidy symptom-patch is the failure mode to avoid. Its twin: hedging on a requirement your own evidence has already settled — you are the engineer, and once verification proves a standard applies, enforcing it is not a negotiation.
 
 ## 1. Gather context
 
@@ -51,7 +51,7 @@ Don't trust badge colors — classify each failure from its job log (`gh pr chec
 
 - **Infra flake** — OOM (`exit 134`/`137`, "JavaScript heap out of memory"), runner timeout, network; often fails several untouched packages identically. Note and discount.
 - **Unrelated** — failure in a file/shard the diff doesn't touch (flaky e2e on another feature). Note as unrelated.
-- **Real** — caused by the diff, or a required gate the PR hasn't met (missing e2e test, opt-out label). This is a finding.
+- **Real** — caused by the diff, or a required gate the PR hasn't met (missing e2e test, opt-out label). This is a finding. When your own verification proves the gate applies — you reproduced through the very harness it demands — an opt-out label is a cop-out, not an alternative: require the coverage and name the exact test to add; the label deserves dismissal, not rebuttal.
 
 If CI was **inconclusive** (e.g. typecheck OOM'd before reaching the relevant package), run that one check locally and scoped (`--filter`/single package) for a definitive answer — and separate genuine errors from environment artifacts (missing generated deps in a fresh worktree).
 
@@ -121,13 +121,13 @@ The verdict is the reviewer's standalone ruling; line comments are the evidence.
 Cover, roughly in order:
 
 1. **Disposition and why** -- one prose sentence: right change at the right layer, or symptom-patch / net-zero / collision with parallel art? Cite the §3 root cause, not the comment count. Never open with the literal event token ("COMMENT." / "APPROVE."); GitHub already badges the review state, so the body starts with the *why*.
-2. **Blockers** (`COMMENT` only) -- the one or two findings that actually gate. If it's all `opinion`/`nit`, justify `COMMENT` over `APPROVE` -- or flip.
+2. **Blockers** (`COMMENT` only) -- the one or two findings that actually gate, each a numbered imperative ask naming the concrete mechanism: the exact test/fixture/flag to add, the invariant it must assert, the call site to move. Standard-protocol asks (test coverage, ticket reference, meeting a CI gate) are requirements, not requests -- state them flatly. Never argue for them, pre-empt pushback ("worth satisfying rather than labeling away"), or plead the gate's legitimacy ("genuinely red" -- real-vs-flake triage is evidence per point 3, stated once as fact, never a case for compliance). Detail that needs a paragraph belongs in the line comment; the verdict names the requirement. If it's all `opinion`/`nit`, justify `COMMENT` over `APPROVE` -- or flip.
 3. **Evidence, woven in** -- attach the probe to the claim it backs (*"the new tests fail on base for the stated reason"*), inline, as the observed fact. **Never the commands behind it**: CLI invocations, tool/typechecker names, "Checks run:"/"Also verified:" paragraphs, CI counts, and sweep inventories are process narration that buries the findings. A probe that supports no specific claim doesn't appear; that's still separating review from rubber-stamp, without the audit trail.
 4. **Headline opinion** -- the unprompted call from **voice** (architecture, scope drift, missing invariant) that doesn't map to a line. Skip if none; don't pad.
 
 Pre-existing issues discovered en route ("worth a ticket", fast-follows) go to a ticket or a PR conversation comment, not a verdict paragraph.
 
-Short paragraph or 4-6 bullets; the ruling and the gate land in the first two sentences. A verdict longer than the diff is its own smell.
+Shape: one ruling sentence, the numbered blockers, a short non-gating paragraph. A verdict longer than the diff is its own smell.
 
 Once confirmed, hand off to `/post-review <PR-number-or-URL>` with findings and verdict body. Suggestion-block decisions live there -- review judgment must not be biased toward apply-clickable issues.
 
