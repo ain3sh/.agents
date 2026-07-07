@@ -116,7 +116,7 @@ Show every finding to the user before posting:
 
 ### Draft the verdict body
 
-The verdict is the reviewer's standalone ruling; line comments are the evidence. Recapping "posted N comments on X, Y, Z" is the failure mode to kill -- GitHub renders the threads, restating them adds zero.
+The verdict is the reviewer's standalone ruling; line comments are the evidence. Recapping "posted N comments on X, Y, Z" is the failure mode to kill -- GitHub renders the threads, restating them adds zero. The audience is the PR author: the approval-gate discussion (draft revisions, severity re-calibrations, dropped findings) is invisible to them and never referenced in the body.
 
 Cover, roughly in order:
 

@@ -88,6 +88,7 @@ gh api "repos/$REPO/pulls/<number>/reviews" \
 **Deslop pass before submitting -- mandatory, even on a user-approved body.** Approval at the `/review-pr` gate covered the findings and disposition, not the prose; re-read the body against **voice** and cut wholesale:
 
 - **Event-token prefix**: a body opening with "COMMENT." / "APPROVE." duplicates the badge GitHub renders from `event`; start with the *why* sentence instead.
+- **Internal deliberation**: the approval-gate chat never leaks. Draft history, severity re-calibrations, "my earlier draft over-weighted X", what the user reworded or dropped -- the PR author sees none of that conversation and must not learn it existed. Post the final position as if it were the only one you ever held.
 - **Command narration**: the CLI invocations, tool names, and worker dispatches behind a probe (`gh run view`, vitest flags, `slop-scan delta`, typechecker choice). Report the observed fact -- *"the new tests fail on base for the stated reason"* -- never the transcript that produced it. How you learned something is your business; what's true is the review.
 - **Methodology paragraphs**: "Checks run:", "Also verified:", CI pass counts, sweep inventories. If a probe backs a claim, it's already inline in that claim; standalone it's an essay about your process.
 - **Fast-follow / "worth a ticket" material**: pre-existing issues belong in a ticket or a PR conversation comment, not the verdict.
