@@ -122,10 +122,12 @@ Cover, roughly in order:
 
 1. **Disposition and why** -- one sentence: right change at the right layer, or symptom-patch / net-zero / collision with parallel art? Cite the §3 root cause, not the comment count.
 2. **Blockers** (`COMMENT` only) -- the one or two findings that actually gate. If it's all `opinion`/`nit`, justify `COMMENT` over `APPROVE` -- or flip.
-3. **What you verified** -- the probes (repro, test-against-base, CI triage, slop-scan delta, structural sweep), one line each. Separates review from rubber-stamp.
+3. **Evidence, woven in** -- attach the probe to the claim it backs (*"the new tests fail on base for the stated reason"*), inline, as the observed fact. **Never the commands behind it**: CLI invocations, tool/typechecker names, "Checks run:"/"Also verified:" paragraphs, CI counts, and sweep inventories are process narration that buries the findings. A probe that supports no specific claim doesn't appear; that's still separating review from rubber-stamp, without the audit trail.
 4. **Headline opinion** -- the unprompted call from **voice** (architecture, scope drift, missing invariant) that doesn't map to a line. Skip if none; don't pad.
 
-Short paragraph or 4-6 bullets; a verdict longer than the diff is its own smell.
+Pre-existing issues discovered en route ("worth a ticket", fast-follows) go to a ticket or a PR conversation comment, not a verdict paragraph.
+
+Short paragraph or 4-6 bullets; the ruling and the gate land in the first two sentences. A verdict longer than the diff is its own smell.
 
 Once confirmed, hand off to `/post-review <PR-number-or-URL>` with findings and verdict body. Suggestion-block decisions live there -- review judgment must not be biased toward apply-clickable issues.
 

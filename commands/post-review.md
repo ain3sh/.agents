@@ -83,4 +83,14 @@ gh api "repos/$REPO/pulls/<number>/reviews" \
 
 `COMMENT` if any line comments were posted; `APPROVE` only if `/review-pr` ended with zero findings.
 
-`<verdict-body>` is the standalone judgment from `/review-pr` §5 (disposition + root cause, blockers, what you verified, headline opinion) -- **not** a recap of the threads you just posted; GitHub renders those inline. If the upstream handoff omitted one, draft it against that structure before submitting -- don't fall back to "Posted N comments on X, Y, Z."
+`<verdict-body>` is the standalone judgment from `/review-pr` §5 (disposition + root cause, blockers, headline opinion, evidence woven into the claims it backs) -- **not** a recap of the threads you just posted; GitHub renders those inline. If the upstream handoff omitted one, draft it against that structure before submitting -- don't fall back to "Posted N comments on X, Y, Z."
+
+**Deslop pass before submitting -- mandatory, even on a user-approved body.** Approval at the `/review-pr` gate covered the findings and disposition, not the prose; re-read the body against **voice** and cut wholesale:
+
+- **Command narration**: the CLI invocations, tool names, and worker dispatches behind a probe (`gh run view`, vitest flags, `slop-scan delta`, typechecker choice). Report the observed fact -- *"the new tests fail on base for the stated reason"* -- never the transcript that produced it. How you learned something is your business; what's true is the review.
+- **Methodology paragraphs**: "Checks run:", "Also verified:", CI pass counts, sweep inventories. If a probe backs a claim, it's already inline in that claim; standalone it's an essay about your process.
+- **Fast-follow / "worth a ticket" material**: pre-existing issues belong in a ticket or a PR conversation comment, not the verdict.
+
+This applies to line-comment bodies too, not just the verdict: findings state the defect and the fix, never the commands run to find it.
+
+The reader has the diff open and shit to do: ruling and gate in the first two sentences, done.
