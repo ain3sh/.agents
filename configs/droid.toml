@@ -121,6 +121,11 @@ match.tool = "ExitSpecMode"
 match.output = { approved = true }
 include = ["instructions/INIT_NOTES.md"]
 
+[[hooks.post_tool_use.instructions.rules]]
+match.tool = "ProposeMission"
+match.output = { approved = true }
+include = ["instructions/INIT_NOTES.md"]
+
 # ---
 [hooks.notification]
 
