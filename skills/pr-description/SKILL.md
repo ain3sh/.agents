@@ -60,7 +60,7 @@ The 5 required sections fire on every PR. Conditional sections are a **menu, not
 |---|---|---|
 | 1 | Description | always — inline anti-goals / scope-map / design-doc link / Root Cause Analysis as needed |
 | 2 | Visual Evidence | concrete visual change (UI / TUI / CLI output / rendered media) → capture live proof via `references/visual-evidence.md`; renders right after Description. **Produced after the PR is open** so capture never blocks the create |
-| 3 | Repro Recipe | new feature / fixed bug — **manual steps a human runs by hand, never a CI-run test command** |
+| 3 | Repro Recipe | new feature / fixed bug — **manual, copy-pasteable steps a human runs by hand, never a CI-run test command** |
 | 4 | Architecture | structural change (new/altered components, flows, boundaries) → **draw** via `references/artifacts.md`; skip only when the diagram would add nothing prose can't (renders after the top proof sections) |
 | 5 | Related Issue (+ PR lineage / stack block) | always; lineage line if stacked/split; stack block if `stack`-managed |
 | 6 | Reviewer Guide | always |

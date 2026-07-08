@@ -108,6 +108,10 @@ Honest acknowledgment beats discovery six weeks later. No regression → omit; d
 
 **Manual, human-run steps**: `setup -> action -> observed result`, each line something a reviewer *types or clicks* by hand, closing on a result they can eyeball. Bar: someone who's never touched the repo runs it as-is and sees the behavior. Indented (not fenced) block so it nests cleanly.
 
+Make the happy path **copy-pasteable**. Prefer exact prompts, commands, URLs, fixture values, and clicks over meta-prompts like "create an example resource" or "try the new flow." If a reviewer should type a prompt, include the prompt text. If they should use a fixture, name the fixture. Meta-prompts are allowed only after at least one concrete example, when you expect reviewers to try variations.
+
+Resolve every placeholder in the recipe. If a step needs an ID, generated filename, session slug, or other runtime value, include the command/UI action that reveals it before the step that uses it. Never assume reviewer context about where an identifier comes from; write the retrieval mechanism inline.
+
 ```markdown
 ## Repro Recipe
 
