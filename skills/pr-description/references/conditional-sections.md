@@ -102,7 +102,7 @@ Honest acknowledgment beats discovery six weeks later. No regression → omit; d
 - `cart_events` grows ~1 row/checkout. Est. +0.5% table storage / 90d.
 ```
 
-## After Verification
+## Below Description
 
 ### Repro Recipe — new feature / fixed bug
 

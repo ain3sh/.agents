@@ -59,26 +59,26 @@ The 5 required sections fire on every PR. Conditional sections are a **menu, not
 | # | Section | Fires when |
 |---|---|---|
 | 1 | Description | always — inline anti-goals / scope-map / design-doc link / Root Cause Analysis as needed |
-| 2 | Architecture | structural change (new/altered components, flows, boundaries) → **draw** via `references/artifacts.md`; skip only when the diagram would add nothing prose can't (renders right after Description) |
-| 3 | Visual Evidence | concrete visual change (UI / TUI / CLI output / rendered media) → capture live proof via `references/visual-evidence.md`; renders right after Architecture (or Description if no diagram). **Produced after the PR is open** so capture never blocks the create |
-| 4 | Related Issue (+ PR lineage / stack block) | always; lineage line if stacked/split; stack block if `stack`-managed |
-| 5 | Reviewer Guide | always |
-| 6 | Risk & Impact | always |
-| 7 | Contract Delta | DB / REST / GraphQL / protobuf / shared types touched |
-| 8 | Migration & Rollout | flag / migration / env var / breaking API |
-| 9 | Performance Evidence | perf-sensitive change |
-| 10 | Telemetry & Observability | new/removed metrics, logs, traces, alerts |
-| 11 | Reverse Dependencies | >3 consumers of the changed surface |
-| 12 | Side Effects | acknowledged regression |
-| 13 | Verification | always |
-| 14 | Repro Recipe | new feature / fixed bug — **manual steps a human runs by hand, never a CI-run test command** |
+| 2 | Visual Evidence | concrete visual change (UI / TUI / CLI output / rendered media) → capture live proof via `references/visual-evidence.md`; renders right after Description. **Produced after the PR is open** so capture never blocks the create |
+| 3 | Repro Recipe | new feature / fixed bug — **manual steps a human runs by hand, never a CI-run test command** |
+| 4 | Architecture | structural change (new/altered components, flows, boundaries) → **draw** via `references/artifacts.md`; skip only when the diagram would add nothing prose can't (renders after the top proof sections) |
+| 5 | Related Issue (+ PR lineage / stack block) | always; lineage line if stacked/split; stack block if `stack`-managed |
+| 6 | Reviewer Guide | always |
+| 7 | Risk & Impact | always |
+| 8 | Contract Delta | DB / REST / GraphQL / protobuf / shared types touched |
+| 9 | Migration & Rollout | flag / migration / env var / breaking API |
+| 10 | Performance Evidence | perf-sensitive change |
+| 11 | Telemetry & Observability | new/removed metrics, logs, traces, alerts |
+| 12 | Reverse Dependencies | >3 consumers of the changed surface |
+| 13 | Side Effects | acknowledged regression |
+| 14 | Verification | always |
 | 15 | Implementation map | `<details>`; large multi-subsystem diff (~20+ files) |
 | 16 | Changes since last review | `<details>`; refresh under active review → `references/refresh.md` |
 | 17 | Implementation Notes | `<details>`; `.agents/specs/<spec>.notes.md` exists |
 
 **Length scales with complexity, not effort.** A one-file fix is ~150 words and three sections. A complex PR earns length only through *conditional sections that carry real content* — the five required sections stay disciplined regardless. If the always-on body crosses ~450 words with no conditional block in play, you're restating the diff — trim.
 
-**Live visual proof is the reviewer's trust layer (row 3).** When the diff changes what a human sees, a clip or screenshot from the running app lets a reviewer approve on sight instead of building and clicking — `references/visual-evidence.md` owns the capture decision tree. Run it *after* the PR is open so the multi-minute capture never blocks the create, then PATCH the artifact high in the body. If the capture surfaces a real bug, **stop and fail loud** — RCA it, don't ship over it.
+**Live visual proof is the reviewer's trust layer (row 2).** When the diff changes what a human sees, a clip or screenshot from the running app lets a reviewer approve on sight instead of building and clicking — `references/visual-evidence.md` owns the capture decision tree. Run it *after* the PR is open so the multi-minute capture never blocks the create, then PATCH the artifact high in the body. If the capture surfaces a real bug, **stop and fail loud** — RCA it, don't ship over it.
 
 ### Required-section templates
 

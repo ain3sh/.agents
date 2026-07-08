@@ -68,7 +68,7 @@ Live capture runs the real code — it's the most honest test you'll run, and it
 
 ## Placement & upload
 
-- **High in the body** — its own `## Visual Evidence` heading right after Architecture, or after Description when there's no diagram (fold into `## Architecture` if a diagram is already there). Reviewers meet the proof before the diff.
+- **High in the body** — its own `## Visual Evidence` heading right after Description. Reviewers meet the proof before the diff.
 - **Screenshot** → `gh-attach --md file.png` for inline markdown; pair before/after stacked or as a two-row table, each captioned.
 - **Video** → GitHub inlines an mp4/webm only when the bare `user-attachments` URL is on its own line, so use `gh-attach --url clip.mp4` and paste that URL alone (markdown image syntax does **not** embed video). Keep under 5 MB (25 MB hard limit).
 - Upload mechanics, headless-cookie fallback, and the never-commit / never-`raw.githubusercontent` / never-secrets rules live in `references/artifacts.md` — don't re-derive.
