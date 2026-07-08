@@ -29,7 +29,7 @@ Detect the project's tooling from config files at the repo root, then run each a
 | Lint fix | `eslint.config*`, `.eslintrc*`, `biome.json` | `npx eslint --fix <paths>` / `biome lint --apply <paths>` (prefer over a bundled `npm run fix`) |
 | Dead code (JS/TS) | `knip.*`, `knip` in package.json scripts | `npx knip --workspace <pkg>` (monorepo) / `npx knip` (single pkg) |
 | Dead code (Python) | `*.py` in diff + `pyproject.toml` / `setup.py` | `vulture <changed-paths>` (or `uvx vulture`) |
-| AI-slop (JS/TS) | any `*.{js,jsx,ts,tsx}` in diff | `slop-scan delta <base> <head> --format json` |
+| AI-slop (JS/TS) | any `*.{js,jsx,ts,tsx}` in diff | `slop-scan delta <base-dir> <head-dir> --json` on changed-files temp dirs (see below) |
 | React diagnostics (JS/TS) | `react`/`react-dom`/`next`/`@remix-run/*` in `package.json` | `npx -y react-doctor@latest . --diff <base> --verbose` |
 | Type check | `tsconfig.json` | `npx tsc --noEmit -p <pkg>` (or runner-scoped per Monorepo scoping) |
 | Tests | `jest.config*`, `vitest.config*`, `pytest.ini` | Changed-file subset, serial workers (see below) |
@@ -71,7 +71,26 @@ quality-ship checklist:
 
 ### AI-slop detector (deterministic)
 
-For any PR touching JS/TS files, run `slop-scan delta <base-ref> <head-ref> --format json` and triage the findings alongside lint/typecheck output. It catches the 15 deterministic slop patterns (swallowed errors, placeholder comments, generic `Record<string, unknown>` casts, pass-through wrappers, duplicate signatures, etc.) that lint and typecheck miss. Treat any new violations as blocking — do not commit slop.
+For any diff touching JS/TS files, run `slop-scan delta` on **temp dirs containing only the changed files**, then delete them:
+
+```bash
+BASE=$(git merge-base origin/<target> HEAD)
+TMP=$(mktemp -d)
+git diff --name-only --diff-filter=d "$BASE" -- '*.js' '*.jsx' '*.ts' '*.tsx' | while read -r f; do
+  mkdir -p "$TMP/base/$(dirname "$f")" "$TMP/head/$(dirname "$f")"
+  git show "$BASE:$f" > "$TMP/base/$f" 2>/dev/null || rm -f "$TMP/base/$f"  # new file: no base version
+  cp "$f" "$TMP/head/$f"                                                    # working tree = what you're about to commit
+done
+slop-scan delta "$TMP/base" "$TMP/head" --json --fail-on added,worsened
+rm -rf "$TMP"
+```
+
+Known dead ends (both burned real sessions):
+
+- `delta` takes **directory paths as positionals**, not git refs, and JSON output is `--json`. `slop-scan delta origin/dev HEAD --format json` fails with `Unexpected extra positional arguments: json` (and would have scanned nothing useful anyway).
+- **Never point `--base`/`--head` at full checkouts** (main repo, a worktree). It walks the entire tree — `node_modules`, build output, everything — and times out (240s+) even with a pile of `--ignore` globs. The changed-files temp dirs above finish in seconds.
+
+If the file list is empty, skip the check (`no signal`). Triage findings alongside lint/typecheck output: slop-scan catches the 15 deterministic slop patterns (swallowed errors, placeholder comments, generic `Record<string, unknown>` casts, pass-through wrappers, duplicate signatures, etc.) that lint and typecheck miss. Treat any new violations as blocking — do not commit slop.
 
 ### React diagnostics (rules-based)
 

@@ -73,7 +73,7 @@ Walk each category. Record every finding as a triage candidate — severity come
 
 ### AI-slop signals (run `slop-scan`)
 
-For any JS/TS diff, run `slop-scan delta "$BASE" HEAD --format json` and fold the violations into your triage. Treat the structured rules (swallowed errors, placeholder comments, generic casts, pass-through wrappers, duplicate signatures) as hard finds; don't negotiate with them. If `slop-scan` isn't on PATH, note it and continue — but prefer to install it rather than skip (`npm install -g slop-scan`).
+For any JS/TS diff, run `slop-scan delta <base-dir> <head-dir> --json` on temp dirs holding only the changed files (`delta` takes directory paths, not git refs — build them with the changed-files recipe in the **quality-ship** skill; never scan full checkouts) and fold the violations into your triage. Treat the structured rules (swallowed errors, placeholder comments, generic casts, pass-through wrappers, duplicate signatures) as hard finds; don't negotiate with them. If `slop-scan` isn't on PATH, note it and continue — but prefer to install it rather than skip (`npm install -g slop-scan`).
 
 ### Scope creep
 
