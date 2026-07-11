@@ -130,6 +130,10 @@ def _candidate_from_npm(tool: str) -> Path | None:
     if npm is None:
         return None
 
+    direct_candidate = npm.parent / tool
+    if _executable(direct_candidate):
+        return direct_candidate
+
     try:
         result = subprocess.run(
             [str(npm), "prefix", "-g"],
@@ -163,18 +167,18 @@ def _candidate_from_spec(spec: str, tool: str) -> Path | None:
 
 
 def _resolve_target(tool: str, config: Config) -> Path | None:
-    candidates: list[Path | None] = []
-    for spec in config.targets.get(tool, ()):
-        candidates.append(_candidate_from_spec(spec, tool))
-    candidates.append(_candidate_from_path(tool))
-
     shim = FACTORY_BIN / tool
     try:
         shim_resolved = shim.resolve()
     except OSError:
         shim_resolved = shim
 
-    for candidate in candidates:
+    def candidates():
+        for spec in config.targets.get(tool, ()):
+            yield _candidate_from_spec(spec, tool)
+        yield _candidate_from_path(tool)
+
+    for candidate in candidates():
         if candidate is None or not _executable(candidate):
             continue
         try:
