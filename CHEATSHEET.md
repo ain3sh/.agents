@@ -2,6 +2,7 @@
 
 - **`linear-cli`** — linear-cli commands, agent output flags, chaining patterns
 - **`slack`** — slck commands, bot/user token guidance, search flags
+- **`dsx`** — session search/analytics plus durable `dsx papercut add|list|review`
 - **`worktree-setup`** — node_modules symlink rule; never `npm install` in a worktree
 
 ## Workflow Commands
