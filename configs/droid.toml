@@ -57,7 +57,7 @@ message = "[policy] Grep blocked; use codebase_search for high-quality codebase 
 [hooks.pre_tool_use.policy.overrides."Execute"]
 decision = "deny"
 message = "[policy] Just use `rg` — it's faster and already available."
-match_input.command = "\\bgrep\\b"
+match_input.command = "(?<![\\w-])grep\\b"
 
 [hooks.pre_tool_use.commit_review_guard]
 type = "committed"
