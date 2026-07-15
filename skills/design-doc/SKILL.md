@@ -46,7 +46,7 @@ Do not start from scratch. The styles encode hard-won decisions (variable-axis t
 
 Filling top-down keeps prose honest with structure:
 
-1. `<title>`, eyebrow, `h1.title`, `.tagline`, `.meta` strip.
+1. `<title>`, eyebrow, `h1.title`, `.tagline`, `.meta` strip. Keep only meta fields that earn their slot — a reviewer roster is fat unless the user asks for it.
 2. **Optional** `figure.demo` if there's a demo video — see [Embedding video](#embedding-video).
 3. §1 Summary — `.lede` with `.dropcap` + 1 supporting paragraph (zero-context rules below).
 4. §2 Context — reader primer first, then what breaks today (tickets spelled out), why now.
@@ -56,7 +56,7 @@ Filling top-down keeps prose honest with structure:
 8. §6 Tradeoffs — `table.kv` or short prose.
 9. §7 Rollout & verification — feature-flag posture, telemetry, rollback.
 10. §8 Open questions — `ol.numbered`, **ordered by how much each answer would change the design** (highest leverage first).
-11. `.colophon` + `footer.doc`.
+11. `footer.doc` (provenance: PR, ticket, HEAD sha, file path). The template ships no colophon — typographic-credits sections read as flourish and get cut in review; don't add one unless asked.
 
 Skip a section only if it's genuinely empty for this change — don't pad.
 
@@ -76,12 +76,14 @@ node ~/.agents/skills/design-doc/references/screenshot.js <abs-path-to-html>
 # → /tmp/doc-previews/scroll-light-NN.png + hero-dark-v2.png
 ```
 
-Run from a directory whose `node_modules` resolves `playwright` (a repo root that ships it works); from `/tmp` it dies with `ERR_MODULE_NOT_FOUND`.
+Playwright must resolve: run from a repo root whose `node_modules` ships it, or from anywhere with `NODE_PATH=<repo-root>/node_modules node …`. From a bare `/tmp` it dies with `ERR_MODULE_NOT_FOUND`. Use this reference script — don't recreate an ad-hoc capture script in `/tmp`; it won't survive the session.
 
 **Read each PNG with the `Read` tool at `image_quality="high"`.** Fix layout, contrast, and overflow bugs visually before tightening prose. Bugs you will only catch this way:
 - `dl > dd` falling under `dt` instead of into column 2 → the template pins `grid-column: 2`; if you copied a card and removed it, restore it.
 - Dark-mode contrast failures on `--code-bg` and `--accent-soft`.
 - SVG text overflowing on narrow viewports.
+- **TOC rail clipping**: the collapsed `nav.toc` must fit its widest roman numeral — at 56px "VIII" clipped to "VII"; the template now ships 68px. Recheck if you shrink the rail or exceed 8 sections.
+- **SVG box captions touching or crossing rect edges**: in the template's 780-unit viewBox, `.cap` mono text runs ~6.5 units/char (titles wider). Size each `rect` to its longest caption plus ~30 units, or shorten the caption. Confirm with `image_quality="high"` reads — default quality hides near-edge overflow.
 
 If layout is mysterious, run `inspect.js`:
 ```bash
@@ -93,7 +95,10 @@ It dumps bounding rects + computed styles for the first 12 matches.
 
 After visual layout is clean:
 
-- **Pass 1 — structural cuts.** If a fact appears in §1 and §5, delete it from §1 and link forward ("full list: D7"). The doc gets *shorter* in this pass, not longer.
+- **Pass 1 — structural cuts.** If a fact appears in §1 and §5, delete it from §1 and link forward ("full list: D7"). The doc gets *shorter* in this pass, not longer. **Cut template furniture** — scaffolding prose users reliably nuke as fat:
+  - Section meta-intros that describe the section instead of adding content ("Eight decisions carry this PR…", "The parts where good engineers could disagree…", "Each row is independently checkable."). The heading already does that work; open on the first real item.
+  - Navigational cross-reference sentences in §1 ("§4 breaks the diff into…; §5 defends…; §7 records…") — the TOC is the map.
+  - Audience lead-ins ("A primer for readers outside the SDK effort.") — just start the primer.
 - **Pass 2 — polish.** Read aloud (literally, your inner voice catches bumps). Replace neologisms ("due-times" → "task that came due three times"), kill "actually", strip "we can", tighten cross-references. Each edit should remove or replace text, rarely add.
 - **Pass 2.5: voice sweep.** Load **voice** for a quick craft pass focused on anti-slop, false agency, and filler. Keep edits surgical and preference-light so this reads as an independent quality gate, not a rewrite.
 
@@ -136,7 +141,7 @@ All defined in `references/template.html` — read it for any pattern you're uns
 |---|---|---|
 | `.eyebrow` | Mono uppercase kicker w/ rule | Above titles & figure labels |
 | `h1.title` + `.tagline` | Hero | Once, in `header.doc` |
-| `.meta .field` | Status/author/reviewers grid | Once, after tagline |
+| `.meta .field` | Status/author/ticket/PR grid | Once, after tagline |
 | `figure.demo` | Video poster card | Optional, between header and §1 |
 | `section.block > h2/h3` | Numbered eyebrow + display heading | Every section |
 | `.lede` + `.dropcap` | First-paragraph treatment | First paragraph of §1 only |
@@ -148,7 +153,7 @@ All defined in `references/template.html` — read it for any pattern you're uns
 | `.callout` (`.rose`) | Notes, warnings | Sparingly — every callout devalues the rest |
 | `table.kv` | Tradeoff matrices, limits tables | Comparing N options |
 | `ol.numbered` | Roman-numeralled list | Open questions |
-| `.colophon` + `footer.doc` | Closing credits + provenance | Once, at end |
+| `footer.doc` | Provenance (PR · ticket · HEAD sha · file path) | Once, at end |
 
 **Citing code.** Use `<code>name</code>` for function/component names inline. File paths get one explicit anchor at the point of citation: "(see `apps/cli/src/services/scheduled-tasks/loopSchedule.ts:42`)". Reviewers `rg` from names; they don't click.
 
@@ -157,11 +162,11 @@ All defined in `references/template.html` — read it for any pattern you're uns
 For internal docs, **secret gist + gistpreview** is the only path that reliably works without org infra:
 
 ```bash
-gh gist create <path>/<slug>-design.html --desc "<title>"
+gh gist create <path>/<slug>-design.html --desc "<title>"   # add --public only if the user asks
 # → https://gist.github.com/<user>/<gist-id>
 ```
 
-Share: `https://gistpreview.github.io/?<gist-id>`
+Share: `https://gistpreview.github.io/?<gist-id>/<slug>-design.html` (filename suffix required for multi-file gists, harmless otherwise)
 
 Update: `gh gist edit <gist-id> <path>/<slug>-design.html`
 
@@ -225,6 +230,7 @@ Before declaring done:
 - [ ] Each `article.decision` has all four `dt` slots: Decision, Rationale, Alternatives rejected, Consequence.
 - [ ] §8 Open questions are ordered by leverage (highest first).
 - [ ] No literal "TODO" or `<!-- TODO -->` markers remain.
+- [ ] No template furniture: colophon, reviewer roster, section meta-intros, and §1 cross-ref sentences are absent unless the user asked for them.
 
 **Visual**
 - [ ] Light + dark mode tested via Playwright captures; no contrast failures on code blocks or accent chips.
@@ -240,13 +246,13 @@ Before declaring done:
 - ⚠️ **Don't render only in light mode.** Half of reviewers use dark; the Playwright dark capture catches contrast bugs in 5 seconds.
 - ⚠️ **Don't put the same enumeration in §3 Goals AND §5 Decisions.** Pick the canonical home (usually a decision card) and forward-reference from elsewhere.
 - ⚠️ **Don't remove `.decision dd { grid-column: 2 }`.** Without it, `dd` falls under `dt` instead of into column 2. Most browsers won't warn.
-- ⚠️ **Don't revert the auto-hide TOC** (`nav.toc` → 56px rail expanding to 248px on hover) **to a sticky 220px sidebar.** Content reads worse with the sidebar always present.
+- ⚠️ **Don't revert the auto-hide TOC** (`nav.toc` → 68px rail expanding to 248px on hover) **to a sticky 220px sidebar.** Content reads worse with the sidebar always present. Don't shrink the rail below 68px either — 56px clips "VIII" to "VII".
 - ⚠️ **Don't hotlink auth-gated assets** (GitHub `user-attachments` images, private CDNs) — they 404 from gistpreview. Inline base64 per [Embedding diagrams (raster)](#embedding-diagrams-raster).
 - ⚠️ **Don't inline excalidraw/vector diagrams as base64 PNG.** A handful at `-s 2` push the doc past the gist API's ~1 MB truncation limit; gistpreview then renders only partway through with no error. Use SVG renders — see [Embedding diagrams (raster)](#embedding-diagrams-raster).
 - ⚠️ **Don't make a secret-gist URL public-shareable** without confirming with the user. The doc may reference internal Linear tickets, employees, or unmerged architecture.
 
 ## References
 
-- `references/template.html` — full HTML scaffold to copy. ~1100 lines, mostly CSS + one example of each component pattern.
+- `references/template.html` — full HTML scaffold to copy. ~1550 lines, mostly CSS + one example of each component pattern.
 - `references/screenshot.js` — Playwright capture. `node screenshot.js <abs-path-to-html> [out-dir]`.
 - `references/inspect.js` — DOM probe for layout debugging. `node inspect.js <abs-path> "<selector>"`.

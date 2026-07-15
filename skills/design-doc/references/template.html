@@ -157,7 +157,7 @@
       position: fixed;
       top: 40px;
       left: 0;
-      width: 56px;
+      width: 68px; /* must fit the widest numeral (VIII) when collapsed */
       max-height: calc(100vh - 80px);
       overflow: hidden;
       align-self: start;
@@ -1132,77 +1132,10 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* ---- Colophon & footer ---------------------------------------- */
-
-    .colophon {
-      margin-top: 128px;
-      padding-top: 52px;
-      position: relative;
-      text-align: center;
-    }
-    .colophon::before {
-      content: "⁂";
-      position: absolute;
-      top: -14px; left: 50%;
-      transform: translateX(-50%);
-      background: var(--bg);
-      padding: 0 18px;
-      color: var(--accent);
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 36, "wght" 400;
-      font-size: 22px;
-      letter-spacing: 0.18em;
-    }
-    .colophon::after {
-      content: "";
-      position: absolute;
-      top: 0; left: 8%; right: 8%;
-      height: 1px;
-      background: var(--line);
-    }
-    .colophon h4 {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      font-weight: 500;
-      letter-spacing: 0.26em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin: 0 0 24px;
-    }
-    .colophon p {
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 18, "wght" 400, "SOFT" 60;
-      font-size: 15px;
-      font-style: italic;
-      line-height: 1.62;
-      color: var(--graphite);
-      max-width: 540px;
-      margin: 0 auto 32px;
-      text-wrap: balance;
-    }
-    .colophon p strong { font-style: normal; font-weight: 500; color: var(--ink); }
-    .colophon dl {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 6px 24px;
-      max-width: 380px;
-      margin: 0 auto;
-      font-family: var(--mono);
-      font-size: 11px;
-      line-height: 1.7;
-      text-align: left;
-    }
-    .colophon dt {
-      color: var(--fog);
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      font-weight: 500;
-      margin: 0;
-    }
-    .colophon dd { margin: 0; color: var(--ink-soft); }
+    /* ---- Footer ---------------------------------------------------- */
 
     footer.doc {
-      margin-top: 56px;
+      margin-top: 96px;
       padding-top: 22px;
       color: var(--fog);
       font-family: var(--mono);
@@ -1245,7 +1178,7 @@
       body { font-size: 10.5pt; line-height: 1.5; }
       h1.title { font-size: 28pt; }
       section.block > h3 { font-size: 18pt; }
-      .decision, figure.diagram, .panel, .pullquote, pre.code, .colophon {
+      .decision, figure.diagram, .panel, .pullquote, pre.code {
         break-inside: avoid; box-shadow: none;
       }
       section.block { margin-top: 28pt; }
@@ -1264,7 +1197,7 @@
   <div class="page">
 
     <!-- =========================================================== -->
-    <!--  TABLE OF CONTENTS — autohides to a 56px rail; expands on hover -->
+    <!--  TABLE OF CONTENTS — autohides to a 68px rail; expands on hover -->
     <!-- =========================================================== -->
     <nav class="toc" aria-label="Table of contents">
       <p class="toc-label">Contents</p>
@@ -1300,10 +1233,6 @@
           <div class="field">
             <span class="k">Author</span>
             <span class="v">TODO Author Name</span>
-          </div>
-          <div class="field">
-            <span class="k">Reviewers</span>
-            <span class="v">TODO · TODO · TODO</span>
           </div>
           <div class="field">
             <span class="k">Linear</span>
@@ -1457,10 +1386,8 @@
       <section class="block" id="decisions">
         <h2><span class="num">§5</span> Key decisions</h2>
         <h3>The choices worth defending in review</h3>
-        <p>
-          TODO one short framing paragraph. Each card stands alone — a
-          reviewer should be able to argue D3 without reading D1.
-        </p>
+        <!-- No framing paragraph: the heading does that work. Each card
+             stands alone — a reviewer can argue D3 without reading D1. -->
 
         <!-- ============ D1 ============ -->
         <article class="decision" id="d1">
@@ -1572,11 +1499,8 @@
       <section class="block" id="questions">
         <h2><span class="num">§8</span> Open questions</h2>
         <h3>Decisions worth pressure-testing in the sync</h3>
-        <p>
-          The parts of the design where good engineers could disagree,
-          ordered by how much they would move the design if the answer
-          changes.
-        </p>
+        <!-- No intro paragraph — open on question i. Order by how much
+             each answer would move the design, highest leverage first. -->
         <ol class="numbered">
           <li>
             <strong>TODO highest-leverage question?</strong>
@@ -1597,26 +1521,9 @@
       </section>
 
       <!-- ============================================================ -->
-      <!--  COLOPHON & FOOTER                                          -->
+      <!--  FOOTER — provenance only; no colophon (typographic credits  -->
+      <!--  read as template flourish and get cut in review)            -->
       <!-- ============================================================ -->
-      <section class="colophon" aria-labelledby="colophon-head">
-        <h4 id="colophon-head">Colophon</h4>
-        <p>
-          Set in <strong>Fraunces</strong>, a variable display &amp; text
-          serif by Phaedra Charles, Flavia Zimbardi, and Undercase Type,
-          with code and metadata in <strong>JetBrains Mono</strong>. Cream
-          paper and oxblood ink drawn from the visual language of
-          university-press technical monographs. Typeset as a single-file
-          HTML document.
-        </p>
-        <dl>
-          <dt>Filed</dt><dd>TODO area · TODO ticket</dd>
-          <dt>Source</dt><dd>PR #TODO · HEAD <code>TODO-sha</code></dd>
-          <dt>Author</dt><dd>TODO Name</dd>
-          <dt>Revised</dt><dd>YYYY-MM-DD</dd>
-        </dl>
-      </section>
-
       <footer class="doc">
         <div>
           <a href="#">PR #TODO</a> &nbsp;·&nbsp;
