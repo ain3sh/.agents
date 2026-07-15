@@ -1,0 +1,25 @@
+skills/design-doc/SKILL.md
+  ed5715d59550ea41 49,85-86,98-101,144,156,165,169,233,249,256
+skills/design-doc/references/template.html
+  ed5715d59550ea41 160,1135,1138,1181,1200,1502-1503
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.2",
+  "base_commit_sha": "d47fafd20a29240569cdb70636bc3e1606db7191",
+  "prompts": {
+    "ed5715d59550ea41": {
+      "agent_id": {
+        "tool": "droid",
+        "id": "490a1ca7-54c9-4551-b3f0-280333e3830e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "ain3sh",
+      "messages": [],
+      "total_additions": 23,
+      "total_deletions": 91,
+      "accepted_lines": 21,
+      "overriden_lines": 1
+    }
+  }
+}
