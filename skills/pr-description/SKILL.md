@@ -6,7 +6,7 @@ user-invocable: false
 
 # PR Description
 
-A reviewer triages on the first screen: *why does this matter, and what will it cost me?* — answered there, they help push the PR through; unanswered, it sits ("not my problem", "looks exhausting"). So the body answers the reviewer's questions in the order they ask them and front-loads what the diff can't give: intent, the rejected alternative, the blast radius, the proof it works. Every rule below derives from that.
+A reviewer triages on the first screen: *why does this matter, and what will it cost me?* The opening should answer that quickly: user impact, cause, and change first; review detail below.
 
 ## When this fires & how to load it
 
@@ -85,7 +85,25 @@ The 5 required sections fire on every PR. Conditional sections are a **menu, not
 ```markdown
 ## Description
 
-<2-4 sentences: the user-visible problem in plain words -> why the current design can't simply be patched -> what this PR does. Stands alone without the ticket; don't restate the title. Never open with internal vocabulary or with a non-goal. Large structural PR: relax into a **Why** / **What this PR does** pair (numbered mechanism steps OK) + a one-line "Net effect for users: …", and link the design doc here ("Full design rationale: [design doc]") — not only in Related Issue.>
+<Write for a human reading the first screen, not for a diff summarizer. Use this shape for ordinary fixes and features. Keep each block to 1-3 short sentences, use plain language before code vocabulary, and do not make one paragraph carry the whole causal chain. The opening stands alone without the ticket and does not restate the title.>
+
+### Default Description shape
+
+**What**
+
+<What the user could not do, what was confusing, or what capability was missing. Lead with the observable outcome.>
+
+**Why**
+
+<The motivation or first unintended side effect. Name the relevant actors and boundary, then stop once the cause is clear.>
+
+**How**
+
+<The change in one or two sentences. State the new flow or invariant, not a file tour.>
+
+Use bullets for multiple states, actors, or outcomes, and a compact table when it makes a before/after distinction faster to scan. Use GitHub formatting when it improves hierarchy or emphasis: bold labels, bullets, tables, and `<details>` for genuinely optional depth. Formatting must clarify real information, never decorate uncertainty or manufacture confidence.
+
+For a large structural PR, use **Why** / **What this PR does** plus a one-line **Net effect for users:** statement, and link the design doc here ("Full design rationale: [design doc]") rather than only in Related Issue. Put detailed mechanism traces, scope maps, and anti-goals in their existing conditional locations instead of inflating the opening.
 
 ## Related Issue
 
@@ -119,7 +137,8 @@ Closes TEAM-123   <!-- "Closes" full fix; "Part of" incremental. Add a context c
 Load **voice** before drafting or editing this section and apply it to every line (specifics, named actors, no slop). Treat this as a required quality gate; the rules below are only the PR-specific additions.
 
 - **Reviewer Guide is the highest-leverage block — keep it scannable.** One file (or tight pair) per numbered read-order line; never collapse into an `a > b > c` run-on — that's where legibility dies on multi-file PRs (a 1-3 file PR may inline the read order on one line). Drop the pushback line when there's no live call — empty prompts read as performative. If intentional behavior changes could look like drive-by edits or merge noise, add a "Deliberate behavior changes (not merge noise):" list, one line each on why the core change requires it.
-- **Description leads with the problem, not the mechanism.** "separate liveness from commit"-style openers draw "needs a clear WHY" comments; a non-goal opener ("the visual model is unchanged") buries the lede.
+- **Description is the highest-visibility writing surface.** Lead with the observable problem or capability, then make the cause and change legible with **Why** and **How**. The default is three small labeled blocks, not one paragraph. Keep paragraphs to three sentences or fewer, use bullets for multi-actor explanations, and reserve file tours for Reviewer Guide or Implementation map. A small PR may omit **Why** when the cause is self-evident.
+- **Optimize for truthful scanning.** Use whitespace, bold labels, and compact lists or tables when they help. Do not use decorative headings, emoji, fake before/after claims, or `<details>` to hide required context. A reader should be able to summarize the PR as `<user impact>` because `<cause>`; this PR `<change>`.
 - **Naming**: prose terms must not collide with existing product surfaces (e.g., "transcript rendering" already meant the CLI's alt-view → use "chat rendering"). Reserve module/symbol names for code references.
 - **Risk & Impact never claims a mitigation the diff doesn't contain** — no "gated behind a flag" unless the flag is in this PR. Future rollout intent goes in Migration & Rollout, marked as a plan.
 - **Verification is outcome-first**; each block answers one reviewer question, and behavior-verified items tie back to listed risks so the two sections check each other. Enumerable changes → `| Scenario | Before | After |` table; the "unchanged" rows show what you deliberately preserved.
