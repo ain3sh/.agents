@@ -71,13 +71,13 @@ payload:
         "messages.0.content.text": "${overrides/CLAUDE.md}\n---\n${SOUL.md}"
         "messages.0.content.type": "text"
         "messages.0.role": "user"
-        "context_management.edits.0.keep.value": 5
+        "context_management.edits.0.keep.value": 10
         "context_management.edits.0.keep.type": "thinking_turns"
         "context_management.edits.0.type": "clear_thinking_20251015"
         "context_management.edits.1.clear_tool_inputs": false
-        "context_management.edits.1.keep.value": 5
+        "context_management.edits.1.keep.value": 10
         "context_management.edits.1.trigger.value": 100000
-        "context_management.edits.1.clear_at_least.value": 25000
+        "context_management.edits.1.clear_at_least.value": 50000
         "context_management.edits.1.exclude_tools.0": "memory"
         "context_management.edits.1.keep.type": "tool_uses"
         "context_management.edits.1.trigger.type": "input_tokens"
