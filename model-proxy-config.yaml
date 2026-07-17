@@ -45,7 +45,7 @@ payload:
           protocol: "codex"
       params:
         "instructions": "${SOUL.md}"
-        "reasoning.summary": "auto"
+        "reasoning.summary": "detailed"
         "parallel_tool_calls": true
         # https://github.com/router-for-me/CLIProxyAPI/blob/main/internal/translator/codex/claude/codex_claude_request.go
         # https://github.com/router-for-me/CLIProxyAPI/blob/main/internal/translator/openai/claude/openai_claude_request.go
@@ -75,8 +75,8 @@ payload:
         "context_management.edits.0.keep.type": "thinking_turns"
         "context_management.edits.0.type": "clear_thinking_20251015"
         "context_management.edits.1.clear_tool_inputs": false
-        "context_management.edits.1.keep.value": 2
-        "context_management.edits.1.trigger.value": 50000
+        "context_management.edits.1.keep.value": 5
+        "context_management.edits.1.trigger.value": 100000
         "context_management.edits.1.clear_at_least.value": 25000
         "context_management.edits.1.exclude_tools.0": "memory"
         "context_management.edits.1.keep.type": "tool_uses"
