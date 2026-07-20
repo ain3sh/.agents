@@ -7,7 +7,7 @@ Load skills: **pr-context**, **voice**.
 
 **voice** is required here: use its severity taxonomy and craft rules for every posted body instead of rephrasing approved findings into generic review-speak.
 
-The posting half of the review workflow. Findings come from an upstream `/review-pr` (typical) or fresh paste.
+The posting half of the review workflow. Findings come from an upstream `/review-pr` (typical) or fresh paste. **After submitting, write the dossier** — `./.agents/review.md` per the **review-pr** skill's `references/dossier.md` (first-pass writes it; follow-up replaces state sections and appends a history line). Skip only for pasted findings with no upstream review session.
 
 ## 1. Resolve PR Identity
 
@@ -81,9 +81,9 @@ gh api "repos/$REPO/pulls/<number>/reviews" \
   -f body="<verdict-body>"
 ```
 
-`COMMENT` if any line comments were posted; `APPROVE` only if `/review-pr` ended with zero findings.
+The event is the verdict approved at the `/review-pr` gate — don't recompute it here. `COMMENT` when blockers gate; `APPROVE` with non-gating line comments (`opinion`/`nit`/`suggestion`) is legitimate per the skill's first-pass §6.
 
-`<verdict-body>` is the standalone judgment from `/review-pr` §5 (disposition + root cause, blockers, headline opinion, evidence woven into the claims it backs) -- **not** a recap of the threads you just posted; GitHub renders those inline. If the upstream handoff omitted one, draft it against that structure before submitting -- don't fall back to "Posted N comments on X, Y, Z."
+`<verdict-body>` is the standalone judgment from the **review-pr** skill's first-pass §6 (disposition + root cause, blockers, headline opinion, evidence woven into the claims it backs) -- **not** a recap of the threads you just posted; GitHub renders those inline. If the upstream handoff omitted one, draft it against that structure before submitting -- don't fall back to "Posted N comments on X, Y, Z."
 
 **Deslop pass before submitting -- mandatory, even on a user-approved body.** Approval at the `/review-pr` gate covered the findings and disposition, not the prose; re-read the body against **voice** and cut wholesale:
 
