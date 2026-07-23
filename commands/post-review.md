@@ -77,11 +77,11 @@ Add `--argjson start_line <N>` and emit `start_line:$start_line, start_side:"RIG
 ```bash
 gh api "repos/$REPO/pulls/<number>/reviews" \
   --method POST \
-  -f event="<COMMENT|APPROVE>" \
+  -f event="<COMMENT|APPROVE|REQUEST_CHANGES>" \
   -f body="<verdict-body>"
 ```
 
-The event is the verdict approved at the `/review-pr` gate — don't recompute it here. `COMMENT` when blockers gate; `APPROVE` with non-gating line comments (`opinion`/`nit`/`suggestion`) is legitimate per the skill's first-pass §6.
+The event is the verdict approved at the `/review-pr` gate — don't recompute it here. Default to `COMMENT` when blockers gate or `APPROVE` otherwise. Use `REQUEST_CHANGES` only when the user explicitly requested that verdict type; never infer it from blocking findings. `APPROVE` with non-gating line comments (`opinion`/`nit`/`suggestion`) is legitimate per the skill's first-pass §6.
 
 `<verdict-body>` is the standalone judgment from the **review-pr** skill's first-pass §6 (disposition + root cause, blockers, headline opinion, evidence woven into the claims it backs) -- **not** a recap of the threads you just posted; GitHub renders those inline. If the upstream handoff omitted one, draft it against that structure before submitting -- don't fall back to "Posted N comments on X, Y, Z."
 

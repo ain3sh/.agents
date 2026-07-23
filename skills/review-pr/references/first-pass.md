@@ -130,7 +130,7 @@ If unresolved suspicions or high-risk uncovered surfaces remain, recommend `deep
 Show every finding to the user before posting:
 
 - Group by file; include severity, line, suggested fix.
-- State intended verdict (`APPROVE` / `COMMENT`) and draft the verdict body (below).
+- State intended verdict (`APPROVE` / `COMMENT`) and draft the verdict body (below). Never propose `REQUEST_CHANGES` unless the user explicitly asks for that verdict type.
 - Plain chat prose; **do not use `AskUser`** — the user should be free to discuss, reword, drop, or re-severity findings.
 - **Wait for explicit confirmation.** Apply any user edits before handoff.
 
