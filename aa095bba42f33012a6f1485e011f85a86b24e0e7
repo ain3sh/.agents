@@ -1,0 +1,25 @@
+skills/review-pr/references/first-pass.md
+  ff661aaf2f876ebb 133
+commands/post-review.md
+  ff661aaf2f876ebb 80,84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.2",
+  "base_commit_sha": "aa095bba42f33012a6f1485e011f85a86b24e0e7",
+  "prompts": {
+    "ff661aaf2f876ebb": {
+      "agent_id": {
+        "tool": "droid",
+        "id": "000d38e4-9bfb-4065-a1b6-04cac532baca",
+        "model": "custom:openai://gpt-5-6-sol"
+      },
+      "human_author": "ain3sh",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 3,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
