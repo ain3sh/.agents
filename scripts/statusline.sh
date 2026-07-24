@@ -91,6 +91,7 @@ REASONING_EFFORT=""
 CONTEXT_DISPLAY=""
 CONTEXT_TOKENS=""
 CONTEXT_PERCENT=""
+COMPUTER_REMOTE=""
 
 if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1 <<< "$input"; then
     mapfile -t json_fields < <(
@@ -102,7 +103,9 @@ if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1
             .model.reasoning_effort // "",
             .context.display // "",
             (.context.last_call_compaction_tokens // "" | tostring),
-            (.context.percentage // "" | tostring)
+            (.context.percentage // "" | tostring),
+            .computer.name // "",
+            (.computer.is_remote // "" | tostring)
         ][]' <<< "$input" 2>/dev/null
     )
 
@@ -114,6 +117,8 @@ if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1
     p_context_display=${json_fields[5]:-}
     p_context_tokens=${json_fields[6]:-}
     p_context_percent=${json_fields[7]:-}
+    p_computer_name=${json_fields[8]:-}
+    p_computer_remote=${json_fields[9]:-}
 
     [[ -n "$p_model" && "$p_model" != "null" ]] && MODEL="${p_model,,}"
     MODEL="${MODEL// /-}"
@@ -124,6 +129,12 @@ if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1
     [[ -n "$p_context_display" && "$p_context_display" != "null" ]] && CONTEXT_DISPLAY="$p_context_display"
     [[ -n "$p_context_tokens" && "$p_context_tokens" != "null" ]] && CONTEXT_TOKENS="$p_context_tokens"
     [[ -n "$p_context_percent" && "$p_context_percent" != "null" ]] && CONTEXT_PERCENT="$p_context_percent"
+    # AC-768: prefer the CLI-reported computer identity over local hostname;
+    # flags remote execution after a /handoff (field absent until that ships).
+    if [[ -n "$p_computer_name" && "$p_computer_name" != "null" ]]; then
+        HOSTNAME="$p_computer_name"
+        [[ "$p_computer_remote" == "true" ]] && COMPUTER_REMOTE=1
+    fi
 fi
 
 DIR_NAME=$(basename "$CWD")
@@ -214,7 +225,11 @@ if [[ -n "$GIT_INFO" ]]; then
 fi
 
 printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
-printf "💻 ${HOST_COLOR}%s${RESET}" "$HOSTNAME"
+if [[ -n "$COMPUTER_REMOTE" ]]; then
+    printf "📡 ${HOST_COLOR}%s${RESET}" "$HOSTNAME"
+else
+    printf "💻 ${HOST_COLOR}%s${RESET}" "$HOSTNAME"
+fi
 if [[ -n "$SESSION_ID" ]]; then
     printf "${ACCENT_COLOR}/${RESET}${SESSION_COLOR}%s${RESET}" "$SESSION_ID"
 fi
