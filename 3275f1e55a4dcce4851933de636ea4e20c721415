@@ -1,0 +1,34 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.2",
+  "base_commit_sha": "3275f1e55a4dcce4851933de636ea4e20c721415",
+  "prompts": {
+    "279d2fb8d020a800": {
+      "agent_id": {
+        "tool": "droid",
+        "id": "e928e2ec-44fd-41a1-8a97-f207da46c859",
+        "model": "almond-05-27"
+      },
+      "human_author": "ain3sh",
+      "messages": [],
+      "total_additions": 62,
+      "total_deletions": 5,
+      "accepted_lines": 62,
+      "overriden_lines": 0
+    },
+    "ed5715d59550ea41": {
+      "agent_id": {
+        "tool": "droid",
+        "id": "490a1ca7-54c9-4551-b3f0-280333e3830e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "ain3sh",
+      "messages": [],
+      "total_additions": 23,
+      "total_deletions": 91,
+      "accepted_lines": 21,
+      "overriden_lines": 1
+    }
+  }
+}
