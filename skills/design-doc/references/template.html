@@ -712,6 +712,72 @@
     }
     .panel.rose ul li::before { background: var(--ochre); }
 
+    /* ---- Callout panels: claim + scannable rows + caveat -----------
+       For product/exec callouts where a paragraph would be skipped.
+       Structure: .claim (the memorable line) → .rows (3 scannable facts)
+       → .note (the honest caveat, deliberately de-emphasized).
+       Use .rows .was/.to for before→after deltas; plain .v otherwise.  */
+
+    .panel .claim {
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 400;
+      line-height: 1.24;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+      margin: 0 0 18px;
+      text-wrap: balance;
+    }
+    .panel .claim code {
+      font-size: 0.78em;
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: var(--accent);
+    }
+    .panel .rows { display: grid; gap: 9px; margin: 0 0 16px; }
+    .panel .rows .r {
+      display: grid;
+      grid-template-columns: 86px 1fr;
+      gap: 12px;
+      align-items: baseline;
+    }
+    .panel .rows .k {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--fog);
+    }
+    .panel .rows .v {
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.35;
+      color: var(--ink-soft);
+      font-variant-numeric: tabular-nums;
+    }
+    .panel .rows .v .was { color: var(--fog); }
+    .panel .rows .v .to { color: var(--accent); font-weight: 500; }
+    .panel .rows .v .to::before {
+      content: "→";
+      color: var(--accent);
+      padding: 0 6px;
+      font-weight: 400;
+    }
+    .panel .note {
+      font-family: var(--serif);
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--graphite);
+      margin: 0;
+    }
+    /* Caveat panels must not read as another win. */
+    .panel.rose .rows .v .to,
+    .panel.rose .rows .v .to::before { color: var(--ink-soft); }
+    @media (max-width: 640px) {
+      .panel .rows .r { grid-template-columns: 1fr; gap: 2px; }
+    }
+
     /* ---- Code blocks ---------------------------------------------- */
 
     pre.code {
@@ -1480,6 +1546,37 @@
             <div class="figure">TODO<span class="unit">s</span></div>
             <div class="cap">proof-point label</div>
             <div class="sub">one-line comparison or denominator</div>
+          </div>
+        </div>
+        -->
+
+        <!-- Optional callout panels. Answer "so what?" for the stats above.
+             Four children auto-flow into 2x2. Last panel = .rose for the
+             honest caveat, so it doesn't read as a fourth win.
+             Delete in RFC mode.
+        <div class="two-col">
+          <div class="panel">
+            <h5>claim label</h5>
+            <p class="claim">The one line a reader will repeat.</p>
+            <div class="rows">
+              <div class="r"><span class="k">Metric</span>
+                <span class="v"><span class="was">before</span><span class="to">after</span></span></div>
+              <div class="r"><span class="k">Metric</span>
+                <span class="v"><span class="was">before</span><span class="to">after</span></span></div>
+              <div class="r"><span class="k">Metric</span>
+                <span class="v">plain value, no delta</span></div>
+            </div>
+            <p class="note">The caveat or the reason, in one sentence.</p>
+          </div>
+          <div class="panel rose">
+            <h5>what this is not</h5>
+            <p class="claim">Feasible today. Not yet a product.</p>
+            <div class="rows">
+              <div class="r"><span class="k">Option</span><span class="v">tradeoff</span></div>
+              <div class="r"><span class="k">Option</span><span class="v">tradeoff</span></div>
+              <div class="r"><span class="k">Option</span><span class="v">tradeoff</span></div>
+            </div>
+            <p class="note">Why the choice is still open.</p>
           </div>
         </div>
         -->

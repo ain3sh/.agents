@@ -25,7 +25,7 @@ The order matters. Skipping step 2 is the most common failure: prose ends up ref
 Choose the mode before touching HTML:
 
 - **RFC / proposal:** problem → primer → goals/non-goals → proposal → decision cards → tradeoffs → rollout → open questions.
-- **Technical memo / internal sell:** demand → structural constraint → evidence → shipped artifact → limits → deployment. Lead with a four-stat proof band and use charts/tables instead of decision-card boilerplate.
+- **Technical memo / internal sell:** demand → structural constraint → evidence → shipped artifact → limits → deployment. Lead with a four-stat proof band plus the callout panels in [The "so what" layer](#the-so-what-layer), and use charts/tables instead of decision-card boilerplate.
 - **Sync prep:** decision needed → evidence → options → recommendation → unresolved questions.
 
 Do not force the RFC scaffold onto a memo. A selling document should not read like a budget request, research diary, or next-cycle roadmap.
@@ -80,6 +80,12 @@ For memo mode, replace the goals/decision-card spine with the structure selected
 - **Spell out every motivating ticket in-doc**: bold `ID — symptom` title, then 2–3 sentences of user-visible failure + mechanism. A bare tracker link is not context; the reader must never need to open Linear to follow the argument.
 - **Order = how a stranger builds context**: problem → primer → mechanism of failure → concrete failures → goals → proposal. When revising a published doc against reviewer feedback, keep it a controlled change — touch only the sections the feedback targets.
 
+**Inserting a block into a finished doc has knock-on edits.** Adding a summary layer makes neighbours redundant; sweep for these before re-publishing, or the doc reads as saying everything twice:
+
+- **The tagline.** Once a new block carries the artifact spec, the tagline should lead with the capability instead. Two adjacent blocks opening on the same fact is the most common duplication.
+- **The section that originally made the point.** A closing ask that now restates a fold-level callout should be reworded to read as follow-through, not first mention.
+- **Staggered-animation `nth-child` rules**, if the container has them — a new child otherwise appears un-animated or out of sequence.
+
 ### 5. Iteration loop (mandatory)
 
 Write → capture → inspect → fix:
@@ -91,7 +97,9 @@ node ~/.agents/skills/design-doc/references/screenshot.js <abs-path-to-html>
 #   /tmp/doc-previews/hero-dark-v2.png
 ```
 
-Playwright must resolve: run from a repo root whose `node_modules` ships it, or from anywhere with `NODE_PATH=<repo-root>/node_modules node …`. From a bare `/tmp` it dies with `ERR_MODULE_NOT_FOUND`. Use this reference script — don't recreate an ad-hoc capture script in `/tmp`; it won't survive the session.
+Playwright must resolve. The script walks up from your **CWD** looking for `node_modules/playwright`, so run it from inside (or under) any project that has Playwright installed. If that project is elsewhere, pass `PLAYWRIGHT_NODE_MODULES=/abs/path/to/node_modules`. Last resort: `cd /tmp && npm i playwright && npx playwright install chromium`.
+
+⚠️ **`NODE_PATH=… node script.js` does not work.** Node resolves a bare `require('playwright')` from the *script's own directory* and ignores `NODE_PATH` — so a script in `/tmp` or `~/.agents/` misses no matter where you `cd`. The bundled scripts carry an explicit CWD walk-up to compensate; an ad-hoc one you write will only resolve if you place the file *inside* the project. Use the reference scripts.
 
 The script clears stale captures with these filenames before rendering, then captures the full document in both color schemes. **Read every light and dark PNG with the `Read` tool at `image_quality="high"`.** A dark hero alone is insufficient: charts, tables, diagrams, and callouts often fail several viewports below it. Fix layout, contrast, and overflow bugs visually before tightening prose. Bugs you will only catch this way:
 - `dl > dd` falling under `dt` instead of into column 2 → the template pins `grid-column: 2`; if you copied a card and removed it, restore it.
@@ -163,6 +171,23 @@ Internal selling docs often succeed or fail on the chart:
 - Put the delta beside the winning value (`+12.5 pts`), not in a detached prose paragraph.
 - Use 1px grid lines or pseudo-elements for reference marks. Do not use gradients to fake chart structure.
 
+## The "so what" layer
+
+**Memo mode.** Evidence-ordered docs (demand → constraint → evidence → artifact) prove a claim they never actually *state*. Skimmers leave with numbers and no thesis, and the feedback comes back as *"outline the key product callouts in addition to the numbers."* Pre-empt it.
+
+Directly under the statband, add a `.two-col` of **four** `.panel` children (they auto-flow into a 2×2 — no new CSS). Reading order at the fold becomes: title → tagline → the numbers → what the numbers buy. Each panel gets three parts:
+
+1. **`p.claim`** — large serif, ≤10 words, the line a reader repeats in Slack. "Usually you pick two." / "Feasible today. Not yet a product."
+2. **`.rows`** — exactly three mono rows. For deltas use `.was`/`.to` (renders `before → after`, arrow and after-value in orange) so the *change* is the visual event. For non-metrics, use the three rows as an option set (three placements; warn/block/redact) — the choice becomes legible without prose.
+3. **`p.note`** — one muted sentence carrying the caveat or the mechanism.
+
+Rules that make this work:
+
+- **One panel must be the honest limit.** Give it `.rose`; the template neutralizes its row accents so it doesn't read as a fourth win. A callout block of four unbroken wins reads as marketing and costs you the other three.
+- **Don't repeat the statband's headline number as a claim.** Adjacent blocks saying `26×` twice read as one beat stuttering; demote the repeat into `.note`.
+- **Prose paragraphs in these panels defeat the purpose.** If a panel needs a paragraph, it belongs in a section, not the fold.
+- **Keep the hedges** the body sections were careful about — differing measurement frames, hardware assumptions, scope limits. A summary layer that flattens caveats is how a doc loses its most careful reader.
+
 ## Components inventory
 
 All defined in `references/template.html` — read it for any pattern you're unsure of.
@@ -177,6 +202,7 @@ All defined in `references/template.html` — read it for any pattern you're uns
 | `section.block > h2/h3` | Numbered eyebrow + display heading | Every section |
 | `.lede` + `.dropcap` | First-paragraph treatment | First paragraph of §1 only |
 | `.two-col > .panel` | Side-by-side lists | Goals/non-goals, pros/cons |
+| `.panel > .claim` + `.rows` + `.note` | Product callout: memorable line, three scannable rows, one caveat | Under the statband, when the numbers need a "so what" — see [The "so what" layer](#the-so-what-layer) |
 | `article.decision` | D-card: Decision / Rationale / Alternatives / Consequence | Every key decision — the load-bearing component. Reviewers skim titles, then dt/dd rows. **Bullets are not a substitute.** |
 | `aside.pullquote` | Mental-model or thesis quote | 1 per ~1500 words; should literally state the thesis in ≤25 words |
 | `figure.diagram` + inline `<svg>` | Architecture/sequence diagrams | When the picture is faster than prose |
@@ -199,9 +225,15 @@ gh gist create <path>/<slug>-design.html --desc "<title>"   # add --public only 
 
 Share: `https://gistpreview.github.io/?<gist-id>/<slug>-design.html` (filename suffix required for multi-file gists, harmless otherwise)
 
-Update: `gh gist edit <gist-id> <path>/<slug>-design.html`
+Update (single-file gist, preferred — no JSON assembly needed):
 
-**Revising an already-published doc** — keep the same gist id and filename so the gistpreview link already shared in PRs/Slack stays valid:
+```bash
+gh gist edit <gist-id> -f <filename-in-gist> <local-path>
+```
+
+`-f` names the file **inside** the gist; the positional arg is the local source. Get the gist's filename with `gh gist view <gist-id> --files`. Match it exactly — a mismatch silently adds a second file instead of updating, and gistpreview then needs the `/<filename>` suffix to find the right one. Without `-f`, `gh` opens an interactive editor, which fails in a non-TTY agent session.
+
+**Revising an already-published doc** — keep the same gist id and filename so the gistpreview link already shared in PRs/Slack stays valid. `gh gist edit -f` above handles the common case. Drop to the API only to change the **description** or to touch several files at once:
 
 ```bash
 # pull the live copy to revise against (strip tags to a text outline if you only need structure)
@@ -211,7 +243,7 @@ gh api gists/<gist-id> --jq '.files["<slug>-design.html"].content' > current.htm
 gh api gists/<gist-id> -X PATCH --input /tmp/gist-patch.json
 ```
 
-The API path also updates the gist description. **Keep the file under ~1 MB.** The gist *contents* API truncates files past roughly that size: `GET gists/<id>` returns only the first ~1 MB and sets `"truncated": true`, and gistpreview renders through that API — so an oversized doc renders only partway through (the tail sections and footer silently vanish) even though the PATCH succeeded and the source is intact. A PATCH that bloats the file past the limit therefore *breaks* the preview without any error. After any PATCH, verify: `gh api gists/<id> --jq '.files["<name>"].truncated'` must be `false`. Almost always the bloat is inlined base64 images — see [Embedding diagrams (raster)](#embedding-diagrams-raster) for the SVG-not-PNG fix.
+**Keep the file under ~1 MB.** The gist *contents* API truncates files past roughly that size: `GET gists/<id>` returns only the first ~1 MB and sets `"truncated": true`, and gistpreview renders through that API — so an oversized doc renders only partway through (the tail sections and footer silently vanish) even though the PATCH succeeded and the source is intact. A PATCH that bloats the file past the limit therefore *breaks* the preview without any error. After any PATCH, verify: `gh api gists/<id> --jq '.files["<name>"].truncated'` must be `false`. Almost always the bloat is inlined base64 images — see [Embedding diagrams (raster)](#embedding-diagrams-raster) for the SVG-not-PNG fix.
 
 ### Publishing dead ends (verified failures)
 
@@ -262,6 +294,8 @@ Before declaring done:
 - [ ] Open questions, when present, are ordered by leverage (highest first).
 - [ ] No literal "TODO" or `<!-- TODO -->` markers remain.
 - [ ] No template furniture: colophon, reviewer roster, section meta-intros, and §1 cross-ref sentences are absent unless the user asked for them.
+- [ ] If callout panels are present: each has a `.claim`, one is `.rose` carrying the honest limit, and no headline number is repeated verbatim from the adjacent statband.
+- [ ] After inserting any block, the tagline and the section that previously owned the point were swept for duplication.
 
 **Visual**
 - [ ] Every light and dark Playwright segment was inspected; no contrast failures on charts, tables, diagrams, code blocks, or accent surfaces.
@@ -283,6 +317,7 @@ Before declaring done:
 - ⚠️ **Don't revert the auto-hide TOC** (`nav.toc` → 68px rail expanding to 248px on hover) **to a sticky 220px sidebar.** Content reads worse with the sidebar always present. Don't shrink the rail below 68px either — 56px clips "VIII" to "VII".
 - ⚠️ **Don't hotlink auth-gated assets** (GitHub `user-attachments` images, private CDNs) — they 404 from gistpreview. Inline base64 per [Embedding diagrams (raster)](#embedding-diagrams-raster).
 - ⚠️ **Don't inline excalidraw/vector diagrams as base64 PNG.** A handful at `-s 2` push the doc past the gist API's ~1 MB truncation limit; gistpreview then renders only partway through with no error. Use SVG renders — see [Embedding diagrams (raster)](#embedding-diagrams-raster).
+- ⚠️ **Don't answer "make it punchier" by trimming sentences.** Shorter paragraphs are still paragraphs, and still get skipped. Change the *structure* — claim line, scannable rows, one caveat ([The "so what" layer](#the-so-what-layer)). Restructuring cut one doc's body copy ~60% and its panel height from 393px to ~280px; word-level trimming would not have.
 - ⚠️ **Don't make a secret-gist URL public-shareable** without confirming with the user. The doc may reference internal Linear tickets, employees, or unmerged architecture.
 
 ## References

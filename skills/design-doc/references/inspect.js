@@ -15,17 +15,36 @@
 //     redefined in the @media (prefers-color-scheme: dark) block
 
 const path = require('path');
+// See screenshot.js: bare require() resolves from THIS FILE, not the CWD,
+// so we walk up from the invocation directory to find playwright.
 function loadPlaywright() {
-  const candidates = [
-    'playwright',
+  const candidates = ['playwright'];
+
+  for (const envDir of [process.env.PLAYWRIGHT_NODE_MODULES, process.env.NODE_PATH]) {
+    for (const entry of (envDir || '').split(path.delimiter).filter(Boolean)) {
+      candidates.push(path.join(entry, 'playwright'));
+    }
+  }
+
+  for (let dir = process.cwd(); ; dir = path.dirname(dir)) {
+    candidates.push(path.join(dir, 'node_modules', 'playwright'));
+    if (dir === path.dirname(dir)) break;
+  }
+
+  candidates.push(
     '/tmp/node_modules/playwright',
     '/usr/lib/node_modules/playwright',
     '/usr/local/lib/node_modules/playwright',
-  ];
+  );
+
   for (const c of candidates) {
     try { return require(c); } catch (_) { /* try next */ }
   }
-  console.error('playwright not found. Install with: cd /tmp && npm i playwright && npx playwright install chromium');
+  console.error(
+    'playwright not found. Run from (or under) a project that has it installed,\n' +
+    'or set PLAYWRIGHT_NODE_MODULES=/abs/path/to/node_modules,\n' +
+    'or: cd /tmp && npm i playwright && npx playwright install chromium',
+  );
   process.exit(1);
 }
 const { chromium } = loadPlaywright();

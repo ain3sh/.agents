@@ -4,7 +4,7 @@
 - **`slack`** — slck commands, bot/user token guidance, search flags
 - **`dsx`** — session search/analytics plus durable `dsx papercut add|list|review`
 - **`worktree-setup`** — node_modules symlink rule; never `npm install` in a worktree
-- **`design-doc`** — Factory-themed single-file RFCs and technical memos; adaptive document modes, proof-band/chart patterns, full light/dark Playwright capture, secret-gist publishing
+- **`design-doc`** — Factory-themed single-file RFCs and technical memos; adaptive document modes, proof-band/chart and claim-row callout patterns, full light/dark Playwright capture, secret-gist publishing
 
 ## Workflow Commands
 
