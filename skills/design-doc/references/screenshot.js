@@ -5,7 +5,8 @@
 //
 // Outputs to <out-dir> (default /tmp/doc-previews):
 //   scroll-light-NN.png   — full-width segments at 1400px viewport, 2x DPR, light mode
-//   hero-dark-v2.png      — first viewport in dark mode (catches contrast bugs)
+//   scroll-dark-NN.png    — matching full-page dark-mode segments
+//   hero-dark-v2.png      — compatibility alias for scroll-dark-00.png
 //
 // Dependencies: requires `playwright` resolvable. The script searches
 // node_modules in CWD, then /tmp/node_modules, then global. If missing:
@@ -48,53 +49,59 @@ const SCROLL_SETTLE_MS = 350;
   }
   const fileUrl = arg.startsWith('file://') ? arg : `file://${path.resolve(arg)}`;
   fs.mkdirSync(outDir, { recursive: true });
+  for (const name of fs.readdirSync(outDir)) {
+    if (/^(scroll-(light|dark)-\d+|hero-dark-v2)\.png$/.test(name)) {
+      fs.unlinkSync(path.join(outDir, name));
+    }
+  }
 
   const browser = await chromium.launch();
 
-  // Light mode — full-page scroll capture
-  const ctxLight = await browser.newContext({
-    viewport: { width: VIEWPORT_W, height: SEG_HEIGHT },
-    deviceScaleFactor: 2,
-    colorScheme: 'light',
-  });
-  const pageLight = await ctxLight.newPage();
-  await pageLight.goto(fileUrl, { waitUntil: 'networkidle' });
-  await pageLight.waitForTimeout(SETTLE_MS);
-
-  const totalHeight = await pageLight.evaluate(
-    () => document.documentElement.scrollHeight,
-  );
-  console.log('total height:', totalHeight);
-
-  const segments = [];
-  for (let y = 0, i = 0; y < totalHeight; y += SEG_HEIGHT, i++) {
-    segments.push([i, y]);
-  }
-  for (const [i, y] of segments) {
-    await pageLight.evaluate((y) => window.scrollTo(0, y), y);
-    await pageLight.waitForTimeout(SCROLL_SETTLE_MS);
-    const name = String(i).padStart(2, '0');
-    await pageLight.screenshot({
-      path: path.join(outDir, `scroll-light-${name}.png`),
-      fullPage: false,
+  async function captureTheme(colorScheme) {
+    const context = await browser.newContext({
+      viewport: { width: VIEWPORT_W, height: SEG_HEIGHT },
+      deviceScaleFactor: 2,
+      colorScheme,
     });
-    console.log('captured at y=', y);
+    const page = await context.newPage();
+    await page.goto(fileUrl, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(SETTLE_MS);
+
+    const totalHeight = await page.evaluate(
+      () => document.documentElement.scrollHeight,
+    );
+    const segments = [];
+    for (let y = 0, i = 0; y < totalHeight; y += SEG_HEIGHT, i++) {
+      segments.push([i, y]);
+    }
+    console.log(`${colorScheme} total height:`, totalHeight);
+
+    for (const [i, y] of segments) {
+      await page.evaluate((scrollY) => window.scrollTo(0, scrollY), y);
+      await page.waitForTimeout(SCROLL_SETTLE_MS);
+      const name = String(i).padStart(2, '0');
+      await page.screenshot({
+        path: path.join(outDir, `scroll-${colorScheme}-${name}.png`),
+        fullPage: false,
+      });
+      console.log(`${colorScheme} captured at y=`, y);
+    }
+
+    await context.close();
+    return segments;
   }
 
-  // Dark mode — first viewport (hero + first body segment)
-  const ctxDark = await browser.newContext({
-    viewport: { width: VIEWPORT_W, height: SEG_HEIGHT },
-    deviceScaleFactor: 2,
-    colorScheme: 'dark',
-  });
-  const pageDark = await ctxDark.newPage();
-  await pageDark.goto(fileUrl, { waitUntil: 'networkidle' });
-  await pageDark.waitForTimeout(SETTLE_MS);
-  await pageDark.screenshot({
-    path: path.join(outDir, 'hero-dark-v2.png'),
-    fullPage: false,
-  });
+  const lightSegments = await captureTheme('light');
+  const darkSegments = await captureTheme('dark');
+  fs.copyFileSync(
+    path.join(outDir, 'scroll-dark-00.png'),
+    path.join(outDir, 'hero-dark-v2.png'),
+  );
 
   await browser.close();
-  console.log('done — segments:', segments.length, '· out:', outDir);
+  console.log(
+    'done — light segments:', lightSegments.length,
+    '· dark segments:', darkSegments.length,
+    '· out:', outDir,
+  );
 })();

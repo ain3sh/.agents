@@ -1,15 +1,16 @@
 ---
 name: design-doc
-description: Author a publication-grade single-file HTML design doc (RFCs, architecture proposals, sync prep). Editorial typography, decision cards, fact-checked code references, Playwright-verified layout, secret-gist publishing. Use when an engineer asks for a design doc, RFC, monograph, sync-prep brief, or "make this look like a real spec."
+description: Author a publication-grade single-file HTML design doc or technical memo. Factory visual system, adaptive RFC/memo structure, fact-checked references, full light/dark Playwright verification, and secret-gist publishing.
 ---
 
-A design doc here is one self-contained HTML file — fonts via Google Fonts, all styles inline, no JS framework — that reads like a university-press technical monograph. The aesthetic exists to make reviewers actually read it; the structure exists to make the engineer's argument legible.
+A design doc here is one self-contained HTML file — fonts via Google Fonts, all styles inline, no JS framework — with the precision of an internal engineering artifact and the visual confidence of Factory product surfaces. The aesthetic exists to make reviewers actually read it; the structure exists to make the argument legible.
 
 Output target: ~1.5k–3k lines, ~80–200 KB, prints to A4, dark-mode aware, publishable as a secret gist viewed via `gistpreview.github.io`.
 
 ## When to use
 
 - Engineer asks for an RFC, design doc, ADR, monograph, technical spec, or sync-prep brief.
+- Engineer needs an internal technical memo that sells a shipped capability with evidence rather than proposal boilerplate.
 - A PR has architectural weight (≥2 reviewers, multiple sub-decisions) and needs framing beyond the PR description.
 - A change touches a contract, persistence, or cross-component ownership and needs one shareable artifact.
 
@@ -19,12 +20,20 @@ Output target: ~1.5k–3k lines, ~80–200 KB, prints to A4, dark-mode aware, pu
 
 The order matters. Skipping step 2 is the most common failure: prose ends up referencing constants or call sites that don't exist.
 
-### 1. Frame the argument (plain text, before any HTML)
+### 1. Frame the argument and choose the document mode
+
+Choose the mode before touching HTML:
+
+- **RFC / proposal:** problem → primer → goals/non-goals → proposal → decision cards → tradeoffs → rollout → open questions.
+- **Technical memo / internal sell:** demand → structural constraint → evidence → shipped artifact → limits → deployment. Lead with a four-stat proof band and use charts/tables instead of decision-card boilerplate.
+- **Sync prep:** decision needed → evidence → options → recommendation → unresolved questions.
+
+Do not force the RFC scaffold onto a memo. A selling document should not read like a budget request, research diary, or next-cycle roadmap.
 
 Name three things:
 - **The single structural claim** — one sentence, ≤25 words. This becomes the tagline + §1 lede.
-- **The 3–8 key decisions** — each becomes a `D` card with Decision / Rationale / Alternatives rejected / Consequence.
-- **The non-goals.** If you can't name 3, the goals are too vague.
+- **The 3–8 proof points or decisions** — decision cards in RFC mode; scorecards, comparisons, or deployment implications in memo mode.
+- **The non-goals or current limits.** Keep them short and relevant to the chosen mode.
 
 ### 2. Source-of-truth pass
 
@@ -40,11 +49,13 @@ When the PR description disagrees with the code, **the code wins** and you flag 
 cp ~/.agents/skills/design-doc/references/template.html <project>/.agents/specs/<slug>-design.html
 ```
 
-Do not start from scratch. The styles encode hard-won decisions (variable-axis tuning, `text-wrap: balance`, decision-card grid, auto-hide nav, dark mode, print stylesheet). The template is a working scaffold — render it once with the screenshot script in step 5 to confirm it loads before filling.
+Do not start from scratch. The styles encode hard-won decisions (Factory tokens, Geist hierarchy, `text-wrap: balance`, decision-card grid, auto-hide nav, dark/light modes, print stylesheet). The template is a working scaffold — render it once with the screenshot script in step 5 to confirm it loads before filling.
+
+Before styling, search the repo for `DESIGN.md`, brand guidance, or live tokens. **The repo's design canon wins.** In Factory repos, read `packages/core-ui/src/DESIGN.md`; the bundled template follows that dark-first system.
 
 ### 4. Fill the scaffold top-down
 
-Filling top-down keeps prose honest with structure:
+For RFC mode, fill the scaffold top-down:
 
 1. `<title>`, eyebrow, `h1.title`, `.tagline`, `.meta` strip. Keep only meta fields that earn their slot — a reviewer roster is fat unless the user asks for it.
 2. **Optional** `figure.demo` if there's a demo video — see [Embedding video](#embedding-video).
@@ -60,6 +71,8 @@ Filling top-down keeps prose honest with structure:
 
 Skip a section only if it's genuinely empty for this change — don't pad.
 
+For memo mode, replace the goals/decision-card spine with the structure selected in step 1. Keep the same components and verification loop, but remove unused template furniture rather than leaving empty RFC sections.
+
 **Write for a reader with zero context (review-tested — violating these draws "hard to read, context implicit and out of order" feedback):**
 
 - **§1 Summary lede = 1–2 sentences a completely new reader understands**: the user-visible problem in plain words, then the fix in plain words. No internal vocabulary that only makes sense after §4 ("separate liveness from commit"-style taglines read as meaningless), and never open with a non-goal ("the visual shape is unchanged") — it buries the why.
@@ -73,12 +86,14 @@ Write → capture → inspect → fix:
 
 ```bash
 node ~/.agents/skills/design-doc/references/screenshot.js <abs-path-to-html>
-# → /tmp/doc-previews/scroll-light-NN.png + hero-dark-v2.png
+# → /tmp/doc-previews/scroll-light-NN.png
+#   /tmp/doc-previews/scroll-dark-NN.png
+#   /tmp/doc-previews/hero-dark-v2.png
 ```
 
 Playwright must resolve: run from a repo root whose `node_modules` ships it, or from anywhere with `NODE_PATH=<repo-root>/node_modules node …`. From a bare `/tmp` it dies with `ERR_MODULE_NOT_FOUND`. Use this reference script — don't recreate an ad-hoc capture script in `/tmp`; it won't survive the session.
 
-**Read each PNG with the `Read` tool at `image_quality="high"`.** Fix layout, contrast, and overflow bugs visually before tightening prose. Bugs you will only catch this way:
+The script clears stale captures with these filenames before rendering, then captures the full document in both color schemes. **Read every light and dark PNG with the `Read` tool at `image_quality="high"`.** A dark hero alone is insufficient: charts, tables, diagrams, and callouts often fail several viewports below it. Fix layout, contrast, and overflow bugs visually before tightening prose. Bugs you will only catch this way:
 - `dl > dd` falling under `dt` instead of into column 2 → the template pins `grid-column: 2`; if you copied a card and removed it, restore it.
 - Dark-mode contrast failures on `--code-bg` and `--accent-soft`.
 - SVG text overflowing on narrow viewports.
@@ -112,26 +127,41 @@ See [Publishing](#publishing).
 
 ## Aesthetic foundation
 
-The template ships one canonical aesthetic — warm cream paper, oxblood ink, Fraunces + JetBrains Mono. Keep it across docs unless the user explicitly asks otherwise; consistency across the engineer's design docs has more value than per-doc novelty.
+The bundled default follows Factory's visual system:
 
-To retheme: **change only `:root` custom properties** in both the light and `@media (prefers-color-scheme: dark)` blocks. Leave structural CSS alone.
+- **Dark-first:** black canvas, white foreground, warm gray support text. Light mode exists for marketing/install surfaces and print.
+- **One accent:** Factory orange (`#EE6018`) marks active paths, key numerics, section metadata, and the primary comparison. It is not ambient decoration.
+- **Flat surfaces:** no shadows, glows, gradients, glass, or elevation theater. Depth comes from surface contrast, 1px borders, spacing, and type.
+- **Mono-led:** Geist Mono carries labels, metadata, code, chart axes, and diagram text. Geist carries headings and prose.
+- **Restrained geometry:** 4px default radius, 6px only for large containers, pills only for actual tags.
+- **Technical confidence:** left-align interiors, use generous outer margins, and let scale rather than bold weight carry hierarchy.
 
-## Typography craft (the non-obvious wins)
+If the repo defines a different canon, adapt the tokens and typography to it. Do not invent an independent theme merely because the artifact is standalone.
 
-Editorial feel comes from variable-axis tuning per role, not from picking a "nicer serif." The template encodes these — list here so you don't accidentally undo them:
+## Typography craft
 
-| Role | Variation settings | Note |
+| Role | Factory treatment | Note |
 |---|---|---|
-| `body` | `opsz 16, SOFT 40, WONK 0` + `font-feature-settings: "kern", "liga", "dlig", "onum"` | Old-style numerals are non-negotiable for editorial tone. |
-| `h1.title` | `opsz 144, wght 500, SOFT 30` | Big optical size + slight weight = display-cut feel. |
-| `.tagline` | `opsz 32, wght 380, SOFT 60`, **`font-style: normal`** | Italic at 18–22px tanks reading speed. |
-| `section.block > h3` | `opsz 72, wght 500, SOFT 40` | Forces Fraunces into its display master. |
-| `.dropcap` | `opsz 144, wght 500, SOFT 80` + `font-feature-settings: "dlig", "swsh"` | Swash variants are why we use Fraunces and not Georgia. |
-| `.pullquote p` | `opsz 48, wght 400, SOFT 50`, italic | Italic IS appropriate at 22–28px display sizes. |
-| `em` | `opsz 17, wght 400, SOFT 60` | Slightly softer to differentiate from upright. |
-| All mono | `font-feature-settings: "cv02", "cv03", "zero"` | Slashed zero, disambiguated `i`/`l`. |
+| `body` | Geist 400, 18px, `line-height: 1.62`, `letter-spacing: -0.01em` | Larger, calmer body copy works better than compact editorial serif text for broad-team docs. |
+| `h1.title` | Geist 300, 52–82px, `line-height: 0.98`, tracking `-0.045em` | Light weight plus scale creates authority without a marketing-heavy display face. |
+| `.tagline` | Geist 400, 19–23px, muted foreground | Keep upright. No italic in Factory product or document surfaces. |
+| `section.block > h3` | Geist 300, 32–44px, tracking `-0.035em` | Use type scale, not orange or bold weight, for section hierarchy. |
+| `.dropcap` | Geist Mono 400, orange | A technical accent, not a decorative swash. Remove it if it feels literary rather than useful. |
+| `.pullquote p` | Geist 300, 24–30px, upright, orange left rule | Treat it as an engineering assertion, not a quotation ornament. |
+| All mono | Geist Mono 400, uppercase labels at `0.08em` | Use `font-feature-settings: "zero"` for numeric disambiguation. |
 
-Use `text-wrap: balance` on every heading, tagline, pullquote, figcaption, and decision title. Use `color-mix(in oklab, var(--accent) X%, transparent)` for tonal blends — don't invent new hex codes.
+Use `text-wrap: balance` on headings, taglines, pullquotes, figcaptions, and decision titles. Use existing tokens and `color-mix(in oklab, …)` only for tonal versions of the canonical palette.
+
+## Quantitative proof and charts
+
+Internal selling docs often succeed or fail on the chart:
+
+- Put a **four-stat proof band** directly under the hero when four numbers carry the thesis. Values use orange; labels and explanations stay neutral.
+- Scale bars to the meaningful range, not mechanically from zero. For ROC-AUC, a `0.5 → 1.0` axis exposes useful signal far better than `0 → 1.0`. State the truncated baseline in the axis and caption.
+- Give the shipped/recommended row the sole orange bar and a subtle orange-tinted surface. Render incumbents, controls, and frontier references in gray.
+- If benchmark frames differ, separate them into visibly distinct groups and state that they are not directly comparable. Never imply a head-to-head comparison with color or proximity alone.
+- Put the delta beside the winning value (`+12.5 pts`), not in a detached prose paragraph.
+- Use 1px grid lines or pseudo-elements for reference marks. Do not use gradients to fake chart structure.
 
 ## Components inventory
 
@@ -142,6 +172,7 @@ All defined in `references/template.html` — read it for any pattern you're uns
 | `.eyebrow` | Mono uppercase kicker w/ rule | Above titles & figure labels |
 | `h1.title` + `.tagline` | Hero | Once, in `header.doc` |
 | `.meta .field` | Status/author/ticket/PR grid | Once, after tagline |
+| `.statband` | Four quantitative proof points | Memo/internal-sell mode, directly below the hero |
 | `figure.demo` | Video poster card | Optional, between header and §1 |
 | `section.block > h2/h3` | Numbered eyebrow + display heading | Every section |
 | `.lede` + `.dropcap` | First-paragraph treatment | First paragraph of §1 only |
@@ -226,24 +257,27 @@ Before declaring done:
 - [ ] §2 opens with the primer; every motivating ticket is described in-doc — the reader never needs to open the tracker.
 
 **Structure**
-- [ ] All eight standard sections present (or skip is justified).
-- [ ] Each `article.decision` has all four `dt` slots: Decision, Rationale, Alternatives rejected, Consequence.
-- [ ] §8 Open questions are ordered by leverage (highest first).
+- [ ] The document follows the mode chosen in step 1; memo mode contains no empty RFC sections or vestigial decision cards.
+- [ ] In RFC mode, each `article.decision` has all four `dt` slots: Decision, Rationale, Alternatives rejected, Consequence.
+- [ ] Open questions, when present, are ordered by leverage (highest first).
 - [ ] No literal "TODO" or `<!-- TODO -->` markers remain.
 - [ ] No template furniture: colophon, reviewer roster, section meta-intros, and §1 cross-ref sentences are absent unless the user asked for them.
 
 **Visual**
-- [ ] Light + dark mode tested via Playwright captures; no contrast failures on code blocks or accent chips.
+- [ ] Every light and dark Playwright segment was inspected; no contrast failures on charts, tables, diagrams, code blocks, or accent surfaces.
 - [ ] Print stylesheet renders without overflow (Chrome → Cmd-P → check pagination).
 - [ ] `scrollHeight` after Pass 2 is ≤ `scrollHeight` after Pass 1. If it grew, you bloated.
-- [ ] Tagline is `font-style: normal`. (Frequent regression — looks elegant in italic, reads worse.)
+- [ ] Factory mode uses no italics, gradients, shadows, glass, or decorative second accent.
+- [ ] Orange identifies the primary path or proof point; controls and reference rows remain neutral.
 
 **Publish**
 - [ ] After any gist create/PATCH, `gh api gists/<id> --jq '.files["<name>"].truncated'` is `false` (file under ~1 MB), and the live gistpreview renders through the footer — not just the first sections. Diagrams are SVG, not base64 PNG.
 
 ## Dead ends (warnings)
 
-- ⚠️ **Don't render only in light mode.** Half of reviewers use dark; the Playwright dark capture catches contrast bugs in 5 seconds.
+- ⚠️ **Don't inspect only the dark hero.** The full dark scroll catches failures in lower charts, tables, diagrams, and callouts that the first viewport cannot.
+- ⚠️ **Don't use orange as ambient decoration.** If every border, heading, and comparison row is orange, nothing is primary. Keep controls and secondary comparisons gray.
+- ⚠️ **Don't bring gradients or shadows back to create “depth.”** Factory surfaces use contrast, borders, spacing, and type.
 - ⚠️ **Don't put the same enumeration in §3 Goals AND §5 Decisions.** Pick the canonical home (usually a decision card) and forward-reference from elsewhere.
 - ⚠️ **Don't remove `.decision dd { grid-column: 2 }`.** Without it, `dd` falls under `dt` instead of into column 2. Most browsers won't warn.
 - ⚠️ **Don't revert the auto-hide TOC** (`nav.toc` → 68px rail expanding to 248px on hover) **to a sticky 220px sidebar.** Content reads worse with the sidebar always present. Don't shrink the rail below 68px either — 56px clips "VIII" to "VII".
@@ -253,6 +287,6 @@ Before declaring done:
 
 ## References
 
-- `references/template.html` — full HTML scaffold to copy. ~1550 lines, mostly CSS + one example of each component pattern.
+- `references/template.html` — full Factory-themed HTML scaffold to copy, with RFC components and an optional memo proof band.
 - `references/screenshot.js` — Playwright capture. `node screenshot.js <abs-path-to-html> [out-dir]`.
 - `references/inspect.js` — DOM probe for layout debugging. `node inspect.js <abs-path> "<selector>"`.

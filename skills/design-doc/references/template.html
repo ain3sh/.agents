@@ -8,90 +8,76 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,30..100;1,9..144,300..700,30..100&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@400;500&display=swap"
     rel="stylesheet"
   />
   <style>
     /* =================================================================
-       DESIGN MONOGRAPH TEMPLATE
-       Cream paper · oxblood ink · Fraunces + JetBrains Mono
-       Edit only :root tokens to retheme. Leave structural CSS alone.
+       FACTORY DESIGN DOC TEMPLATE
+       Dark-first · Geist + Geist Mono · orange as the sole accent
        ================================================================= */
 
     :root {
-      --bg: #f4eee4;
-      --bg-elevated: #fbf6ec;
-      --bg-sunk: #ede6d8;
-      --ink: #1b1714;
-      --ink-soft: #2e2722;
-      --graphite: #4a443e;
-      --fog: #8d847a;
-      --fog-soft: #b1a99d;
-      --line: #d7cebe;
-      --line-strong: #b9ad97;
-      --line-faint: #e5ddcc;
-      --code-bg: #ebe1cd;
-      --code-fg: #2b2420;
+      --bg: #000000;
+      --bg-elevated: #161413;
+      --bg-sunk: #0c0b0a;
+      --ink: #ffffff;
+      --ink-soft: #e8e5e3;
+      --graphite: #b9b0ab;
+      --fog: #9b8e87;
+      --fog-soft: #5e5652;
+      --line: #342f2d;
+      --line-strong: #4d4541;
+      --line-faint: #211e1c;
+      --code-bg: #1d1a18;
+      --code-fg: #ffffff;
 
-      --accent: #8c2337;        /* oxblood */
-      --accent-ink: #fff7f2;
-      --accent-soft: #efd9db;
-      --accent-line: #bb6970;
+      --accent: #ee6018;
+      --accent-ink: #000000;
+      --accent-soft: #2a160c;
+      --accent-line: #ee6018;
 
-      --ochre: #a87618;
-      --ochre-soft: #f2e5c4;
+      --ochre: #9b8e87;
+      --ochre-soft: #1b1918;
 
-      --slate: #495b68;
-      --slate-soft: #dfe5ea;
+      --slate: #9b8e87;
+      --slate-soft: #1b1918;
 
-      --shadow-sm: 0 1px 0 rgba(27, 23, 20, 0.04);
-      --shadow-md:
-        0 1px 2px rgba(27, 23, 20, 0.05),
-        0 3px 12px rgba(27, 23, 20, 0.04);
-      --shadow-lg:
-        0 2px 4px rgba(27, 23, 20, 0.08),
-        0 14px 32px rgba(27, 23, 20, 0.09);
+      --shadow-sm: none;
+      --shadow-md: none;
+      --shadow-lg: none;
 
-      --serif: "Fraunces", "Iowan Old Style", "Constantia", "Palatino",
-        "Georgia", serif;
-      --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Menlo",
+      --serif: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      --mono: "Geist Mono", "SFMono-Regular", "Menlo",
         "Consolas", monospace;
     }
 
-    @media (prefers-color-scheme: dark) {
+    @media (prefers-color-scheme: light) {
       :root {
-        --bg: #171310;
-        --bg-elevated: #1f1a16;
-        --bg-sunk: #13100d;
-        --ink: #ede4d3;
-        --ink-soft: #d5cbba;
-        --graphite: #b1a795;
-        --fog: #8a8175;
-        --fog-soft: #6a6055;
-        --line: #332d26;
-        --line-strong: #4d463c;
-        --line-faint: #241f1a;
-        --code-bg: #221d18;
-        --code-fg: #e4dacb;
+        --bg: #f2f0f0;
+        --bg-elevated: #ffffff;
+        --bg-sunk: #e8e5e3;
+        --ink: #020202;
+        --ink-soft: #242220;
+        --graphite: #5f5956;
+        --fog: #808080;
+        --fog-soft: #b8b3b0;
+        --line: #b8b3b0;
+        --line-strong: #8f8986;
+        --line-faint: #d8d4d2;
+        --code-bg: #e5e1df;
+        --code-fg: #020202;
 
-        --accent: #e3828f;
-        --accent-ink: #1b0b0e;
-        --accent-soft: #2e171a;
-        --accent-line: #7d2d36;
+        --accent: #ee6018;
+        --accent-ink: #000000;
+        --accent-soft: #f7dfd2;
+        --accent-line: #ee6018;
 
-        --ochre: #d6ac66;
-        --ochre-soft: #302416;
-
-        --slate: #a0aeb9;
-        --slate-soft: #222830;
-
-        --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.3);
-        --shadow-md:
-          0 1px 2px rgba(0, 0, 0, 0.4),
-          0 4px 14px rgba(0, 0, 0, 0.3);
-        --shadow-lg:
-          0 2px 4px rgba(0, 0, 0, 0.5),
-          0 14px 32px rgba(0, 0, 0, 0.45);
+        --ochre: #808080;
+        --ochre-soft: #e8e5e3;
+        --slate: #808080;
+        --slate-soft: #e8e5e3;
       }
     }
 
@@ -101,29 +87,19 @@
 
     body {
       font-family: var(--serif);
-      font-optical-sizing: auto;
-      font-variation-settings: "opsz" 16, "SOFT" 40, "WONK" 0;
-      font-size: 17px;
-      line-height: 1.68;
+      font-size: 18px;
+      line-height: 1.62;
+      letter-spacing: -0.01em;
+      font-weight: 400;
       color: var(--ink);
       background: var(--bg);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      font-feature-settings: "kern", "liga", "dlig", "onum";
+      font-feature-settings: "kern", "liga";
     }
 
-    /* Subtle atmospheric wash */
     body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      pointer-events: none;
-      background:
-        radial-gradient(ellipse 56% 38% at 12% -4%,
-          color-mix(in oklab, var(--accent) 7%, transparent), transparent 62%),
-        radial-gradient(ellipse 44% 32% at 92% 104%,
-          color-mix(in oklab, var(--ochre) 8%, transparent), transparent 62%);
+      display: none;
     }
 
     ::selection {
@@ -178,10 +154,10 @@
 
     nav.toc:hover, nav.toc:focus-within {
       width: 248px;
-      background: color-mix(in oklab, var(--bg-elevated) 92%, var(--accent));
-      box-shadow:
-        0 1px 0 var(--line),
-        24px 24px 56px -28px color-mix(in oklab, var(--ink) 14%, transparent);
+      background: var(--bg-elevated);
+      box-shadow: none;
+      border: 1px solid var(--line);
+      border-left: 0;
       padding: 24px 22px 24px 28px;
     }
 
@@ -244,7 +220,7 @@
       text-decoration: none;
       display: block;
       padding: 3px 0;
-      font-style: italic;
+      font-style: normal;
       font-weight: 400;
       letter-spacing: -0.003em;
       border-bottom: none;
@@ -363,8 +339,8 @@
       text-wrap: balance;
     }
     .tagline em {
-      font-style: italic;
-      font-variation-settings: "opsz" 32, "wght" 380;
+      font-style: normal;
+      font-variation-settings: normal;
     }
     .tagline code {
       font-style: normal;
@@ -396,7 +372,7 @@
       font-family: var(--serif);
       font-variation-settings: "opsz" 24, "wght" 400;
       font-size: 18px;
-      font-style: italic;
+      font-style: normal;
       color: var(--accent);
     }
     .meta::after {
@@ -442,6 +418,57 @@
     .meta .field a:hover {
       border-bottom-color: var(--accent);
       color: color-mix(in oklab, var(--accent) 80%, var(--ink));
+    }
+
+    /* ---- Optional quantitative proof band ------------------------- */
+
+    .statband {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      margin: 44px 0 0;
+      overflow: hidden;
+      background: var(--line);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+    }
+    .statband .stat {
+      min-width: 0;
+      padding: 24px 18px 22px;
+      text-align: center;
+      background: var(--bg-elevated);
+    }
+    .statband .figure {
+      font-family: var(--serif);
+      font-size: 44px;
+      font-weight: 300;
+      line-height: 1;
+      letter-spacing: -0.045em;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+    .statband .unit {
+      font-size: 0.48em;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+    .statband .cap {
+      margin-top: 10px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--fog);
+    }
+    .statband .sub {
+      margin-top: 6px;
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--graphite);
+    }
+    @media (max-width: 700px) {
+      .statband { grid-template-columns: repeat(2, 1fr); }
     }
 
     /* ---- Chips ---------------------------------------------------- */
@@ -578,9 +605,9 @@
     }
     a:hover { border-bottom-color: var(--accent); }
     em {
-      font-style: italic;
+      font-style: normal;
       color: var(--ink-soft);
-      font-variation-settings: "opsz" 17, "wght" 400, "SOFT" 60;
+      font-variation-settings: normal;
     }
     strong {
       font-weight: 600;
@@ -638,7 +665,7 @@
       border-radius: 4px;
       padding: 22px 26px 24px;
       position: relative;
-      box-shadow: var(--shadow-sm);
+      box-shadow: none;
     }
     .panel::before {
       content: "";
@@ -699,7 +726,7 @@
       line-height: 1.7;
       margin: 20px 0 6px;
       tab-size: 2;
-      box-shadow: var(--shadow-sm);
+      box-shadow: none;
       position: relative;
     }
     pre.code::before {
@@ -709,7 +736,7 @@
       width: 2px;
       background: var(--accent); opacity: 0.7;
     }
-    pre.code .comment { color: color-mix(in oklab, var(--code-fg) 48%, transparent); font-style: italic; }
+    pre.code .comment { color: color-mix(in oklab, var(--code-fg) 48%, transparent); font-style: normal; }
     pre.code .k  { color: color-mix(in oklab, var(--code-fg) 76%, var(--accent)); font-weight: 500; }
     pre.code .s  { color: color-mix(in oklab, var(--code-fg) 58%, var(--accent)); }
     pre.code .t  { color: color-mix(in oklab, var(--code-fg) 64%, var(--slate)); }
@@ -853,7 +880,7 @@
       line-height: 1.3;
       letter-spacing: -0.018em;
       color: var(--ink);
-      font-style: italic;
+      font-style: normal;
       text-wrap: balance;
       margin: 0 0 14px;
     }
@@ -921,7 +948,7 @@
       background: var(--bg-elevated);
       border: 1px solid var(--line);
       border-radius: 4px;
-      box-shadow: var(--shadow-sm);
+      box-shadow: none;
       position: relative;
     }
     figure.diagram::before {
@@ -929,8 +956,8 @@
       position: absolute;
       top: 0; left: 0; right: 0;
       height: 2px;
-      background: linear-gradient(90deg, var(--accent) 0%, var(--ochre) 100%);
-      opacity: 0.35;
+      background: var(--accent);
+      opacity: 1;
     }
     figure.diagram svg {
       width: 100%; height: auto; display: block;
@@ -940,7 +967,7 @@
       font-family: var(--serif);
       font-variation-settings: "opsz" 18, "wght" 400;
       font-size: 13.5px;
-      font-style: italic;
+      font-style: normal;
       color: var(--graphite);
       margin-top: 18px;
       text-align: center;
@@ -960,7 +987,7 @@
       background: var(--bg-elevated);
       border: 1px solid var(--line);
       border-radius: 6px;
-      box-shadow: var(--shadow-md);
+      box-shadow: none;
       overflow: hidden;
     }
     figure.demo::before {
@@ -968,8 +995,8 @@
       position: absolute;
       top: 0; left: 0; right: 0;
       height: 2px;
-      background: linear-gradient(90deg, var(--accent) 0%, var(--ochre) 100%);
-      opacity: 0.5;
+      background: var(--accent);
+      opacity: 1;
       z-index: 1;
     }
     figure.demo .demo-eyebrow {
@@ -993,12 +1020,7 @@
       position: relative;
       margin-top: 12px;
       aspect-ratio: 16 / 9;
-      background:
-        radial-gradient(ellipse 60% 50% at 50% 50%,
-          color-mix(in oklab, var(--accent) 22%, transparent), transparent 70%),
-        linear-gradient(180deg,
-          var(--bg-sunk) 0%,
-          color-mix(in oklab, var(--bg-sunk) 75%, var(--ink) 25%) 100%);
+      background: var(--bg-sunk);
       border-top: 1px solid var(--line);
       border-bottom: 1px solid var(--line);
       text-decoration: none;
@@ -1006,34 +1028,23 @@
       transition: background 220ms ease, transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
     }
     figure.demo a.demo-link::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background-image: repeating-linear-gradient(0deg,
-        color-mix(in oklab, var(--ink) 6%, transparent) 0 1px,
-        transparent 1px 3px);
-      opacity: 0.35;
-      pointer-events: none;
+      display: none;
     }
     figure.demo .play {
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 84px; height: 84px;
-      border-radius: 50%;
+      width: 64px; height: 64px;
+      border-radius: 4px;
       background: var(--accent);
       display: flex; align-items: center; justify-content: center;
-      box-shadow:
-        0 6px 24px color-mix(in oklab, var(--accent) 35%, transparent),
-        0 0 0 8px color-mix(in oklab, var(--accent) 14%, transparent);
+      box-shadow: none;
       transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 220ms ease;
       z-index: 1;
     }
     figure.demo a.demo-link:hover .play, figure.demo a.demo-link:focus-visible .play {
       transform: translate(-50%, -50%) scale(1.06);
-      box-shadow:
-        0 8px 32px color-mix(in oklab, var(--accent) 42%, transparent),
-        0 0 0 12px color-mix(in oklab, var(--accent) 18%, transparent);
+      box-shadow: none;
     }
     figure.demo .play svg {
       width: 28px; height: 28px;
@@ -1058,7 +1069,7 @@
       font-family: var(--serif);
       font-variation-settings: "opsz" 16, "wght" 400;
       font-size: 13.5px;
-      font-style: italic;
+      font-style: normal;
       color: var(--graphite);
       padding: 14px 20px 18px;
       line-height: 1.5;
@@ -1156,6 +1167,206 @@
     footer.doc a { color: var(--graphite); text-decoration: none; border: none; }
     footer.doc a:hover { color: var(--accent); }
 
+    /* ---- Factory visual system ------------------------------------ */
+
+    nav.toc {
+      font-family: var(--mono);
+      font-style: normal;
+      border-radius: 0 4px 4px 0;
+    }
+    nav.toc:hover, nav.toc:focus-within {
+      background: var(--bg-elevated);
+      box-shadow: none;
+      border: 1px solid var(--line);
+      border-left: 0;
+    }
+    nav.toc a {
+      font-family: var(--mono);
+      font-style: normal;
+      font-size: 12px;
+      letter-spacing: -0.01em;
+    }
+
+    header.doc {
+      margin-bottom: 104px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+    .eyebrow {
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      margin-bottom: 44px;
+    }
+    .eyebrow::before {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      opacity: 1;
+    }
+    .eyebrow::after { opacity: 1; }
+
+    h1.title {
+      font-family: var(--serif);
+      font-variation-settings: normal;
+      font-size: clamp(52px, 7vw, 82px);
+      font-weight: 300;
+      line-height: 0.98;
+      letter-spacing: -0.045em;
+      max-width: 14ch;
+      margin-bottom: 28px;
+    }
+    .tagline {
+      font-family: var(--serif);
+      font-variation-settings: normal;
+      font-size: clamp(19px, 2vw, 23px);
+      font-weight: 400;
+      line-height: 1.5;
+      letter-spacing: -0.018em;
+      max-width: 66ch;
+      color: var(--graphite);
+    }
+    .meta::before, .meta::after { display: none; }
+    .meta .field .k {
+      font-weight: 400;
+      letter-spacing: 0.08em;
+    }
+    .meta .field .v {
+      font-family: var(--serif);
+      font-variation-settings: normal;
+      font-weight: 400;
+    }
+    .chip { font-weight: 400; }
+
+    section.block + section.block::before {
+      content: "//";
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      color: var(--fog);
+    }
+    section.block > h2 {
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+    }
+    section.block > h2 .num {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--accent);
+      background: transparent;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      padding: 3px 8px;
+    }
+    section.block > h3,
+    section.block h4,
+    .panel h5,
+    .decision h4,
+    .pullquote p {
+      font-family: var(--serif);
+      font-variation-settings: normal;
+    }
+    section.block > h3 {
+      font-size: clamp(32px, 3.5vw, 44px);
+      font-weight: 300;
+      letter-spacing: -0.035em;
+      line-height: 1.08;
+      max-width: 24ch;
+    }
+    section.block h4 { font-weight: 400; }
+    section.block > p:first-of-type,
+    section.block > p.lede {
+      font-size: 18px;
+    }
+
+    .dropcap {
+      font-family: var(--mono);
+      font-variation-settings: normal;
+      font-feature-settings: "zero";
+      font-size: 4.6em;
+      font-weight: 400;
+      line-height: 0.86;
+      padding-right: 0.16em;
+    }
+    em, figcaption, .pullquote p, pre.code .comment {
+      font-style: normal;
+      font-variation-settings: normal;
+    }
+    strong { font-weight: 500; font-variation-settings: normal; }
+
+    .panel, .decision, figure.diagram, figure.demo, pre.code {
+      border-radius: 4px;
+      box-shadow: none;
+    }
+    .panel::before { height: 2px; }
+    .panel.rose::before { background: var(--line-strong); }
+    .panel.rose h5 { color: var(--fog); }
+
+    .pullquote {
+      border-left: 2px solid var(--accent);
+      padding: 22px 0 22px 28px;
+    }
+    .pullquote::before { display: none; }
+    .pullquote p {
+      font-size: clamp(24px, 2.8vw, 30px);
+      font-weight: 300;
+      line-height: 1.3;
+      letter-spacing: -0.025em;
+    }
+
+    figure.diagram::before,
+    figure.demo::before {
+      background: var(--accent);
+      opacity: 1;
+    }
+    figure.diagram figcaption,
+    figure.demo figcaption {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-style: normal;
+      color: var(--fog);
+    }
+    figure.demo a.demo-link {
+      background: var(--bg-sunk);
+    }
+    figure.demo a.demo-link::after { display: none; }
+    figure.demo .play {
+      width: 64px;
+      height: 64px;
+      border-radius: 4px;
+      box-shadow: none;
+    }
+    figure.demo a.demo-link:hover .play,
+    figure.demo a.demo-link:focus-visible .play {
+      box-shadow: none;
+    }
+
+    .callout {
+      border-radius: 0 4px 4px 0;
+      background: var(--bg-elevated);
+      font-family: var(--serif);
+      font-variation-settings: normal;
+    }
+    .callout.rose { border-left-color: var(--line-strong); }
+    .callout.rose .title { color: var(--fog); }
+
+    table.kv {
+      font-family: var(--serif);
+      font-variation-settings: normal;
+      font-size: 15px;
+    }
+    table.kv th {
+      font-weight: 400;
+      letter-spacing: 0.08em;
+    }
+    table.kv tr:hover td { background: var(--bg-elevated); }
+
+    svg text {
+      font-family: var(--mono);
+      font-feature-settings: "zero";
+    }
+
     /* ---- Reduced motion + print ----------------------------------- */
 
     @media (prefers-reduced-motion: reduce) {
@@ -1167,10 +1378,10 @@
       @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
       :root {
         --bg: #ffffff; --bg-elevated: #ffffff; --bg-sunk: #ffffff;
-        --ink: #0a0806; --ink-soft: #1e1a17; --graphite: #3a342e; --fog: #6b6459;
-        --line: #c4baaa; --line-strong: #9a9080;
-        --accent: #6a1626; --accent-soft: #f3dddd; --ochre: #7a5410;
-        --code-bg: #f0e9da;
+        --ink: #020202; --ink-soft: #242220; --graphite: #5f5956; --fog: #808080;
+        --line: #b8b3b0; --line-strong: #8f8986;
+        --accent: #ee6018; --accent-soft: #f7dfd2; --ochre: #808080;
+        --code-bg: #e5e1df;
       }
       body::before { display: none; }
       .page { grid-template-columns: minmax(0, 1fr); padding: 0; max-width: none; gap: 0; }
@@ -1247,6 +1458,31 @@
             <span class="v">YYYY-MM-DD</span>
           </div>
         </div>
+
+        <!-- Optional in memo / internal-sell mode. Delete in RFC mode.
+        <div class="statband">
+          <div class="stat">
+            <div class="figure">TODO<span class="unit">×</span></div>
+            <div class="cap">proof-point label</div>
+            <div class="sub">one-line comparison or denominator</div>
+          </div>
+          <div class="stat">
+            <div class="figure">TODO<span class="unit"> pts</span></div>
+            <div class="cap">proof-point label</div>
+            <div class="sub">one-line comparison or denominator</div>
+          </div>
+          <div class="stat">
+            <div class="figure">TODO<span class="unit">%</span></div>
+            <div class="cap">proof-point label</div>
+            <div class="sub">one-line comparison or denominator</div>
+          </div>
+          <div class="stat">
+            <div class="figure">TODO<span class="unit">s</span></div>
+            <div class="cap">proof-point label</div>
+            <div class="sub">one-line comparison or denominator</div>
+          </div>
+        </div>
+        -->
       </header>
 
       <!-- ============================================================ -->
