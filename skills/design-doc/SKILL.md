@@ -276,6 +276,20 @@ Default to the template's inline-`<svg>` `figure.diagram` — it inherits both t
 4. Author the HTML with placeholder tokens and inject the base64 with a small python pass — don't paste large strings through editor tools.
 5. After publishing, confirm the gist is not truncated (see [Publishing](#publishing)) and verify both themes with the screenshot loop.
 
+## Hero thumbnail
+
+A published doc link is just a URL — in chat it renders as one, and people scroll past it. Generate a hero image and hand it to the user alongside the link so they can lead with the title and the numbers.
+
+```bash
+node ~/.agents/skills/design-doc/references/thumbnail.js <abs-path-to-html> [out.png] [ratio]
+```
+
+Dark mode, 2× DPR, default 1.6:1. It crops eyebrow → title → tagline → stat band (falling back to the `.meta` strip in RFC mode), hides the TOC rail, and hides every sibling after the anchor. Those rules are not cosmetic — naive captures fail three ways: the auto-hide TOC renders as a stray column of numerals, whatever follows the hero bleeds a sliver of accent color into the bottom edge, and centering on `header.doc` leaves the image visibly off-center because the stat band is wider than the header.
+
+Present the PNG path with the doc link and let the user place it. Verify it with a `Read` at `image_quality="high"` first — the same bleed and centering bugs are invisible at default quality.
+
+⚠️ **Do not try to make the link auto-unfurl into a preview card.** Verified dead end: `gistpreview.github.io` serves a 2.7 KB JavaScript shell with `<title>Gist HTML Preview</title>` and zero `og:` tags, then fetches your document client-side — crawlers don't run JS, so they never see the doc. A secret gist compounds it: `gist.github.com/<id>` returns **404** to an anonymous crawler. Public gists *do* carry `og:`/`twitter:` tags, but `og:image` is GitHub's generic gist logo, not your document. Adding `og:` tags to the HTML changes nothing, because nothing crawler-visible serves them. A real card would require hosting both the doc and the image at anonymously-fetchable URLs — which defeats the point of an internal memo, and yields a ~360px card that is smaller than an attached image anyway.
+
 ## Verification checklist
 
 Before declaring done:
@@ -296,6 +310,7 @@ Before declaring done:
 - [ ] No template furniture: colophon, reviewer roster, section meta-intros, and §1 cross-ref sentences are absent unless the user asked for them.
 - [ ] If callout panels are present: each has a `.claim`, one is `.rose` carrying the honest limit, and no headline number is repeated verbatim from the adjacent statband.
 - [ ] After inserting any block, the tagline and the section that previously owned the point were swept for duplication.
+- [ ] If the doc is being shared as a link, a hero thumbnail was generated, inspected at high quality, and handed to the user with the URL.
 
 **Visual**
 - [ ] Every light and dark Playwright segment was inspected; no contrast failures on charts, tables, diagrams, code blocks, or accent surfaces.
@@ -325,3 +340,4 @@ Before declaring done:
 - `references/template.html` — full Factory-themed HTML scaffold to copy, with RFC components and an optional memo proof band.
 - `references/screenshot.js` — Playwright capture. `node screenshot.js <abs-path-to-html> [out-dir]`.
 - `references/inspect.js` — DOM probe for layout debugging. `node inspect.js <abs-path> "<selector>"`.
+- `references/thumbnail.js` — hero crop for sharing a doc link. `node thumbnail.js <abs-path> [out.png] [ratio]`.
