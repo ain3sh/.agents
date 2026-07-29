@@ -55,6 +55,7 @@ What it does, all idempotent:
 - hardlink-mirrors root and package-local `node_modules` from main
 - rewires workspace packages to the worktree's own `packages/`, with relative symlinks
 - mirrors postinstall build outputs per workspace package (auto-detected from each `package.json`'s `main`/`module`/`types`/`exports` fields), so `packages/<pkg>/dist/` etc. populate without rebuilding
+- conservatively skips auto-detected directories that contain any tracked content (for example an export rooted at `auth/src/` rather than `src/`)
 - links `.venv`/`venv` from main when present
 
 After repair, Bun-driven packages may need declared `setup`/`generate` scripts to recreate git-ignored artifacts (e.g. `src/generated/bin/*`). Run only existing scripts from that package dir; never replace them with install commands.
@@ -87,7 +88,7 @@ Structural checks:
 1. Workspace package entries in `node_modules` are symlinks, not real directories (self-reference slots are skipped: when a workspace owns a `node_modules` and a real dependency shares its name, that slot legitimately stays a real dir).
 2. Those symlinks are relative.
 3. Those symlinks resolve under the worktree.
-4. Each workspace package's declared entry points (`main`, `module`, `types`, `exports`) actually exist (catches missing postinstall builds -- empty `dist/` etc.).
+4. Each workspace package entry point that exists in main also exists in the worktree (catches mirrorable postinstall builds that repair missed without requiring runtime-generated app outputs).
 5. No other symlinks in the worktree point to absolute paths outside main + worktree boundaries.
 
 Optional env vars:

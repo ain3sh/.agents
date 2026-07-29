@@ -3,6 +3,7 @@
 no stale absolute symlinks. See SKILL.md for env vars and the full check list.
 Defaults to the cwd worktree; WORKTREE_VERIFY_ALL=1 sweeps all. Exit 0 ok, 1 fail.
 """
+
 from __future__ import annotations
 
 import json
@@ -21,7 +22,11 @@ def git_worktrees(start: Path) -> tuple[Path, list[Path]]:
     raw = subprocess.check_output(
         ["git", "worktree", "list", "--porcelain"], cwd=start, text=True
     )
-    paths = [Path(l.split(" ", 1)[1]).resolve() for l in raw.splitlines() if l.startswith("worktree ")]
+    paths = [
+        Path(line.split(" ", 1)[1]).resolve()
+        for line in raw.splitlines()
+        if line.startswith("worktree ")
+    ]
     if not paths:
         sys.exit("no git worktrees found")
     return paths[0], paths[1:]
@@ -84,19 +89,31 @@ def check_workspace_links(wt: Path, pkgs: dict[str, Path]) -> list[tuple[str, st
             if not link.exists() and not link.is_symlink():
                 continue
             if not link.is_symlink():
-                findings.append((
-                    "error",
-                    f"{link.relative_to(wt)} should be a symlink to the worktree's package but is a real directory "
-                    "(probably installed in-place; remove it and rerun repair)",
-                ))
+                findings.append(
+                    (
+                        "error",
+                        f"{link.relative_to(wt)} should be a symlink to the worktree's package but is a real directory "
+                        "(probably installed in-place; remove it and rerun repair)",
+                    )
+                )
                 continue
             target = os.readlink(link)
             if os.path.isabs(target):
-                findings.append(("error", f"{link.relative_to(wt)} is an absolute symlink ({target})"))
+                findings.append(
+                    (
+                        "error",
+                        f"{link.relative_to(wt)} is an absolute symlink ({target})",
+                    )
+                )
                 continue
             real = os.path.realpath(link)
             if real != str(wt) and not real.startswith(str(wt) + os.sep):
-                findings.append(("error", f"{link.relative_to(wt)} resolves outside the worktree -> {real}"))
+                findings.append(
+                    (
+                        "error",
+                        f"{link.relative_to(wt)} resolves outside the worktree -> {real}",
+                    )
+                )
     return findings
 
 
@@ -116,7 +133,9 @@ def _collect_export_strings(value) -> list[str]:
     return []
 
 
-def check_package_entry_points(wt: Path, pkgs: dict[str, Path]) -> list[tuple[str, str]]:
+def check_package_entry_points(
+    main_repo: Path, wt: Path, pkgs: dict[str, Path]
+) -> list[tuple[str, str]]:
     findings: list[tuple[str, str]] = []
     for name, rel in pkgs.items():
         pkg_root = wt / rel
@@ -140,13 +159,17 @@ def check_package_entry_points(wt: Path, pkgs: dict[str, Path]) -> list[tuple[st
             if not cleaned or any(c in cleaned for c in "*?["):
                 continue
             target = pkg_root / cleaned
-            if not target.exists():
-                findings.append((
-                    "error",
-                    f"workspace package {name}: {key}={raw} not found at "
-                    f"{target.relative_to(wt)} (probably a postinstall build dir not "
-                    "mirrored; rerun repair)",
-                ))
+            main_target = main_repo / rel / cleaned
+            if main_target.exists() and not target.exists():
+                findings.append(
+                    (
+                        "error",
+                        f"workspace package {name}: {key}={raw} not found at "
+                        f"{target.relative_to(wt)} although main has "
+                        f"{main_target.relative_to(main_repo)} (postinstall build dir was "
+                        "not mirrored; rerun repair)",
+                    )
+                )
     return findings
 
 
@@ -177,7 +200,10 @@ def run_smoke(wt: Path) -> tuple[bool, str]:
     try:
         subprocess.check_output(
             ["sh", "-c", SMOKE_CMD],
-            cwd=wt, stderr=subprocess.STDOUT, timeout=120, text=True,
+            cwd=wt,
+            stderr=subprocess.STDOUT,
+            timeout=120,
+            text=True,
         )
         return True, "ok"
     except subprocess.CalledProcessError as e:
@@ -210,7 +236,7 @@ def main() -> int:
     for wt in targets:
         pkgs = workspaces(wt)
         link_findings = check_workspace_links(wt, pkgs)
-        entry_findings = check_package_entry_points(wt, pkgs)
+        entry_findings = check_package_entry_points(main_repo, wt, pkgs)
         stale = list(find_stale_absolute_symlinks(wt, [str(wt), str(main_repo)]))
         smoke_ok, smoke_msg = run_smoke(wt)
 

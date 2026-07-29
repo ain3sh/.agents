@@ -5,6 +5,7 @@ mirror postinstall build outputs, rewire workspace symlinks, link venvs.
 Defaults to the cwd worktree; WORKTREE_REPAIR_ALL=1 sweeps all worktrees.
 See SKILL.md for env vars. Idempotent. Never installs in the worktree.
 """
+
 from __future__ import annotations
 
 import json
@@ -16,13 +17,21 @@ from pathlib import Path
 
 ALL = os.environ.get("WORKTREE_REPAIR_ALL") == "1"
 WORKTREES_ROOT = os.environ.get("WORKTREES_ROOT", "").strip()
-EXTRA_MIRROR_DIRS = [s.strip() for s in os.environ.get("WORKTREE_MIRROR_DIRS", "").split(",") if s.strip()]
+EXTRA_MIRROR_DIRS = [
+    s.strip()
+    for s in os.environ.get("WORKTREE_MIRROR_DIRS", "").split(",")
+    if s.strip()
+]
 
 _PKG_BUILD_RAW = os.environ.get("WORKTREE_PACKAGE_BUILD_DIRS")
 if _PKG_BUILD_RAW is None:
-    PACKAGE_BUILD_DIRS_OVERRIDE: list[str] | None = None  # auto-detect from package.json
+    PACKAGE_BUILD_DIRS_OVERRIDE: list[str] | None = (
+        None  # auto-detect from package.json
+    )
 else:
-    PACKAGE_BUILD_DIRS_OVERRIDE = [s.strip() for s in _PKG_BUILD_RAW.split(",") if s.strip()]
+    PACKAGE_BUILD_DIRS_OVERRIDE = [
+        s.strip() for s in _PKG_BUILD_RAW.split(",") if s.strip()
+    ]
 
 CWD = Path.cwd().resolve()
 
@@ -31,7 +40,11 @@ def git_worktrees(start: Path) -> tuple[Path, list[Path]]:
     raw = subprocess.check_output(
         ["git", "worktree", "list", "--porcelain"], cwd=start, text=True
     )
-    paths = [Path(l.split(" ", 1)[1]).resolve() for l in raw.splitlines() if l.startswith("worktree ")]
+    paths = [
+        Path(line.split(" ", 1)[1]).resolve()
+        for line in raw.splitlines()
+        if line.startswith("worktree ")
+    ]
     if not paths:
         sys.exit("no git worktrees found")
     return paths[0], paths[1:]
@@ -187,11 +200,32 @@ def is_git_ignored(wt: Path, rel: str) -> bool:
     try:
         subprocess.check_call(
             ["git", "check-ignore", "-q", rel],
-            cwd=wt, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            cwd=wt,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         return True
     except subprocess.CalledProcessError:
         return False
+
+
+def git_tracked_paths(wt: Path, rels: list[str]) -> set[str]:
+    if not rels:
+        return set()
+    try:
+        output = subprocess.check_output(
+            ["git", "ls-files", "-z", "--", *rels],
+            cwd=wt,
+            stderr=subprocess.DEVNULL,
+        )
+    except subprocess.CalledProcessError:
+        return set()
+    tracked_files = [Path(raw.decode()) for raw in output.split(b"\0") if raw]
+    return {
+        rel
+        for rel in rels
+        if any(Path(rel) == path or Path(rel) in path.parents for path in tracked_files)
+    }
 
 
 def safe_mirror(src: Path, dst: Path, wt: Path, rel_for_check: str) -> str:
@@ -261,7 +295,12 @@ def detect_package_build_dirs(pkg_root: Path) -> set[str]:
         if "/" not in p:
             continue
         d = p.split("/", 1)[0]
-        if not d or d in _SOURCE_DIRS or d in {".", ".."} or any(c in d for c in "*?[]{}"):
+        if (
+            not d
+            or d in _SOURCE_DIRS
+            or d in {".", ".."}
+            or any(c in d for c in "*?[]{}")
+        ):
             continue
         dirs.add(d)
     return dirs
@@ -269,27 +308,34 @@ def detect_package_build_dirs(pkg_root: Path) -> set[str]:
 
 def mirror_package_builds(main: Path, wt: Path, pkgs: dict[str, Path]) -> str:
     """Mirror per-package build output dirs (dist/, lib/, etc.) from main."""
-    rebuilt = fresh = tracked = 0
-    refused: list[str] = []
+    candidates: list[tuple[Path, Path, str]] = []
     for _name, rel in pkgs.items():
         wt_pkg = wt / rel
         # Use the worktree's package.json -- branch's build config may differ from main.
-        for d in detect_package_build_dirs(wt_pkg):
-            rel_dir = str(rel / d)
-            status = safe_mirror(main / rel / d, wt / rel / d, wt, rel_dir)
-            if status == "rebuilt":
-                rebuilt += 1
-            elif status == "fresh":
-                fresh += 1
-            elif status == "dst-tracked-refusing":
-                tracked += 1
-                refused.append(rel_dir)
-            # src-missing / src-not-dir / wt-parent-missing: silently skip
+        candidates.extend(
+            (rel, Path(d), str(rel / d)) for d in detect_package_build_dirs(wt_pkg)
+        )
+
+    tracked_paths = git_tracked_paths(
+        wt, [rel_dir for _rel, _build_dir, rel_dir in candidates]
+    )
+    rebuilt = fresh = source = 0
+    for rel, build_dir, rel_dir in candidates:
+        # Export maps may point at tracked trees outside a conventional src/
+        # directory (for example packages/runtime/auth/src/index.ts). Treat any
+        # tracked content conservatively: a mirror must never replace it.
+        if rel_dir in tracked_paths:
+            source += 1
+            continue
+        status = safe_mirror(main / rel / build_dir, wt / rel / build_dir, wt, rel_dir)
+        if status == "rebuilt":
+            rebuilt += 1
+        elif status == "fresh":
+            fresh += 1
+        # src-missing / src-not-dir / wt-parent-missing: silently skip
     summary = f"rebuilt={rebuilt} fresh={fresh}"
-    if tracked:
-        summary += f" tracked-skip={tracked}"
-        for r in refused:
-            print(f"  refusing to clobber tracked path: {r}")
+    if source:
+        summary += f" source-skip={source}"
     return summary
 
 
