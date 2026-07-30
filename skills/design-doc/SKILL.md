@@ -57,7 +57,7 @@ Before styling, search the repo for `DESIGN.md`, brand guidance, or live tokens.
 
 For RFC mode, fill the scaffold top-down:
 
-1. `<title>`, eyebrow, `h1.title`, `.tagline`, `.meta` strip. Keep only meta fields that earn their slot — a reviewer roster is fat unless the user asks for it.
+1. `<title>`, eyebrow, `h1.title`, `.tagline`, `.linkline`. The linkline is one borderless mono row for links that earn their slot (tracker project/ticket, PRs). Status, author, date, and reviewer rosters are fat — provenance lives in `footer.doc`.
 2. **Optional** `figure.demo` if there's a demo video — see [Embedding video](#embedding-video).
 3. §1 Summary — `.lede` with `.dropcap` + 1 supporting paragraph (zero-context rules below).
 4. §2 Context — reader primer first, then what breaks today (tickets spelled out), why now.
@@ -196,7 +196,7 @@ All defined in `references/template.html` — read it for any pattern you're uns
 |---|---|---|
 | `.eyebrow` | Mono uppercase kicker w/ rule | Above titles & figure labels |
 | `h1.title` + `.tagline` | Hero | Once, in `header.doc` |
-| `.meta .field` | Status/author/ticket/PR grid | Once, after tagline |
+| `.linkline .group` | Borderless mono row of ticket/PR links | Once, after tagline |
 | `.statband` | Four quantitative proof points | Memo/internal-sell mode, directly below the hero |
 | `figure.demo` | Video poster card | Optional, between header and §1 |
 | `section.block > h2/h3` | Numbered eyebrow + display heading | Every section |
@@ -284,7 +284,7 @@ A published doc link is just a URL — in chat it renders as one, and people scr
 node ~/.agents/skills/design-doc/references/thumbnail.js <abs-path-to-html> [out.png] [ratio]
 ```
 
-Dark mode, 2× DPR, default 1.6:1. It crops eyebrow → title → tagline → stat band (falling back to the `.meta` strip in RFC mode), hides the TOC rail, and hides every sibling after the anchor. Those rules are not cosmetic — naive captures fail three ways: the auto-hide TOC renders as a stray column of numerals, whatever follows the hero bleeds a sliver of accent color into the bottom edge, and centering on `header.doc` leaves the image visibly off-center because the stat band is wider than the header.
+Dark mode, 2× DPR, default 1.6:1. It crops eyebrow → title → tagline → stat band (falling back to the `.meta` strip or `.linkline` in RFC mode), hides the TOC rail, and hides every sibling after the anchor. Those rules are not cosmetic — naive captures fail three ways: the auto-hide TOC renders as a stray column of numerals, whatever follows the hero bleeds a sliver of accent color into the bottom edge, and centering on `header.doc` leaves the image visibly off-center because the stat band is wider than the header.
 
 Present the PNG path with the doc link and let the user place it. Verify it with a `Read` at `image_quality="high"` first — the same bleed and centering bugs are invisible at default quality.
 

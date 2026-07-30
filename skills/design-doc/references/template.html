@@ -352,70 +352,43 @@
       font-size: 0.82em;
     }
 
-    /* ---- Metadata strip ------------------------------------------- */
+    /* ---- Provenance link line -------------------------------------
+       One quiet mono line under the tagline: label + link pairs,
+       no borders — the eyebrow rule above carries the horizontal.
+       Keep only fields that earn their slot (tracker link, PRs);
+       status/author/date provenance belongs in footer.doc. */
 
-    .meta {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 24px 40px;
-      padding: 30px 0 24px;
-      border-top: 1px solid var(--line);
-      border-bottom: 1px solid var(--line);
-      position: relative;
-    }
-    .meta::before {
-      content: "§";
-      position: absolute;
-      top: -14px; left: 0;
-      background: var(--bg);
-      padding: 0 12px 0 0;
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 24, "wght" 400;
-      font-size: 18px;
-      font-style: normal;
-      color: var(--accent);
-    }
-    .meta::after {
-      content: "∎";
-      position: absolute;
-      bottom: -10px; right: 0;
-      background: var(--bg);
-      padding: 0 0 0 12px;
-      font-family: var(--serif);
-      font-size: 11px;
-      color: var(--fog);
-      letter-spacing: 0.1em;
-    }
-    .meta .field {
+    .linkline {
       display: flex;
-      flex-direction: column;
-      min-width: 0;
-      gap: 4px;
-    }
-    .meta .field .k {
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 10px 36px;
+      margin: 0;
       font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--ink-soft);
+    }
+    .linkline .group {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 12px;
+      min-width: 0;
+    }
+    .linkline .k {
       font-size: 10px;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       color: var(--fog);
       font-weight: 500;
     }
-    .meta .field .v {
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 20, "wght" 500;
-      color: var(--ink);
-      font-size: 15.5px;
-      font-weight: 500;
-      letter-spacing: -0.004em;
-      line-height: 1.3;
-    }
-    .meta .field a {
+    .linkline a {
       color: var(--accent);
       text-decoration: none;
       border-bottom: 1px solid color-mix(in oklab, var(--accent) 38%, transparent);
       transition: border-color 180ms ease, color 180ms ease;
     }
-    .meta .field a:hover {
+    .linkline a:hover {
       border-bottom-color: var(--accent);
       color: color-mix(in oklab, var(--accent) 80%, var(--ink));
     }
@@ -1292,15 +1265,9 @@
       max-width: 66ch;
       color: var(--graphite);
     }
-    .meta::before, .meta::after { display: none; }
-    .meta .field .k {
+    .linkline .k {
       font-weight: 400;
       letter-spacing: 0.08em;
-    }
-    .meta .field .v {
-      font-family: var(--serif);
-      font-variation-settings: normal;
-      font-weight: 400;
     }
     .chip { font-weight: 400; }
 
@@ -1502,28 +1469,16 @@
           TODO ≤25-word thesis. State the structural claim the doc is
           making, plain and confident. Avoid italics here.
         </p>
-        <div class="meta">
-          <div class="field">
-            <span class="k">Status</span>
-            <span class="v"><span class="chip"><span class="dot"></span> In review</span></span>
-          </div>
-          <div class="field">
-            <span class="k">Author</span>
-            <span class="v">TODO Author Name</span>
-          </div>
-          <div class="field">
+        <p class="linkline">
+          <span class="group">
             <span class="k">Linear</span>
-            <span class="v"><a href="#">TODO-TICKET</a></span>
-          </div>
-          <div class="field">
+            <a href="#">TODO-TICKET</a>
+          </span>
+          <span class="group">
             <span class="k">Pull request</span>
-            <span class="v"><a href="#">#TODO</a></span>
-          </div>
-          <div class="field">
-            <span class="k">Last updated</span>
-            <span class="v">YYYY-MM-DD</span>
-          </div>
-        </div>
+            <a href="#">#TODO</a>
+          </span>
+        </p>
 
         <!-- Optional in memo / internal-sell mode. Delete in RFC mode.
         <div class="statband">

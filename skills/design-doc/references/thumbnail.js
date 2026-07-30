@@ -82,10 +82,12 @@ const PAD = 56;
     const header = document.querySelector('header.doc');
     if (!header) return null;
 
-    // Bottom anchor: stat band in memo mode, else the tagline/meta strip.
+    // Bottom anchor: stat band in memo mode, else the link line / tagline
+    // (.meta kept for docs authored from older template revisions).
     const anchor =
       header.querySelector('.statband') ||
       header.querySelector('.meta') ||
+      header.querySelector('.linkline') ||
       header.querySelector('.tagline') ||
       header;
 
