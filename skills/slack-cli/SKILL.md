@@ -5,171 +5,31 @@ description: Reference for using slck (aliased as `slack`) to manage Slack chann
 
 # Slack CLI (`slack`)
 
-slck uses a stored bot token (`xoxb-`). Verify with `slack config show`.
-Search requires a user token (`xoxp-`). Set via `slack config set-token` or `SLACK_USER_TOKEN` env var.
+`slck` (aliased `slack`) drives the workspace from the terminal. Bot token (`xoxb-`) is stored via config — verify with `slack config show`. Search and DM-reads need a user token (`xoxp-`) via `slack config set-token` or `SLACK_USER_TOKEN`.
 
-## Channels
+## Route by task
 
-```bash
-slack ch list                                      # All channels
-slack ch list --exclude-archived                   # Active only
-slack ch list --type public                        # Public only
-slack ch get C0123456789                           # Details (channel metadata + member count)
-slack ch create "name" --public                    # Create
-slack ch archive C0123456789                       # Archive
-slack ch unarchive C0123456789                     # Unarchive (user token only)
-slack ch rename C0123456789 "new-name"             # Rename
-slack ch invite C0123456789 -u U0123456789         # Invite user
-slack ch kick C0123456789 -u U0123456789           # Remove user
-slack ch set-topic C0123456789 "topic"             # Set topic
-slack ch set-purpose C0123456789 "purpose"         # Set purpose
-```
+- **`ops/`** — operating Slack. [`ops/cli.md`](ops/cli.md) is the full command reference: reading threads, channel admin, search, files, auth, `not_in_channel` fixes, flag surface.
+- **`comms/`** — writing to humans. Read [`comms/voice.md`](comms/voice.md) *before composing* any channel post, thread reply, or DM: the audience/communication mindset plus Slack mrkdwn rules, not a personality script. Future workflow docs (e.g. reply-to-thread) land here.
 
-## Messages
+Doing both (the common case: read a thread, then reply)? Load both.
+
+## Quick reference
 
 ```bash
-slack msg send C0123456789 "text"                  # Send
-slack msg send C0123456789 "reply" --thread-ts TS  # Thread reply
-slack msg send C0123456789 --file ./doc.pdf        # Upload file
-slack msg send --channel "#general" "text"         # By channel name
-slack msg update C0123 TS "new text"               # Edit
-slack msg delete C0123 TS                          # Delete
-slack msg react C0123 TS thumbsup                  # React
-slack msg unreact C0123 TS thumbsup                # Remove reaction
-slack msg history C0123456789                      # Channel history
-slack msg history C0123456789 --limit 50           # With limit
-slack msg thread C0123 THREAD_TS                   # Thread replies (parent + all replies)
-slack msg thread C0123 THREAD_TS --limit 200       # Higher page size
-```
-
-## Users
-
-```bash
-slack u list                                       # All users
-slack u list --include-bots                        # Include bots
-slack u list --include-deactivated                 # Include deactivated
-slack u get U0123456789                            # User details
-slack u presence U0123456789                       # Presence status
-```
-
-## Search (requires user token)
-
-```bash
-slack s messages "query"                           # Messages
-slack s messages "query" --in "#general"           # In channel
-slack s messages "query" --from "@alice"           # From user
-slack s messages "query" --after 2025-01-01        # Date filter
-slack s messages "query" --has-link                # With links
-slack s files "query"                              # Files
-slack s files "query" --type pdf                   # By type
-slack s all "query"                                # Both
-```
-
-### Search Flags
-
-| Flag | Description |
-|------|-------------|
-| `--count N` | Results per page (max 100) |
-| `--page N` | Page number |
-| `--sort score\|timestamp` | Sort order |
-| `--sort-dir asc\|desc` | Direction |
-| `--scope all\|public\|private\|dm\|mpim` | Scope |
-| `--highlight` | Highlight matches |
-
-## Emoji, Files, Identity
-
-```bash
-slack emoji list                                   # Custom emoji
-slack emoji list --include-aliases                 # With aliases
-slack files download FILE_ID                       # Download file
-slack files download FILE_ID --output ./file.pdf   # To path
+slack msg thread C0123 THREAD_TS -o json           # Read a thread (parent + replies)
+slack msg send C0123 "text" --thread THREAD_TS     # Reply (flag is --thread, NOT --thread-ts)
+slack msg send C0123 "$(cat /tmp/msg.txt)" --thread TS  # Long bodies: draft in a file first
+slack msg history C0123 --limit 50                 # Channel history
+slack s messages "query" --in "#general"           # Search (user token)
 slack whoami                                       # Current identity
-slack ws info                                      # Workspace info
 ```
 
-## Output Formats
+Thread URLs: use the `thread_ts` query param (the parent), not the `p<ts>` path segment — details and edge cases in `ops/cli.md`.
 
-```bash
-slack ch list                                      # Text (default)
-slack ch list -o json                              # JSON
-slack ch list -o table                             # Table
-```
+## Gotchas that bite
 
-## Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `SLACK_API_TOKEN` | Bot token override |
-| `SLACK_USER_TOKEN` | User token for search |
-| `SLCK_AS_USER` | `true` to default to user token |
-| `NO_COLOR` | Disable colored output |
-
-## Aliases
-
-| Command | Aliases |
-|---------|---------|
-| `channels` | `ch` |
-| `messages` | `msg`, `m` |
-| `users` | `u` |
-| `search` | `s` |
-| `emoji` | `e` |
-| `workspace` | `ws`, `team` |
-
-## Config Management
-
-```bash
-slack config set-token                             # Interactive
-slack config set-token xoxb-...                    # Direct
-slack config show                                  # Status
-slack config test                                  # Test auth
-slack config delete-token                          # Delete all
-slack config delete-token --type bot               # Delete bot only
-```
-
-## Shell Completions
-
-```bash
-slack completion zsh > "${fpath[1]}/_slck"
-slack completion bash > /etc/bash_completion.d/slck
-slack completion fish > ~/.config/fish/completions/slck.fish
-```
-
-## Patterns
-
-### Read a thread from its URL
-
-URL shape: `https://<ws>.slack.com/archives/<CHANNEL_ID>/p<REPLY_TS>?thread_ts=<PARENT_TS>`.
-Use `thread_ts` (the parent). The `p<ts>` in the path is a reply id — using it misses the parent and any replies above it.
-
-```bash
-URL='https://example.slack.com/archives/CXXXXXXXXXX/p1700000000000000?thread_ts=1700000000.000000'
-CH=${URL#*archives/}; CH=${CH%%/*}
-TS=${URL#*thread_ts=}; TS=${TS%%&*}
-slack msg thread "$CH" "$TS" -o json
-```
-
-### Resolve `not_in_channel`
-
-Reading messages requires channel membership; `channels:history` alone is not enough.
-
-- **Public** — bot self-joins via `conversations.join` (requires `channels:join` scope).
-- **Private** — a human must `/invite @slackcli`; bots cannot self-join.
-- **DM / MPIM** — use a user token (`SLACK_USER_TOKEN` / `--as-user`).
-
-Self-join guard for public channels (`conversations.join` is idempotent):
-
-```bash
-TOKEN=${SLACK_API_TOKEN:-$(cut -d= -f2 ~/.config/slack-chat-api/credentials)}
-curl -sS -H "Authorization: Bearer $TOKEN" -d "channel=$CH" \
-  https://slack.com/api/conversations.join >/dev/null
-slack msg thread "$CH" "$TS"
-```
-
-If `conversations.join` returns `missing_scope`, add `channels:join` at
-https://api.slack.com/apps/A0AN5RUFSNB/oauth and Reinstall to Workspace.
-
-## Known Limitations
-
-- Bot tokens (`xoxb-`) cannot unarchive channels — bot is removed on archive. Use a user token or the Slack UI.
-- `channels invite` idempotency is limited to single-user invites.
-- Reading messages/threads requires channel membership — see Patterns → "Resolve `not_in_channel`".
+- `--thread-ts` is not a flag; it's `--thread`. The mistake only surfaces as a failed send after you've drafted the whole message.
+- Inline shell quoting of long messages breaks on backticks/quotes; draft in a file and pass `"$(cat file)"`.
+- Slack mrkdwn ≠ Markdown: `*bold*` single-asterisk, `•` bullets, no headers/tables — see `comms/voice.md`.
+- Reading requires channel membership even with `channels:history`; see "Resolve `not_in_channel`" in `ops/cli.md`.
