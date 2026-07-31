@@ -44,8 +44,9 @@ def _extract_base_fields(data: dict[str, Any]) -> dict[str, Any]:
         "session_id": data.get("session_id", ""),
         "transcript_path": data.get("transcript_path", ""),
         "cwd": data.get("cwd", ""),
-        "permission_mode": data.get("permission_mode", "default"),
-        "hook_event_name": data.get("hookEventName") or data.get("hook_event_name", ""),
+        "permission_mode": data.get("permission_mode", "off"),
+        "hook_event_name": data.get("hook_event_name", ""),
+        "message_id": data.get("message_id"),
     }
 
 
@@ -68,16 +69,45 @@ _EVENT_DEFAULTS: dict[HookEventName, tuple[type[BaseHookInput], dict[str, Any]]]
         PostToolUseInput,
         {"tool_name": "", "tool_input": {}, "tool_response": {}},
     ),
-    "Notification": (NotificationInput, {"message": ""}),
-    "UserPromptSubmit": (UserPromptSubmitInput, {"prompt": ""}),
-    "Stop": (StopInput, {"stop_hook_active": False}),
-    "SubagentStop": (SubagentStopInput, {"stop_hook_active": False}),
+    "Notification": (
+        NotificationInput,
+        {"message": "", "notification_type": ""},
+    ),
+    "UserPromptSubmit": (
+        UserPromptSubmitInput,
+        {"prompt": "", "has_images": False},
+    ),
+    "Stop": (
+        StopInput,
+        {
+            "stop_hook_active": False,
+            "tool_execution_count": 0,
+            "elapsed_time": 0,
+        },
+    ),
+    "SubagentStop": (
+        SubagentStopInput,
+        {
+            "task_name": "",
+            "task_result": "",
+            "task_error": "",
+            "stop_hook_active": False,
+        },
+    ),
     "PreCompact": (
         PreCompactInput,
-        {"trigger": "manual", "custom_instructions": ""},
+        {
+            "trigger": "manual",
+            "custom_instructions": "",
+            "message_count": 0,
+            "estimated_tokens": 0,
+        },
     ),
     "SessionStart": (SessionStartInput, {"source": "startup"}),
-    "SessionEnd": (SessionEndInput, {"reason": "other"}),
+    "SessionEnd": (
+        SessionEndInput,
+        {"reason": "other", "session_duration_ms": 0, "message_count": 0},
+    ),
 }
 
 
@@ -105,9 +135,9 @@ def read_input() -> HookInput:
     if not isinstance(data, dict):
         raise HookInputError("Hook input must be a JSON object")
 
-    event_name = data.get("hookEventName") or data.get("hook_event_name")
+    event_name = data.get("hook_event_name")
     if not event_name:
-        raise HookInputError("Missing 'hookEventName' field")
+        raise HookInputError("Missing 'hook_event_name' field")
 
     event_config = _EVENT_DEFAULTS.get(event_name)
     if event_config is None:

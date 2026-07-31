@@ -24,7 +24,7 @@ HookEventName = Literal[
     "SessionEnd",
 ]
 
-PermissionMode = Literal["default", "plan", "acceptEdits", "bypassPermissions"]
+PermissionMode = Literal["off", "spec", "auto-low", "auto-medium", "auto-high"]
 
 # PreCompact triggers
 PreCompactTrigger = Literal["manual", "auto"]
@@ -56,6 +56,7 @@ class BaseHookInput:
     cwd: str
     permission_mode: PermissionMode
     hook_event_name: HookEventName
+    message_id: str | None
 
 
 # ============================================================================
@@ -91,6 +92,7 @@ class NotificationInput(BaseHookInput):
     """Input for Notification hooks."""
 
     message: str
+    notification_type: str
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "hook_event_name", "Notification")
@@ -101,6 +103,7 @@ class UserPromptSubmitInput(BaseHookInput):
     """Input for UserPromptSubmit hooks."""
 
     prompt: str
+    has_images: bool
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "hook_event_name", "UserPromptSubmit")
@@ -111,6 +114,8 @@ class StopInput(BaseHookInput):
     """Input for Stop hooks."""
 
     stop_hook_active: bool
+    tool_execution_count: int
+    elapsed_time: int
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "hook_event_name", "Stop")
@@ -120,6 +125,9 @@ class StopInput(BaseHookInput):
 class SubagentStopInput(BaseHookInput):
     """Input for SubagentStop hooks."""
 
+    task_name: str
+    task_result: str
+    task_error: str
     stop_hook_active: bool
 
     def __post_init__(self) -> None:
@@ -132,6 +140,8 @@ class PreCompactInput(BaseHookInput):
 
     trigger: PreCompactTrigger
     custom_instructions: str
+    message_count: int
+    estimated_tokens: int
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "hook_event_name", "PreCompact")
@@ -152,6 +162,8 @@ class SessionEndInput(BaseHookInput):
     """Input for SessionEnd hooks."""
 
     reason: SessionEndReason
+    session_duration_ms: int
+    message_count: int
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "hook_event_name", "SessionEnd")

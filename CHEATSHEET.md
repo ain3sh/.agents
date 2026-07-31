@@ -45,3 +45,14 @@
 | `gh-attach` | At `~/.local/bin/` | Uploads images/clips to GitHub's CDN for PR bodies. `pr-description` (artifacts.md, visual-evidence.md), `excalidraw` skill |
 | `paperclip` MCP | HTTP MCP + `paperclip login` | Biomedical lit (`~/.factory/mcp.json`) |
 | `paper-search` MCP | `npx -y paper-search-mcp-nodejs` | 14 academic platforms (`~/.factory/mcp.json`) |
+
+## Session Environment
+
+`hooks/session_start/env_vars.py` persists environment settings from
+`[hooks.session_start.environment]` in `configs/droid.toml`. Use
+`path_prepend` or `path_append` for ordered, deduplicated PATH additions:
+
+```toml
+[hooks.session_start.environment]
+path_prepend = ["~/.local/bin"]
+```

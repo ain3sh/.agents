@@ -58,6 +58,16 @@ from utils import (  # type: ignore
 )
 
 HOOK_EVENT_NAME = "SessionStart"
+DEFAULT_PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+RESERVED_CONFIG_KEYS = {
+    "when",
+    "sources",
+    "secrets",
+    "strict",
+    "verbose",
+    "path_prepend",
+    "path_append",
+}
 
 
 # ============================================================================
@@ -82,6 +92,41 @@ def apply_env_vars(env_vars: dict[str, str]) -> int:
             count += 1
 
     return count
+
+
+def _path_entries(value: object) -> list[str]:
+    raw_entries = value if isinstance(value, list) else [value]
+    entries: list[str] = []
+    for entry in raw_entries:
+        if not isinstance(entry, str) or not entry:
+            continue
+        expanded = str(Path(entry).expanduser())
+        if expanded not in entries:
+            entries.append(expanded)
+    return entries
+
+
+def _updated_path(prepend: list[str], append: list[str]) -> str:
+    current = (os.environ.get("PATH") or DEFAULT_PATH).split(os.pathsep)
+    entries: list[str] = []
+    for entry in [*prepend, *current, *append]:
+        if entry and entry not in entries:
+            entries.append(entry)
+    return os.pathsep.join(entries)
+
+
+def apply_path_config(config: dict[str, object]) -> int:
+    """Persist configured PATH additions into the agent session environment."""
+    prepend = _path_entries(config.get("path_prepend"))
+    append = _path_entries(config.get("path_append"))
+    if not prepend and not append:
+        return 0
+
+    path = _updated_path(prepend, append)
+    if get_droid_env_file() is None:
+        os.environ["PATH"] = path
+        return 1
+    return int(set_env("PATH", path))
 
 
 # ============================================================================
@@ -131,9 +176,8 @@ def _resolve_secrets_files(
 
 def _config_env_vars(config: dict[str, object]) -> dict[str, str]:
     env_vars: dict[str, str] = {}
-    reserved = {"when", "sources", "secrets", "strict", "verbose"}
     for key, value in config.items():
-        if key in reserved:
+        if key in RESERVED_CONFIG_KEYS:
             continue
         if isinstance(value, (str, int, float, bool)):
             env_vars[key] = str(value)
@@ -207,10 +251,14 @@ def main():
 
     env_vars.update(_config_env_vars(config))
 
-    if not env_vars:
+    if (
+        not env_vars
+        and not config.get("path_prepend")
+        and not config.get("path_append")
+    ):
         _exit_session_start()
 
-    count = apply_env_vars(env_vars)
+    count = apply_env_vars(env_vars) + apply_path_config(config)
 
     status: str | None = None
     if count > 0:

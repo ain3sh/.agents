@@ -18,6 +18,7 @@ cua-driver = ["path:~/.agents/scripts/cua-driver"]
 [hooks.session_start.environment]
 when = ["startup", "resume", "clear"]
 secrets = "~/.factory/.env" # .env secrets loaded by env vars session-start hook
+path_prepend = ["~/.local/bin"]
 # config env vars
 EXAMPLE_CONFIG_VAR = "clod"
 TIRITH_INTEGRATION = "droid-cli"
