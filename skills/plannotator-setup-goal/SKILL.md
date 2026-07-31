@@ -1,6 +1,6 @@
 ---
 name: plannotator-setup-goal
-description: Turn an idea or objective into a goal package for /goal. Interviews the user, builds a reviewed fact sheet via Plannotator, then explores the codebase to produce an execution plan.
+description: Build a plannotator goal package (goals/<slug>/) from an idea through a Plannotator-reviewed interview, fact sheet, and execution plan. Use ONLY when the user explicitly asks to set up, scaffold, or plan a goal package — never for the /goal slash command, goal loops, or ordinary objectives.
 ---
 
 # Setup Goal
