@@ -112,6 +112,18 @@ Make the happy path **copy-pasteable**. Prefer exact prompts, commands, URLs, fi
 
 Resolve every placeholder in the recipe. If a step needs an ID, generated filename, session slug, or other runtime value, include the command/UI action that reveals it before the step that uses it. Never assume reviewer context about where an identifier comes from; write the retrieval mechanism inline.
 
+**Synthesize required state inline — the sandbox pattern.** When the repro needs config, fixtures, or environment (a settings file, a hook, a seeded dir), the recipe *builds* them instead of instructing the reviewer to edit their own setup: `mktemp -d` for a scratch workspace, heredocs writing the exact config/fixture files, env vars or flags pointing the tool at the sandbox, then the one launch command that exhibits the behavior. The whole block is a single paste that runs from any checkout and leaves the reviewer's repo, settings, and home dir untouched — "edit your settings.json to add…" is a recipe smell; write the heredoc that creates a throwaway one instead.
+
+    REPO=$(git rev-parse --show-toplevel)
+    SCRATCH=$(mktemp -d)
+    mkdir -p "$SCRATCH/.factory"
+    cat > "$SCRATCH/.factory/settings.json" <<'JSON'
+    { "hooks": { "PreToolUse": [{ "matcher": "Execute",
+      "hooks": [{ "type": "command", "command": "sleep 95", "timeout": 120 }] }] } }
+    JSON
+    DROID_DEV_REPO_ROOT="$REPO" droid-dev --cwd "$SCRATCH" --auto high
+    # Run any command -> hook stalls 95s -> expect: no client-side timeout at 90s
+
 ```markdown
 ## Repro Recipe
 
