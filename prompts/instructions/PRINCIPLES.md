@@ -37,6 +37,13 @@ When implementing a spec:
 - If the vscode diagnostics mcp tool is not available for the workspace you are in, use your built-in getDiagnostics tool with a 10 second sleep to allow for updates.
 </diagnostics>
 
+<verification>
+Existence is not evidence. Before claiming work is "already landed", "subsumed", or "covered", verify **lineage and behavior**, not file presence:
+- Lineage: did the specific commits/PR actually merge (`git log --follow`, ancestor check), or is this an older implementation with the same filenames?
+- Behavior: does it actually function — gates that block, baselines that advance, tests that can fail?
+A green CI run, a populated file, or a matching path proves nothing by itself. When a "this is redundant / already done" conclusion would delete or deprioritize work, it must survive both checks first.
+</verification>
+
 <philosophy>
 - This codebase will outlive you:
     - Every shortcut becomes someone else's burden.
