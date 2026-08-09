@@ -30,7 +30,7 @@ Detect the project's tooling from config files at the repo root, then run each a
 | Dead code (JS/TS) | `knip.*`, `knip` in package.json scripts | `npx knip --workspace <pkg>` (monorepo) / `npx knip` (single pkg) |
 | Dead code (Python) | `*.py` in diff + `pyproject.toml` / `setup.py` | `vulture <changed-paths>` (or `uvx vulture`) |
 | AI-slop (JS/TS) | any `*.{js,jsx,ts,tsx}` in diff | `slop-scan delta <base-dir> <head-dir> --json` on changed-files temp dirs (see below) |
-| React diagnostics (JS/TS) | `react`/`react-dom`/`next`/`@remix-run/*` in `package.json` | `npx -y react-doctor@latest . --diff <base> --verbose` |
+| React diagnostics (JS/TS) | `react`/`react-dom`/`next`/`@remix-run/*` in `package.json` | `react-doctor . --scope changed --base <base> --verbose` |
 | Type check | `tsconfig.json` | `npx tsc --noEmit -p <pkg>` (or runner-scoped per Monorepo scoping) |
 | Tests | `jest.config*`, `vitest.config*`, `pytest.ini` | Changed-file subset, serial workers (see below) |
 
@@ -94,7 +94,7 @@ If the file list is empty, skip the check (`no signal`). Triage findings alongsi
 
 ### React diagnostics (rules-based)
 
-For any PR touching a React codebase (signal: `react`/`react-dom`/`next`/`@remix-run/*` in `package.json`), run `npx -y react-doctor@latest . --diff <base-ref> --verbose` and triage alongside the AI-slop output. Different axes: slop-scan flags structural noise, react-doctor flags concrete React correctness/perf bugs (effect chains, derived state, fetch-in-effect, missing Suspense around `useSearchParams`, server-fn input validation, etc.). See the **react-doctor** skill for category-gated triage policy, false-positive handling, and config. New errors are blocking; warnings are blocking when the category is `security`, `correctness`, `state-and-effects`, or `server` -- advisory for `design`.
+For any PR touching a React codebase (signal: `react`/`react-dom`/`next`/`@remix-run/*` in `package.json`), run `react-doctor . --scope changed --base <base-ref> --verbose` and triage alongside the AI-slop output. Different axes: slop-scan flags structural noise, react-doctor flags concrete React correctness/perf bugs (effect chains, derived state, fetch-in-effect, missing Suspense around `useSearchParams`, server-fn input validation, etc.). See the **react-doctor** skill for category-gated triage policy, false-positive handling, and config. New errors are blocking; warnings are blocking when the category is `security`, `correctness`, `state-and-effects`, or `server` -- advisory for `design`.
 
 ### Repo conventions (documented)
 
