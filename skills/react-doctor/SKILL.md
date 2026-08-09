@@ -20,15 +20,13 @@ No signal -> tag `no signal` in the gate checklist; do not run.
 
 Always scope to the diff. Full-repo scans are slow and bury current-PR findings under legacy noise.
 
-    npx -y react-doctor@latest . --diff <base-ref> --verbose
+    react-doctor . --scope changed --base <base-ref> --verbose
 
 In monorepos with `turbo.json` or `pnpm-workspace.yaml`, scope to the affected workspace package:
 
-    npx -y react-doctor@latest . --diff <base-ref> --project <pkg> --verbose
+    react-doctor . --scope changed --base <base-ref> --project <pkg> --verbose
 
-Required Node version: >=22. If the agent host is on Node 20, pass `--node-version 22` and react-doctor will provision via nvm:
-
-    npx -y react-doctor@latest . --diff <base-ref> --node-version 22 --verbose
+Required Node version: >=22, with the CLI installed globally (`npm install -g react-doctor`). The 0.1.x `--node-version` nvm-provisioning flag was removed in 0.9.x, so the host itself must run Node >=22. `--diff <base-ref>` still works in 0.9.x but is deprecated in favor of `--scope changed --base <base-ref>` -- use the new form.
 
 Never use `--fix` or `--ami`. Those flags hand off to Ami (millionco's coding agent) and conflict with the host agent (droid / claude code / codex).
 
@@ -66,7 +64,7 @@ Diagnostics come tagged `{ plugin, rule, severity, category }`. Gate by category
   - `architecture/*`, `nextjs/*`, `react-native/*`, `tanstack-*` -> blocking.
   - `design/*` -> advisory by default. Most are taste rules (`noEmDashInJsxText`, `noThreePeriodEllipsis`, `noPureBlackBackground`) and fight intentional design tokens. Enable per-repo if the project has a design system that aligns.
   - `knip/*` -> blocking if the unused export was added in the current diff; advisory if pre-existing.
-- New violations only. `--diff <base-ref>` already scopes the scan; do not block on findings in unchanged files. If react-doctor reports findings outside the diff (it occasionally surfaces transitive dead-code from knip), filter to changed paths before gating.
+- New violations only. `--scope changed --base <base-ref>` already scopes the scan; do not block on findings in unchanged files. If react-doctor reports findings outside the diff (it occasionally surfaces transitive dead-code from knip), filter to changed paths before gating.
 
 The 0-100 score (75+ Great / 50-74 Needs work / <50 Critical) is **informational**. Do not gate on the score. The upstream leaderboard shows Sentry at 64 and tldraw at 84; both ship daily. Gate on individual diagnostics, not the rollup.
 
@@ -97,7 +95,7 @@ CLI flags always override config values. If a rule produces >5 false positives p
 
 [#caveats](#caveats)
 
-- v0.1.6, pre-1.0. CLI flags, rule IDs, and output format can change between minor versions. If a workflow breaks on upgrade, pin: `react-doctor@0.1.6` not `@latest`.
+- Installed globally at v0.9.10, still pre-1.0. CLI flags, rule IDs, and output format can change between minor versions (e.g. `--diff` became `--scope changed --base` in 0.9.x). If a workflow breaks on upgrade, pin the global install: `npm install -g react-doctor@<version>`.
 - Vendor (millionco) has pivoted twice: Million.js -> Million Lint -> react-doctor. Bus-factor risk is non-zero. The Node API is the most stable surface for custom integrations.
 - First run downloads an oxlint binary (~10 MB). In CI, cache `~/.npm` or use `pnpm dlx` with a project-local store.
 - The framework auto-detection occasionally misclassifies hybrid setups (Next.js + Remix in the same monorepo). Pass `--project <pkg>` to disambiguate.
