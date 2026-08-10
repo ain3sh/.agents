@@ -29,6 +29,7 @@ When implementing a spec:
 - **never** enforce "backwards compatibility" or "legacy support" unless explicitly instructed by the user.
 - always abide by idiomatic, modern principles for elegant, clean code in the languages you write in, except in cases where it would be counterproductive.
 - adding new dependencies is always okay unless explicitly stated otherwise. we do not need to make a mess of try-catch's/fallbacks!
+- **design vocabulary**: optimize for simplest exposed primitives × most powerful functionality. Strip every schema, API, and architecture question down to the smallest vocabulary that still composes into the full feature set. Prefer adding one orthogonal primitive over adding a parallel mechanism; prefer composition of existing primitives over any new surface. Apply this test when choosing where code lives, what a wire contract carries, and what a module exports.
 </implementation>
 
 <diagnostics>
