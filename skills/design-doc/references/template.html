@@ -315,6 +315,19 @@
       text-wrap: balance;
     }
 
+    /* Optional literal-subject subtitle for conceptual titles —
+       "Where judgment sits" alone fails search/recall; the subtitle
+       carries the indexable subject ("Converging Factory's PR review flows"). */
+    h1.title .subtitle {
+      display: block;
+      font-variation-settings: "opsz" 60, "wght" 420, "SOFT" 40;
+      font-size: 0.36em;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      color: var(--graphite);
+      margin-top: 18px;
+    }
+
     h1.title code {
       font-family: var(--mono);
       font-size: 0.62em;
@@ -1132,6 +1145,8 @@
     svg .accent-stroke { stroke: var(--accent); }
     svg .accent-fill   { fill: var(--accent); }
     svg .accent-soft-fill { fill: var(--accent-soft); }
+    svg .muted-fill { fill: var(--line-strong); }   /* gray bars/blocks for the incumbent side of a contrast */
+    svg .dash { stroke-dasharray: 4 4; }            /* divider between two-panel contrast diagrams */
 
     /* ---- Tables --------------------------------------------------- */
 
@@ -1464,6 +1479,8 @@
       <!-- ============================================================ -->
       <header class="doc">
         <p class="eyebrow"><span class="dot"></span> Design doc · TODO-AREA · TODO-TICKET</p>
+        <!-- If the title is conceptual rather than literal, add:
+             <span class="subtitle">TODO literal, indexable subject</span> -->
         <h1 class="title">TODO Title with optional <code>code</code></h1>
         <p class="tagline">
           TODO ≤25-word thesis. State the structural claim the doc is

@@ -35,6 +35,8 @@ Name three things:
 - **The 3–8 proof points or decisions** — decision cards in RFC mode; scorecards, comparisons, or deployment implications in memo mode.
 - **The non-goals or current limits.** Keep them short and relevant to the chosen mode.
 
+**The hero + TOC must tell the story in order.** Title, tagline, and section headings read in sequence must form one narrative spine a stranger can follow (e.g. one principle → mechanism → measurement → merge → product → proof bar → open questions). If the TOC reads as a topic pile, restructure sections before polishing prose — the review otherwise comes back "doesn't tell a coherent, linear story."
+
 ### 2. Source-of-truth pass
 
 For every constant, file path, function signature, enum, and limit you intend to cite, run `rg` and verify. Write verified facts to a scratchpad. Two failure modes you will hit if you skip this:
@@ -57,7 +59,7 @@ Before styling, search the repo for `DESIGN.md`, brand guidance, or live tokens.
 
 For RFC mode, fill the scaffold top-down:
 
-1. `<title>`, eyebrow, `h1.title`, `.tagline`, `.linkline`. The linkline is one borderless mono row for links that earn their slot (tracker project/ticket, PRs). Status, author, date, and reviewer rosters are fat — provenance lives in `footer.doc`.
+1. `<title>`, eyebrow, `h1.title`, `.tagline`, `.linkline`. The linkline is one borderless mono row for links that earn their slot (tracker project/ticket, PRs). Status, author, date, and reviewer rosters are fat — provenance lives in `footer.doc`. A conceptual title ("Where judgment sits") wins the argument but fails search and Slack recall; keep it and add `<span class="subtitle">` carrying the literal subject ("Converging Factory's PR review flows"), then sweep the tagline so it doesn't repeat the subtitle.
 2. **Optional** `figure.demo` if there's a demo video — see [Embedding video](#embedding-video).
 3. §1 Summary — `.lede` with `.dropcap` + 1 supporting paragraph (zero-context rules below).
 4. §2 Context — reader primer first, then what breaks today (tickets spelled out), why now.
@@ -79,12 +81,14 @@ For memo mode, replace the goals/decision-card spine with the structure selected
 - **§2 Context opens with a basics primer** before any deep-dive: define the system being changed and its load-bearing primitives, and define terms the rest of the doc leans on ("monotonic", "idempotent", …) — what they mean *here* and why they matter. Goals/Non-goals must read cleanly using only words the primer introduced.
 - **Spell out every motivating ticket in-doc**: bold `ID — symptom` title, then 2–3 sentences of user-visible failure + mechanism. A bare tracker link is not context; the reader must never need to open Linear to follow the argument.
 - **Order = how a stranger builds context**: problem → primer → mechanism of failure → concrete failures → goals → proposal. When revising a published doc against reviewer feedback, keep it a controlled change — touch only the sections the feedback targets.
+- **When the proposal displaces an existing system, add a function-by-function disposition table** (`table.kv`): one row per function the old system performs, verdict bolded first (**Kept at full rigor** / **Kept as input, transformed on output** / **Retired** / **Subsumed by X** / **Kept unchanged**), plus a Where column pointing at the owning section or decision. The people who built the old system read the doc looking for exactly this table; without it the review comes back "unclear what the hell happens to X."
 
 **Inserting a block into a finished doc has knock-on edits.** Adding a summary layer makes neighbours redundant; sweep for these before re-publishing, or the doc reads as saying everything twice:
 
 - **The tagline.** Once a new block carries the artifact spec, the tagline should lead with the capability instead. Two adjacent blocks opening on the same fact is the most common duplication.
 - **The section that originally made the point.** A closing ask that now restates a fold-level callout should be reworded to read as follow-through, not first mention.
 - **Staggered-animation `nth-child` rules**, if the container has them — a new child otherwise appears un-animated or out of sequence.
+- **Old vocabulary after a rename.** When a concept is renamed or demoted mid-revision ("presets" → plain settings), `rg` the whole doc for the old word — it hides in YAML samples, table rows, callouts, and open questions, not just the section you rewrote.
 
 ### 5. Iteration loop (mandatory)
 
@@ -114,7 +118,7 @@ node ~/.agents/skills/design-doc/references/inspect.js <abs-path> "<css-selector
 ```
 It dumps bounding rects + computed styles for the first 12 matches.
 
-### 6. Two content passes
+### 6. Content passes
 
 After visual layout is clean:
 
@@ -122,12 +126,17 @@ After visual layout is clean:
   - Section meta-intros that describe the section instead of adding content ("Eight decisions carry this PR…", "The parts where good engineers could disagree…", "Each row is independently checkable."). The heading already does that work; open on the first real item.
   - Navigational cross-reference sentences in §1 ("§4 breaks the diff into…; §5 defends…; §7 records…") — the TOC is the map.
   - Audience lead-ins ("A primer for readers outside the SDK effort.") — just start the primer.
+- **Pass 1.5 — legibility.** No wall of text at any scroll-point: every viewport needs a structural break. Split with content-fitted patterns, never uniform bulletization (which flattens an argument into a listicle):
+  - *enumeration seam* → bold-led bullets (`**Admission** — the checklist forces…`);
+  - *contrast seam* → split the paragraph at the but/whereas pivot;
+  - *coda* → isolate the one-sentence conclusion as its own paragraph.
 - **Pass 2 — polish.** Read aloud (literally, your inner voice catches bumps). Replace neologisms ("due-times" → "task that came due three times"), kill "actually", strip "we can", tighten cross-references. Each edit should remove or replace text, rarely add.
 - **Pass 2.5: voice sweep.** Load **voice** for a quick craft pass focused on anti-slop, false agency, and filler. Keep edits surgical and preference-light so this reads as an independent quality gate, not a rewrite.
+- **Pass 3 — diagram pass (restate or replace, only lossless).** Scan for prose that describes *shape* — a before/after inversion, a flow, a magnitude comparison — and add a `figure.diagram` only where the picture carries the full content. Proven archetypes: two-panel contrast split by a dashed divider (`svg .dash`, incumbents in `.muted-fill`), equal-scale grouped bar comparison, pipeline flow. If the diagram would summarize rather than restate, skip it.
 
 ### 7. Re-verify
 
-Re-run `screenshot.js`. **`scrollHeight` should drop, not grow.** Prior session went 18820 → 18429 px and 17 → 14 segments with no information lost.
+Re-run `screenshot.js`. **`scrollHeight` should drop, not grow** — prior session went 18820 → 18429 px and 17 → 14 segments with no information lost. The only sanctioned growth is Pass-3 diagrams; prose height still shrinks.
 
 ### 8. Publish (optional)
 
@@ -208,7 +217,7 @@ All defined in `references/template.html` — read it for any pattern you're uns
 | `figure.diagram` + inline `<svg>` | Architecture/sequence diagrams | When the picture is faster than prose |
 | `pre.code` w/ `.k`/`.s`/`.t`/`.fn`/`.hl` spans | Syntax-highlighted snippets | When citing actual call sites |
 | `.callout` (`.rose`) | Notes, warnings | Sparingly — every callout devalues the rest |
-| `table.kv` | Tradeoff matrices, limits tables | Comparing N options |
+| `table.kv` | Tradeoff matrices, limits, disposition tables | Comparing N options; function-by-function fate of a displaced system |
 | `ol.numbered` | Roman-numeralled list | Open questions |
 | `footer.doc` | Provenance (PR · ticket · HEAD sha · file path) | Once, at end |
 
@@ -303,7 +312,10 @@ Before declaring done:
 - [ ] §2 opens with the primer; every motivating ticket is described in-doc — the reader never needs to open the tracker.
 
 **Structure**
+- [ ] Title + tagline + section headings read in order as one narrative spine; a conceptual title carries a literal `.subtitle`.
 - [ ] The document follows the mode chosen in step 1; memo mode contains no empty RFC sections or vestigial decision cards.
+- [ ] If the proposal displaces an existing system, a function-by-function disposition table states each function's fate.
+- [ ] Decision cards that touch product surface passed the smallest-vocabulary audit (composition of existing primitives before any new surface).
 - [ ] In RFC mode, each `article.decision` has all four `dt` slots: Decision, Rationale, Alternatives rejected, Consequence.
 - [ ] Open questions, when present, are ordered by leverage (highest first).
 - [ ] No literal "TODO" or `<!-- TODO -->` markers remain.
@@ -314,8 +326,9 @@ Before declaring done:
 
 **Visual**
 - [ ] Every light and dark Playwright segment was inspected; no contrast failures on charts, tables, diagrams, code blocks, or accent surfaces.
+- [ ] No scroll-point is a single unbroken paragraph block — every segment shows at least one structural break.
 - [ ] Print stylesheet renders without overflow (Chrome → Cmd-P → check pagination).
-- [ ] `scrollHeight` after Pass 2 is ≤ `scrollHeight` after Pass 1. If it grew, you bloated.
+- [ ] `scrollHeight` after Pass 2 is ≤ `scrollHeight` after Pass 1. If it grew and no Pass-3 diagram was added, you bloated.
 - [ ] Factory mode uses no italics, gradients, shadows, glass, or decorative second accent.
 - [ ] Orange identifies the primary path or proof point; controls and reference rows remain neutral.
 
@@ -332,6 +345,7 @@ Before declaring done:
 - ⚠️ **Don't revert the auto-hide TOC** (`nav.toc` → 68px rail expanding to 248px on hover) **to a sticky 220px sidebar.** Content reads worse with the sidebar always present. Don't shrink the rail below 68px either — 56px clips "VIII" to "VII".
 - ⚠️ **Don't hotlink auth-gated assets** (GitHub `user-attachments` images, private CDNs) — they 404 from gistpreview. Inline base64 per [Embedding diagrams (raster)](#embedding-diagrams-raster).
 - ⚠️ **Don't inline excalidraw/vector diagrams as base64 PNG.** A handful at `-s 2` push the doc past the gist API's ~1 MB truncation limit; gistpreview then renders only partway through with no error. Use SVG renders — see [Embedding diagrams (raster)](#embedding-diagrams-raster).
+- ⚠️ **Don't let decision cards mint product surface unexamined.** New verbs, flags, config axes, parallel stores, and named presets reliably draw "this is ugly" review — one session took three consecutive rounds, each one level deeper (CLI flags → a dual dossier store → presets layered over existing settings). Audit each card for the smallest vocabulary that still composes into the full feature set: prefer composition of existing primitives over any new surface, and one orthogonal primitive over a parallel mechanism. When the design genuinely adds no surface, say so — "the primitive already ships" is the strongest selling line.
 - ⚠️ **Don't answer "make it punchier" by trimming sentences.** Shorter paragraphs are still paragraphs, and still get skipped. Change the *structure* — claim line, scannable rows, one caveat ([The "so what" layer](#the-so-what-layer)). Restructuring cut one doc's body copy ~60% and its panel height from 393px to ~280px; word-level trimming would not have.
 - ⚠️ **Don't make a secret-gist URL public-shareable** without confirming with the user. The doc may reference internal Linear tickets, employees, or unmerged architecture.
 
