@@ -6,7 +6,7 @@ The comprehensive main review. One reviewer (you) owns judgment end to end; work
 
 ## 1. Gather context
 
-Follow **pr-context** to fetch metadata, conversation, diff, and linked Linear ticket; derive `REPO` and `HEAD_SHA` from the target. Record `HEAD_SHA` — it anchors the dossier.
+Follow **pr-context** to fetch metadata, conversation, diff, and linked Linear ticket; derive `REPO` and `HEAD_SHA` from the target. Record `HEAD_SHA` — it anchors the dossier — and **scaffold the ledger pair now** (`dossier.md`: `review.md` + `review.notes.md`), before verification begins. From here on, every candidate finding, kill, fold, tier change, dispatch, and reconciliation gets a notes entry in the same turn it happens.
 
 ## 2. Classify PR type
 
@@ -33,7 +33,7 @@ The diff won't tell you whether the fix is at the right layer. Before accepting 
 - **Verify claimed invariants.** Treat every "this makes X stable / Y safe / Z green" as a hypothesis. Build the adversarial case; if it breaks, **prove it with a throwaway probe** (append a temp test → run → restore via `git checkout`/backup) and quote the concrete before/after. An overstated invariant is a `warning`.
 - **Hunt prior/parallel art.** Mine the PR's own "related work"/linked refs first, then search merged + open PRs on the same files or root cause (`gh pr list --search "<area>" --state all`; compare changed-file overlap). If a larger in-flight PR already fixes the cause idiomatically, the patch may be net-zero or on a collision course — make that the headline finding (symptom vs root cause), citing the other PR's mechanism.
 - **Name it.** State the actual invariant being violated, the layer it belongs to, and whether this change establishes it or just patches one manifestation.
-- **Record suspicions you cannot settle inline.** An adversarial case you can settle with one bounded probe or trace, settle now — that is this section's job. What remains genuinely open after that goes into the review-state summary's *unresolved suspicions* (exact hypothesis, path, evidence so far, what would settle it) — the raw material for `deeper`. Do not silently drop them, and do not spawn ad-hoc worker waves mid-pass to chase them (that's overcoverage's job, done with pairing and reconciliation).
+- **Record suspicions you cannot settle inline.** An adversarial case you can settle with one bounded probe or trace, settle now — that is this section's job. What remains genuinely open after that goes to the notes as a `candidate` entry (assign its `F<id>`; exact hypothesis, path, evidence so far, what would settle it) and surfaces in the review-state summary's *unresolved suspicions* — the raw material for `deeper`. Do not silently drop them, and do not spawn ad-hoc worker waves mid-pass to chase them (that's overcoverage's job, done with pairing and reconciliation).
 
 ### Triage every red CI check
 
@@ -97,7 +97,7 @@ Hits (swallowed errors, placeholder comments, generic casts, pass-through wrappe
 
 ## 5. Review-state summary
 
-Produce this before the approval gate — it is the bridge to `deeper`, the dossier seed, and the honest record of what you did and didn't settle:
+Produce this before the approval gate — it is the bridge to `deeper` and the honest record of what you did and didn't settle. It is generated *from* the ledger, not from memory: findings and kills should already be notes entries by now. Refresh `review.md` to match (first dossier checkpoint).
 
 ```text
 REVIEW STATE — PR <number> @ <HEAD_SHA>
@@ -132,7 +132,7 @@ Show every finding to the user before posting:
 - Group by file; include severity, line, suggested fix.
 - State intended verdict (`APPROVE` / `COMMENT`) and draft the verdict body (below). Never propose `REQUEST_CHANGES` unless the user explicitly asks for that verdict type.
 - Plain chat prose; **do not use `AskUser`** — the user should be free to discuss, reword, drop, or re-severity findings.
-- **Wait for explicit confirmation.** Apply any user edits before handoff.
+- **Wait for explicit confirmation.** Apply any user edits before handoff, and record them as notes entries (`gate` for drops/rewording/verdict choice, `retier` for severity changes) — the posted body never references this discussion, but the ledger keeps it.
 
 ### Draft the verdict body
 
@@ -149,4 +149,4 @@ Pre-existing issues discovered en route ("worth a ticket", fast-follows) go to a
 
 Shape: one ruling sentence, the numbered blockers, a short non-gating paragraph. A verdict longer than the diff is its own smell.
 
-Once confirmed: hand off to `/post-review <PR>` with findings and verdict body (suggestion-block decisions live there — review judgment must not be biased toward apply-clickable issues), and **write the dossier** per `dossier.md`.
+Once confirmed: hand off to `/post-review <PR>` with findings and verdict body (suggestion-block decisions live there — review judgment must not be biased toward apply-clickable issues). Posting appends the `post` notes entry (review id, comment ids → anchors) and refreshes the dossier per `dossier.md`.

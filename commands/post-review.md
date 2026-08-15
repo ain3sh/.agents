@@ -7,7 +7,7 @@ Load skills: **pr-context**, **voice**.
 
 **voice** is required here: use its severity taxonomy and craft rules for every posted body instead of rephrasing approved findings into generic review-speak.
 
-The posting half of the review workflow. Findings come from an upstream `/review-pr` (typical) or fresh paste. **After submitting, write the dossier** — `./.agents/review.md` per the **review-pr** skill's `references/dossier.md` (first-pass writes it; follow-up replaces state sections and appends a history line). Skip only for pasted findings with no upstream review session.
+The posting half of the review workflow. Findings come from an upstream `/review-pr` (typical) or fresh paste. **After submitting, close the ledger for this pass** — append the `post` entry (review id, comment ids → anchors) to `./.agents/review.notes.md` and refresh `./.agents/review.md` per the **review-pr** skill's `references/dossier.md` (replace state sections, mark posted findings with their thread ids, append a history line). Skip only for pasted findings with no upstream review session (no ledger exists).
 
 ## 1. Resolve PR Identity
 

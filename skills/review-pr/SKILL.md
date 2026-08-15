@@ -42,7 +42,7 @@ Rules:
 4. **Voice is the judgment gate.** Load **voice** before drafting any finding; severities, phrasing, and the unprompted-opinion sweep come from it, not local invention.
 5. **User approval before posting.** Present findings + draft verdict in plain chat prose (never `AskUser`), wait for explicit confirmation, then hand off to `/post-review`.
 6. **Workers follow the contract.** Before the first `Task` dispatch in any mode, load `references/worker-contracts.md` — complexity-by-responsibility, output schema, reconciliation, and cancellation rules live there. Every mode obeys it.
-7. **Dossier discipline.** Every posted review writes/updates the dossier (`references/dossier.md`); every follow-up starts by loading it.
+7. **Ledger discipline.** Scaffold the paired ledger (`references/dossier.md`: `review.md` current state + append-only `review.notes.md`) at review start, before verification. Notes entries are appended **in the same turn as the event they record** — candidate, confirm/kill, fold, retier, dispatch, reconciliation, gate decision, post — never batched to end-of-phase; a context compaction between turns must never cost a conclusion. Workers never touch either file. Every follow-up starts by loading the dossier and continues the same notes log.
 
 ## Shared skill loads
 

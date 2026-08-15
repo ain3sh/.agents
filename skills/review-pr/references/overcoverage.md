@@ -24,7 +24,7 @@ Impact if real: <user-visible consequence>
 Files/tests: <bounded list>
 ```
 
-Show the ledger to the user with your proposed pairings before dispatching if the wave is large (>3 categories); otherwise proceed.
+Show the ledger to the user with your proposed pairings before dispatching if the wave is large (>3 categories); otherwise proceed. On dispatch, append a `dispatch` notes entry per category (sids, modality pairing) — worker session ids recorded only in-context do not survive compression.
 
 ## 2. Paired dispatch — differ by method, not conclusion
 
@@ -49,7 +49,9 @@ When a pair returns:
 - Record killed suspicions with the exact invariant/probe that killed them — these go in the dossier's verified-safe section and, where they contradict a headline concern, into the review narrative.
 - State what, if anything, remains verdict-relevant and unresolved.
 
-A category with no remaining named question is **closed**. Closed categories do not receive more workers.
+Write the reconciliation to the notes (`reconcile` entry: outcome per proposition, agreements, disagreements-as-open-questions, plus any `confirm`/`kill`/`fold`/`retier`/`env` entries it produced) **before processing the next return or dispatching further** — a wave's returns arrive faster than they can all be held in-context.
+
+A category with no remaining named question is **closed** — record the closure and refresh `review.md` (dossier checkpoint). Closed categories do not receive more workers.
 
 ## 4. Third-worker admission
 
@@ -64,4 +66,4 @@ The third worker receives the prior results and the exact remaining question —
 
 ## 5. Merge into the review
 
-Fold surviving findings into the first-pass finding set (voice severities, dedupe against existing findings), update the review-state summary (confirmed / verified-safe / coverage map), and return to the first-pass **approval gate** (§6 of `first-pass.md`) with the combined set. The dossier write on posting records the wave: categories, worker assignments, conclusions, killed suspicions.
+Fold surviving findings into the first-pass finding set (voice severities, dedupe against existing findings — keep stable `F<id>`s, never renumber), update the review-state summary (confirmed / verified-safe / coverage map), and return to the first-pass **approval gate** (§6 of `first-pass.md`) with the combined set. By this point the wave is already fully in the ledger — categories, worker sids, conclusions, kills — so the post-time dossier refresh is a distillation, not a reconstruction.

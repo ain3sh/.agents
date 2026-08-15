@@ -2,7 +2,7 @@
 
 The author re-requested review, or new commits landed after our verdict. **Delta-first with a bounded interaction perimeter** — not a checkbox pass over our old findings, and not a rerun of the whole original review.
 
-Start from the **dossier** (`dossier.md`), not the original review transcript. If no dossier exists, reconstruct the minimum from our GitHub review threads (reviewed SHA from the review's commit anchor, findings from the threads) and note the gap.
+Start from the **dossier** (`dossier.md`), not the original review transcript; continue appending to the existing `review.notes.md` (same log across passes — query it by `F<id>` when a prior finding's history matters). If no dossier exists, reconstruct the minimum from our GitHub review threads (reviewed SHA from the review's commit anchor, findings from the threads), note the gap, and scaffold the ledger pair before proceeding.
 
 ## 1. Establish the delta
 
@@ -48,7 +48,7 @@ Reinspect **unchanged** code only where the delta changes: a contract or schema;
 
 ## 4. Workers
 
-Build a **delta suspicion ledger** (same shape as overcoverage §1) before any dispatch. One worker per distinct unresolved proposition; pair static/probe modalities per `overcoverage.md` §2 only for material uncertainty; same reconciliation and third-worker admission rules. Typical follow-ups need zero to two workers — the lanes are mostly main-reviewer work.
+Build a **delta suspicion ledger** (same shape as overcoverage §1, entries into the notes as `candidate`s) before any dispatch. One worker per distinct unresolved proposition; pair static/probe modalities per `overcoverage.md` §2 only for material uncertainty; same reconciliation, notes-before-next-return, and third-worker admission rules. Typical follow-ups need zero to two workers — the lanes are mostly main-reviewer work. Lane 1 resolutions are notes entries too (`confirm`/`kill` against the prior `F<id>`s).
 
 ## 5. Verdict and close
 
@@ -61,4 +61,4 @@ Present to the user at the approval gate, sections kept separate (this is the ga
 - pre-existing observations (→ tickets, not verdict);
 - current `APPROVE` / `COMMENT` rationale.
 
-Then the standard first-pass **approval gate** and verdict-body rules apply (§6 of `first-pass.md`) — read that section; "never restate the threads" and requirements-stated-flatly bind here too. On approval: hand off to `/post-review`, and update the dossier per `dossier.md` (replace state sections, append history line).
+Then the standard first-pass **approval gate** and verdict-body rules apply (§6 of `first-pass.md`) — read that section; "never restate the threads" and requirements-stated-flatly bind here too. On approval: hand off to `/post-review`, append the `post` notes entry, and update the dossier per `dossier.md` (replace state sections, append history line).
