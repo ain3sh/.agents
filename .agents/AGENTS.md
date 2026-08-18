@@ -20,6 +20,10 @@ skills, slash commands, lifecycle hooks, prompts, and configs.
   runtime `overrides/` (`CLAUDE.md`, `CODEX.md`).
 - `configs/droid.toml` — all hook **behavior** lives here: tool policy, rtk,
   tirith, instruction-composition rules.
+- `~/.factory/` (machine-local, **not committed**) — runtime registration:
+  `hooks.json` wires hook scripts to events, `mcp.json` defines MCP servers.
+  Committing `hooks/` or `configs/` changes doesn't ship them without the
+  matching edit there.
 - `CHEATSHEET.md` — quick reference for commands, atoms, and installed tooling.
 
 Local-only (gitignored): `.agents/`, `logs/`, `*.env`, `__pycache__/`,

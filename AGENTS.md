@@ -35,7 +35,8 @@ When implementing a spec:
 <diagnostics>
 - Only check for diagnostics regularly **if** I tell you to do so at some point in the conversation.
 - If there are diagnostics, fix them before proceeding.
-- If the vscode diagnostics mcp tool is not available for the workspace you are in, use your built-in getDiagnostics tool with a 10 second sleep to allow for updates.
+- The vscode MCP tools (`vscode:get_diagnostics`, `get_symbol_lsp_info`, `get_references`, `rename_symbol`) are backed by on-demand headless VSCode instances (vscode-workspace skill): a PreToolUse hook auto-spawns/reuses one for any `workspace_path` (default: session cwd), so they work with no editor open. A first call on a cold project blocking ~30s is normal.
+- If a vscode MCP tool itself errors or is disabled, fall back to the built-in getDiagnostics tool with a 10 second sleep to allow for updates.
 </diagnostics>
 
 <papercuts>

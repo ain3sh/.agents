@@ -19,10 +19,14 @@ hooks/
 │   ├── config.py
 │   ├── env.py
 │   ├── tokens.py
-│   └── clipboard.py
+│   ├── clipboard.py
+│   └── vscode_workspace.py
 ├── pre_tool_use/
 │   ├── policy.py
-│   └── commit_review_guard.py
+│   ├── commit_review_guard.py
+│   ├── rtk_rewrite.py
+│   ├── tirith_guard.py
+│   └── vscode_auto_ensure.py
 ├── post_tool_use/
 │   └── instructions.py
 ├── pre_compact/
@@ -30,9 +34,11 @@ hooks/
 ├── session_start/
 │   ├── env_vars.py
 │   ├── instructions.py
+│   ├── reap_vscode_workspaces.py
 │   └── debug.sh
 ├── session_end/
-│   └── store_artifacts.py
+│   ├── store_artifacts.py
+│   └── retire_vscode_workspaces.py
 └── user_prompt_submit/
     └── conflict_guard.py
 ```
@@ -106,6 +112,7 @@ if __name__ == "__main__":
 - **`policy.py`**: rule-based tool policy with glob matching and `server:tool` pattern matching. Supports allow, ask, or deny decisions.
 - **`commit_review_guard.py`**: blocks `git push` if CodeRabbit CLI reports findings; runs on detected push commands.
 - **`rtk_rewrite.py`**: transparently rewrites `Execute` commands through [`rtk`](https://github.com/rtk-ai/rtk) (`rtk rewrite <cmd>`) to compress tool output and save 60-90% tokens. Fails open: missing rtk, unsupported command, or explicit surface disable → pass-through. Per-surface toggles live under `[hooks.pre_tool_use.rtk.surfaces]` in `configs/droid.toml`.
+- **`vscode_auto_ensure.py`**: transparently spawns/reuses the isolated headless VSCode instance behind `vscode:*` MCP tool calls (see `skills/vscode-workspace`). First call on a cold workspace blocks ~10-30s; later calls cost one socket health check. A failed ensure denies with the real reason; hook errors fail open.
 
 ### PostToolUse
 - **`instructions.py`**: rule-based instruction injection by tool, with optional input/output matching (string, regex, or structured dict) and `${...}` interpolation for dynamic text.
@@ -114,12 +121,14 @@ if __name__ == "__main__":
 - **`instructions.py`**: injects default compression instructions from `commands/compress.md` when manual compression has none.
 
 ### SessionStart
-- **`env_vars.py`**: loads inline config env vars plus optional secrets file on `startup`, `resume`, and `clear`.
+- **`env_vars.py`**: loads inline config env vars plus optional secrets file on `startup`, `resume`, and `clear`. With `export_session_id = true` also persists the session id as `DROID_SESSION_ID`.
 - **`instructions.py`**: injects instructions via ordered rules (`when` + `include`/`include_text`) with interpolation support.
+- **`reap_vscode_workspaces.py`**: retires vscode workspaces idle beyond `[hooks.session_start.vscode_workspaces] idle_hours` (default 12h); catches orphans from crashed sessions. Fails open.
 - **`debug.sh`**: emits detailed diagnostics for env discovery and tool availability.
 
 ### SessionEnd
 - **`store_artifacts.py`**: stores session tail and latest todos under `.agents/{MM_DD_YYYY}/`.
+- **`retire_vscode_workspaces.py`**: releases the ending session's claim on vscode workspaces (refcounted) and reaps dead instances/stale sockets. Fails open.
 
 ### UserPromptSubmit
 - **`conflict_guard.py`**: blocks long prompts, stores them on disk, and instructs use of `/check-conflicts`.

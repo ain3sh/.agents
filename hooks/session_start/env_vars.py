@@ -67,6 +67,7 @@ RESERVED_CONFIG_KEYS = {
     "verbose",
     "path_prepend",
     "path_append",
+    "export_session_id",
 }
 
 
@@ -250,6 +251,9 @@ def main():
         env_vars.update(parse_env_files(secrets_files, strict=strict))
 
     env_vars.update(_config_env_vars(config))
+
+    if bool(config.get("export_session_id", False)):
+        env_vars.setdefault("DROID_SESSION_ID", hook_input.session_id)
 
     if (
         not env_vars

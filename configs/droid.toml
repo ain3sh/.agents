@@ -8,20 +8,32 @@
 
 [hooks.session_start.tool_wrappers]
 when = ["startup", "resume", "clear"]
-tools = ["rg", "agent-browser", "cua-driver"]
+tools = ["rg", "agent-browser", "cua-driver", "vscode-ws"]
 
 [hooks.session_start.tool_wrappers.targets]
 rg = ["path:/usr/bin/rg", "path:/bin/rg", "path:/usr/local/bin/rg"]
 agent-browser = ["npm:agent-browser"]
 cua-driver = ["path:~/.agents/scripts/cua-driver"]
+vscode-ws = ["path:~/.agents/skills/vscode-workspace/scripts/vscode_ws.py"]
 
 [hooks.session_start.environment]
 when = ["startup", "resume", "clear"]
-secrets = "~/.factory/.env" # .env secrets loaded by env vars session-start hook
+secrets = "~/.factory/.env" # .env secrets ****** by env vars session-start hook
 path_prepend = ["~/.local/bin"]
+# export the session id as DROID_SESSION_ID so tools (e.g. vscode-ws ensure)
+# can tag resources with their owning session for SessionEnd cleanup
+export_session_id = true
 # config env vars
 EXAMPLE_CONFIG_VAR = "clod"
 TIRITH_INTEGRATION = "droid-cli"
+
+[hooks.session_start.vscode_workspaces]
+# Idle reaper for vscode workspaces (vscode-workspace skill): retires
+# workspaces no session has ensured within the window. Catches orphans from
+# hard-crashed sessions whose session_end hook never ran.
+enabled = true
+when = ["startup"]
+idle_hours = 12
 
 [hooks.session_start.instructions]
 prompts_dir = "~/.agents/prompts"
@@ -96,6 +108,20 @@ pipe_to_interpreter_safe_lhs = [
     "ls", "find", "rg", "grep", "sort", "uniq",
 ]
 
+[hooks.pre_tool_use.vscode_auto_ensure]
+# Transparently spawn/reuse the isolated headless VSCode instance behind
+# vscode:* MCP tool calls (see the vscode-workspace skill). The first call on
+# a cold workspace blocks ~10-30s while the editor boots; later calls cost a
+# single socket health check. Workspaces are tagged with DROID_SESSION_ID and
+# retired by the session_end hook. workspace_path is canonicalized via
+# updatedInput (the bridge socket hashes the resolved path).
+enabled = true
+timeout = 90
+# On a cold spawn, pre-open the files the tool call is about to query so the
+# first diagnostics/symbol result comes back populated, not empty.
+warm = true
+warm_wait = 4
+
 # ---
 [hooks.post_tool_use]
 
@@ -155,5 +181,29 @@ skip_prefix = "" # ignored if missing/null or empty string
 tail = 1
 tail_when = ["prompt_input_exit", "other"]
 todo_when = ["prompt_input_exit", "clear", "other"]
+
+[hooks.session_end.vscode_workspaces]
+# Retire headless VSCode workspaces spawned via the vscode-workspace skill.
+# mode = "session": release the ending session's claim and retire workspaces
+# it solely owned (plus always reap dead processes/stale sockets);
+# mode = "all" retires every known workspace. Fails open.
+enabled = true
+mode = "session"
+timeout = 25
+
+# ------------------------------------------------------------------------------
+[tools]
+
+[tools.vscode-workspace]
+# Default extensions installed into the shared extensions dir by
+# `vscode_ws.py setup` (the bridge itself is always installed). TS/JS/HTML/CSS
+# language features ship with VSCode; these add Python, ESLint, Rust, Go.
+extensions = [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "dbaeumer.vscode-eslint",
+    "rust-lang.rust-analyzer",
+    "golang.go",
+]
 
 # ------------------------------------------------------------------------------
