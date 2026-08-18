@@ -53,6 +53,16 @@ Query the exact error or distinctive symptom in the current project, then inspec
 Prefer a proven prior fix over another speculative workaround.
 </recovery>
 
+<dev_box_access>
+To run commands on the dev-box droid computer from this laptop, use `ssh factory-dev-box '<cmd>'`
+(Host entry in ~/.ssh/config: ProxyCommand through `droid-dev computer ssh dev-box --proxy`,
+user `factory-user`, key `~/.factory-dev/.ssh/id_ed25519`). Works non-interactively (BatchMode-safe);
+`droid-dev computer ssh dev-box` itself is interactive-only and hangs scripts, and the key at
+`~/.factory/.ssh/id_ed25519` is stale (rejected). dev-box has a small 61G disk with a strict
+no-`npm install`-in-worktrees policy — see the `<disk_and_worktrees>` section of its
+`~/.agents/AGENTS.md` before doing repo work there.
+</dev_box_access>
+
 <philosophy>
 - This codebase will outlive you:
     - Every shortcut becomes someone else's burden.
