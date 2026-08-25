@@ -1,0 +1,281 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly REPO_URL="https://github.com/router-for-me/CLIProxyAPI.git"
+readonly BINARY="$HOME/.local/bin/cli-proxy-api"
+# Upstream forces this beta flag, which redacts Claude thinking blocks. Strip
+# it from the outbound Claude beta baseline by token (date-agnostic). Keep the
+# constant and client-detection references intact: they document/recognize the
+# native client profile but do not force the beta onto upstream requests.
+readonly REDACT_BETA='redact-thinking-[0-9]{4}-[0-9]{2}-[0-9]{2}'
+readonly CLAUDE_REQUEST_REL='internal/runtime/executor/claude_executor_request.go'
+readonly CODEX_WS_REL='internal/runtime/executor/codex_websockets_executor.go'
+readonly CODEX_WS_STREAM_REL='internal/runtime/executor/codex_websockets_stream.go'
+readonly CONFIG_FILE="${CLIPROXY_CONFIG:-$HOME/.agents/model-proxy/config.yaml}"
+readonly PROXY_CTL="$HOME/.agents/model-proxy/model-proxy"
+
+check_only=false
+requested_version=""
+for arg in "$@"; do
+    case "$arg" in
+        --check) check_only=true ;;
+        -h|--help)
+            echo "Usage: update-cliproxyapi [--check] [VERSION]"
+            exit 0
+            ;;
+        *)
+            [[ -z "$requested_version" ]] || {
+                echo "error: only one version may be specified" >&2
+                exit 2
+            }
+            requested_version="$arg"
+            ;;
+    esac
+done
+
+for command in git go python3; do
+    command -v "$command" >/dev/null || {
+        echo "error: required command not found: $command" >&2
+        exit 1
+    }
+done
+
+if [[ -n "$requested_version" ]]; then
+    tag="v${requested_version#v}"
+else
+    tag="$(
+        git ls-remote --tags --refs "$REPO_URL" 'v*' |
+            sed 's#.*refs/tags/##' |
+            sort -V |
+            tail -n 1
+    )"
+fi
+[[ -n "$tag" ]] || {
+    echo "error: could not determine the latest CLIProxyAPI release" >&2
+    exit 1
+}
+
+workdir="$(mktemp -d -t cliproxyapi-update.XXXXXX)"
+cleanup() {
+    rm -rf "$workdir"
+}
+trap cleanup EXIT
+
+echo "[1/4] Fetching CLIProxyAPI $tag..."
+git clone --quiet --depth 1 --branch "$tag" "$REPO_URL" "$workdir/source"
+
+echo "[2/4] Applying local request patches..."
+claude_request="$workdir/source/$CLAUDE_REQUEST_REL"
+if [[ ! -f "$claude_request" ]]; then
+    echo "error: upstream Claude request builder moved: $CLAUDE_REQUEST_REL" >&2
+    exit 1
+fi
+if ! grep -qE "$REDACT_BETA" "$claude_request"; then
+    patch_status="not needed (upstream no longer forces redacted thinking)"
+else
+    before_patch="$workdir/claude_executor_request.go.before"
+    cp "$claude_request" "$before_patch"
+
+    # Older releases stored the beta in a comma-separated string. Newer ones
+    # use a constant as a standalone element in claudeCodeCLIConstantBetas.
+    sed -i -E \
+        -e "s/,${REDACT_BETA}//g" \
+        -e "s/${REDACT_BETA},//g" \
+        -e "/^[[:space:]]*(claudeRedactThinkingBeta|\"${REDACT_BETA}\")[[:space:]]*,[[:space:]]*$/d" \
+        "$claude_request"
+
+    if cmp -s "$before_patch" "$claude_request"; then
+        echo "error: failed to strip redact-thinking beta from $tag" >&2
+        grep -nE "$REDACT_BETA|claudeRedactThinkingBeta" "$claude_request" >&2 || true
+        exit 1
+    fi
+    patch_status="applied (stripped forced beta from $CLAUDE_REQUEST_REL)"
+fi
+echo "Patch: $patch_status"
+
+# Codex Fast mode is only honored by the ChatGPT backend over the Responses
+# WebSocket transport. Droid is an HTTP/SSE client, so bridge streaming
+# priority requests onto CLIProxyAPI's existing upstream WebSocket executor.
+codex_ws="$workdir/source/$CODEX_WS_REL"
+if [[ ! -f "$codex_ws" ]]; then
+    echo "error: upstream Codex WebSocket dispatcher moved: $CODEX_WS_REL" >&2
+    exit 1
+fi
+python3 - "$codex_ws" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+source = path.read_text()
+
+old_imports = '''\t"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
+\tcliproxyauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
+\tcliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
+'''
+new_imports = '''\t"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
+\t"github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor/helps"
+\t"github.com/router-for-me/CLIProxyAPI/v7/internal/thinking"
+\tcliproxyauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
+\tcliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
+\tsdktranslator "github.com/router-for-me/CLIProxyAPI/v7/sdk/translator"
+\t"github.com/tidwall/gjson"
+'''
+old_condition = '''\tif cliproxyexecutor.DownstreamWebsocket(ctx) && codexWebsocketsEnabled(auth) {
+\t\treturn e.wsExec.ExecuteStream(ctx, auth, req, opts)
+\t}
+'''
+new_condition = '''\tif codexWebsocketsEnabled(auth) && (cliproxyexecutor.DownstreamWebsocket(ctx) || e.priorityWebsocketRequested(req, opts)) {
+\t\treturn e.wsExec.ExecuteStream(ctx, auth, req, opts)
+\t}
+'''
+insert_before = '''func (e *CodexAutoExecutor) Refresh(ctx context.Context, auth *cliproxyauth.Auth) (*cliproxyauth.Auth, error) {
+'''
+helper = '''// priorityWebsocketRequested reports whether the final translated request asks
+// for Codex Fast mode. The ChatGPT Codex backend only honors this tier over
+// its Responses WebSocket transport, even when the downstream client uses SSE.
+func (e *CodexAutoExecutor) priorityWebsocketRequested(req cliproxyexecutor.Request, opts cliproxyexecutor.Options) bool {
+\tif e == nil || e.httpExec == nil {
+\t\treturn false
+\t}
+\tbaseModel := thinking.ParseSuffix(req.Model).ModelName
+\tfrom := opts.SourceFormat
+\tto := sdktranslator.FromString("codex")
+\toriginal := req.Payload
+\tif len(opts.OriginalRequest) > 0 {
+\t\toriginal = opts.OriginalRequest
+\t}
+\toriginalTranslated, body := translateCodexRequestPair(from, to, baseModel, original, req.Payload, false, helps.APIKeyModelIsCompat(req))
+\trequestedModel := helps.PayloadRequestedModel(opts, req.Model)
+\tbody = helps.ApplyPayloadConfigWithRequest(e.httpExec.cfg, baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, helps.PayloadRequestPath(opts), opts.Headers)
+\treturn strings.EqualFold(strings.TrimSpace(gjson.GetBytes(body, "service_tier").String()), "priority")
+}
+
+'''
+
+for old, new, label in (
+    (old_imports, new_imports, "imports"),
+    (old_condition, new_condition, "stream dispatch"),
+    (insert_before, helper + insert_before, "priority helper"),
+):
+    if old not in source:
+        raise SystemExit(f"error: failed to apply Codex fast WebSocket patch ({label}); upstream changed")
+    source = source.replace(old, new, 1)
+
+path.write_text(source)
+PY
+echo "Patch: applied (bridged Codex priority SSE requests to upstream WebSocket)"
+
+codex_ws_stream="$workdir/source/$CODEX_WS_STREAM_REL"
+if [[ ! -f "$codex_ws_stream" ]]; then
+    echo "error: upstream Codex WebSocket stream moved: $CODEX_WS_STREAM_REL" >&2
+    exit 1
+fi
+python3 - "$codex_ws_stream" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+source = path.read_text()
+
+old_import = '''\t"github.com/tidwall/gjson"
+)'''
+new_import = '''\t"github.com/tidwall/gjson"
+\t"github.com/tidwall/sjson"
+)'''
+old_body = '''\tbody = helps.ApplyPayloadConfigWithRequest(e.cfg, baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, requestPath, opts.Headers)
+\tbody = helps.SetStringIfDifferent(body, "model", baseModel)
+'''
+new_body = '''\tbody = helps.ApplyPayloadConfigWithRequest(e.cfg, baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, requestPath, opts.Headers)
+\tbody, _ = sjson.DeleteBytes(body, "prompt_cache_retention")
+\tbody, _ = sjson.DeleteBytes(body, "safety_identifier")
+\tbody = helps.SetStringIfDifferent(body, "model", baseModel)
+'''
+
+for old, new, label in (
+    (old_import, new_import, "sjson import"),
+    (old_body, new_body, "unsupported field sanitation"),
+):
+    if old not in source:
+        raise SystemExit(f"error: failed to apply Codex WebSocket sanitation patch ({label}); upstream changed")
+    source = source.replace(old, new, 1)
+
+path.write_text(source)
+PY
+echo "Patch: applied (sanitized unsupported Codex WebSocket fields)"
+
+echo "[3/4] Testing and building..."
+# Compile a focused regression test against the patched source. This verifies
+# behavior instead of rejecting harmless constant, comment, and detector uses.
+cat >"$workdir/source/internal/runtime/executor/zz_local_no_redact_thinking_test.go" <<'EOF'
+package executor
+
+import (
+    "strings"
+    "testing"
+
+    cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
+    sdktranslator "github.com/router-for-me/CLIProxyAPI/v7/sdk/translator"
+)
+
+func TestLocalNoForcedRedactThinkingBeta(t *testing.T) {
+    for _, oauth := range []bool{false, true} {
+        got := claudeCodeCLIBetas([]byte(`{"model":"claude-opus-5"}`), nil, oauth)
+        if strings.Contains(got, "redact-thinking-") {
+            t.Fatalf("oauth=%v: forced redact-thinking beta remains in %q", oauth, got)
+        }
+    }
+}
+
+func TestLocalPriorityWebsocketBridgeDetection(t *testing.T) {
+    executor := NewCodexAutoExecutor(nil)
+    opts := cliproxyexecutor.Options{SourceFormat: sdktranslator.FromString("openai-response")}
+    priority := cliproxyexecutor.Request{
+        Model: "gpt-5.6-sol",
+        Payload: []byte(`{"model":"gpt-5.6-sol","service_tier":"priority","input":"hi"}`),
+    }
+    standard := cliproxyexecutor.Request{
+        Model: "gpt-5.6-sol",
+        Payload: []byte(`{"model":"gpt-5.6-sol","input":"hi"}`),
+    }
+    if !executor.priorityWebsocketRequested(priority, opts) {
+        t.Fatal("priority request did not select the WebSocket bridge")
+    }
+    if executor.priorityWebsocketRequested(standard, opts) {
+        t.Fatal("standard request unexpectedly selected the WebSocket bridge")
+    }
+}
+EOF
+go -C "$workdir/source" test ./internal/runtime/executor \
+    -run '^(TestLocalNoForcedRedactThinkingBeta|TestLocalPriorityWebsocketBridgeDetection|TestApplyClaudeHeaders_FastModeBetaIsConditional)$' -count=1
+version="${tag#v}"
+commit="$(git -C "$workdir/source" rev-parse --short HEAD)"
+build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+CGO_ENABLED=1 go -C "$workdir/source" build \
+    -ldflags="-s -w -X main.Version=${version}-summary-patch -X main.Commit=${commit}+local -X main.BuildDate=${build_date}" \
+    -o "$workdir/cli-proxy-api" ./cmd/server/
+"$workdir/cli-proxy-api" --help 2>&1 | sed -n '1p'
+
+if "$check_only"; then
+    echo "[4/4] Check complete; active binary unchanged."
+    exit 0
+fi
+
+echo "[4/4] Installing and restarting..."
+old_version="$(
+    "$BINARY" --help 2>&1 |
+        sed -n 's/^CLIProxyAPI Version: \([^,]*\).*/\1/p'
+)"
+backup="${BINARY}.previous"
+cp -a "$BINARY" "$backup"
+install -m 0755 "$workdir/cli-proxy-api" "${BINARY}.new"
+mv -f "${BINARY}.new" "$BINARY"
+
+if ! "$PROXY_CTL" restart "$CONFIG_FILE"; then
+    echo "error: restart failed; restoring $backup" >&2
+    cp -a "$backup" "$BINARY"
+    "$PROXY_CTL" restart "$CONFIG_FILE"
+    exit 1
+fi
+
+"$PROXY_CTL" status "$CONFIG_FILE" >/dev/null
+echo "Updated CLIProxyAPI from ${old_version:-unknown} to ${version}-summary-patch."

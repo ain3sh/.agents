@@ -1,7 +1,7 @@
 # https://gist.github.com/chandika/c4b64c5b8f5e29f6112021d46c159fdd
 # https://github.com/luispater/CLIProxyAPI
 #
-# Prompt substitution syntax (preprocessed by cli-model-proxy-preprocessor.sh):
+# Prompt substitution syntax (preprocessed by the managed launcher):
 #   ${file.md}           -> contents of ~/.agents/prompts/file.md
 #   ${/abs/path.md}      -> absolute path
 #   ${img.png:base64}    -> base64 encoded (auto for .png/.jpg/.gif/.webp/.pdf)
@@ -40,6 +40,16 @@ codex-instructions-enabled: true
 # ------------------------------------------------------------------------------
 payload:
   override: # always set parameters, overwriting any existing values
+    - models:
+        - name: "gpt-5.6-sol-fast"
+          protocol: "codex"
+        - name: "gpt-5.6-luna-fast"
+          protocol: "codex"
+      params:
+        # Fast is service_tier=priority on the base model, not a separate upstream model.
+        # Droid speaks HTTP/SSE, so the local build bridges only these priority requests
+        # to Codex WebSockets; plain Sol remains standard-speed HTTP for workers.
+        "service_tier": "priority"
     - models:
         - name: "gpt-*"
           protocol: "codex"
@@ -125,6 +135,17 @@ remote-management: # api settings
   secret-key: "" # empty -> management api disabled
   disable-control-panel: true # skip asset download and http route
 oauth-model-alias:
+  codex:
+    - name: gpt-5.6-sol
+      alias: gpt-5.6-sol-fast
+      display-name: GPT-5.6 Sol Fast
+      fork: true
+      force-mapping: true
+    - name: gpt-5.6-luna
+      alias: gpt-5.6-luna-fast
+      display-name: GPT-5.6 Luna Fast
+      fork: true
+      force-mapping: true
   antigravity:
     - name: rev19-uic3-1p
       alias: gemini-2.5-computer-use-preview-10-2025

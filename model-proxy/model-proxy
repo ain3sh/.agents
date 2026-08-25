@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${CLIPROXY_DEFAULT_CONFIG:=$HOME/.agents/model-proxy/config.yaml}"
+: "${CLIPROXY_BIN:=$HOME/.local/bin/cli-proxy-api}"
+: "${CLIPROXY_LAUNCHER:=$HOME/.agents/model-proxy/launcher}"
+: "${CLIPROXY_UPDATER:=$HOME/.agents/model-proxy/update-cliproxyapi}"
+
+usage() {
+    cat <<'USAGE'
+Usage: model-proxy [command] [config.yaml] [options]
+
+Commands:
+  ensure              Enable and start the config instance if needed (default)
+  start               Enable and start the config instance
+  stop                Stop and disable the config instance
+  restart             Restart the config instance
+  status              Show instance status
+  logs                Show the last 200 log lines
+  list                List running proxy instances
+  update [--check]    Update, patch, test, and install CLIProxyAPI
+  login PROVIDER      Authenticate codex, claude, antigravity, kimi, or xai
+  version             Show CLIProxyAPI version
+
+Config may be supplied positionally or with -c/--config.
+Examples:
+  model-proxy status
+  model-proxy update
+  model-proxy update --check
+  model-proxy --version
+  model-proxy restart ~/.agents/model-proxy/config.yaml
+  model-proxy --config ~/other-proxy.yaml start
+  model-proxy login codex --device
+  model-proxy login claude --no-browser
+USAGE
+}
+
+die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+config="$CLIPROXY_DEFAULT_CONFIG"
+command="ensure"
+declare -a extras=()
+
+while (($#)); do
+    case "$1" in
+        -h|--help) usage; exit 0 ;;
+        -v|--version|version) command="version"; shift ;;
+        -c|--config)
+            (($# >= 2)) || die "$1 requires a YAML path"
+            config="$2"
+            shift 2
+            ;;
+        ensure|start|stop|restart|status|list)
+            command="$1"
+            shift
+            ;;
+        logs|login|update)
+            command="$1"
+            shift
+            extras=("$@")
+            break
+            ;;
+        *.yaml|*.yml)
+            config="$1"
+            shift
+            ;;
+        *) die "unknown argument: $1" ;;
+    esac
+done
+
+config="$(realpath -e "$config")" || die "config not readable: $config"
+unit="$(systemd-escape --path --template=cli-model-proxy@.service "$config")"
+
+case "$command" in
+    version)
+        "$CLIPROXY_BIN" --help 2>&1 | sed -n '1p'
+        ;;
+    update)
+        export CLIPROXY_CONFIG="$config"
+        exec "$CLIPROXY_UPDATER" "${extras[@]}"
+        ;;
+    ensure)
+        systemctl --user daemon-reload
+        systemctl --user enable --now "$unit"
+        ;;
+    start)
+        systemctl --user daemon-reload
+        systemctl --user enable --now "$unit"
+        ;;
+    stop)
+        systemctl --user disable --now "$unit"
+        ;;
+    restart)
+        systemctl --user restart "$unit"
+        ;;
+    status)
+        systemctl --user status --no-pager "$unit"
+        ;;
+    logs)
+        if ((${#extras[@]})); then
+            journalctl --user -u "$unit" "${extras[@]}"
+        else
+            journalctl --user -u "$unit" -n 200 --no-pager
+        fi
+        ;;
+    list)
+        systemctl --user list-units 'cli-model-proxy@*.service' --all
+        ;;
+    login)
+        ((${#extras[@]})) || die "login requires a provider"
+        provider="${extras[0]}"
+        extras=("${extras[@]:1}")
+        case "$provider" in
+            codex|openai|gpt)
+                flag="--codex-login"
+                if [[ "${extras[0]:-}" == "--device" ]]; then
+                    flag="--codex-device-login"
+                    extras=("${extras[@]:1}")
+                fi
+                ;;
+            claude|anthropic) flag="--claude-login" ;;
+            antigravity|gemini) flag="--antigravity-login" ;;
+            kimi) flag="--kimi-login" ;;
+            xai|grok) flag="--xai-login" ;;
+            *) die "unknown provider: $provider" ;;
+        esac
+        exec "$CLIPROXY_LAUNCHER" --config "$config" "$flag" "${extras[@]}"
+        ;;
+esac
