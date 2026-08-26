@@ -44,24 +44,15 @@ Apply in order:
 6. Keep only current-shape validation that is still required for correctness.
 7. If a real external compatibility boundary exists, isolate it and call out the exact file, function, boundary, and reason it cannot be removed yet.
 
-## Review checklist
+## Ship gate
 
-- Reject changes that preserve old-shape behavior behind conditionals.
-- Reject translation layers between old and new shapes.
-- Reject validation branches added only to reject legacy inputs.
-- Reject tests added only to memorialize abandoned draft formats.
-- Remove dead helpers and comments that describe removed draft formats.
-- Keep one owner for the canonical contract.
+Same bar whether writing or reviewing -- confirm before delivering, reject on violation:
 
-## Deliverables
-
-Deliver only:
-
-- a minimal implementation that supports the canonical shape
-- updated tests for the canonical shape only
-- removal of obsolete legacy-shape tests
-- no new rejection tests for old shapes
-- no runtime logic dedicated to recognizing legacy formats
+- One owner for the canonical contract; producers, consumers, fixtures, and tests all speak only it.
+- No old-shape behavior behind conditionals; no translation layers between shapes.
+- No validation branches, runtime logic, or tests whose purpose is recognizing or rejecting legacy shapes.
+- Dead helpers, obsolete legacy-shape tests, and comments describing removed shapes are gone.
+- The diff is minimal: canonical implementation plus canonical tests, nothing else.
 
 ## Exception rule
 
