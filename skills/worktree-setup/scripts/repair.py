@@ -96,6 +96,9 @@ def already_mirrored(src: Path, dst: Path) -> bool:
 
 
 def mirror(src: Path, dst: Path) -> bool:
+    # Non-JS repos have no node_modules in main; nothing to mirror.
+    if not src.is_dir():
+        return False
     if already_mirrored(src, dst):
         return False
     remove(dst)
