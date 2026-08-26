@@ -8,61 +8,37 @@ See SKILL.md for env vars. Idempotent. Never installs in the worktree.
 
 from __future__ import annotations
 
-import json
 import os
-import shutil
 import subprocess
-import sys
+from collections import deque
 from pathlib import Path
 
-ALL = os.environ.get("WORKTREE_REPAIR_ALL") == "1"
-WORKTREES_ROOT = os.environ.get("WORKTREES_ROOT", "").strip()
-EXTRA_MIRROR_DIRS = [
-    s.strip()
-    for s in os.environ.get("WORKTREE_MIRROR_DIRS", "").split(",")
-    if s.strip()
-]
-
-_PKG_BUILD_RAW = os.environ.get("WORKTREE_PACKAGE_BUILD_DIRS")
-if _PKG_BUILD_RAW is None:
-    PACKAGE_BUILD_DIRS_OVERRIDE: list[str] | None = (
-        None  # auto-detect from package.json
-    )
-else:
-    PACKAGE_BUILD_DIRS_OVERRIDE = [
-        s.strip() for s in _PKG_BUILD_RAW.split(",") if s.strip()
-    ]
-
-CWD = Path.cwd().resolve()
+from _common import (
+    CWD,
+    EXTRA_MIRROR_DIRS,
+    detect_package_build_dirs,
+    env_flag,
+    find_node_modules,
+    git_ignored_paths,
+    git_tracked_paths,
+    git_worktrees,
+    remove,
+    select_targets,
+    workspaces,
+)
 
 
-def git_worktrees(start: Path) -> tuple[Path, list[Path]]:
-    raw = subprocess.check_output(
-        ["git", "worktree", "list", "--porcelain"], cwd=start, text=True
-    )
-    paths = [
-        Path(line.split(" ", 1)[1]).resolve()
-        for line in raw.splitlines()
-        if line.startswith("worktree ")
-    ]
-    if not paths:
-        sys.exit("no git worktrees found")
-    return paths[0], paths[1:]
-
-
-def remove(path: Path) -> None:
-    if path.is_symlink() or path.is_file():
-        path.unlink()
-    elif path.exists():
-        shutil.rmtree(path)
+# ============================================================================
+# Hardlink mirroring
+# ============================================================================
 
 
 def find_sample_file(root: Path, max_depth: int = 2) -> Path | None:
-    queue: list[tuple[Path, int]] = [(root, 0)]
+    queue: deque[tuple[Path, int]] = deque([(root, 0)])
     while queue:
-        d, depth = queue.pop(0)
+        directory, depth = queue.popleft()
         try:
-            entries = list(d.iterdir())
+            entries = list(directory.iterdir())
         except (FileNotFoundError, PermissionError):
             continue
         for entry in entries:
@@ -88,8 +64,7 @@ def already_mirrored(src: Path, dst: Path) -> bool:
     sample = find_sample_file(src)
     if sample is None:
         return True
-    rel = sample.relative_to(src)
-    cand = dst / rel
+    cand = dst / sample.relative_to(src)
     if not cand.is_file() or cand.is_symlink():
         return False
     return sample.stat().st_ino == cand.stat().st_ino
@@ -107,27 +82,22 @@ def mirror(src: Path, dst: Path) -> bool:
     return True
 
 
-def workspaces(root: Path) -> dict[str, Path]:
-    try:
-        raw = json.loads((root / "package.json").read_text()).get("workspaces", [])
-    except Exception:
-        return {}
-    if isinstance(raw, dict):
-        raw = raw.get("packages", [])
-    if not isinstance(raw, list):
-        return {}
-    found: dict[str, Path] = {}
-    for pattern in raw:
-        if not isinstance(pattern, str):
-            continue
-        for pkg_json in sorted(root.glob(pattern + "/package.json")):
-            try:
-                name = json.loads(pkg_json.read_text()).get("name")
-            except Exception:
-                continue
-            if isinstance(name, str) and name:
-                found[name] = pkg_json.parent.relative_to(root)
-    return found
+def safe_mirror(src: Path, dst: Path, ignored: bool) -> str:
+    """Hardlink-mirror src->dst with safety guards. Returns a status string."""
+    if not src.exists():
+        return "src-missing"
+    if not src.is_dir():
+        return "src-not-dir"
+    if not dst.parent.exists():
+        return "wt-parent-missing"
+    if dst.exists() and not ignored:
+        return "dst-tracked-refusing"
+    return "rebuilt" if mirror(src, dst) else "fresh"
+
+
+# ============================================================================
+# Workspace symlinks
+# ============================================================================
 
 
 def rel_link(link: Path, target: Path) -> bool:
@@ -144,6 +114,7 @@ def rel_link(link: Path, target: Path) -> bool:
 def rewire(nm: Path, wt: Path, pkgs: dict[str, Path]) -> tuple[int, int]:
     if not nm.exists():
         return 0, 0
+    own_dir = nm.parent.resolve()
     changed = total = 0
     for name, rel in pkgs.items():
         target = wt / rel
@@ -155,7 +126,7 @@ def rewire(nm: Path, wt: Path, pkgs: dict[str, Path]) -> tuple[int, int]:
         # named "storybook" that also depends on the "storybook" package), the
         # real dependency lives in this slot and a self-link would clobber it.
         # Defer to whatever the node_modules mirror placed from main.
-        if target.resolve() == nm.parent.resolve():
+        if target.resolve() == own_dir:
             continue
         if name.startswith("@"):
             scope, pkg = name.split("/", 1)
@@ -172,15 +143,14 @@ def rewire(nm: Path, wt: Path, pkgs: dict[str, Path]) -> tuple[int, int]:
     return changed, total
 
 
+# ============================================================================
+# Mirror groups
+# ============================================================================
+
+
 def discover_local_node_modules(main: Path) -> list[Path]:
-    return sorted(
-        p.relative_to(main)
-        for p in main.glob("**/node_modules")
-        if p.is_dir()
-        and p != main / "node_modules"
-        and ".git" not in p.parts
-        and "node_modules" not in p.relative_to(main).parent.parts
-    )
+    root_nm = main / "node_modules"
+    return [p.relative_to(main) for p in find_node_modules(main) if p != root_nm]
 
 
 def link_venvs(main: Path, wt: Path) -> str:
@@ -199,138 +169,40 @@ def link_venvs(main: Path, wt: Path) -> str:
     return ",".join(state) if state else "none"
 
 
-def is_git_ignored(wt: Path, rel: str) -> bool:
-    try:
-        subprocess.check_call(
-            ["git", "check-ignore", "-q", rel],
-            cwd=wt,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-
-def git_tracked_paths(wt: Path, rels: list[str]) -> set[str]:
-    if not rels:
-        return set()
-    try:
-        output = subprocess.check_output(
-            ["git", "ls-files", "-z", "--", *rels],
-            cwd=wt,
-            stderr=subprocess.DEVNULL,
-        )
-    except subprocess.CalledProcessError:
-        return set()
-    tracked_files = [Path(raw.decode()) for raw in output.split(b"\0") if raw]
-    return {
-        rel
-        for rel in rels
-        if any(Path(rel) == path or Path(rel) in path.parents for path in tracked_files)
-    }
-
-
-def safe_mirror(src: Path, dst: Path, wt: Path, rel_for_check: str) -> str:
-    """Hardlink-mirror src->dst with a safety guard. Returns a status string."""
-    if not src.exists():
-        return "src-missing"
-    if not src.is_dir():
-        return "src-not-dir"
-    if not dst.parent.exists():
-        return "wt-parent-missing"
-    if dst.exists() and not is_git_ignored(wt, rel_for_check):
-        return "dst-tracked-refusing"
-    return "rebuilt" if mirror(src, dst) else "fresh"
-
-
 def mirror_extras(main: Path, wt: Path) -> str:
     if not EXTRA_MIRROR_DIRS:
         return "none"
+    ignored = git_ignored_paths(wt, EXTRA_MIRROR_DIRS)
     parts: list[str] = []
     for rel in EXTRA_MIRROR_DIRS:
-        rel_path = Path(rel)
-        status = safe_mirror(main / rel_path, wt / rel_path, wt, rel)
+        status = safe_mirror(main / rel, wt / rel, ignored=rel in ignored)
         parts.append(f"{rel}:{status}")
     return " ".join(parts)
-
-
-def _collect_export_strings(value) -> list[str]:
-    if isinstance(value, str):
-        return [value]
-    if isinstance(value, dict):
-        out: list[str] = []
-        for v in value.values():
-            out.extend(_collect_export_strings(v))
-        return out
-    if isinstance(value, list):
-        out = []
-        for v in value:
-            out.extend(_collect_export_strings(v))
-        return out
-    return []
-
-
-# Always source, never build output; filter to skip TS-as-source packages.
-_SOURCE_DIRS = {"src", "source", "sources"}
-
-
-def detect_package_build_dirs(pkg_root: Path) -> set[str]:
-    """Infer build output dirs from a package.json's entry-point fields."""
-    if PACKAGE_BUILD_DIRS_OVERRIDE is not None:
-        return set(PACKAGE_BUILD_DIRS_OVERRIDE)
-    try:
-        pj = json.loads((pkg_root / "package.json").read_text())
-    except Exception:
-        return set()
-    paths: list[str] = []
-    for key in ("main", "module", "types", "browser", "unpkg", "jsdelivr"):
-        v = pj.get(key)
-        if isinstance(v, str):
-            paths.append(v)
-    paths.extend(_collect_export_strings(pj.get("exports")))
-    dirs: set[str] = set()
-    for p in paths:
-        if p.startswith("./"):
-            p = p[2:]
-        elif p.startswith("/"):
-            p = p[1:]
-        if "/" not in p:
-            continue
-        d = p.split("/", 1)[0]
-        if (
-            not d
-            or d in _SOURCE_DIRS
-            or d in {".", ".."}
-            or any(c in d for c in "*?[]{}")
-        ):
-            continue
-        dirs.add(d)
-    return dirs
 
 
 def mirror_package_builds(main: Path, wt: Path, pkgs: dict[str, Path]) -> str:
     """Mirror per-package build output dirs (dist/, lib/, etc.) from main."""
     candidates: list[tuple[Path, Path, str]] = []
-    for _name, rel in pkgs.items():
-        wt_pkg = wt / rel
+    for rel in pkgs.values():
         # Use the worktree's package.json -- branch's build config may differ from main.
         candidates.extend(
-            (rel, Path(d), str(rel / d)) for d in detect_package_build_dirs(wt_pkg)
+            (rel, Path(d), str(rel / d)) for d in detect_package_build_dirs(wt / rel)
         )
 
-    tracked_paths = git_tracked_paths(
-        wt, [rel_dir for _rel, _build_dir, rel_dir in candidates]
-    )
+    rel_dirs = [rel_dir for _rel, _build_dir, rel_dir in candidates]
+    tracked = git_tracked_paths(wt, rel_dirs)
+    ignored = git_ignored_paths(wt, rel_dirs)
     rebuilt = fresh = source = 0
     for rel, build_dir, rel_dir in candidates:
         # Export maps may point at tracked trees outside a conventional src/
         # directory (for example packages/runtime/auth/src/index.ts). Treat any
         # tracked content conservatively: a mirror must never replace it.
-        if rel_dir in tracked_paths:
+        if rel_dir in tracked:
             source += 1
             continue
-        status = safe_mirror(main / rel / build_dir, wt / rel / build_dir, wt, rel_dir)
+        status = safe_mirror(
+            main / rel / build_dir, wt / rel / build_dir, ignored=rel_dir in ignored
+        )
         if status == "rebuilt":
             rebuilt += 1
         elif status == "fresh":
@@ -342,58 +214,56 @@ def mirror_package_builds(main: Path, wt: Path, pkgs: dict[str, Path]) -> str:
     return summary
 
 
-def select_targets(others: list[Path]) -> list[Path]:
-    if ALL:
-        targets = others
-        if WORKTREES_ROOT:
-            root = Path(WORKTREES_ROOT).resolve()
-            targets = [t for t in targets if t == root or root in t.parents]
-        return targets
-    match = next((p for p in others if CWD == p or p in CWD.parents), None)
-    if match is None:
-        print(
-            f"cwd {CWD} is not inside a non-main worktree; "
-            "set WORKTREE_REPAIR_ALL=1 to repair all worktrees"
-        )
-        return []
-    return [match]
+# ============================================================================
+# Entry point
+# ============================================================================
+
+
+def repair_worktree(main_repo: Path, wt: Path, main_local_nms: list[Path]) -> str:
+    pkgs = workspaces(wt)
+    root_built = mirror(main_repo / "node_modules", wt / "node_modules")
+    root_changed, root_total = rewire(wt / "node_modules", wt, pkgs)
+
+    local_built = local_fresh = local_changed = local_total = 0
+    for rel_nm in main_local_nms:
+        if not (wt / rel_nm.parent).exists():
+            continue
+        if mirror(main_repo / rel_nm, wt / rel_nm):
+            local_built += 1
+        else:
+            local_fresh += 1
+        changed, total = rewire(wt / rel_nm, wt, pkgs)
+        local_changed += changed
+        local_total += total
+
+    pkg_builds = mirror_package_builds(main_repo, wt, pkgs)
+    extras = mirror_extras(main_repo, wt)
+    venv = link_venvs(main_repo, wt)
+
+    return (
+        f"root={'rebuilt' if root_built else 'fresh'} ({root_changed}/{root_total} links); "
+        f"local built={local_built} fresh={local_fresh} ({local_changed}/{local_total} links); "
+        f"pkg_builds={pkg_builds}; extras={extras}; venv={venv}"
+    )
 
 
 def main() -> None:
     main_repo, others = git_worktrees(CWD)
-    targets = select_targets(others)
+    targets = select_targets(
+        others,
+        sweep=env_flag("WORKTREE_REPAIR_ALL"),
+        missing_msg=(
+            f"cwd {CWD} is not inside a non-main worktree; "
+            "set WORKTREE_REPAIR_ALL=1 to repair all worktrees"
+        ),
+    )
     if not targets:
         return
 
     main_local_nms = discover_local_node_modules(main_repo)
-
     for i, wt in enumerate(targets, 1):
-        pkgs = workspaces(wt)
-        root_built = mirror(main_repo / "node_modules", wt / "node_modules")
-        root_changed, root_total = rewire(wt / "node_modules", wt, pkgs)
-
-        local_built = local_fresh = local_changed = local_total = 0
-        for rel_nm in main_local_nms:
-            if not (wt / rel_nm.parent).exists():
-                continue
-            if mirror(main_repo / rel_nm, wt / rel_nm):
-                local_built += 1
-            else:
-                local_fresh += 1
-            c, t = rewire(wt / rel_nm, wt, pkgs)
-            local_changed += c
-            local_total += t
-
-        pkg_builds = mirror_package_builds(main_repo, wt, pkgs)
-        extras = mirror_extras(main_repo, wt)
-        venv = link_venvs(main_repo, wt)
-
-        print(
-            f"[{i}/{len(targets)}] {wt.name}: "
-            f"root={'rebuilt' if root_built else 'fresh'} ({root_changed}/{root_total} links); "
-            f"local built={local_built} fresh={local_fresh} ({local_changed}/{local_total} links); "
-            f"pkg_builds={pkg_builds}; extras={extras}; venv={venv}"
-        )
+        summary = repair_worktree(main_repo, wt, main_local_nms)
+        print(f"[{i}/{len(targets)}] {wt.name}: {summary}")
 
 
 if __name__ == "__main__":

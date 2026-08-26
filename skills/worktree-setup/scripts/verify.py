@@ -6,53 +6,32 @@ Defaults to the cwd worktree; WORKTREE_VERIFY_ALL=1 sweeps all. Exit 0 ok, 1 fai
 
 from __future__ import annotations
 
-import json
 import os
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
-ALL = os.environ.get("WORKTREE_VERIFY_ALL") == "1"
-WORKTREES_ROOT = os.environ.get("WORKTREES_ROOT", "").strip()
+from _common import (
+    CWD,
+    collect_export_strings,
+    env_flag,
+    find_node_modules,
+    git_worktrees,
+    iter_tree,
+    read_json,
+    select_targets,
+    workspaces,
+)
+
 SMOKE_CMD = os.environ.get("WORKTREE_SMOKE_CMD", "").strip()
-CWD = Path.cwd().resolve()
+
+Finding = tuple[str, str]
 
 
-def git_worktrees(start: Path) -> tuple[Path, list[Path]]:
-    raw = subprocess.check_output(
-        ["git", "worktree", "list", "--porcelain"], cwd=start, text=True
-    )
-    paths = [
-        Path(line.split(" ", 1)[1]).resolve()
-        for line in raw.splitlines()
-        if line.startswith("worktree ")
-    ]
-    if not paths:
-        sys.exit("no git worktrees found")
-    return paths[0], paths[1:]
-
-
-def workspaces(root: Path) -> dict[str, Path]:
-    try:
-        raw = json.loads((root / "package.json").read_text()).get("workspaces", [])
-    except Exception:
-        return {}
-    if isinstance(raw, dict):
-        raw = raw.get("packages", [])
-    if not isinstance(raw, list):
-        return {}
-    found: dict[str, Path] = {}
-    for pattern in raw:
-        if not isinstance(pattern, str):
-            continue
-        for pkg_json in sorted(root.glob(pattern + "/package.json")):
-            try:
-                name = json.loads(pkg_json.read_text()).get("name")
-            except Exception:
-                continue
-            if isinstance(name, str) and name:
-                found[name] = pkg_json.parent.relative_to(root)
-    return found
+# ============================================================================
+# Checks
+# ============================================================================
 
 
 def package_link(nm: Path, name: str) -> Path:
@@ -62,40 +41,29 @@ def package_link(nm: Path, name: str) -> Path:
     return nm / name
 
 
-def all_node_modules(wt: Path) -> list[Path]:
-    out = []
-    if (wt / "node_modules").is_dir():
-        out.append(wt / "node_modules")
-    for p in wt.glob("**/node_modules"):
-        if not p.is_dir() or p == wt / "node_modules":
-            continue
-        if ".git" in p.parts or "node_modules" in p.relative_to(wt).parent.parts:
-            continue
-        out.append(p)
-    return sorted(out)
-
-
-def check_workspace_links(wt: Path, pkgs: dict[str, Path]) -> list[tuple[str, str]]:
-    findings: list[tuple[str, str]] = []
-    for nm in all_node_modules(wt):
+def check_workspace_links(wt: Path, pkgs: dict[str, Path]) -> list[Finding]:
+    findings: list[Finding] = []
+    pkg_dirs = {name: (wt / rel).resolve() for name, rel in pkgs.items()}
+    for nm in find_node_modules(wt):
+        own_dir = nm.parent.resolve()
         for name in pkgs:
-            link = package_link(nm, name)
             # Self-reference slot (see repair.py rewire): when a workspace owns
             # this node_modules, the slot named after it may legitimately hold a
             # real third-party dependency of the same name (or be absent), so it
             # is not a broken workspace link.
-            if (wt / pkgs[name]).resolve() == nm.parent.resolve():
+            if pkg_dirs[name] == own_dir:
                 continue
-            if not link.exists() and not link.is_symlink():
-                continue
+            link = package_link(nm, name)
             if not link.is_symlink():
-                findings.append(
-                    (
-                        "error",
-                        f"{link.relative_to(wt)} should be a symlink to the worktree's package but is a real directory "
-                        "(probably installed in-place; remove it and rerun repair)",
+                if link.exists():
+                    findings.append(
+                        (
+                            "error",
+                            f"{link.relative_to(wt)} should be a symlink to the "
+                            "worktree's package but is a real directory (probably "
+                            "installed in-place; remove it and rerun repair)",
+                        )
                     )
-                )
                 continue
             target = os.readlink(link)
             if os.path.isabs(target):
@@ -117,46 +85,30 @@ def check_workspace_links(wt: Path, pkgs: dict[str, Path]) -> list[tuple[str, st
     return findings
 
 
-def _collect_export_strings(value) -> list[str]:
-    if isinstance(value, str):
-        return [value]
-    if isinstance(value, dict):
-        out: list[str] = []
-        for v in value.values():
-            out.extend(_collect_export_strings(v))
-        return out
-    if isinstance(value, list):
-        out = []
-        for v in value:
-            out.extend(_collect_export_strings(v))
-        return out
-    return []
-
-
 def check_package_entry_points(
     main_repo: Path, wt: Path, pkgs: dict[str, Path]
-) -> list[tuple[str, str]]:
-    findings: list[tuple[str, str]] = []
+) -> list[Finding]:
+    findings: list[Finding] = []
     for name, rel in pkgs.items():
         pkg_root = wt / rel
-        try:
-            pj = json.loads((pkg_root / "package.json").read_text())
-        except Exception:
+        pj = read_json(pkg_root / "package.json")
+        if not pj:
             continue
-        entries: list[tuple[str, str]] = []
-        for key in ("main", "module", "types", "browser"):
-            v = pj.get(key)
-            if isinstance(v, str):
-                entries.append((key, v))
-        for v in _collect_export_strings(pj.get("exports")):
-            entries.append(("exports", v))
+        entries: list[tuple[str, str]] = [
+            (key, value)
+            for key in ("main", "module", "types", "browser")
+            if isinstance(value := pj.get(key), str)
+        ]
+        entries.extend(
+            ("exports", v) for v in collect_export_strings(pj.get("exports"))
+        )
         for key, raw in entries:
             cleaned = raw
             if cleaned.startswith("./"):
                 cleaned = cleaned[2:]
             elif cleaned.startswith("/"):
                 cleaned = cleaned[1:]
-            if not cleaned or any(c in cleaned for c in "*?["):
+            if not cleaned or any(char in cleaned for char in "*?["):
                 continue
             target = pkg_root / cleaned
             main_target = main_repo / rel / cleaned
@@ -173,25 +125,21 @@ def check_package_entry_points(
     return findings
 
 
-def find_stale_absolute_symlinks(scan_root: Path, allowed_roots: list[str]):
-    for dirpath, dirnames, filenames in os.walk(scan_root, followlinks=False):
-        parts = Path(dirpath).parts
-        if ".git" in parts:
-            dirnames[:] = []
+def find_stale_absolute_symlinks(
+    scan_root: Path, allowed_roots: list[str]
+) -> Iterator[tuple[Path, str]]:
+    for entry in iter_tree(scan_root):
+        if not entry.is_symlink():
             continue
-        for name in dirnames + filenames:
-            p = Path(dirpath) / name
-            try:
-                if not p.is_symlink():
-                    continue
-                target = os.readlink(p)
-            except (OSError, ValueError):
-                continue
-            if not os.path.isabs(target):
-                continue
-            if any(target == r or target.startswith(r + os.sep) for r in allowed_roots):
-                continue
-            yield p, target
+        try:
+            target = os.readlink(entry.path)
+        except OSError:
+            continue
+        if not os.path.isabs(target):
+            continue
+        if any(target == r or target.startswith(r + os.sep) for r in allowed_roots):
+            continue
+        yield Path(entry.path), target
 
 
 def run_smoke(wt: Path) -> tuple[bool, str]:
@@ -212,52 +160,44 @@ def run_smoke(wt: Path) -> tuple[bool, str]:
         return False, "timeout"
 
 
-def select_targets(others: list[Path]) -> list[Path]:
-    if ALL:
-        targets = others
-        if WORKTREES_ROOT:
-            root = Path(WORKTREES_ROOT).resolve()
-            targets = [t for t in targets if t == root or root in t.parents]
-        return targets
-    match = next((p for p in others if CWD == p or p in CWD.parents), None)
-    if match is None:
-        print("cwd not inside a non-main worktree; nothing to verify")
-        return []
-    return [match]
+# ============================================================================
+# Entry point
+# ============================================================================
+
+
+def verify_worktree(main_repo: Path, wt: Path) -> bool:
+    pkgs = workspaces(wt)
+    link_findings = check_workspace_links(wt, pkgs)
+    entry_findings = check_package_entry_points(main_repo, wt, pkgs)
+    stale = list(find_stale_absolute_symlinks(wt, [str(wt), str(main_repo)]))
+    smoke_ok, smoke_msg = run_smoke(wt)
+
+    ok = not link_findings and not entry_findings and not stale and smoke_ok
+    print(
+        f"{wt.name}: {'ok' if ok else 'FAIL'} "
+        f"(workspace_findings={len(link_findings)}, "
+        f"entry_findings={len(entry_findings)}, "
+        f"stale_abs={len(stale)}, smoke={smoke_msg})"
+    )
+    for severity, msg in link_findings + entry_findings:
+        print(f"  {severity}: {msg}")
+    for path, target in stale:
+        try:
+            rel = path.relative_to(wt)
+        except ValueError:
+            rel = path
+        print(f"  stale: {rel} -> {target}")
+    return ok
 
 
 def main() -> int:
     main_repo, others = git_worktrees(CWD)
-    targets = select_targets(others)
-    if not targets:
-        return 0
-
-    fail = 0
-    for wt in targets:
-        pkgs = workspaces(wt)
-        link_findings = check_workspace_links(wt, pkgs)
-        entry_findings = check_package_entry_points(main_repo, wt, pkgs)
-        stale = list(find_stale_absolute_symlinks(wt, [str(wt), str(main_repo)]))
-        smoke_ok, smoke_msg = run_smoke(wt)
-
-        ok = not link_findings and not entry_findings and not stale and smoke_ok
-        print(
-            f"{wt.name}: {'ok' if ok else 'FAIL'} "
-            f"(workspace_findings={len(link_findings)}, "
-            f"entry_findings={len(entry_findings)}, "
-            f"stale_abs={len(stale)}, smoke={smoke_msg})"
-        )
-        for severity, msg in link_findings + entry_findings:
-            print(f"  {severity}: {msg}")
-        for path, target in stale:
-            try:
-                rel = path.relative_to(wt)
-            except ValueError:
-                rel = path
-            print(f"  stale: {rel} -> {target}")
-        if not ok:
-            fail += 1
-
+    targets = select_targets(
+        others,
+        sweep=env_flag("WORKTREE_VERIFY_ALL"),
+        missing_msg="cwd not inside a non-main worktree; nothing to verify",
+    )
+    fail = sum(1 for wt in targets if not verify_worktree(main_repo, wt))
     return 1 if fail else 0
 
 
