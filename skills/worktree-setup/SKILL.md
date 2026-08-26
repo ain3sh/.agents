@@ -52,7 +52,7 @@ WT_ROOT=$(git rev-parse --show-toplevel)
 
 ## Rules
 
-- Don't run `npm install` / `bun install` / `pnpm install` or create a venv in a normally repaired worktree -- it links to main's instead. First run `break.py` when the purpose of the worktree requires an independent environment.
+- Don't run `npm install` / `bun install` / `pnpm install` or create a venv in a normally repaired worktree -- it links to main's instead. First run `worktree-cli break` when the purpose of the worktree requires an independent environment.
 - Workspace packages must resolve to the **current worktree**, via relative symlinks (so SSHFS and alternate mount paths still work).
 - Workspace discovery reads the **worktree branch's** `package.json`, not main's.
 - A workspace package whose name also matches a real third-party dependency (e.g. an app literally named `storybook` that also depends on the `storybook` npm package) keeps the **real dependency** in its own `node_modules/<name>` slot. Repair/verify treat that self-reference slot specially and never overwrite it with a self-link, so it still needs **no install**.
