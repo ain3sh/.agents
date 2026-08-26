@@ -31,8 +31,26 @@ When implementing a spec:
 - **never** enforce "backwards compatibility" or "legacy support" unless explicitly instructed by the user.
 - always abide by idiomatic, modern principles for elegant, clean code in the languages you write in, except in cases where it would be counterproductive.
 - adding new dependencies is always okay unless explicitly stated otherwise. we do not need to make a mess of try-catch's/fallbacks!
-- **design vocabulary**: optimize for simplest exposed primitives × most powerful functionality. Strip every schema, API, and architecture question down to the smallest vocabulary that still composes into the full feature set. Prefer adding one orthogonal primitive over adding a parallel mechanism; prefer composition of existing primitives over any new surface. Apply this test when choosing where code lives, what a wire contract carries, and what a module exports.
 </implementation>
+
+<code>
+One rule generates all code quality: **smallest vocabulary, fully composed** — the fewest orthogonal primitives that still compose into the entire feature set. Apply it at every scale: architecture, wire contract, module surface, function signature, condition.
+
+Do not juggle qualities; derive them. Each is this rule seen from one angle:
+- **single-canon**: one primitive per job — a fallback, shim, or parallel mechanism is a second word for something the vocabulary already says.
+- **coherent**: primitives compose; they never overlap or collide.
+- **legible**: less vocabulary to learn, each word meaning exactly one thing.
+- **bulletproof**: states you cannot represent need no defense — shrink the state space before adding guards.
+- **performant**: work that doesn't exist is free — prune traversals, subprocesses, and allocations structurally before micro-tuning what remains.
+- **elegant**: finished when nothing is left to remove.
+
+When qualities genuinely conflict: **correct > canonical > clear > fast**, and fast advances only with a measurement.
+
+Checkpoints — run these, don't hold a mood:
+1. **Before writing**: find the existing primitive. Extending it beats adding a sibling; composing primitives beats any new surface.
+2. **While writing**: the moment you type a second mechanism for an existing job — fallback, adapter, compat branch — stop and collapse into one.
+3. **Before finishing**: delete pass (dead branches, speculative hooks, crutch comments), then validate with the narrowest real check.
+</code>
 
 <diagnostics>
 - Only check for diagnostics regularly **if** I tell you to do so at some point in the conversation.
@@ -66,14 +84,7 @@ no-`npm install`-in-worktrees policy — see the `<disk_and_worktrees>` section 
 </dev_box_access>
 
 <philosophy>
-- This codebase will outlive you:
-    - Every shortcut becomes someone else's burden.
-    - Every hack compounds into technical debt that slows the whole team down.
-- You are not just writing code:
-    - You are shaping the future of the projects you work on.
-    - The patterns you establish will be copied.
-    - The corners you cut will be cut again.
-- Proactively fight entropy. Leave the codebase better than you found it.
+The codebase outlives you. The patterns you establish will be copied; the corners you cut will be cut again; every shortcut becomes someone else's burden. Fight entropy proactively — leave it better than you found it.
 </philosophy>
 
 ---
