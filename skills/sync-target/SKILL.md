@@ -38,7 +38,7 @@ Note: files this branch owns, what it changes, what to preserve from upstream.
 git merge "$REMOTE/$TARGET" --no-edit
 ```
 
-Clean? Skip to §5. Else capture the **targeted scope** for §4–§5:
+Clean? Still run §4's auto-resolution audit (with `CONFLICTS=""`), then §5. Else capture the **targeted scope** for §4–§5:
 
 ```bash
 CONFLICTS=$(git diff --name-only --diff-filter=U)
@@ -58,6 +58,18 @@ For each file in `$CONFLICTS`, read both sides and classify. Tag each resolution
 | **Genuine collision** | Judge from branch context |
 
 Stage resolutions, then `git commit --no-edit`.
+
+### Audit auto-resolutions (runs even on clean merges)
+
+Conflict markers are not the only merge risk: hunks git resolved silently can be textually clean yet semantically wrong — a splice that duplicates a function, one side still referencing a symbol the other renamed or deleted, the same guard applied twice. Audit the overlap set, the files both sides changed since the merge-base:
+
+```bash
+MB=$(git merge-base HEAD^1 HEAD^2)
+OVERLAP=$(comm -12 <(git diff --name-only "$MB" HEAD^1 | sort) \
+                   <(git diff --name-only "$MB" HEAD^2 | sort))
+```
+
+For each overlap file not already handled in `$CONFLICTS`: read the merged result around both sides' hunks and confirm the combined logic coheres — no duplicated definitions, no stale references to symbols the other side renamed/moved/deleted (`rg` the old names), no double-applied logic. Anything you fix here is a **Low**-confidence resolution (it gates §6) in its own commit, and its files join the §5 scope.
 
 ## 5. Quality checks (scoped)
 
