@@ -23,25 +23,16 @@ Read-only fetches don't violate spec mode -- skipping artifacts sabotages the RC
 
 If you cannot reproduce the failure or read its artifacts, **stop and surface the gap** rather than guessing. A guess phrased as a root cause is worse than "I don't have enough state to RCA this yet."
 
-## Default workflow
+## Workflow (in order)
 
-1. State the expected behavior in plain language.
+1. State the expected behavior in plain language: what user action or system event was supposed to happen?
 2. State the invariant in one sentence.
 3. State what definitely did not happen.
-4. Trace the causal chain from the intended action or system event to the observed system effect.
-5. Ask whether the request or mutation should have happened at all.
-6. Identify the canonical source of truth and every competing source.
+4. Trace the causal chain: what exact call path led from the intended action or system event to the observed effect?
+5. Ask whether the request, mutation, or side effect should have happened at all under the expected behavior and invariants.
+6. Identify who owns the state at each layer: the canonical source of truth and every competing source (observer-driven syncing, lifecycle startup code, persistence restore, retry logic, background work).
 7. Find the first unintended side effect or write.
-8. Only then decide whether a downstream contract fix is still necessary.
-
-## Questions to answer in order
-
-1. What user action or system event was supposed to happen?
-2. What exact call path caused this request or response?
-3. Should this request, mutation, or side effect have happened at all under the expected behavior and invariants?
-4. Who owns the state at each layer?
-5. Is there observer-driven syncing, lifecycle startup code, persistence restore, retry logic, background work, or multiple sources of truth causing an unintended side effect?
-6. If a contract is violated, is the contract wrong, or did unintended logic reach the contract?
+8. Only then decide whether a downstream contract fix is still necessary: is the contract wrong, or did unintended logic reach the contract?
 
 ## Rules
 
