@@ -4,36 +4,60 @@ description: Reflect on session learnings and update a skill so future agents su
 argument-hint: <skill-name> [context about what was learned]
 ---
 
+# Update Skill
+
+Goal: a future agent with **no prior context** acts correctly at minimum tokens read.
+
 ## 1. Reflect
 
-Review the work done in this session (or as described in `$ARGUMENTS`). Identify:
+Review the session's work (or `$ARGUMENTS`). Identify:
 
-- **Correct pathways**: What approaches/commands/patterns ultimately worked?
-- **Dead ends**: What looked promising but failed? Why?
-- **Missing info**: What did the skill not cover that it should have?
-- **Key insights**: Non-obvious learnings that would save future agents significant time.
+- **Correct pathways**: approaches/commands/patterns that ultimately worked.
+- **Dead ends**: what looked promising but failed, and why.
+- **Missing info**: what the skill should have covered but didn't.
+- **Key insights**: non-obvious learnings that save future agents significant time.
 
+## 2. Read whole, in aggregate
 
-## 2. Read Current Skill
+Read **every** file of the skill -- `SKILL.md`, `references/**`, `scripts/**`,
+`templates/**` -- fully, before any edit. Surgical patches without the aggregate
+view leave incoherence: a command renamed in one section stays stale in another.
+Verify behavior claims against the current scripts/tools they describe, not
+against memory or the old prose.
 
-- Read the current skill file(s) thoroughly.
-- Identify: gaps, inaccuracies, outdated information, missing edge cases, misleading guidance.
-
-## 3. Update Comprehensively
-
-Rewrite/amend the skill so that a future agent with **no prior context** would succeed:
+## 3. Update
 
 - Fix incorrect or outdated instructions.
-- Add the correct pathways discovered in step 1.
-- Explicitly mark known dead ends with warnings.
-- Fill gaps in coverage.
-- Remove or update any misleading content.
-- Keep the skill focused and actionable -- no filler.
+- Add the correct pathways from step 1; explicitly mark dead ends with warnings.
+- Fill coverage gaps; remove misleading content.
+- No filler: every sentence must change what an agent does or prevents a mistake.
 
-## 4. Critique & Refine
+## 4. Structure for action
 
-**Round 1**: Read the updated skill as a fresh agent. Is it clear? Complete? Would you succeed following only these instructions? Fix any issues.
+`SKILL.md` is a lean, action-first entrypoint. Target shape, in order:
 
-**Round 2**: Check for redundancy, ambiguity, missing edge cases, inconsistent formatting, and ordering. Fix any issues.
+1. One framing sentence -- the mental model.
+2. **Act**: goal → command table. Commands before explanations, always.
+3. **Detect**: when/where the skill applies, as a runnable check.
+4. **Rules**: numbered, few, each one violation-shaped ("never X -- consequence").
+5. **Failure map**: symptom → action table; every row resolves in one command or one reference hop.
+6. **References**: explicit `references/<file>.md` pointers with one-line scopes, prefixed "load on demand; do not reabsorb into this file".
 
-**Final Round**: Critique and refine holistically, x2, including optimizing for information density per token so we are not bloating the content/size(s) needlessly, till you are happy with and proud of the work you've done <3
+Push depth down: per-command internals, env-var tables, safety rationale, and
+multi-step edge-case walkthroughs live in `references/*.md`, loaded only when
+needed. Split when `SKILL.md` mixes action with explanation or grows past ~80
+lines; don't manufacture references for a skill that fits lean in one file.
+
+Restructure invariants:
+
+- **Zero content dropped**: every fragment of the old skill maps to exactly one new home. Diff old against new to prove it.
+- **Frontmatter `description` is the trigger**: byte-identical unless the trigger itself is what changed.
+- **One owner per fact**: state each warning/mechanism once, point to it elsewhere. Duplication is where staleness breeds.
+
+## 5. Critique & refine
+
+**Round 1**: Read the result as a fresh agent. Clear? Complete? Would you succeed following only this? Fix.
+
+**Round 2**: Check redundancy, ambiguity, missing edge cases, inconsistent formatting, ordering, and that the section shapes of step 4 held. Fix.
+
+**Final round**: Critique holistically, x2, optimizing information density per token -- no bloat -- until you are happy with and proud of the work you've done <3
