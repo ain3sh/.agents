@@ -7,16 +7,29 @@ description: "Manage a git worktree's dev environment: normally mirror main's de
 
 ## Quickstart
 
-Once per worktree, before invoking validators or other tooling:
+Worktrees created with `worktree-cli new` (or the `gwk` shell alias) are already
+set up: creation runs repair + verify automatically and carries dirty changes
+over (`--no-setup` skips it). For any other worktree, once before invoking
+validators or other tooling:
 
 ```bash
-python3 ~/.agents/skills/worktree-setup/scripts/repair.py        # repair this worktree
-python3 ~/.agents/skills/worktree-setup/scripts/verify.py        # structural sanity check
+worktree-cli repair        # repair this worktree
+worktree-cli verify        # structural sanity check
+worktree-cli setup         # repair, then verify
 # Deliberate isolation only:
-python3 ~/.agents/skills/worktree-setup/scripts/break.py         # remove sharing with main
+worktree-cli break         # remove sharing with main
 ```
 
-All default to the cwd worktree and are idempotent. Their respective `WORKTREE_*_ALL=1` variables opt into a host-wide sweep.
+These subcommands run the scripts below in the cwd; invoke them directly when
+`worktree-cli` isn't installed:
+
+```bash
+python3 ~/.agents/skills/worktree-setup/scripts/repair.py
+python3 ~/.agents/skills/worktree-setup/scripts/verify.py
+python3 ~/.agents/skills/worktree-setup/scripts/break.py
+```
+
+All default to the cwd worktree and are idempotent. The `WORKTREE_*` env vars below apply to both invocation forms; the respective `WORKTREE_*_ALL=1` variables opt into a host-wide sweep.
 
 After repair, for Bun-driven packages only, run declared package-local artifact scripts before retrying:
 
@@ -47,7 +60,7 @@ WT_ROOT=$(git rev-parse --show-toplevel)
 ## Repair
 
 ```bash
-python3 ~/.agents/skills/worktree-setup/scripts/repair.py
+worktree-cli repair    # or: python3 ~/.agents/skills/worktree-setup/scripts/repair.py
 ```
 
 Run from inside the worktree (or anywhere with `WORKTREE_REPAIR_ALL=1`). Main's dependencies and any generated artifacts must be healthy first (`npm install`, `npm run setup`, etc. -- in main only).
@@ -82,7 +95,7 @@ Workspace discovery supports the npm/yarn/bun `"workspaces"` field in `package.j
 ## Break sharing
 
 ```bash
-python3 ~/.agents/skills/worktree-setup/scripts/break.py
+worktree-cli break    # or: python3 ~/.agents/skills/worktree-setup/scripts/break.py
 ```
 
 Use this deliberately when sharing main's environment would undermine the task: reproducing an install/postinstall, package-manager, native-build, patching, or lockfile issue; validating a branch against a genuinely independent dependency tree; or running tooling known to mutate files in place. It is not routine cleanup -- repair remains the fast default for ordinary worktrees.
@@ -111,7 +124,7 @@ Optional env vars:
 ## Verify
 
 ```bash
-python3 ~/.agents/skills/worktree-setup/scripts/verify.py
+worktree-cli verify    # or: python3 ~/.agents/skills/worktree-setup/scripts/verify.py
 ```
 
 Structural checks:
