@@ -5,164 +5,52 @@ description: "Manage a git worktree's dev environment: normally mirror main's de
 
 # Worktree Setup
 
-## Quickstart
+Non-main worktrees share main's dependencies through hardlink mirrors and relative symlinks -- never install into them. Worktrees created by `worktree-cli new` (shell alias `gwk`) are already set up (`--no-setup` skips).
 
-Worktrees created with `worktree-cli new` (or the `gwk` shell alias) are already
-set up: creation runs repair + verify automatically and carries dirty changes
-over (`--no-setup` skips it). For any other worktree, once before invoking
-validators or other tooling:
+## Act
 
-```bash
-worktree-cli repair        # repair this worktree
-worktree-cli verify        # structural sanity check
-worktree-cli setup         # repair, then verify
-# Deliberate isolation only:
-worktree-cli break         # remove sharing with main
-```
+| Goal | Command |
+|---|---|
+| Fix a broken or fresh worktree env | `worktree-cli repair` |
+| Structural sanity check (exit 1 = findings) | `worktree-cli verify` |
+| Repair, then verify | `worktree-cli setup` |
+| Independent env for install/repro work | `worktree-cli break`, then the repo's normal install flow |
 
-These subcommands run the scripts below in the cwd; invoke them directly when
-`worktree-cli` isn't installed:
+Run from inside the worktree. All idempotent, cwd-scoped by default. Without `worktree-cli`, invoke the same scripts directly: `python3 ~/.agents/skills/worktree-setup/scripts/{repair,verify,break}.py`. `WORKTREE_*` env vars tune scope and mirror sets for both forms -- see `references/mechanics.md`.
 
-```bash
-python3 ~/.agents/skills/worktree-setup/scripts/repair.py
-python3 ~/.agents/skills/worktree-setup/scripts/verify.py
-python3 ~/.agents/skills/worktree-setup/scripts/break.py
-```
+After repair, Bun-driven packages only: run `bun run setup` / `bun run generate` from the package dir when `package.json` declares them. Never substitute install commands.
 
-All default to the cwd worktree and are idempotent. The `WORKTREE_*` env vars below apply to both invocation forms; the respective `WORKTREE_*_ALL=1` variables opt into a host-wide sweep.
+## Detect
 
-After repair, for Bun-driven packages only, run declared package-local artifact scripts before retrying:
-
-```bash
-bun run setup       # only if package.json declares scripts.setup
-bun run generate    # only if package.json declares scripts.generate
-```
-
-Run from the package/app dir. Skip Python/non-JS/non-Bun projects and missing scripts.
-
-## Detection
-
-If the cwd path contains `worktree` (e.g. `myrepo-worktrees/feat-123`), you're in one. Explicit check:
-
-```bash
-MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
-WT_ROOT=$(git rev-parse --show-toplevel)
-[ "$WT_ROOT" != "$MAIN_REPO" ] && echo "WORKTREE -- repair before tooling"
-```
+You are in a worktree when `git rev-parse --show-toplevel` differs from the first path in `git worktree list`. A path containing `worktree` (e.g. `myrepo-worktrees/feat-123`) is a strong hint.
 
 ## Rules
 
-- Don't run `npm install` / `bun install` / `pnpm install` or create a venv in a normally repaired worktree -- it links to main's instead. First run `worktree-cli break` when the purpose of the worktree requires an independent environment.
-- Workspace packages must resolve to the **current worktree**, via relative symlinks (so SSHFS and alternate mount paths still work).
-- Workspace discovery reads the **worktree branch's** `package.json`, not main's.
-- A workspace package whose name also matches a real third-party dependency (e.g. an app literally named `storybook` that also depends on the `storybook` npm package) keeps the **real dependency** in its own `node_modules/<name>` slot. Repair/verify treat that self-reference slot specially and never overwrite it with a self-link, so it still needs **no install**.
-
-## Repair
-
-```bash
-worktree-cli repair    # or: python3 ~/.agents/skills/worktree-setup/scripts/repair.py
-```
-
-Run from inside the worktree (or anywhere with `WORKTREE_REPAIR_ALL=1`). Main's dependencies and any generated artifacts must be healthy first (`npm install`, `npm run setup`, etc. -- in main only).
-
-What it does, all idempotent:
-
-- hardlink-mirrors root and package-local `node_modules` from main
-- rewires workspace packages to the worktree's own `packages/`, with relative symlinks
-- mirrors postinstall build outputs per workspace package (auto-detected from each `package.json`'s `main`/`module`/`types`/`exports` fields), so `packages/<pkg>/dist/` etc. populate without rebuilding
-- conservatively skips auto-detected directories that contain any tracked content (for example an export rooted at `auth/src/` rather than `src/`)
-- links `.venv`/`venv` from main when present
-
-After repair, Bun-driven packages may need declared `setup`/`generate` scripts to recreate git-ignored artifacts (e.g. `src/generated/bin/*`). Run only existing scripts from that package dir; never replace them with install commands.
-
-Optional env vars:
-
-| Var | Effect |
-|---|---|
-| `WORKTREE_REPAIR_ALL=1` | Repair every non-main worktree on the host. |
-| `WORKTREES_ROOT=/path` | In all-mode, only repair worktrees under this dir. |
-| `WORKTREE_MIRROR_DIRS=a,b/c` | Comma-separated repo-relative paths to additionally mirror from main (e.g. generated artifact dirs at the repo root). |
-| `WORKTREE_PACKAGE_BUILD_DIRS=dist,lib` | Override the auto-detected per-package build output dirs. Set empty to disable build-output mirroring. |
-
-**Never sweep silently** -- `WORKTREE_REPAIR_ALL=1` rebuilds every sibling worktree's `node_modules`. Other sessions may have a dev server, IDE indexer, or install holding files.
-
-**Safety:** any mirror that would clobber an existing destination refuses unless the destination is git-ignored. A typo in `WORKTREE_MIRROR_DIRS` cannot wipe tracked source.
-
-**Hardlink caveat:** mirrored build dirs are hardlinks to main. Tools that *unlink-and-rewrite* (most bundlers, tsc) break the link cleanly. Tools that modify files *in place* would cross-contaminate main; for those, set `WORKTREE_PACKAGE_BUILD_DIRS=` to disable build mirroring and rebuild fresh in the worktree.
-
-Workspace discovery supports the npm/yarn/bun `"workspaces"` field in `package.json` (array form, or yarn-berry's `{"packages": [...]}`). pnpm-workspace.yaml, lerna, and non-JS managers are not handled.
-
-## Break sharing
-
-```bash
-worktree-cli break    # or: python3 ~/.agents/skills/worktree-setup/scripts/break.py
-```
-
-Use this deliberately when sharing main's environment would undermine the task: reproducing an install/postinstall, package-manager, native-build, patching, or lockfile issue; validating a branch against a genuinely independent dependency tree; or running tooling known to mutate files in place. It is not routine cleanup -- repair remains the fast default for ordinary worktrees.
-
-What it does, idempotently:
-
-- removes root and package-local `node_modules` only when they actually share files with main
-- removes ignored, auto-detected package build directories when they share files with main
-- removes symlinks that resolve into main, including linked `.venv`/`venv`
-- copy-breaks any remaining hardlinks to main in place, preserving their paths and contents
-
-It does not install dependencies or rebuild artifacts. Afterward, run the repository's normal install/setup flow with its required runtime and package-manager versions.
-
-Optional env vars:
-
-| Var | Effect |
-|---|---|
-| `WORKTREE_BREAK_ALL=1` | Break sharing for every non-main worktree on the host. |
-| `WORKTREE_BREAK_DRY_RUN=1` | Report what would be detached without changing files. |
-| `WORKTREES_ROOT=/path` | In all-mode, only process worktrees under this dir. |
-| `WORKTREE_MIRROR_DIRS=a,b/c` | Also remove matching extra mirror dirs when they still share files with main; use the same value supplied to repair. |
-| `WORKTREE_PACKAGE_BUILD_DIRS=dist,lib` | Override auto-detected package build dirs, matching repair's override. |
-
-**Never sweep silently** -- `WORKTREE_BREAK_ALL=1` can remove dependency trees from sibling worktrees that active sessions still need.
-
-## Verify
-
-```bash
-worktree-cli verify    # or: python3 ~/.agents/skills/worktree-setup/scripts/verify.py
-```
-
-Structural checks:
-
-1. Workspace package entries in `node_modules` are symlinks, not real directories (self-reference slots are skipped: when a workspace owns a `node_modules` and a real dependency shares its name, that slot legitimately stays a real dir).
-2. Those symlinks are relative.
-3. Those symlinks resolve under the worktree.
-4. Each workspace package entry point that exists in main also exists in the worktree (catches mirrorable postinstall builds that repair missed without requiring runtime-generated app outputs).
-5. No other symlinks in the worktree point to absolute paths outside main + worktree boundaries.
-
-Optional env vars:
-
-| Var | Effect |
-|---|---|
-| `WORKTREE_VERIFY_ALL=1` | Verify every non-main worktree on the host. |
-| `WORKTREES_ROOT=/path` | In all-mode, only verify worktrees under this dir. |
-| `WORKTREE_SMOKE_CMD="..."` | Shell command run in each target's worktree root; non-zero exit fails verification. |
-
-Exit code 0 if all targets pass, 1 otherwise.
-
-## Path migration warning
-
-After moving a repo or its worktrees between hosts/paths, fix `.git/worktrees/*/gitdir` and each worktree's `.git` pointer **before** `git worktree prune`. Prune unregisters valid worktrees if those pointers still reference the old path.
+1. **Never** run `npm/bun/pnpm install` or create a venv in a shared worktree -- writes cross the links into main. Need independence? `worktree-cli break` first.
+2. Workspace packages must resolve into the **current worktree** via **relative** symlinks (survives SSHFS and alternate mounts).
+3. Main must be healthy first (installed + built); repair copies from main, never builds.
+4. Never sweep (`WORKTREE_*_ALL=1`) silently -- sibling worktrees may be held by other sessions' dev servers, indexers, or installs.
 
 ## Failure map
 
-| Symptom | Fix |
+| Symptom | Action |
 |---|---|
-| `Cannot find module X` from a workspace package | Run repair |
-| Workspace package added on this branch but absent in main's `node_modules` | Run repair (discovery reads the worktree's `package.json`, so the link is created if the package directory exists in the worktree) |
-| Stale exports, impossible type errors, or relative imports failing from a workspace package | Run repair |
-| `Cannot find module '@scope/pkg/dist/...'` or workspace package's `dist/` is empty | Postinstall build not mirrored. Repair auto-detects build dirs from entry points; if your build dir isn't referenced there, set `WORKTREE_PACKAGE_BUILD_DIRS=...` and rerun |
-| Verify reports a workspace entry point not found | Same -- rerun repair, or extend `WORKTREE_PACKAGE_BUILD_DIRS` |
-| Missing files under a repo-root generated artifact dir | Add the path to `WORKTREE_MIRROR_DIRS` and rerun repair |
-| Need an independent install/build environment for a clean reproduction | Run break, then the repository's normal install/setup flow |
-| Verify reports a workspace package is a real directory, not a symlink | An install materialized it -- `rm -rf` that path inside `node_modules` and rerun repair (exception: a self-reference slot whose name matches a real dependency is supposed to be a real dir -- see next row) |
-| `<app>/node_modules/.bin/<tool>` is a dangling symlink / `spawn ... ENOENT` for a tool whose name equals a workspace package name (e.g. `storybook`) | Name collision: the workspace and a third-party dep share a name, and an older repair clobbered the real package with a `<name> -> ..` self-link. Current repair/verify leave self-reference slots to the mirror, so just rerun repair. If the bad self-link persists, `rm <app>/node_modules/<name>` then rerun repair to restore the real package from main (build it in **main** first if main's copy is also missing) |
-| Install was run inside the worktree | `rm -rf` the worktree's `node_modules` and rerun repair |
-| Works locally, fails through SSHFS or an alternate mount path | Run repair (relative symlinks survive remount) |
-| Sibling worktree also looks broken | Re-run with `WORKTREE_REPAIR_ALL=1` from a quiet shell |
-| Valid worktrees disappeared after `git worktree prune` | Restore/fix `.git/worktrees/*/gitdir` and worktree `.git` pointer files |
+| `Cannot find module X` from a workspace package | `worktree-cli repair` |
+| Stale exports, impossible type errors, relative imports failing | `worktree-cli repair` |
+| Workspace package added on this branch, absent in main | `worktree-cli repair` (discovery reads the worktree's `package.json`) |
+| `dist/` empty or `Cannot find module '@scope/pkg/dist/...'` | repair; if the build dir isn't auto-detected, set `WORKTREE_PACKAGE_BUILD_DIRS=...` and rerun |
+| Missing repo-root generated artifact dir | add to `WORKTREE_MIRROR_DIRS`, rerun repair |
+| verify: real directory where a symlink is expected | `rm -rf` that `node_modules` entry, rerun repair -- unless it is a self-reference slot: `references/troubleshooting.md` |
+| Dangling `node_modules/.bin/<tool>` where tool name equals a workspace name | name collision: `references/troubleshooting.md` |
+| Install was run inside the worktree | `rm -rf` its `node_modules`, rerun repair |
+| Works locally, fails over SSHFS / alternate mount | `worktree-cli repair` |
+| Sibling worktrees also broken | sweep with `WORKTREE_REPAIR_ALL=1` -- read the sweep warning in `references/mechanics.md` first |
+| Tool mutates build outputs in place (would contaminate main) | `WORKTREE_PACKAGE_BUILD_DIRS=` (empty) + rebuild fresh: `references/mechanics.md` |
+| Worktrees vanished after `git worktree prune` | path migration: `references/troubleshooting.md` |
+
+## References
+
+Load on demand; do not reabsorb into this file.
+
+- `references/mechanics.md` -- what repair/break/verify each do internally, all env vars, safety guards, hardlink caveats, workspace-discovery scope.
+- `references/troubleshooting.md` -- extended walkthroughs: self-reference slots and name collisions, path migration after moving repos, choosing break vs repair.
