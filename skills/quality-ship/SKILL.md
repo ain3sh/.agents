@@ -127,6 +127,8 @@ The failure is silent (exit 0 or timeout). If a "scoped" check runs unexpectedly
 
 Prefer turbo when `turbo.json` is present (it picks up workspace-level config that direct invocation misses); otherwise use the table. Last resort: `cd` into the package and run there. Derive affected packages from `git diff --name-only` vs the base.
 
+**Cwd-sensitive configs:** some tools resolve config from their working directory, making `cd` into the package required rather than a last resort. Known case: factory-mono `apps/cli`'s `@/` aliases only resolve when ESLint runs from `apps/cli`; from the root you get false `import/no-unresolved` errors.
+
 ### Test scoping: package scope is NOT enough
 
 **This is about how you *run* tests to validate a diff (execution scope), not how broad the tests you *author* should be (coverage).** A feature's acceptance test or a bug's contract-level regression can legitimately span components or run under stress (see **consolidate-test-suites**); never let "run narrow" leak into "write narrow."
