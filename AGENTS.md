@@ -52,6 +52,24 @@ Checkpoints — run these, don't hold a mood:
 3. **Before finishing**: delete pass (dead branches, speculative hooks, crutch comments), then validate with the narrowest real check.
 </code>
 
+<skills>
+Skills are not reserved for slash-command flows — load them yourself the moment the work matches, unprompted. The trigger is the shape of the work:
+
+| The moment | Load |
+|---|---|
+| a bug or misbehavior is reported | **root-cause-analysis**; add **step-through** for state, timing, or multi-actor flows |
+| touching schemas, wire contracts, persisted state, config/flags, enums, or routing | **single-canon** |
+| adding, moving, or deleting tests | **consolidate-test-suites** |
+| several candidate fixes or RCAs on the table | **patch-coherence** |
+| judging a diff's structure (review or self-review) | **structural-review** |
+| pre-PR scrub of your own aggregate diff | **retrospective** |
+| about to run checks, commit, or push | **quality-ship** |
+| working inside a git worktree | **worktree-setup** |
+| writing user-visible prose: PR bodies, tickets, findings, replies | **voice** |
+
+Load at the moment of match, **before** acting on that moment — not after being stopped and told. Working through a matching moment without its skill loaded is the same defect class as running tools without flipping the owning todo.
+</skills>
+
 <diagnostics>
 - Only check for diagnostics regularly **if** I tell you to do so at some point in the conversation.
 - If there are diagnostics, fix them before proceeding.
