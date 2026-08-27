@@ -3,7 +3,21 @@ description: Implement a Linear ticket -- explore, plan, spec, then code
 argument-hint: <TICKET-ID or pasted ticket content>
 ---
 
-Load skills: **linear-cli**, **worktree-setup**, **quality-ship**, **repo-conventions**, **consolidate-test-suites**. Bug-fix tickets also load: **root-cause-analysis**, **step-through**.
+## Skill loading (phased)
+
+Load skills at the moment their work begins — not everything up front. Deferring a load to the phase that consumes it is correct; skipping the load is not. Beyond this list, load any other skill the moment the work matches its trigger (dispatch table in AGENTS.md).
+
+**All tickets:**
+- **At start**: **worktree-setup**, **ast-grep**, **step-through**, **repo-conventions**.
+- **At start, when the ticket references externals**: the matching CLI skill(s) — **linear-cli**, **slack-cli**, **notion-cli**, ...
+- **Once due diligence is done** (exploration complete, before designing or writing code): **single-canon**, **patch-coherence**, **quality-ship**.
+
+**Bug-fix tickets inherit the above, plus:**
+- **At start**: **root-cause-analysis**, **structural-review**, **pr-context**.
+- **Once initial exploration is done** (mid-flow, not at the very end): **droid-control** — drive the real app/TUI/browser to reproduce the failure and later verify the fix.
+
+**Feature/enhancement tickets inherit the above, plus:**
+- **Once initial exploration is done** (mid-flow, not at the very end): **droid-control** — exercise the flow being built against the running app.
 
 ## Todo cadence (non-optional)
 
