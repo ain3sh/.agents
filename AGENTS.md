@@ -58,7 +58,7 @@ Skills are not reserved for slash-command flows — load them yourself the momen
 | The moment | Load |
 |---|---|
 | a bug or misbehavior is reported | **root-cause-analysis**; add **step-through** for state, timing, or multi-actor flows |
-| touching schemas, wire contracts, persisted state, config/flags, enums, or routing | **single-canon** |
+| defining or touching schemas, wire contracts, persisted state, config/flags, enums, or routing | **single-canon** |
 | adding, moving, or deleting tests | **consolidate-test-suites** |
 | several candidate fixes or RCAs on the table | **patch-coherence** |
 | judging a diff's structure (review or self-review) | **structural-review** |
