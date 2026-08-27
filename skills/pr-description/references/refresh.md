@@ -86,7 +86,7 @@ The body proper reads as one authored piece, not a log of patches — with **one
    - Risk & Impact reflects current full scope, not just the delta.
    - **Conditional sections re-evaluated both ways** — add newly-triggered (>3 consumers → Reverse Dependencies; new metric → Telemetry) **and remove** newly-untriggered (risky migration extracted to its own PR → drop Migration & Rollout / RCA). An orphaned section describing absent work is staleness too.
    - Every evidence claim revalidated or narrowed; every generated appendix regenerated (or replaced with a tighter Reviewer Guide if it adds bulk without aiding review).
-3. Apply via REST (SKILL.md §5 — `gh pr edit` is broken), re-stamping the marker as the final line. Draft the body marker-free, then:
+3. Apply via REST (SKILL.md §5 — `gh pr edit` is broken), re-stamping the marker as the final line. Draft the body marker-free with a file tool (Create / apply_patch — §5, never a heredoc), then:
    ```bash
    printf '\n<!-- pr-desc-base: %s -->\n' "$(git rev-parse HEAD)" >> /tmp/pr-updated-body.md
    gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f body="$(cat /tmp/pr-updated-body.md)"

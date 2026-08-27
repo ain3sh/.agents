@@ -31,7 +31,7 @@ pr-description checklist:
 - [ ] Structural change? Architecture diagram drawn (references/artifacts.md) — default is *draw*, not skip
 - [ ] Concrete visual change? Live proof captured via droid-control + attached high in body (references/visual-evidence.md) — *after* the PR is open, never blocking the create
 - [ ] Verification outcome-first; CI status compressed to one line; length scaled to complexity
-- [ ] Written via `gh api ... -X PATCH` (never `gh pr edit` — §5)
+- [ ] Body file composed via Create/apply_patch (never a shell heredoc), applied via `gh api ... -X PATCH` (never `gh pr edit`) — §5
 - [ ] Refresh only: base resolved + marker re-stamped (references/refresh.md)
 ```
 
@@ -166,6 +166,8 @@ Inline conventions (not their own section) — keep bodies grep-able years later
 ## 5. Apply via REST — never `gh pr edit`
 
 `gh pr edit` fails on any org with Projects (classic) enabled (it issues a deprecated GraphQL query the server rejects) — do not retry. Write the body to a file and PATCH it; `-f body="$(cat file)"` avoids quoting bugs with multi-line markdown, backticks, and `$`.
+
+**Compose the body file with a file tool (Create / apply_patch) — never a shell heredoc.** `cat > /tmp/pr-body.md <<'EOF'` routes the entire markdown through the Execute command line, where terminal-security guards scan it and false-positive on external URLs (tirith `lookalike_tld`), and one interruption discards the whole draft. File-tool writes aren't command-scanned and never trigger this. The shell only *reads* the body back (`-f body="$(cat …)"`); it never writes it. Never degrade or placeholder-substitute body content to appease a command-line scanner — switch the write tool instead.
 
 ```bash
 REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
