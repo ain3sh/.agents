@@ -1,6 +1,6 @@
 ---
-description: Implement a Linear ticket -- explore, plan, spec, then code
-argument-hint: <TICKET-ID or pasted ticket content>
+description: Implement a work item -- Linear ticket, pasted content, or plain description: explore, plan, spec, then code
+argument-hint: <TICKET-ID | pasted content | plain description>
 ---
 
 ## Skill loading (phased)
@@ -34,14 +34,15 @@ After any approved spec or plan becomes ground truth (Phase 4 here, equivalents 
 
 Fire `TodoWrite` in parallel with the first tool call of each phase.
 
-## 1. Understand the Ticket
+## 1. Understand the Work
 
 - If `$ARGUMENTS` contains a ticket ID (e.g., `TEAM-123`), fetch it:
   ```bash
   linear i get <ID> --output json --comments
   ```
-- If pasted ticket content is provided, parse it directly.
+- If pasted content or a plain description is provided, parse it directly.
 - Identify: the problem statement, acceptance criteria, constraints, linked issues/PRs, and any discussion context.
+- When acceptance criteria or constraints aren't stated (untracked work), derive them from the request and the codebase -- they surface for confirmation in the step-4 spec, not as silent assumptions.
 - **Pull every referenced artifact** -- bug reports, Sentry, logs, attachments, linked PRs, design docs (see `linear-cli`'s **Attached Artifact Enrichment**). Read-only fetches don't violate spec mode.
 
 ## 2. Explore Current Code
@@ -50,12 +51,12 @@ Fire `TodoWrite` in parallel with the first tool call of each phase.
 - Read the key files: entry points, data models, services, components, tests.
 - Map the current behavior and data flow in the area of change.
 - Identify existing patterns and abstractions to follow -- from the surrounding code **and** the repo's written standards (follow **repo-conventions**, steps 1-2): surface the docs governing this area so the spec conforms from the start, not retrofitted at the gate.
-- When the ticket names specific flows or commands to reuse, trace each one end-to-end and note exactly where the new feature's behavior diverges.
+- When the request names specific flows or commands to reuse, trace each one end-to-end and note exactly where the new feature's behavior diverges.
 - Note tests, types, configs, and documentation that will need updating.
 
-### Bug-fix tickets: root-cause analysis before proposing a fix
+### Bug fixes: root-cause analysis before proposing a fix
 
-When the ticket describes a bug, apply the **root-cause-analysis** methodology before moving to Step 3:
+When the work describes a bug, apply the **root-cause-analysis** methodology before moving to Step 3:
 
 1. **Reproduce**: Identify or write a minimal repro (test case, script, or manual steps) that demonstrates the failure on the current base branch. If reproduction fails, revisit exploration -- a bug you can't trigger is a bug you don't yet understand.
 
@@ -84,7 +85,7 @@ Do **not** take the easiest-but-ugly path. Evaluate the implementation against:
 
 If there are multiple viable approaches, evaluate trade-offs explicitly.
 
-### Feature tickets: grill on open decisions before spec
+### Features: grill on open decisions before spec
 
 Before locking the spec, walk the design tree with the user. For each unresolved branch (state ownership, extend-vs-create, edge-case behavior, naming, ordering of dependent changes), ask **one question at a time as a regular prose response** -- *not* via AskUser. Pair the question with your recommended answer and, if there are clear forks, 1-3 primary alternatives. Resolve decisions in dependency order; earlier answers often collapse later branches, so batching defeats that.
 
@@ -115,11 +116,11 @@ After spec approval, before implementing the change, apply **consolidate-test-su
 
 ### Place the test
 
-Run the consolidate-test-suites decision: name the invariant (bug: the behavior that broke; feature: the acceptance criterion the ticket promises), pick the lowest owning layer (integration over unit when torn; never e2e to compensate), find the canonical suite (prefer an existing file over a new one).
+Run the consolidate-test-suites decision: name the invariant (bug: the behavior that broke; feature: the acceptance criterion the work promises), pick the lowest owning layer (integration over unit when torn; never e2e to compensate), find the canonical suite (prefer an existing file over a new one).
 
 ### Write the test
 
-- Exercise the **real user-facing flow** -- the behavior that broke (from the spec's root cause and fix path) or the flow the ticket promises (tied to acceptance criteria) -- not the surface symptom or a synthetic happy path.
+- Exercise the **real user-facing flow** -- the behavior that broke (from the spec's root cause and fix path) or the flow the work promises (tied to acceptance criteria) -- not the surface symptom or a synthetic happy path.
 - Test **behavior, not implementation detail**, so it stays a durable guard.
 - If the contract must hold under stress (concurrency, replay, malformed input, scale), that is its **own case** -- write it separately (see consolidate-test-suites).
 

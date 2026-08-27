@@ -15,7 +15,7 @@
 | `/review-pr` | full review workflows, now a skill: first-pass (per-type verification, repro for bugs) / `deeper` (paired confirm-or-kill wave) / `follow-up` (three-lane re-review from worktree dossier `./.agents/review.md`); `/post-review` publishes + writes dossier | `/review-pr 123`, `deeper`, `re-review` |
 | `/address-review` | read reviewer feedback → triage → fix → respond to threads | `/address-review 123` |
 | `/demo-pr` | tuistory before/after filming | `/demo-pr 123` |
-| `/implement` | spec-first exploration + planning; waits for approval before coding | `/implement FAC-789` |
+| `/implement` | spec-first exploration + planning; waits for approval before coding | `/implement FAC-789` or `/implement "<description>"` |
 | `/retrospective` | stranger-review your own diff for entropy (dead weight / junk / perf / drift / scope) | `/retrospective` |
 | `/update-skill` | reflect → update skill → critique ×2 → PR | `/update-skill linear-cli` |
 | `/split-pr` | split long branch into stacked or independent PRs via cherry-pick | `/split-pr feat/big-branch` |
