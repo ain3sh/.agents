@@ -92,6 +92,8 @@ One row per thread. No prose, no rationale -- just the label. The `Locus` column
 
 Permitted actions: `Fix`, `Respond`, `Ack`, `Investigate`, `Resolved`, `Decline`.
 
+**Provenance is not a decline reason.** "Pre-existing", "inherited", or "worth a follow-up" never justifies `Decline` or a deferral note when the issue is real and lies within a locus this PR already touches: the action is `Fix`. `Decline` requires an actual constraint — a design decision, an external compatibility boundary, or genuine out-of-scope distance. Deferral is the **user's** call to make at the confirmation gate, never yours to propose as the default.
+
 ### 4b. Approach (Fix loci and Decline rows)
 
 **One approach block per locus** (or per `Fix` thread when 3.5 was skipped). Each block's `Threads:` field lists every thread it resolves; the locus ID isn't repeated -- the triage table already maps thread → locus.
@@ -130,6 +132,8 @@ Present this in normal chat prose; **do not use `AskUser`** for the triage repor
 **Wait for user confirmation** before making changes.
 
 ## 5. Apply Fixes
+
+User confirmation means proceed **fully** — every confirmed `Fix` row lands in this pass; do not quietly re-punt during application.
 
 Apply the change for **each locus** (or each `Fix` thread when 3.5 was skipped):
 

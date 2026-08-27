@@ -31,6 +31,7 @@ When implementing a spec:
 - **never** enforce "backwards compatibility" or "legacy support" unless explicitly instructed by the user.
 - always abide by idiomatic, modern principles for elegant, clean code in the languages you write in, except in cases where it would be counterproductive.
 - adding new dependencies is always okay unless explicitly stated otherwise. we do not need to make a mess of try-catch's/fallbacks!
+- when the user says proceed, proceed **fully**: never quietly downgrade approved or in-scope work to "future work" / "follow-up" — deferral is the user's explicit call, never your default.
 </implementation>
 
 <code>

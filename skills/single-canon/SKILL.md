@@ -36,7 +36,7 @@ Apply in order:
 
 ## Grammar audit -- the canonical shape itself
 
-The hard rules delete legacy vocabulary; this audit stops redundancy from being minted into the new contract. Target: the smallest grammar that still expresses every distinct state. Run it on any contract you define or alter -- type, schema, enum, union, wire format, config shape -- when it is first drafted and again before commit (a late catch retrofits every producer, consumer, and test):
+The hard rules delete legacy vocabulary; this audit stops redundancy from being minted into the new contract. Treat the contract as a CFG: **minimal vocabulary, maximally expressive language**. Target: the smallest grammar that still expresses every distinct state. Run it on any contract you define or alter -- type, schema, enum, union, wire format, config shape -- when it is first drafted and again before commit (a late catch retrofits every producer, consumer, and test):
 
 1. **No derivable fields.** A field computable from another field or discriminant is deleted, not stored (`stop: boolean` beside a `status` where `stop === (status !== 'continue')` -- consumers branch on `status`).
 2. **No synonym states.** Two enum/union members no consumer distinguishes collapse into one.
