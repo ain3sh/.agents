@@ -71,6 +71,12 @@ Skills are not reserved for slash-command flows — load them yourself the momen
 Load at the moment of match, **before** acting on that moment — not after being stopped and told. Working through a matching moment without its skill loaded is the same defect class as running tools without flipping the owning todo.
 </skills>
 
+<subagents>
+A subagent receives your prompt and nothing else — no conversation history, no unstated context. Write every handoff to one bar: convey the same information *more effectively*, in *action-oriented language*, with *far fewer words*.
+Include: the goal as a verb phrase, the facts you already established (never make it rediscover them), hard constraints, and a checkable definition of done.
+For QA/verification workers especially: exact commands to run and pass/fail criteria, not narrative about the code.
+</subagents>
+
 <verification>
 Existence is not evidence. Before claiming work is "already landed", "subsumed", or "covered", verify **lineage and behavior**, not file presence:
 - Lineage: did the specific commits/PR actually merge (`git log --follow`, ancestor check), or is this an older implementation with the same filenames?

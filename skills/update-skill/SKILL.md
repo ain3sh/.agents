@@ -51,7 +51,7 @@ lines; don't manufacture references for a skill that fits lean in one file.
 Restructure invariants:
 
 - **Zero content dropped**: every fragment of the old skill maps to exactly one new home. Diff old against new to prove it.
-- **Frontmatter `description` is the trigger**: byte-identical unless the trigger itself is what changed.
+- **Frontmatter `description` is the trigger**: byte-identical unless the trigger itself is what changed. When it is: descriptions load into **every** session, so each word is a global tax -- name the triggering moments verb-first, far fewer words.
 - **One owner per fact**: state each warning/mechanism once, point to it elsewhere. Duplication is where staleness breeds.
 
 ## 5. Critique & refine
@@ -60,4 +60,4 @@ Restructure invariants:
 
 **Round 2**: Check redundancy, ambiguity, missing edge cases, inconsistent formatting, ordering, and that the section shapes of step 4 held. Fix.
 
-**Final round**: Critique holistically, x2, optimizing information density per token -- no bloat -- until you are happy with and proud of the work you've done <3
+**Final round**: Critique holistically, x2 -- each pass must convey the same information *more effectively*, in *action-oriented language*, with *far fewer words* -- until you are happy with and proud of the work you've done <3
