@@ -78,6 +78,8 @@ If steps 1-3 produced **>=2 threads whose resolution requires editing code** (an
 
 ## 4. Triage
 
+**Discovery gate.** The triage table is the point of no return: do the due diligence and discovery *now* — read every file an approach block will touch, trace the symbols it names, and self-check each `Change` and `Verify` against code actually read this session — so that step 5 is mechanical execution with no guesswork and no major decision left unconfirmed merely because you didn't read enough. A decision that would otherwise surface mid-apply is an undiscovered `Investigate`; surface it here instead.
+
 Produce two artifacts in this order.
 
 ### 4a. Triage Table
@@ -133,7 +135,7 @@ Present this in normal chat prose; **do not use `AskUser`** for the triage repor
 
 ## 5. Apply Fixes
 
-User confirmation means proceed **fully** — every confirmed `Fix` row lands in this pass; do not quietly re-punt during application.
+User confirmation means proceed **fully** — every confirmed `Fix` row lands in this pass; do not quietly re-punt during application. If applying a fix forces a choice its approach block didn't confirm, stop: that is a step-4 discovery failure — return to triage with the new question rather than deciding it silently.
 
 Apply the change for **each locus** (or each `Fix` thread when 3.5 was skipped):
 
