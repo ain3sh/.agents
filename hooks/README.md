@@ -152,8 +152,8 @@ include = ["instructions/OPERATOR.md"]
 when = ["compact"]
 include = ["instructions/POST_COMPACT.md"]
 [[hooks.session_start.instructions.rules]]
-when = ["*"]
-include = ["instructions/PRINCIPLES.md"]
+when = ["clear"]
+include = ["SOUL.md"]
 
 [hooks.post_tool_use.instructions]
 prompts_dir = "~/.agents/prompts"

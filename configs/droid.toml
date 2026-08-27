@@ -47,9 +47,8 @@ include = ["instructions/OPERATOR.md"]
 [[hooks.session_start.instructions.rules]]
 when = ["compact"]
 include = ["instructions/POST_COMPACT.md"]
-[[hooks.session_start.instructions.rules]]
-when = ["startup", "clear", "compact"]
-include = ["instructions/PRINCIPLES.md"]
+# Operational principles live in ~/.agents/AGENTS.md (loaded natively by the
+# harness every session), not in an injected prompt file.
 
 # ---
 [hooks.pre_tool_use]

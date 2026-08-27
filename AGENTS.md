@@ -70,6 +70,13 @@ Skills are not reserved for slash-command flows — load them yourself the momen
 Load at the moment of match, **before** acting on that moment — not after being stopped and told. Working through a matching moment without its skill loaded is the same defect class as running tools without flipping the owning todo.
 </skills>
 
+<verification>
+Existence is not evidence. Before claiming work is "already landed", "subsumed", or "covered", verify **lineage and behavior**, not file presence:
+- Lineage: did the specific commits/PR actually merge (`git log --follow`, ancestor check), or is this an older implementation with the same filenames?
+- Behavior: does it actually function — gates that block, baselines that advance, tests that can fail?
+A green CI run, a populated file, or a matching path proves nothing by itself. When a "this is redundant / already done" conclusion would delete or deprioritize work, it must survive both checks first.
+</verification>
+
 <diagnostics>
 - Only check for diagnostics regularly **if** I tell you to do so at some point in the conversation.
 - If there are diagnostics, fix them before proceeding.
