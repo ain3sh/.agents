@@ -38,7 +38,7 @@ Note: files this branch owns, what it changes, what to preserve from upstream.
 git merge "$REMOTE/$TARGET" --no-edit
 ```
 
-Clean? Still run §4's auto-resolution audit (with `CONFLICTS=""`), then §5. Else capture the **targeted scope** for §4–§5:
+Clean? Still run §4's auto-resolution audit (with `CONFLICTS=""`) — `$OVERLAP` alone still drives §5 — then §5. Else capture `$CONFLICTS` for §4–§5:
 
 ```bash
 CONFLICTS=$(git diff --name-only --diff-filter=U)
@@ -69,15 +69,15 @@ OVERLAP=$(comm -12 <(git diff --name-only "$MB" HEAD^1 | sort) \
                    <(git diff --name-only "$MB" HEAD^2 | sort))
 ```
 
-For each overlap file not already handled in `$CONFLICTS`: read the merged result around both sides' hunks and confirm the combined logic coheres — no duplicated definitions, no stale references to symbols the other side renamed/moved/deleted (`rg` the old names), no double-applied logic. Anything you fix here is a **Low**-confidence resolution (it gates §6) in its own commit, and its files join the §5 scope.
+For each overlap file not already handled in `$CONFLICTS`: read the merged result around both sides' hunks and confirm the combined logic coheres — no duplicated definitions, no stale references to symbols the other side renamed/moved/deleted (`rg` the old names), no double-applied logic. Anything you fix here is a **Low**-confidence resolution (it gates §6) in its own commit. The whole `$OVERLAP` set joins §5's scope regardless — the manual pass judges semantics, the validators machine-check everything.
 
 ## 5. Quality checks (scoped)
 
-**Targeted scope = `$CONFLICTS`** — *not* the full merge diff. Upstream lines came in pre-validated; widening scope rebuilds packages this branch never touched.
+**Targeted scope = `$CONFLICTS` + `$OVERLAP`** — every co-touched file, *not* the full merge diff. The merge result is the only code nobody has validated: each side passed its own CI, but their combination is new and can fail lint/format/typecheck even where hunks merged cleanly (an orphaned import, a renamed symbol, one declaration edited from both sides). That is exactly the risk `$OVERLAP` names; anything beyond the union only rebuilds packages this branch never touched.
 
 Run **quality-ship** with that scope:
-- Per-file validators (format, lint, slop-scan, vulture, …): pass `$CONFLICTS` paths.
-- Package-scoped validators (typecheck, tests, knip, …): scope to the packages owning `$CONFLICTS` (e.g. `turbo run … --filter={<pkg>…}`).
+- Per-file validators (format, lint, slop-scan, vulture, …): pass `$CONFLICTS` + `$OVERLAP` paths.
+- Package-scoped validators (typecheck, tests, knip, …): scope to the packages owning `$CONFLICTS` + `$OVERLAP` (e.g. `turbo run … --filter={<pkg>…}`).
 
 Worktree repair is **lazy** — load **worktree-setup** only on `Cannot find module` / empty-`dist/` errors for an in-scope package. Don't run `verify.py` proactively; its full-workspace manifest will demand artifacts (electron-forge bundles, …) outside your scope.
 
