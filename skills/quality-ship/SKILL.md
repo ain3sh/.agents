@@ -23,12 +23,15 @@ Never `npm install` or `pip install` in a worktree.
 
 ## Run all detected checks
 
-Detect the project's tooling from config files at the repo root, then run each applicable check:
+Detect tooling from root and affected-workspace configs and package scripts,
+then run each applicable check:
 
 | Check | Detection signals | Typical command |
 |-------|-------------------|-----------------|
-| Format | `.prettierrc*`, `biome.json`, `dprint.json` | `npx prettier --write <paths>` / `biome format --write <paths>` |
-| Lint fix | `eslint.config*`, `.eslintrc*`, `biome.json` | `npx eslint --fix <paths>` / `biome lint --apply <paths>` |
+| Format | `.oxfmtrc*`, `.prettierrc*`, `biome.json*`, `dprint.json*`, configured package scripts | `oxfmt --write --threads=1 <paths>` / `npx prettier --write <paths>` / `biome format --write <paths>` / `dprint fmt <paths>` |
+| Lint fix | `.oxlintrc*`, `eslint.config*`, `.eslintrc*`, `biome.json*`, configured package scripts | `oxlint --fix --threads=1 <paths>` / `npx eslint --fix <paths>` / `biome lint --apply <paths>` |
+| Docs lint | changed Markdown + `.markdownlint*`, `markdownlint-cli2` config/script/workflow, `remark` config/script | configured script / `markdownlint-cli2 <paths>` / `remark <paths>` |
+| Docs links | changed docs + `lychee.toml`, `.lycheeignore`, Lychee script/workflow/action | configured script / `lychee <configured-args> <paths>` |
 | Dead code (JS/TS) | `knip.*`, `knip` in package.json scripts | `npx knip --workspace <pkg>` (monorepo) / `npx knip` |
 | Dead code (Python) | `*.py` in diff + `pyproject.toml` / `setup.py` | `vulture <changed-paths>` (or `uvx vulture`) |
 | AI-slop (JS/TS) | any `*.{js,jsx,ts,tsx}` in diff | `slop-scan delta` on changed-files temp dirs (recipe in references) |
@@ -36,15 +39,23 @@ Detect the project's tooling from config files at the repo root, then run each a
 | Type check | `tsconfig.json` | `npx tsc --noEmit -p <pkg>` |
 | Tests | `jest.config*`, `vitest.config*`, `pytest.ini` | Changed-file subset, serial workers (rules below) |
 
-- Inspect `package.json` scripts (or `pyproject.toml` / `Makefile`) to learn *which* tools the repo uses, but **invoke each tool directly**, scoped to changed paths.
-- **Avoid aggregate "fix everything" scripts** (`npm run fix` / `npm run check`): they chain every tool across the whole repo and can take minutes. Fall back to one only when a tool genuinely can't be invoked directly -- and note that reason in the checklist evidence.
+- Every detected engine is a separate signal: Oxlint does not imply ESLint is
+  redundant, and Oxfmt does not prove Prettier is absent. Read the package
+  scripts and configs to identify the actual owners.
+- Prefer a repository's narrow package script when it preserves cwd-sensitive
+  config, env, or a deliberate multi-engine sequence. Otherwise invoke the
+  tool directly on changed paths.
+- **Avoid repo-wide aggregate scripts** (`npm run fix` / `npm run check`):
+  they can chain every tool across the monorepo. A package-scoped aggregate is
+  valid when the package script is the canonical owner; record the scope and
+  reason in the checklist evidence.
 - Fix any issues found. Re-run until clean.
 
 ## Fix the cause, don't suppress the validator
 
 A failing validator is signal: assume it's right and fix the underlying code -- remove the dead export knip found, narrow the type instead of casting, handle the swallowed error. Silencing it just ships the problem.
 
-Escape hatches (`eslint-disable`, knip `ignore*`, `@ts-ignore`/`@ts-expect-error`, looser `tsconfig`, `# noqa`/`# type: ignore`/vulture whitelists/`# pragma: no cover`, test skips/`.only`/`xfail`) are last resorts for genuine false positives on a specific line -- scoped as narrowly as possible, with a comment justifying *why* it's safe.
+Escape hatches (`eslint-disable`/`oxlint-disable`, knip `ignore*`, `@ts-ignore`/`@ts-expect-error`, looser `tsconfig`, `# noqa`/`# type: ignore`/vulture whitelists/`# pragma: no cover`, test skips/`.only`/`xfail`) are last resorts for genuine false positives on a specific line -- scoped as narrowly as possible, with a comment justifying *why* it's safe.
 
 Blocking policy: new slop-scan violations block, always. react-doctor errors block; warnings block for `security`, `correctness`, `state-and-effects`, `server` -- advisory for `design`. If the slop-scan file list is empty, skip it (`no signal`).
 
@@ -61,6 +72,8 @@ quality-ship checklist:
 - worktree:  <main | repaired> (evidence)
 - format:    <ran | no signal> (evidence)
 - lint:      <ran | no signal> (evidence)
+- docs-lint: <ran | ci-only | no signal> (evidence)
+- docs-links: <ran | ci-only | no signal> (evidence)
 - dead-code: <ran | no signal> (evidence)
 - ai-slop:   <ran | no signal> (evidence)
 - react:     <ran | no signal> (evidence)
@@ -69,13 +82,28 @@ quality-ship checklist:
 - tests:     <ran | no signal> (evidence)
 ```
 
-`evidence` = command run or missing config (validators); detection output + `repair.py` invocation (worktree). Don't commit until every line is filled. When detection emits `WORKTREE`, `worktree: repaired` is the only valid tag -- not "looks fine, skipped".
+`evidence` = command run (+ capture log path when tee'd), workflow/config path
+for `ci-only`, or missing config (validators); detection output + `repair.py`
+invocation (worktree). Don't commit until every line is filled. When detection
+emits `WORKTREE`, `worktree: repaired` is the only valid tag -- not "looks
+fine, skipped".
 
-`no signal` means the tool is **genuinely not configured** in the repo, not that a convenient scoped script is missing. When the tool exists but no pre-wired scoped task does, scope it yourself with the tool's own flags (`knip --workspace <pkg>`, `eslint <paths>`, `tsc -p <pkg>`, `vulture <paths>`) or by `cd`ing into the package. Skipping it or running it unscoped both ship as `no signal` lies.
+`ci-only` means the repository configures a check only in CI and no local
+runner is available without installing or reproducing CI infrastructure.
+`no signal` means the tool is **genuinely not configured** in the repo, not
+that a convenient scoped script is missing. When the tool exists but no
+pre-wired scoped task does, scope it yourself with the tool's own flags
+(`oxfmt <paths>`, `oxlint <paths>`, `eslint <paths>`,
+`knip --workspace <pkg>`, `tsc -p <pkg>`, `vulture <paths>`) or by `cd`ing
+into the package. Skipping it or running it unscoped both ship as `no signal`
+lies.
 
 ## Scoping rules
 
-1. **Scope flags belong to the runner, before `--`.** After `--` they're silently ignored and the validator runs against the whole repo (exit 0, looks scoped, isn't). Per-runner dialects and the npm/turbo trap: references.
+1. **Put each flag where its owning process parses it.** npm workspace flags
+   go before the script name's `--`; Turbo/test-runner flags passed through an
+   npm script go after `--`. Inspect the script before choosing. Per-runner
+   dialects and the npm/Turbo trap: references.
 2. **A "scoped" check that runs minutes is mis-scoped.** Suspect the flag position or dialect before blaming the repo.
 3. **HARD RULE: never run a full test suite to validate a diff.** A bare `npm test` / `run test` / `turbo run test` with no path argument is a defect -- stop and re-scope before it runs. Full-suite runs are CI's job. The one exception -- a genuinely cross-cutting change -- must be logged: `tests: full-suite (reason: <why>)`.
 4. **Tests have two scope axes; you need both.** The package filter picks *which suite*; only a changed-file subset narrows *which tests*: positional paths, or Jest `--findRelatedTests <changed src files>`. Derive from `git diff --name-only` vs the base. Serial workers by default (flags in references).

@@ -3,6 +3,59 @@
 Exact invocations and known dead ends for the heavier validators. Policy
 (when each runs, what blocks) lives in `SKILL.md`; this file is the how.
 
+## Oxfmt and Oxlint
+
+Detect both config files and package scripts. A repository may deliberately
+run multiple configs or both Oxlint and ESLint; do not replace the canonical
+sequence with one direct command.
+
+Scoped direct shapes:
+
+```bash
+oxfmt --write --threads=1 <paths>
+oxfmt --check --threads=1 <paths>
+oxlint --fix --threads=1 <paths>
+oxlint --threads=1 <paths>
+```
+
+- Resolve the repository-installed binary through its package manager when it
+  is not already on `PATH`; never let an executor install a missing validator
+  inside a shared worktree.
+- Oxfmt writes by default; use `--check` for verification-only runs.
+- Do not use Oxlint's `--fix-dangerously` unless the repository explicitly
+  approves behavior-changing fixes.
+- Do not invent `-c <config>` when the package script omits it. Explicit config
+  selection can bypass a separate root or auto-discovered config pass.
+- Keep resource limits from repository instructions. `--threads=1` is the
+  safe default for shared machines and narrow checks.
+
+## Documentation validation
+
+Formatting, Markdown linting, and link checking are independent checks. Run
+every configured owner; a formatter does not enforce Markdown structure, and
+a Markdown linter does not verify link targets.
+
+| Check | Common signals | Scoped shape |
+|---|---|---|
+| Format | formatter config/script that includes Markdown | use the configured formatter on changed docs |
+| Markdown lint | `.markdownlint*`, `markdownlint-cli2` config/script/workflow, `remark` config/script | configured script / `markdownlint-cli2 <paths>` / `remark <paths>` |
+| Links | `lychee.toml`, `.lycheeignore`, Lychee script/workflow/action | configured script / `lychee <configured-args> <paths>` |
+
+- Prefer the configured script. Markdown globs, ignores, custom rules, and
+  plugin loading are part of the gate.
+- Preserve Lychee's configured mode and arguments. Offline mode, fragment
+  checks, root directory, accepted status codes, and exclusions materially
+  change what it validates.
+- A link checker may intentionally scan all docs because fragments and
+  relative links cross file boundaries. Do not narrow a repo-wide configured
+  gate unless its command supports equivalent changed-file scoping.
+- If the check exists only in CI and no local runner is available without an
+  install or CI emulation, record `ci-only` with the workflow/config path.
+  Never report `no signal`.
+- Treat workflow-specific documentation checks (generated indexes, line
+  ceilings, schema checks) as additional signals; do not assume
+  Markdownlint/Lychee subsume them.
+
 ## slop-scan delta (AI-slop, JS/TS)
 
 Run on **temp dirs containing only the changed files**, then delete them:
@@ -41,47 +94,52 @@ fetch-in-effect, missing Suspense around `useSearchParams`, server-fn input
 validation, etc.). See the **react-doctor** skill for category-gated triage
 policy, false-positive handling, and config.
 
-## Monorepo scoping: the right flag, in the right position
+## Monorepo scoping: identify the flag owner
 
-Scope flags belong to the **runner**, so they go **before** `--`. Put one
-after and it gets silently handed to the underlying tool (which ignores it),
-and the validator runs against the whole repo. Each runner uses a different
-flag:
+`--` separates package-manager arguments from arguments passed to the script.
+The correct side depends on which process owns the scope flag:
 
-| Runner | Scope flag |
-|--------|-----------|
-| npm    | `--workspace=<pkg>` (`-w <pkg>`) |
-| pnpm   | `--filter <pkg>` |
-| yarn   | positional: `yarn workspace <pkg> <task>` |
-| turbo  | `--filter=<pkg>` |
+| Scope owner | Shape |
+|---|---|
+| npm workspace selection | `npm run <task> --workspace=<pkg>` (`-w <pkg>`) |
+| pnpm workspace selection | `pnpm --filter <pkg> <task>` |
+| yarn workspace selection | `yarn workspace <pkg> <task>` |
+| direct Turbo | `turbo run <task> --filter=<pkg>` |
+| Turbo behind an npm script | `npm run <task> -- --filter=<pkg>` |
+| test/lint tool behind a package script | `npm run <task> -- <tool-flags> <paths>` |
 
-**The trap that keeps biting**: droids borrow turbo's `--filter` for npm and
-stick it after `--`:
+Inspect the script before choosing:
 
 ```bash
-# WRONG: `--filter` isn't an npm flag; after `--` it's passed to tsc,
-# which ignores it and typechecks the WHOLE repo (looks scoped, isn't).
-npm run typecheck -- --filter=@factory/cli
+# Root script delegates to Turbo: Turbo owns --filter, so pass it through.
+npm run test -- --filter=@scope/pkg
 
-# RIGHT
-npm run typecheck --workspace=@factory/cli   # or: -w @factory/cli
-turbo run typecheck --filter=@factory/cli    # prefer when turbo.json exists
+# Run the package's own script: npm owns --workspace.
+npm run test --workspace=@scope/pkg -- src/foo.test.ts
+
+# Direct Turbo invocation.
+turbo run test --filter=@scope/pkg -- src/foo.test.ts
 ```
 
-The failure is silent (exit 0 or timeout). If a "scoped" check runs
-unexpectedly long, suspect the flag is in the wrong place or wrong dialect
-before blaming the repo.
+Wrong:
 
-Prefer turbo when `turbo.json` is present (it picks up workspace-level config
-that direct invocation misses); otherwise use the table. Last resort: `cd`
-into the package and run there. Derive affected packages from
-`git diff --name-only` vs the base.
+```bash
+# npm consumes/ignores the unknown placement; Turbo never receives the filter.
+npm run test --filter=@scope/pkg
+```
+
+Do not bypass a canonical root or package script merely because `turbo.json`
+exists. Scripts may supply env, heap limits, cwd-sensitive config, or multiple
+validators. If a scoped run takes unexpectedly long, inspect the script and
+process owning each flag before blaming the repo.
+
+Derive affected packages from `git diff --name-only` vs the base.
 
 **Cwd-sensitive configs:** some tools resolve config from their working
 directory, making `cd` into the package required rather than a last resort.
-Known case: factory-mono `apps/cli`'s `@/` aliases only resolve when ESLint
-runs from `apps/cli`; from the root you get false `import/no-unresolved`
-errors.
+For example, package-local path aliases may resolve only when ESLint runs from
+that package; invoking it from the root can produce false
+`import/no-unresolved` errors.
 
 ## Test runners: serial flags and concurrency mitigations
 
