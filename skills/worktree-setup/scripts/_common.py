@@ -6,8 +6,11 @@ Sibling scripts import this via sys.path[0] (the scripts directory), so
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -52,6 +55,125 @@ PACKAGE_BUILD_DIRS_OVERRIDE: list[str] | None = (
     if _PKG_BUILD_RAW is None
     else [value.strip() for value in _PKG_BUILD_RAW.split(",") if value.strip()]
 )
+
+
+# ============================================================================
+# Process coordination
+# ============================================================================
+
+
+@contextlib.contextmanager
+def repo_lock(main_repo: Path, name: str = "worktree-setup") -> Iterator[None]:
+    """Serialize repair/break runs across all sessions sharing this repo.
+
+    Rebuilds are metadata-heavy; overlapping runs (human + concurrent agents)
+    stall the filesystem and leave half-mirrored trees. Blocking is safe: the
+    holder is making progress, and rsync-based rebuilds resume if it dies.
+    """
+    try:
+        git_dir = Path(
+            subprocess.check_output(
+                ["git", "rev-parse", "--git-common-dir"], cwd=main_repo, text=True
+            ).strip()
+        )
+        if not git_dir.is_absolute():
+            git_dir = main_repo / git_dir
+    except (OSError, subprocess.CalledProcessError):
+        git_dir = main_repo / ".git"
+    lock_path = git_dir / f"{name}.lock"
+    fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print(
+                f"waiting for another worktree-setup process (lock: {lock_path})",
+                file=sys.stderr,
+                flush=True,
+            )
+            fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(fd)  # closing the fd releases the flock
+
+
+# ============================================================================
+# Disk headroom
+# ============================================================================
+
+MAX_METADATA_PCT = float(os.environ.get("WORKTREE_MAX_METADATA_PCT", "90"))
+MIN_UNALLOCATED_GIB = float(os.environ.get("WORKTREE_MIN_UNALLOCATED_GIB", "2"))
+
+_headroom_checked = False
+
+
+def btrfs_pressure(path: Path) -> tuple[float, int] | None:
+    """(metadata used ratio, unallocated bytes) when path sits on btrfs."""
+    while not path.exists():  # findmnt needs a real path; dst may not exist yet
+        if path == path.parent:
+            return None
+        path = path.parent
+    try:
+        fstype = subprocess.check_output(
+            ["findmnt", "-n", "-o", "FSTYPE", "--target", str(path)], text=True
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    if fstype != "btrfs":
+        return None
+    try:
+        df = subprocess.check_output(
+            ["btrfs", "filesystem", "df", "-b", str(path)], text=True
+        )
+        usage = subprocess.check_output(
+            ["btrfs", "filesystem", "usage", "-b", str(path)],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    meta = re.search(r"^Metadata[^:]*:\s*total=(\d+),\s*used=(\d+)", df, re.M)
+    unallocated = re.search(r"Device unallocated:\s*(\d+)", usage)
+    if not meta or not unallocated:
+        return None
+    total, used = int(meta.group(1)), int(meta.group(2))
+    if not total:
+        return None
+    return used / total, int(unallocated.group(1))
+
+
+def disk_pressure_msg(path: Path) -> str | None:
+    """Why a metadata-heavy rebuild would stall here, or None when safe.
+
+    btrfs with full metadata chunks AND no unallocated space to grow them
+    stalls in transaction commit instead of returning ENOSPC cleanly, so the
+    only legible failure is a preflight check.
+    """
+    stats = btrfs_pressure(path)
+    if stats is None:
+        return None
+    ratio, unallocated = stats
+    if ratio * 100 < MAX_METADATA_PCT:
+        return None
+    if unallocated >= MIN_UNALLOCATED_GIB * (1 << 30):
+        return None
+    return (
+        f"btrfs metadata is {ratio:.0%} full with "
+        f"{unallocated / (1 << 30):.1f} GiB unallocated; rebuilds would stall. "
+        "Free space, then rebalance: sudo btrfs balance start -dusage=25 / "
+        "(thresholds: WORKTREE_MAX_METADATA_PCT, WORKTREE_MIN_UNALLOCATED_GIB)"
+    )
+
+
+def ensure_disk_headroom(path: Path) -> None:
+    """Preflight gate before the first mirror rebuild; once per process."""
+    global _headroom_checked
+    if _headroom_checked:
+        return
+    _headroom_checked = True
+    msg = disk_pressure_msg(path)
+    if msg:
+        sys.exit(f"refusing to rebuild mirrors: {msg}")
 
 
 # ============================================================================

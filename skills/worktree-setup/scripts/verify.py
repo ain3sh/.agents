@@ -15,6 +15,7 @@ from pathlib import Path
 from _common import (
     CWD,
     collect_export_strings,
+    disk_pressure_msg,
     env_flag,
     find_node_modules,
     git_worktrees,
@@ -197,6 +198,8 @@ def main() -> int:
         sweep=env_flag("WORKTREE_VERIFY_ALL"),
         missing_msg="cwd not inside a non-main worktree; nothing to verify",
     )
+    if msg := disk_pressure_msg(main_repo):
+        print(f"warning: {msg}")
     fail = sum(1 for wt in targets if not verify_worktree(main_repo, wt))
     return 1 if fail else 0
 

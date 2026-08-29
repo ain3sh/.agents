@@ -24,6 +24,7 @@ from _common import (
     is_within,
     iter_tree,
     remove,
+    repo_lock,
     select_targets,
     workspaces,
 )
@@ -188,8 +189,9 @@ def main() -> None:
         sweep=env_flag("WORKTREE_BREAK_ALL"),
         missing_msg="cwd not inside a non-main worktree; nothing to break",
     )
-    for wt in targets:
-        break_worktree(main_repo, wt)
+    with repo_lock(main_repo):
+        for wt in targets:
+            break_worktree(main_repo, wt)
 
 
 if __name__ == "__main__":

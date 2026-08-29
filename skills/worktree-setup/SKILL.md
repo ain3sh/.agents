@@ -36,6 +36,7 @@ You are in a worktree when `git rev-parse --show-toplevel` differs from the firs
 | Symptom | Action |
 |---|---|
 | `Cannot find module X` from a workspace package | `worktree-cli repair` |
+| repair refuses: "btrfs metadata is ... full" / rebuilds stall with ENOSPC | free space, then `sudo btrfs balance start -dusage=25 /`, rerun repair |
 | Stale exports, impossible type errors, relative imports failing | `worktree-cli repair` |
 | Workspace package added on this branch, absent in main | `worktree-cli repair` (discovery reads the worktree's `package.json`) |
 | `dist/` empty or `Cannot find module '@scope/pkg/dist/...'` | repair; if the build dir isn't auto-detected, set `WORKTREE_PACKAGE_BUILD_DIRS=...` and rerun |

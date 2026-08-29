@@ -9,7 +9,9 @@ See SKILL.md for env vars. Idempotent. Never installs in the worktree.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
+import sys
 from collections import deque
 from pathlib import Path
 
@@ -17,15 +19,19 @@ from _common import (
     CWD,
     EXTRA_MIRROR_DIRS,
     detect_package_build_dirs,
+    ensure_disk_headroom,
     env_flag,
     find_node_modules,
     git_ignored_paths,
     git_tracked_paths,
     git_worktrees,
     remove,
+    repo_lock,
     select_targets,
     workspaces,
 )
+
+RSYNC = shutil.which("rsync")
 
 
 # ============================================================================
@@ -70,15 +76,31 @@ def already_mirrored(src: Path, dst: Path) -> bool:
     return sample.stat().st_ino == cand.stat().st_ino
 
 
-def mirror(src: Path, dst: Path) -> bool:
+def mirror(src: Path, dst: Path, verbose: bool = False) -> bool:
     # Non-JS repos have no node_modules in main; nothing to mirror.
     if not src.is_dir():
         return False
     if already_mirrored(src, dst):
         return False
-    remove(dst)
+    ensure_disk_headroom(dst)
     dst.mkdir(parents=True, exist_ok=True)
-    subprocess.check_call(["cp", "-al", str(src) + "/.", str(dst) + "/"])
+    if verbose:
+        print(
+            f"  rebuilding {dst} from main (interruptible; rerun resumes)",
+            flush=True,
+        )
+    # rsnapshot-style converge-in-place: files unchanged vs the link-dest
+    # become hardlinks to main, deltas are fixed up, extras deleted. Unlike
+    # rmtree + cp -al this is incremental (cost scales with what changed in
+    # main) and an interrupted run leaves a valid tree that the rerun resumes.
+    proc = subprocess.run(
+        ["rsync", "-a", "--delete", f"--link-dest={src}/", f"{src}/", f"{dst}/"],
+        check=False,
+    )
+    if proc.returncode == 24:
+        print("  warning: main changed during mirror; rerun repair", file=sys.stderr)
+    elif proc.returncode != 0:
+        sys.exit(f"rsync failed with exit code {proc.returncode}")
     return True
 
 
@@ -221,14 +243,14 @@ def mirror_package_builds(main: Path, wt: Path, pkgs: dict[str, Path]) -> str:
 
 def repair_worktree(main_repo: Path, wt: Path, main_local_nms: list[Path]) -> str:
     pkgs = workspaces(wt)
-    root_built = mirror(main_repo / "node_modules", wt / "node_modules")
+    root_built = mirror(main_repo / "node_modules", wt / "node_modules", verbose=True)
     root_changed, root_total = rewire(wt / "node_modules", wt, pkgs)
 
     local_built = local_fresh = local_changed = local_total = 0
     for rel_nm in main_local_nms:
         if not (wt / rel_nm.parent).exists():
             continue
-        if mirror(main_repo / rel_nm, wt / rel_nm):
+        if mirror(main_repo / rel_nm, wt / rel_nm, verbose=True):
             local_built += 1
         else:
             local_fresh += 1
@@ -248,6 +270,8 @@ def repair_worktree(main_repo: Path, wt: Path, main_local_nms: list[Path]) -> st
 
 
 def main() -> None:
+    if RSYNC is None:
+        sys.exit("repair requires rsync (sudo pacman -S rsync)")
     main_repo, others = git_worktrees(CWD)
     targets = select_targets(
         others,
@@ -260,10 +284,11 @@ def main() -> None:
     if not targets:
         return
 
-    main_local_nms = discover_local_node_modules(main_repo)
-    for i, wt in enumerate(targets, 1):
-        summary = repair_worktree(main_repo, wt, main_local_nms)
-        print(f"[{i}/{len(targets)}] {wt.name}: {summary}")
+    with repo_lock(main_repo):
+        main_local_nms = discover_local_node_modules(main_repo)
+        for i, wt in enumerate(targets, 1):
+            summary = repair_worktree(main_repo, wt, main_local_nms)
+            print(f"[{i}/{len(targets)}] {wt.name}: {summary}")
 
 
 if __name__ == "__main__":

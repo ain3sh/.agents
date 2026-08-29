@@ -13,11 +13,13 @@ Preconditions: main's dependencies and generated artifacts are healthy
 
 What it does:
 
-- hardlink-mirrors root and package-local `node_modules` from main
+- hardlink-mirrors root and package-local `node_modules` from main via `rsync -a --delete --link-dest=<main>` (rsnapshot-style): cost scales with what changed in main, not the tree size, and an interrupted run leaves a valid tree the rerun resumes -- no rmtree-first window that strands a partial mirror
 - rewires workspace packages to the worktree's own `packages/`, with relative symlinks
 - mirrors postinstall build outputs per workspace package (auto-detected from each `package.json`'s `main`/`module`/`types`/`exports` fields), so `packages/<pkg>/dist/` etc. populate without rebuilding
 - conservatively skips auto-detected directories that contain any tracked content (for example an export rooted at `auth/src/` rather than `src/`)
 - links `.venv`/`venv` from main when present
+- serializes with break and other repair runs through an `flock` in the repo's git dir, so concurrent sessions queue instead of stampeding the filesystem
+- before the first rebuild, refuses to run when the filesystem is btrfs with metadata >= `WORKTREE_MAX_METADATA_PCT`% full AND < `WORKTREE_MIN_UNALLOCATED_GIB` GiB unallocated -- btrfs stalls in transaction commit there instead of failing cleanly, so the gate fails fast with the balance command to run
 
 | Var | Effect |
 |---|---|
@@ -25,6 +27,8 @@ What it does:
 | `WORKTREES_ROOT=/path` | In all-mode, only repair worktrees under this dir. |
 | `WORKTREE_MIRROR_DIRS=a,b/c` | Comma-separated repo-relative paths to additionally mirror from main (e.g. generated artifact dirs at the repo root). |
 | `WORKTREE_PACKAGE_BUILD_DIRS=dist,lib` | Override the auto-detected per-package build output dirs. Set empty to disable build-output mirroring. |
+| `WORKTREE_MAX_METADATA_PCT=90` | btrfs metadata fullness (percent) at which rebuilds are refused. |
+| `WORKTREE_MIN_UNALLOCATED_GIB=2` | Minimum unallocated btrfs space (GiB) required when metadata is past the fullness threshold. |
 
 **Safety:** any mirror that would clobber an existing destination refuses unless
 the destination is git-ignored. A typo in `WORKTREE_MIRROR_DIRS` cannot wipe
@@ -54,6 +58,7 @@ What it does:
 - removes ignored, auto-detected package build directories when they share files with main
 - removes symlinks that resolve into main, including linked `.venv`/`venv`
 - copy-breaks any remaining hardlinks to main in place, preserving paths and contents
+- takes the same repo-wide `flock` as repair, so the two never interleave
 
 It does not install or rebuild. Afterward, run the repository's normal
 install/setup flow with its required runtime and package-manager versions.
