@@ -93,6 +93,30 @@ grep = false # Preserve ripgrep-only flags such as --hidden and --glob.
 # git = false   # e.g. keep raw git output if commit_review_guard needs it
 
 
+[hooks.pre_tool_use.capture]
+# Enforce file-first capture of validator/check output. Interactive
+# PreToolUse denies validator-led commands that pipe through inline filters
+# (rg/grep/head/...) without capturing, with the exact tee'd re-run command
+# in the deny reason. droid exec passes through instead (deny is fail-fast
+# fatal there, and exec drops updatedInput — both verified) and gets a
+# corrective PostToolUse additionalContext note; captured runs get one
+# log-pointer note per path. Narrow trigger: validator-led pipeline segments
+# only — `curl | bash`, `git log | rg`, already-tee'd or file-redirected
+# commands pass through.
+enabled = true
+log_dir = "/tmp/droid-capture"
+# The validator vocabulary lives here, not in code: a bare `tools` entry at
+# segment start (after env/wrapper prefixes) is a check. Structural runners
+# (npm/pnpm/yarn/bun run <test|lint|...>, turbo, go test, cargo test/clippy,
+# make ...test/check/lint) are matched in the hook itself.
+tools = [
+  "vitest", "jest", "pytest", "playwright",
+  "eslint", "biome", "oxlint", "prettier", "oxfmt", "knip",
+  "tsc", "pyright", "mypy",
+  "ruff", "vulture", "golangci-lint",
+  "slop-scan", "react-doctor",
+]
+
 [hooks.pre_tool_use.tirith]
 # Tirith terminal-security guard — https://github.com/sheeki03/tirith
 enabled   = true

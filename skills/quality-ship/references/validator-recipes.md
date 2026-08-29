@@ -3,6 +3,45 @@
 Exact invocations and known dead ends for the heavier validators. Policy
 (when each runs, what blocks) lives in `SKILL.md`; this file is the how.
 
+## Output capture: file-first, never inline-filter
+
+Anti-pattern: `<check> 2>&1 | rg "FAIL|Tests " | head -6`. It guesses in
+advance -- and irrevocably -- which slice of output matters. A wrong guess
+(JSON log lines matching `Tests `, expected error-path logs matching
+`error `) destroys the evidence, and the only recovery is re-running the
+whole suite with a new guess. Two bonus lies: `$?` after a pipeline is the
+last filter's exit code (rg/head), not the runner's, and `head` closing the
+pipe early can SIGPIPE-kill the runner mid-suite while the pipeline still
+exits 0.
+
+Canonical shape -- capture first, then a small visible slice:
+
+```bash
+npx vitest run <paths> 2>&1 | tee /tmp/qs-test.log | tail -n 30
+<scoped-lint-command> 2>&1 | tee /tmp/qs-lint.log | tail -n 30
+```
+
+- `tail` as the visible slice: Vitest/Jest/ESLint/Oxlint/Oxfmt summaries print
+  at the end.
+- For anything else, query the log (`rg -n -C3 FAIL /tmp/qs-test.log`, Read).
+  Re-querying a file is free; re-running a suite is not.
+- Need the runner's real exit code: `set -o pipefail` first (bash/zsh), or
+  read the summary lines from the log.
+
+The `capture` hook enforces the shape: recognized validators piped through
+filters without capture get **denied** (interactively), with the exact tee'd
+re-run command in the deny reason; in `droid exec`, where a deny would kill
+the run, the command runs and a corrective PostToolUse note carries the same
+re-run command. After a captured run, the PostToolUse pass points you at the
+log. It only fires on validator-led pipeline segments with no existing
+capture -- `curl ... | bash`, `git log | rg`, already-tee'd or
+file-redirected commands pass through untouched. The validator vocabulary is
+the `tools` list under `[hooks.pre_tool_use.capture]` in `configs/droid.toml`
+(includes oxlint/oxfmt) plus structural runner patterns (npm/pnpm/yarn/bun
+`run <test|lint|typecheck|check|build>`, turbo, go/cargo/make checks); for a
+validator it doesn't recognize, add it to that list -- and tee manually in
+the moment. Toggle/log dir live in the same section.
+
 ## Oxfmt and Oxlint
 
 Detect both config files and package scripts. A repository may deliberately

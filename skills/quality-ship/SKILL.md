@@ -21,6 +21,19 @@ MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
 If in a worktree, follow the **worktree-setup** skill before any checks.
 Never `npm install` or `pip install` in a worktree.
 
+## Capture check output file-first
+
+Every check invocation tees full output to a log BEFORE any filter:
+
+```bash
+npx vitest run <paths> 2>&1 | tee /tmp/qs-test.log | tail -n 30
+```
+
+- Summaries print last, so `tail` after the tee answers pass/fail in one observation; the log keeps everything.
+- To see different output, query the log (`rg`, Read) -- **never re-run a check just to change the filter**. Re-running to re-filter is the defect.
+- `$?` after a pipeline is the last filter's exit code, not the check's, and `| head` closing the pipe early can SIGPIPE-kill the runner. Read pass/fail from the log, or `set -o pipefail` first (bash/zsh).
+- The `capture` hook enforces this: recognized validator commands that filter without capturing get the tee'd re-run command handed to them (interactively as a deny; in `droid exec` as a post-run note), and captured runs get pointed at their log. That log is the evidence of record. Rationale, per-runner shapes, and the config-owned tools list: `references/validator-recipes.md`.
+
 ## Run all detected checks
 
 Detect tooling from root and affected-workspace configs and package scripts,
