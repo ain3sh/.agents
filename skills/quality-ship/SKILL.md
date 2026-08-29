@@ -6,10 +6,45 @@ user-invocable: false
 
 # Quality Checks + Ship
 
+Run each scoped check once, attached, with every byte visible live and logged.
 Exact invocations, monorepo/test scoping tables, and known dead ends live in
 `references/validator-recipes.md` -- load it before running slop-scan,
-react-doctor, or anything in a monorepo. This file owns policy: what runs,
-what blocks, what gets logged.
+react-doctor, or anything in a monorepo.
+
+## Act: run checks through one primitive
+
+```bash
+~/.agents/scripts/run-check <label> [--cwd <dir>] [--env KEY=VALUE]... -- <scoped-validator-argv>
+```
+
+Examples:
+
+```bash
+~/.agents/scripts/run-check test -- npx vitest run src/foo.test.ts
+~/.agents/scripts/run-check lint -- npx eslint src/foo.ts
+~/.agents/scripts/run-check e2e --cwd apps/cli --env PATH="$HOME/.nvm/versions/node/v22.19.0/bin:$PATH" -- npm run test:e2e:run -- e2e-tests/chat-input.test.ts
+```
+
+`run-check` streams complete merged stdout/stderr to the attached Execute
+call, writes the same bytes under `/tmp/droid-checks/`, waits, prints the log
+path and exit status, and exits with the validator's exact status. It owns the
+check's cwd, environment, cancellation forwarding, and bounded log retention;
+do not compose shell setup around it.
+
+1. Never use `fireAndForget`, shell `&`, or a detached task for checks -- an
+   unattended process can fail while the model sleeps or polls stale output.
+2. Never use `cd`, leading shell assignments, redirects, or pipes around a
+   check, including through `tee`, `tail`, `head`, or `rg` -- `run-check`
+   already owns live display and persistence.
+3. Never append `sleep`, `tail`, `rg`, `echo $?`, or any other shell action
+   after a check -- the attached tool result is the complete evidence.
+4. Never cancel a quiet check to inspect its log. Wait for the foreground
+   call. If the user cancels it, record the run as interrupted, not failed.
+5. Never re-run a check to change the visible slice; there is no slice.
+
+The `check_guard` hook denies recognized validators that bypass this shape,
+including in `droid exec` (where a violation intentionally ends the run). It
+is a cooperation guard, not a Bash sandbox.
 
 ## Pre-check: worktree environment
 
@@ -21,23 +56,11 @@ MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
 If in a worktree, follow the **worktree-setup** skill before any checks.
 Never `npm install` or `pip install` in a worktree.
 
-## Capture check output file-first
-
-Every check invocation tees full output to a log BEFORE any filter:
-
-```bash
-npx vitest run <paths> 2>&1 | tee /tmp/qs-test.log | tail -n 30
-```
-
-- Summaries print last, so `tail` after the tee answers pass/fail in one observation; the log keeps everything.
-- To see different output, query the log (`rg`, Read) -- **never re-run a check just to change the filter**. Re-running to re-filter is the defect.
-- `$?` after a pipeline is the last filter's exit code, not the check's, and `| head` closing the pipe early can SIGPIPE-kill the runner. Read pass/fail from the log, or `set -o pipefail` first (bash/zsh).
-- The `capture` hook enforces this: recognized validator commands that filter without capturing get the tee'd re-run command handed to them (interactively as a deny; in `droid exec` as a post-run note), and captured runs get pointed at their log. That log is the evidence of record. Rationale, per-runner shapes, and the config-owned tools list: `references/validator-recipes.md`.
-
 ## Run all detected checks
 
 Detect tooling from root and affected-workspace configs and package scripts,
-then run each applicable check:
+then run each applicable check. Every "Typical command" below is validator
+argv placed after `run-check ... --`:
 
 | Check | Detection signals | Typical command |
 |-------|-------------------|-----------------|
@@ -95,7 +118,7 @@ quality-ship checklist:
 - tests:     <ran | no signal> (evidence)
 ```
 
-`evidence` = command run (+ capture log path when tee'd), workflow/config path
+`evidence` = command run (+ `run-check` log path), workflow/config path
 for `ci-only`, or missing config (validators); detection output + `repair.py`
 invocation (worktree). Don't commit until every line is filled. When detection
 emits `WORKTREE`, `worktree: repaired` is the only valid tag -- not "looks
@@ -107,9 +130,9 @@ runner is available without installing or reproducing CI infrastructure.
 that a convenient scoped script is missing. When the tool exists but no
 pre-wired scoped task does, scope it yourself with the tool's own flags
 (`oxfmt <paths>`, `oxlint <paths>`, `eslint <paths>`,
-`knip --workspace <pkg>`, `tsc -p <pkg>`, `vulture <paths>`) or by `cd`ing
-into the package. Skipping it or running it unscoped both ship as `no signal`
-lies.
+`knip --workspace <pkg>`, `tsc -p <pkg>`, `vulture <paths>`) with `--cwd`
+when package-local config requires it. Skipping it or running it unscoped both
+ship as `no signal` lies.
 
 ## Scoping rules
 

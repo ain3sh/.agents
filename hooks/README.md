@@ -25,7 +25,7 @@ hooks/
 │   ├── policy.py
 │   ├── commit_review_guard.py
 │   ├── rtk_rewrite.py
-│   ├── capture_rewrite.py
+│   ├── check_guard.py
 │   ├── tirith_guard.py
 │   └── vscode_auto_ensure.py
 ├── post_tool_use/
@@ -113,7 +113,7 @@ if __name__ == "__main__":
 - **`policy.py`**: rule-based tool policy with glob matching and `server:tool` pattern matching. Supports allow, ask, or deny decisions.
 - **`commit_review_guard.py`**: blocks `git push` if CodeRabbit CLI reports findings; runs on detected push commands.
 - **`rtk_rewrite.py`**: transparently rewrites `Execute` commands through [`rtk`](https://github.com/rtk-ai/rtk) (`rtk rewrite <cmd>`) to compress tool output and save 60-90% tokens. Fails open: missing rtk, unsupported command, or explicit surface disable → pass-through. Per-surface toggles live under `[hooks.pre_tool_use.rtk.surfaces]` in `configs/droid.toml`.
-- **`capture_rewrite.py`**: enforces file-first capture of check output. Validator-led pipeline segments that filter inline without capturing get denied interactively with the exact tee'd re-run command in the deny reason; in `droid exec` (detected via `FACTORY_EXEC_TARGET_AUTONOMY`) the command runs and a corrective `PostToolUse` `additionalContext` note carries the same re-run command, because exec drops `updatedInput` and treats a deny as fail-fast fatal (both verified empirically). Captured runs get one log-pointer note per path; a per-session seen-file dedupes everything, and a deny pre-records its paths so the compliant retry stays silent. Kills the re-run-to-refilter loop; `curl | bash`, `git log | rg`, already-tee'd/redirected commands pass through. The validator vocabulary is the `tools` list under `[hooks.pre_tool_use.capture]` in `configs/droid.toml` (structural runner patterns like `npm run test` / `go test` / `cargo clippy` live in the hook). Fails open; registered for both `PreToolUse` and `PostToolUse` on `Execute`.
+- **`check_guard.py`**: requires recognized validators to use the no-shell `scripts/run-check <label> [--cwd ...] [--env ...] -- <argv...>` grammar. The Python runner owns cwd, environment, attached execution, complete live stdout/stderr, bounded logs, signal forwarding, and exact exit status. The guard tokenizes with Python's standard shell lexer, denies recognized raw validators and shell composition around the canonical runner, and never reconstructs commands. It is a cooperation guard, not a Bash sandbox. Violations also hard-fail `droid exec` by design; internal hook errors fail open. The validator vocabulary is the `tools` list under `[hooks.pre_tool_use.checks]` in `configs/droid.toml`; structural package/test runners live in the hook. Registered for `PreToolUse` on `Execute`.
 - **`vscode_auto_ensure.py`**: transparently spawns/reuses the isolated headless VSCode instance behind `vscode:*` MCP tool calls (see `skills/vscode-workspace`). First call on a cold workspace blocks ~10-30s; later calls cost one socket health check. A failed ensure denies with the real reason; hook errors fail open.
 
 ### PostToolUse

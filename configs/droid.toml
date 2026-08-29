@@ -93,18 +93,13 @@ grep = false # Preserve ripgrep-only flags such as --hidden and --glob.
 # git = false   # e.g. keep raw git output if commit_review_guard needs it
 
 
-[hooks.pre_tool_use.capture]
-# Enforce file-first capture of validator/check output. Interactive
-# PreToolUse denies validator-led commands that pipe through inline filters
-# (rg/grep/head/...) without capturing, with the exact tee'd re-run command
-# in the deny reason. droid exec passes through instead (deny is fail-fast
-# fatal there, and exec drops updatedInput — both verified) and gets a
-# corrective PostToolUse additionalContext note; captured runs get one
-# log-pointer note per path. Narrow trigger: validator-led pipeline segments
-# only — `curl | bash`, `git log | rg`, already-tee'd or file-redirected
-# commands pass through.
+[hooks.pre_tool_use.checks]
+# Require validators to run once through scripts/run-check: foreground,
+# complete stdout/stderr visible live, the same bytes persisted, and the
+# validator's exact exit status returned. Raw, backgrounded, redirected,
+# piped, or post-command-polled recognized validators are denied, including
+# in `droid exec`; a violation intentionally fails that automation run.
 enabled = true
-log_dir = "/tmp/droid-capture"
 # The validator vocabulary lives here, not in code: a bare `tools` entry at
 # segment start (after env/wrapper prefixes) is a check. Structural runners
 # (npm/pnpm/yarn/bun run <test|lint|...>, turbo, go test, cargo test/clippy,

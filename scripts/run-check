@@ -1,0 +1,202 @@
+#!/usr/bin/env python3
+"""Run one check attached, mirror every byte to a bounded log, forward signals."""
+
+from __future__ import annotations
+
+import fcntl
+import os
+import re
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+MAX_LOG_FILES = 50
+READ_SIZE = 64 * 1024
+TERMINATION_GRACE_SECONDS = 1.0
+_ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_SLUG_RE = re.compile(r"[^a-z0-9._-]+")
+
+
+@dataclass(frozen=True, slots=True)
+class Options:
+    label: str
+    cwd: str | None
+    env: dict[str, str]
+    command: list[str]
+
+
+def _usage() -> None:
+    print(
+        "usage: run-check <label> [--cwd <directory>] "
+        "[--env KEY=VALUE]... -- <command> [args...]",
+        file=sys.stderr,
+    )
+    raise SystemExit(64)
+
+
+def _parse(argv: list[str]) -> Options:
+    if len(argv) < 3:
+        _usage()
+
+    label = argv[0]
+    cwd: str | None = None
+    env: dict[str, str] = {}
+    index = 1
+
+    while index < len(argv):
+        token = argv[index]
+        if token == "--":
+            command = argv[index + 1 :]
+            if not command:
+                _usage()
+            return Options(label, cwd, env, command)
+        if token == "--cwd":
+            if index + 1 >= len(argv):
+                _usage()
+            cwd = argv[index + 1]
+            index += 2
+            continue
+        if token == "--env":
+            if index + 1 >= len(argv) or "=" not in argv[index + 1]:
+                _usage()
+            name, value = argv[index + 1].split("=", 1)
+            if _ENV_NAME_RE.fullmatch(name) is None:
+                _usage()
+            env[name] = value
+            index += 2
+            continue
+        _usage()
+    _usage()
+
+
+def _log_dir() -> Path:
+    path = Path(os.environ.get("DROID_CHECK_LOG_DIR", "/tmp/droid-checks"))
+    path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    return path
+
+
+def _prune_logs(log_dir: Path) -> None:
+    logs: list[tuple[float, Path]] = []
+    for path in log_dir.glob("*.log"):
+        try:
+            logs.append((path.stat().st_mtime, path))
+        except FileNotFoundError:
+            pass
+    logs.sort(key=lambda item: item[0], reverse=True)
+    for _mtime, path in logs[MAX_LOG_FILES:]:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _create_log(log_dir: Path, label: str) -> tuple[Path, object]:
+    slug = _SLUG_RE.sub("-", label.lower()).strip("-") or "check"
+    with (log_dir / ".lock").open("a+b") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        descriptor, raw_path = tempfile.mkstemp(
+            prefix=f"{slug}.",
+            suffix=".log",
+            dir=log_dir,
+        )
+        _prune_logs(log_dir)
+    return Path(raw_path), os.fdopen(descriptor, "wb", buffering=0)
+
+
+def _status(returncode: int) -> int:
+    return 128 + -returncode if returncode < 0 else returncode
+
+
+def _terminate_group(child: subprocess.Popen[bytes], signum: int) -> None:
+    try:
+        os.killpg(child.pid, signum)
+    except ProcessLookupError:
+        return
+
+    deadline = time.monotonic() + TERMINATION_GRACE_SECONDS
+    while child.poll() is None and time.monotonic() < deadline:
+        time.sleep(0.05)
+    if child.poll() is None:
+        try:
+            os.killpg(child.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+
+def _write(stream: object, log: object, data: bytes) -> None:
+    stream.write(data)
+    stream.flush()
+    log.write(data)
+
+
+def _run(options: Options) -> int:
+    log_dir = _log_dir()
+    log_path, log = _create_log(log_dir, options.label)
+    stdout = sys.stdout.buffer
+
+    def emit(message: str) -> None:
+        _write(stdout, log, message.encode())
+
+    emit(f"[run-check] log: {log_path}\n")
+
+    env = os.environ.copy()
+    env.update(options.env)
+    try:
+        child = subprocess.Popen(
+            options.command,
+            cwd=options.cwd,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    except FileNotFoundError as exc:
+        emit(f"[run-check] error: {exc}\n")
+        emit("[run-check] exit: 127\n")
+        log.close()
+        return 127
+    except OSError as exc:
+        emit(f"[run-check] error: {exc}\n")
+        emit("[run-check] exit: 1\n")
+        log.close()
+        return 1
+
+    received_signal: int | None = None
+
+    def forward(signum: int, _frame: object) -> None:
+        nonlocal received_signal
+        received_signal = signum
+        _terminate_group(child, signum)
+
+    for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        signal.signal(signum, forward)
+
+    assert child.stdout is not None
+    try:
+        while chunk := os.read(child.stdout.fileno(), READ_SIZE):
+            _write(stdout, log, chunk)
+        returncode = child.wait()
+    finally:
+        child.stdout.close()
+        if child.poll() is None:
+            _terminate_group(child, signal.SIGTERM)
+            child.wait()
+
+    status = (
+        128 + received_signal if received_signal is not None else _status(returncode)
+    )
+    emit(f"[run-check] exit: {status}\n")
+    log.close()
+    return status
+
+
+def main() -> int:
+    return _run(_parse(sys.argv[1:]))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

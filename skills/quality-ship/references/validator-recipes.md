@@ -3,44 +3,31 @@
 Exact invocations and known dead ends for the heavier validators. Policy
 (when each runs, what blocks) lives in `SKILL.md`; this file is the how.
 
-## Output capture: file-first, never inline-filter
+## Check execution: live, complete, attached
 
-Anti-pattern: `<check> 2>&1 | rg "FAIL|Tests " | head -6`. It guesses in
-advance -- and irrevocably -- which slice of output matters. A wrong guess
-(JSON log lines matching `Tests `, expected error-path logs matching
-`error `) destroys the evidence, and the only recovery is re-running the
-whole suite with a new guess. Two bonus lies: `$?` after a pipeline is the
-last filter's exit code (rg/head), not the runner's, and `head` closing the
-pipe early can SIGPIPE-kill the runner mid-suite while the pipeline still
-exits 0.
-
-Canonical shape -- capture first, then a small visible slice:
+Canonical shape:
 
 ```bash
-npx vitest run <paths> 2>&1 | tee /tmp/qs-test.log | tail -n 30
-<scoped-lint-command> 2>&1 | tee /tmp/qs-lint.log | tail -n 30
+~/.agents/scripts/run-check <label> [--cwd <dir>] [--env KEY=VALUE]... -- <scoped-validator-argv>
 ```
 
-- `tail` as the visible slice: Vitest/Jest/ESLint/Oxlint/Oxfmt summaries print
-  at the end.
-- For anything else, query the log (`rg -n -C3 FAIL /tmp/qs-test.log`, Read).
-  Re-querying a file is free; re-running a suite is not.
-- Need the runner's real exit code: `set -o pipefail` first (bash/zsh), or
-  read the summary lines from the log.
+`run-check` is the only output/process owner for validators:
 
-The `capture` hook enforces the shape: recognized validators piped through
-filters without capture get **denied** (interactively), with the exact tee'd
-re-run command in the deny reason; in `droid exec`, where a deny would kill
-the run, the command runs and a corrective PostToolUse note carries the same
-re-run command. After a captured run, the PostToolUse pass points you at the
-log. It only fires on validator-led pipeline segments with no existing
-capture -- `curl ... | bash`, `git log | rg`, already-tee'd or
-file-redirected commands pass through untouched. The validator vocabulary is
-the `tools` list under `[hooks.pre_tool_use.capture]` in `configs/droid.toml`
-(includes oxlint/oxfmt) plus structural runner patterns (npm/pnpm/yarn/bun
-`run <test|lint|typecheck|check|build>`, turbo, go/cargo/make checks); for a
-validator it doesn't recognize, add it to that list -- and tee manually in
-the moment. Toggle/log dir live in the same section.
+- complete stdout and stderr stream live to the attached Execute call
+- the identical merged stream is persisted under `/tmp/droid-checks/`
+- the command stays foreground until completion
+- cancellation signals are forwarded to the validator process group
+- the wrapper returns the validator's exact exit status
+- only the 50 newest logs are retained
+- `--cwd` and repeatable `--env` options replace shell prelude composition
+
+The no-composition and cancellation rules live in `SKILL.md`. This file owns
+only validator argv and setup recipes.
+
+The `check_guard` hook enforces this grammar for configured tools plus
+structural npm/pnpm/yarn/bun, Turbo, Go, Cargo, and Make validator commands.
+The vocabulary lives under `[hooks.pre_tool_use.checks]` in
+`configs/droid.toml`.
 
 ## Oxfmt and Oxlint
 
@@ -51,10 +38,10 @@ sequence with one direct command.
 Scoped direct shapes:
 
 ```bash
-oxfmt --write --threads=1 <paths>
-oxfmt --check --threads=1 <paths>
-oxlint --fix --threads=1 <paths>
-oxlint --threads=1 <paths>
+~/.agents/scripts/run-check format -- oxfmt --write --threads=1 <paths>
+~/.agents/scripts/run-check format-check -- oxfmt --check --threads=1 <paths>
+~/.agents/scripts/run-check lint-fix -- oxlint --fix --threads=1 <paths>
+~/.agents/scripts/run-check lint -- oxlint --threads=1 <paths>
 ```
 
 - Resolve the repository-installed binary through its package manager when it
@@ -101,14 +88,21 @@ Run on **temp dirs containing only the changed files**, then delete them:
 
 ```bash
 BASE=$(git merge-base origin/<target> HEAD)
-TMP=$(mktemp -d)
+TMP="/tmp/slop-scan-${DROID_SESSION_ID:-session}"
+rm -rf "$TMP"
+mkdir -p "$TMP"
 git diff --name-only --diff-filter=d "$BASE" -- '*.js' '*.jsx' '*.ts' '*.tsx' | while read -r f; do
   mkdir -p "$TMP/base/$(dirname "$f")" "$TMP/head/$(dirname "$f")"
   git show "$BASE:$f" > "$TMP/base/$f" 2>/dev/null || rm -f "$TMP/base/$f"  # new file: no base version
-  cp "$f" "$TMP/head/$f"                                                    # working tree = what you're about to commit
+  cp "$f" "$TMP/head/$f"  # working tree = what you're about to commit
 done
-slop-scan delta "$TMP/base" "$TMP/head" --json --fail-on added,worsened
-rm -rf "$TMP"
+```
+
+Run the check, then clean up in a separate command:
+
+```bash
+~/.agents/scripts/run-check ai-slop -- slop-scan delta "/tmp/slop-scan-${DROID_SESSION_ID:-session}/base" "/tmp/slop-scan-${DROID_SESSION_ID:-session}/head" --json --fail-on added,worsened
+rm -rf "/tmp/slop-scan-${DROID_SESSION_ID:-session}"
 ```
 
 Known dead ends (both burned real sessions):
@@ -124,7 +118,7 @@ etc.) that lint and typecheck miss.
 ## react-doctor (React correctness/perf)
 
 ```bash
-react-doctor . --scope changed --base <base-ref> --verbose
+~/.agents/scripts/run-check react -- react-doctor . --scope changed --base <base-ref> --verbose
 ```
 
 Different axis from slop-scan: slop-scan flags structural noise, react-doctor
@@ -151,13 +145,13 @@ Inspect the script before choosing:
 
 ```bash
 # Root script delegates to Turbo: Turbo owns --filter, so pass it through.
-npm run test -- --filter=@scope/pkg
+~/.agents/scripts/run-check test -- npm run test -- --filter=@scope/pkg
 
 # Run the package's own script: npm owns --workspace.
-npm run test --workspace=@scope/pkg -- src/foo.test.ts
+~/.agents/scripts/run-check test -- npm run test --workspace=@scope/pkg -- src/foo.test.ts
 
 # Direct Turbo invocation.
-turbo run test --filter=@scope/pkg -- src/foo.test.ts
+~/.agents/scripts/run-check test -- turbo run test --filter=@scope/pkg -- src/foo.test.ts
 ```
 
 Wrong:
@@ -175,7 +169,7 @@ process owning each flag before blaming the repo.
 Derive affected packages from `git diff --name-only` vs the base.
 
 **Cwd-sensitive configs:** some tools resolve config from their working
-directory, making `cd` into the package required rather than a last resort.
+directory; pass that package directory through `run-check --cwd`.
 For example, package-local path aliases may resolve only when ESLint runs from
 that package; invoking it from the root can produce false
 `import/no-unresolved` errors.
@@ -194,13 +188,17 @@ when droids share a host. Forward flags + paths past the script/task boundary
 with `--`:
 
 ```bash
-npm test -- --runInBand --findRelatedTests src/foo.ts
-pnpm vitest run --no-file-parallelism src/foo.test.ts
-turbo run test --filter=@app/web -- --runInBand src/foo.test.ts
+~/.agents/scripts/run-check test -- npm test -- --runInBand --findRelatedTests src/foo.ts
+~/.agents/scripts/run-check test -- pnpm vitest run --no-file-parallelism src/foo.test.ts
+~/.agents/scripts/run-check test -- turbo run test --filter=@app/web -- --runInBand src/foo.test.ts
 ```
 
 Additional mitigations when concurrent droid activity is likely:
 
-- **Mutex**: `flock -w 600 /tmp/droid-tests.lock <cmd>` -- one test run at a time across droid instances.
-- **Heap cap**: `NODE_OPTIONS=--max-old-space-size=2048` -- fail fast instead of swap-thrashing.
-- **Deprioritize**: prefix with `nice -n 10 ionice -c3` when another runner is already active.
+- **Mutex**: put `flock -w 600 /tmp/droid-tests.lock` first in run-check's
+  validator argv -- one test run at a time across droid instances.
+- **Heap cap**: pass
+  `--env NODE_OPTIONS=--max-old-space-size=2048` to run-check -- fail fast
+  instead of swap-thrashing.
+- **Deprioritize**: put `nice -n 10 ionice -c3` first in run-check's validator
+  argv when another runner is already active.

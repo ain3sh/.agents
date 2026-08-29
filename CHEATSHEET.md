@@ -25,7 +25,7 @@
 | Atom | Owns | Composed by |
 |---|---|---|
 | **ticket-branch** | Ticket resolve/create, direct parent/child context, branch checkout | `/open-pr`, `/update-skill`, `/split-pr` |
-| **quality-ship** | Quality checks (file-first evidence capture), commit, push. Not PR creation. | `/open-pr`, `/update-skill`, `/split-pr`, `/address-review` |
+| **quality-ship** | Quality checks (foreground live + logged evidence), commit, push. Not PR creation. | `/open-pr`, `/update-skill`, `/split-pr`, `/address-review` |
 | **pr-description** | Diff analysis, conventional-commit title, 5-section PR body, live visual evidence (post-open) | `/open-pr`, `/update-skill`, `/split-pr` |
 | **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review`, `/demo-pr` |
 | **voice** | Craft (every-word-earns-its-slot: specifics, named actors, calibrated warmth/humility, anti-slop) for any authored/reviewed content + reviewer-reply load-bearing test (cut reflexive sycophancy/recap/performative future tense/status footers; keep them when they own a miss, anchor a thread, scope deferred work, or propose a path) + the canonical review severity taxonomy | `/review-pr`, `/post-review`, `/address-review`, pr-description, linear-cli |
@@ -36,7 +36,7 @@
 | Tool | Install | Wired into |
 |---|---|---|
 | `rtk` | `curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh \| sh` | `hooks/pre_tool_use/rtk_rewrite.py` — transparent `Execute` rewriter. Per-surface toggles in `configs/droid.toml`. |
-| capture hook | built-in (`hooks/pre_tool_use/capture_rewrite.py`) | Enforces file-first capture of check output (`/tmp/droid-capture/*.log`): interactive deny with the exact tee'd re-run command; in `droid exec` the run proceeds and a corrective PostToolUse note teaches instead (exec drops `updatedInput`, deny is fatal there). `curl \| bash`-style payloads untouched. Toggle/log dir/`tools` vocabulary in `configs/droid.toml`. |
+| check runner + guard | built-in (`scripts/run-check`, `hooks/pre_tool_use/check_guard.py`) | One no-shell grammar: `run-check <label> [--cwd ...] [--env ...] -- <argv...>`. The Python runner forwards cancellation signals and keeps 50 logs; the guard denies recognized raw validators and composition around the canonical runner. Toggle/`tools` vocabulary in `configs/droid.toml`. |
 | `slop-scan` | `npm install -g slop-scan` | `/retrospective`, `/review-pr`, `quality-ship` |
 | `react-doctor` | `npm install -g react-doctor` (Node >=22) | `quality-ship` (React branch), `react-doctor` skill |
 | `vulture` | `uv tool install vulture` | `quality-ship` (Python branch) |
