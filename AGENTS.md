@@ -91,20 +91,6 @@ A green CI run, a populated file, or a matching path proves nothing by itself. W
 - If a vscode MCP tool itself errors or is disabled, fall back to the built-in getDiagnostics tool with a 10 second sleep to allow for updates.
 </diagnostics>
 
-<papercuts>
-Papercuts are small, avoidable bits of workflow friction worth sanding down.
-When one genuinely costs time, log it: `dsx papercut add "what happened and the likely fix"`.
-Use judgment: failures and guardrails are not papercuts when the workflow behaved as intended.
-Keep it concrete, avoid duplicates, and continue the task.
-Run `dsx papercut review <session>` only when the user asks; add `--save` to persist findings.
-</papercuts>
-
-<recovery>
-After two failed attempts at the same operational or tooling problem, search `dsx` before a third.
-Query the exact error or distinctive symptom in the current project, then inspect the best prior session.
-Prefer a proven prior fix over another speculative workaround.
-</recovery>
-
 <dev_box_access>
 To run commands on the dev-box droid computer from this laptop, use `ssh factory-dev-box '<cmd>'`
 (Host entry in ~/.ssh/config: ProxyCommand through `droid-dev computer ssh dev-box --proxy`,
@@ -120,3 +106,19 @@ The codebase outlives you. The patterns you establish will be copied; the corner
 </philosophy>
 
 ---
+
+<!-- dsx:begin 70ba0a63 (managed by `dsx sync`) -->
+<papercuts>
+Papercuts are small, avoidable bits of workflow friction worth sanding down.
+When one genuinely costs time, log it: `dsx papercut add "what happened and the likely fix"`.
+Use judgment: failures and guardrails are not papercuts when the workflow behaved as intended.
+Keep it concrete, avoid duplicates, and continue the task.
+Run `dsx papercut review <session>` only when the user asks; add `--save` to persist findings.
+</papercuts>
+
+<recovery>
+After two failed attempts at the same operational or tooling problem, search `dsx` before a third.
+Query the exact error or distinctive symptom in the current project, then inspect the best prior session.
+Prefer a proven prior fix over another speculative workaround.
+</recovery>
+<!-- dsx:end -->
