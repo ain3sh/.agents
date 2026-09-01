@@ -1,6 +1,10 @@
-# Post-push refresh
+# Existing-PR refresh
 
-Keep an existing PR's description accurate after new commits. Three phases: resolve the base the description was last reconciled against (0), find what drifted (1), make it coherent (2). Triggered by any push onto a branch with an open PR, and run on completion by `/open-pr`, `/split-pr`, `/address-review`, `quality-ship`.
+Keep an existing PR accurate and persuasive after new commits or an explicit
+title/body audit. Three phases: resolve the last reconciled base, find factual
+or decision-hierarchy drift, then restore one coherent narrative. Automatic
+refresh runs after pushes in `/open-pr`, `/split-pr`, `/address-review`, and
+`quality-ship`.
 
 ## The synced-base marker (keystone)
 
@@ -46,9 +50,12 @@ fi
 
 The fallback self-heals: once this refresh writes its marker, every later one takes the deterministic path.
 
-**Throttle**: if `git diff --quiet "$BASE"..HEAD` (nothing new since last reconcile), skip Phases 1-2 and go straight to the no-op re-stamp (Phase 2 step 4).
+**Throttle**: for an automatic post-push refresh, if
+`git diff --quiet "$BASE"..HEAD`, skip Phases 1-2 and re-stamp. An explicit
+request to audit, improve, or rewrite the title/body bypasses this throttle:
+run the full hierarchy and coherence checks even when HEAD has not changed.
 
-## Phase 1 — staleness check
+## Phase 1 — staleness and hierarchy check
 
 Two diffs, two jobs:
 
@@ -62,7 +69,8 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD  # (b) FULL — what the bran
 
 Check the description against both:
 
-- **Title drift** — no longer matches the full diff, breaks `type(scope):`, or exceeds 72 chars. On squash repos it's the permanent commit subject — weight heavily on long PRs.
+- **Title drift** — no longer matches the full diff, breaks `type(scope):`, exceeds 72 chars, or names an implementation mechanism despite a higher-level proven outcome, behavior, or invariant. Re-run the title ladder in `workflow.md`. On squash repos it becomes the permanent commit subject.
+- **Decision-hierarchy drift** — the title and first screen no longer answer the four skim-gate questions in `workflow.md`; decisive evidence or material cost appears only in a later conditional section.
 - **Missing scope** — new files/modules (look in the incremental diff first) unmentioned.
 - **Changed intent** — "fix X" but the diff now also refactors Y. If the *approach itself* was replaced (the mechanism the Description narrates is gone), that's a pivot → Phase 2 rewrite, not a patch.
 - **Stale claims** — search absolute wording first (`only`, `exact`, `complete`, `always`, `unchanged`, `lossless`); these decay fastest after follow-up commits.
@@ -73,7 +81,8 @@ Check the description against both:
 
 **Size advisory (non-gating)**: if the full `--stat` shows the PR has outgrown reviewability — mixed concerns, sprawling file count, a diff a reviewer can't hold in their head — surface `split-pr` (decompose) or `retrospective` (scrub).
 
-Nothing stale → re-stamp the marker (step 4) and stop. Don't rewrite for phrasing.
+Nothing stale and no explicit quality audit → re-stamp the marker and stop.
+Do not rewrite for marginal phrasing.
 
 ## Phase 2 — coherence pass
 
@@ -81,19 +90,21 @@ The body proper reads as one authored piece, not a log of patches — with **one
 
 1. **Patch or rewrite?** Localized staleness (a few claims, a missing scope line) → patch in place. Approach pivot, or the incremental diff invalidated most specific claims → **rewrite ground-up from the full diff**; patching a pivoted narrative makes Frankenstein prose. ("Don't rewrite for marginal phrasing" guards *style* — a pivot is the opposite case.)
 2. Before writing, verify:
-   - Single narrative; Description still 2-4 sentences even on scope growth (added flows go in **Verification > Behavior verified**, not paragraph-per-commit).
-   - **Revision log** (the carve-out): under active review a seamless body hides what moved since a reviewer last looked. Keep a `<details><summary>Changes since last review</summary>` trail fed from the incremental diff — the one place a patch-log belongs. Lean: entries since the last human review; drop older ones. Omit pre-review / on first push.
+   - Single narrative; the Description retains `What / Why / How` and passes the `workflow.md` first-screen skim gate. Two to four sentences plus one compact table/list is valid; added flows belong in **Verification > Behavior verified**, not paragraph-per-commit.
+   - **Revision log** (the carve-out): under active review a seamless body hides what moved since a reviewer last looked. Replace the prior list with entries since the last human review; never append branch history. Omit pre-review / on first push.
    - Risk & Impact reflects current full scope, not just the delta.
    - **Conditional sections re-evaluated both ways** — add newly-triggered (>3 consumers → Reverse Dependencies; new metric → Telemetry) **and remove** newly-untriggered (risky migration extracted to its own PR → drop Migration & Rollout / RCA). An orphaned section describing absent work is staleness too.
    - Every evidence claim revalidated or narrowed; every generated appendix regenerated (or replaced with a tighter Reviewer Guide if it adds bulk without aiding review).
-3. Apply via REST (SKILL.md §5 — `gh pr edit` is broken), re-stamping the marker as the final line. Draft the body marker-free with a file tool (Create / apply_patch — §5, never a heredoc), then:
+3. Apply via REST (`publish.md`), re-stamping the marker as the final line.
+   Draft the body marker-free with a file tool, never a shell heredoc, then:
    ```bash
    printf '\n<!-- pr-desc-base: %s -->\n' "$(git rev-parse HEAD)" >> /tmp/pr-updated-body.md
    gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f body="$(cat /tmp/pr-updated-body.md)"
    # title drift, same pass:
    gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f title="<type(scope): description>"
    ```
-4. **No-op re-stamp** (Phase 1 found nothing / throttle hit): replace the marker, leave prose untouched.
+4. **No-op re-stamp** (automatic refresh only; Phase 1 found nothing or the
+   throttle hit): replace the marker and leave prose untouched.
    ```bash
    sed '/<!-- pr-desc-base: /d' /tmp/pr-current-body.md > /tmp/pr-body-nomark.md
    printf '<!-- pr-desc-base: %s -->\n' "$(git rev-parse HEAD)" >> /tmp/pr-body-nomark.md
@@ -102,4 +113,6 @@ The body proper reads as one authored piece, not a log of patches — with **one
 
 **Squash-merge note**: the marker is inert if it lands in a squash commit message; strip it in the final pre-merge refresh if your repo mirrors body→commit and you want a clean message.
 
-**Bar**: would a reviewer reading the current description get a wrong or incomplete picture? Fix that; don't chase marginal phrasing.
+**Bar**: would a reviewer get a wrong or incomplete picture, or have to scroll
+past the merge case before understanding why to approve? Fix that; do not chase
+marginal phrasing.

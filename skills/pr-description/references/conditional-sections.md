@@ -1,6 +1,8 @@
 # Conditional sections
 
-Templates for the catalog's conditional rows (SKILL.md §3). Use only the ones whose trigger fired; each renders at its catalog position.
+Templates for `workflow.md`'s conditional catalog. Use only the sections whose
+trigger fired. Each section owns detail and methodology, not exclusive first
+mention: preview any fact that changes the merge decision in Description.
 
 ## Inline to the Description
 
@@ -59,7 +61,9 @@ Drop rows that don't apply; each states the change + its backward-compat consequ
 
 ### Performance Evidence — perf-sensitive changes
 
-Numbers without methodology are theatre. State workload, hardware, rerun command.
+Description previews the decision-relevant outcome. This section proves it:
+state workload, baseline, result, conditions, and rerun command. Numbers without
+methodology are theatre.
 
 ```markdown
 ## Performance Evidence
