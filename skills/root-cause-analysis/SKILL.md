@@ -34,6 +34,10 @@ If you cannot reproduce the failure or read its artifacts, **stop and surface th
 7. Find the first unintended side effect or write.
 8. Only then decide whether a downstream contract fix is still necessary: is the contract wrong, or did unintended logic reach the contract?
 
+When the proven causal chain spans more than two actors or transitions, load
+`show-me` after step 8 and replace the prose chain with one grounded causal flow
+or sequence. Mark the first unintended edge; do not visualize a theory.
+
 ## Rules
 
 - Do not make the contract more permissive unless you can prove the observed payload is intended in the final design.
@@ -69,3 +73,7 @@ Treat non-explicit writes as suspicious by default.
 - Minimal safe fix
 - Architectural follow-up
 - Proposed patch
+
+Keep the output textual when the chain is simple. When `show-me` fires, its
+representation occupies **Causal chain from intended action to system effect**;
+do not repeat the same chain in prose.

@@ -61,6 +61,13 @@ The trap is skipping step 1 and jumping to "let me walk through the fix." That r
 
 Done when **you can walk the new flow end-to-end without inventing anything mid-step**.
 
+## Present the trace
+
+After the walk is complete, load `show-me` when the trace spans more than two
+actors or transitions. Transform the explicit recorded states into one sequence
+or state-transition table. Preserve every state needed by the invariant; the
+visual is the presentation of the computation, never a substitute for doing it.
+
 ## How to compute well
 
 **Keep state explicit at every step.** At every transition, write each actor's state as a named object. The act of writing forces concreteness.
@@ -83,6 +90,7 @@ Done when **you can walk the new flow end-to-end without inventing anything mid-
 | Stopping at the failing phase | Walking only the broken phase | Walk every phase end-to-end with the fix |
 | Wrong abstraction level | Tracing HTTP when the bug is in render order | Locate the bug's likely home, compute at that level |
 | Wishful code-reading | Describing what the function "should" do | Re-read the actual source at every transition |
+| Visual-first reasoning | Drawing the expected flow before computing real state | Finish the trace, then transform it with `show-me` |
 
 ## Checklist
 

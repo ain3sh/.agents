@@ -14,7 +14,7 @@ Make the merge case legible from the title and first screen; later sections prov
 |---|---|
 | Analyze and draft | Load `references/workflow.md`; use three-dot diff analysis, outcome-first title selection, `What / Why / How`, and the first-screen skim gate. |
 | Add conditional sections | Load `references/conditional-sections.md` only when a catalog trigger fires. |
-| Show a structural change | Load `references/artifacts.md` before deciding the architecture evidence. |
+| Show a structural change | Load `show-me` to select one grounded shape; load `references/artifacts.md` only when inline evidence cannot carry it. |
 | Show a visual change | Open the PR first, then load `references/visual-evidence.md` and capture live proof. |
 | Refresh an existing PR | Load `references/refresh.md`; explicit title/body audits bypass the no-diff throttle. |
 | Publish or PATCH | Load `references/publish.md`; compose with a file tool and use GitHub REST. |

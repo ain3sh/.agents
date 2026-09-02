@@ -15,7 +15,7 @@ pr-description checklist:
 - [ ] Title: outcome/invariant first, type(scope), imperative, <=72 chars
 - [ ] First screen passes the four-question skim gate
 - [ ] Five required sections present; conditional catalog walked row by row
-- [ ] Structural change? Architecture diagram drawn (artifacts.md)
+- [ ] Structural change? Compact Change Shape or Architecture artifact chosen via show-me; no duplicate view
 - [ ] Concrete visual change? Live proof attached high in body (visual-evidence.md)
 - [ ] Verification outcome-first; CI compressed to one line
 - [ ] Body length scales with complexity, not effort
@@ -91,20 +91,21 @@ Description.
 | 1 | Description | always; inline anti-goals, scope map, design link, or RCA as needed |
 | 2 | Visual Evidence | concrete UI/TUI/CLI/rendered-media change |
 | 3 | Repro Recipe | new feature or fixed bug with a manual surface |
-| 4 | Architecture | components, flows, boundaries, integrations, or module structure changed |
-| 5 | Related Issue | always; add lineage/stack block when applicable |
-| 6 | Reviewer Guide | always |
-| 7 | Risk & Impact | always |
-| 8 | Contract Delta | DB/API/wire/shared type touched |
-| 9 | Migration & Rollout | flag, migration, environment, or breaking change |
-| 10 | Performance Evidence | performance-sensitive change |
-| 11 | Telemetry & Observability | metrics, logs, traces, alerts changed |
-| 12 | Reverse Dependencies | changed surface has more than three consumers |
-| 13 | Side Effects | acknowledged regression |
-| 14 | Verification | always |
-| 15 | Implementation map | large multi-subsystem diff, roughly 20+ files |
-| 16 | Changes since last review | active-review refresh |
-| 17 | Implementation Notes | matching `.agents/specs/*.notes.md` exists |
+| 4 | Change Shape | ownership, call flow, state, or dependency delta fits one compact inline representation |
+| 5 | Architecture | structural evidence needs a polished multi-subsystem artifact |
+| 6 | Related Issue | always; add lineage/stack block when applicable |
+| 7 | Reviewer Guide | always |
+| 8 | Risk & Impact | always |
+| 9 | Contract Delta | DB/API/wire/shared type touched |
+| 10 | Migration & Rollout | flag, migration, environment, or breaking change |
+| 11 | Performance Evidence | performance-sensitive change |
+| 12 | Telemetry & Observability | metrics, logs, traces, alerts changed |
+| 13 | Reverse Dependencies | changed surface has more than three consumers |
+| 14 | Side Effects | acknowledged regression |
+| 15 | Verification | always |
+| 16 | Implementation map | large multi-subsystem diff, roughly 20+ files |
+| 17 | Changes since last review | active-review refresh |
+| 18 | Implementation Notes | matching `.agents/specs/*.notes.md` exists |
 
 Conditional templates live in `conditional-sections.md`.
 

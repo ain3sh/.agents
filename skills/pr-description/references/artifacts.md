@@ -1,5 +1,12 @@
 # Visual artifacts — diagrams, screenshots, recordings
 
+Architecture artifacts are the escalation path, not the default representation.
+Load `show-me` first. If one grounded responsibility tree, call flow, state
+table, signature block, or structural diff fits inline, use the PR body's
+`Change Shape` section instead. Use this file when the evidence needs a polished
+multi-subsystem artifact or live visual proof. Never render both forms for the
+same fact.
+
 Attach anything that clarifies behavior or eases validation. **Upload via `gh-attach`** so the file lands at `user-attachments.githubusercontent.com`; never commit images/videos to the repo, never use `raw.githubusercontent.com`, never embed secrets, tokens, or machine-specific paths. If the local machine lacks a browser-authed GitHub session, run `gh-attach` from a trusted machine (SSH is fine) or pass `--session-file`, keeping the wording generic in public PRs.
 
 ## Screenshots & recordings
@@ -10,7 +17,12 @@ A before/after **recording** earns its place with a caption: capture conditions 
 
 ## Diagrams
 
-Draw when the PR adds/alters components, flows, service boundaries, integration points, or module structure. Signal: you're describing a new flow across more than two sentences of the Description. **Excalidraw is the primary path**; Mermaid (below) is the fallback only when you truly can't install the toolchain on this host, or for a throwaway flow.
+Draw when the PR adds or alters multiple components, service boundaries,
+integration points, or a temporal before/after that cannot stay legible within
+`show-me`'s 20-line embedded limit. Signal: the compact form would omit
+decision-relevant actors, data labels, or transitions. **Excalidraw is the
+primary path**; Mermaid (below) is the fallback only when you truly can't
+install the toolchain on this host, or for a throwaway flow.
 
 ### Primary: excalidraw
 

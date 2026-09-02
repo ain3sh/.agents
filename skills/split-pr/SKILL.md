@@ -29,6 +29,7 @@ One large branch becomes N small PRs. The split is driven by the **diff**, not t
 - **git-advanced** -- interactive rebase, cherry-pick, hunk-level commit splitting -- the movement primitives.
 - **stack-cli** -- canonical stacked-PR sync, descendant repair, retargeting, merge, and undo after the initial branch chain exists.
 - **pr-context** -- PR metadata and one-off title/body/base mutations outside the stack lifecycle. `stack-cli` owns retargeting during stack sync and merge.
+- **show-me** -- compact dependency shape after the concern map and textual split plan are complete.
 
 ## 1. Analyze the diff
 
@@ -83,6 +84,11 @@ Merge order:    <PR1 -> PR2 -> PR3> (stacked) | <any order> (atomic)
 **The plan is gated.** Do not cherry-pick, rebase, or branch until the user approves. A wrong split costs more time than a well-planned one.
 
 **Standalone-review test.** For every PR in the plan, write one sentence stating its standalone intent -- what a reviewer seeing only this PR would understand it to do. If the sentence requires "and also PR X does..." to make sense, the split is wrong: either merge with its sibling or stack it.
+
+After the textual plan passes that test, load `show-me` and add one dependency
+graph when the split is stacked or contains at least three PRs. Show true
+compile/logical dependencies and explicitly mark independent nodes; planning
+order alone never creates an edge. Omit the graph for a two-PR atomic split.
 
 ## 3. Pick the shape
 

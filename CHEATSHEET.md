@@ -13,6 +13,7 @@
 
 | Command | Replaces | Usage |
 |---|---|---|
+| `/show-me` | walls of prose for code shape, flow, state, ownership, dependencies, and before/after structure; also composed by design/review workflows | `/show-me`, `/show-me auth retry as sequence` |
 | `/open-pr` | ticket + branch + verify + lint + ship mega-prompt (handles fresh + mid-fix) | `/open-pr FAC-456` |
 | `/review-pr` | full review workflows, now a skill: first-pass (per-type verification, repro for bugs) / `deeper` (paired confirm-or-kill wave) / `follow-up` (three-lane re-review from worktree dossier `./.agents/review.md`); `/post-review` publishes + writes dossier | `/review-pr 123`, `deeper`, `re-review` |
 | `/address-review` | read reviewer feedback → triage → fix → respond to threads | `/address-review 123` |

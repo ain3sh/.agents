@@ -85,6 +85,11 @@ Do **not** take the easiest-but-ugly path. Evaluate the implementation against:
 
 If there are multiple viable approaches, evaluate trade-offs explicitly.
 
+If the chosen approach spans more than two modules or actors, or changes control
+flow, state, ownership, or dependencies, load `show-me` after the analysis.
+Include one compact representation in the spec; it presents the chosen design
+and does not replace the files, decisions, risks, or alternatives.
+
 ### Features: grill on open decisions before spec
 
 Before locking the spec, walk the design tree with the user. For each unresolved branch (state ownership, extend-vs-create, edge-case behavior, naming, ordering of dependent changes), ask **one question at a time as a regular prose response** -- *not* via AskUser. Pair the question with your recommended answer and, if there are clear forks, 1-3 primary alternatives. Resolve decisions in dependency order; earlier answers often collapse later branches, so batching defeats that.

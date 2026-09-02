@@ -132,7 +132,7 @@ After visual layout is clean:
   - *coda* → isolate the one-sentence conclusion as its own paragraph.
 - **Pass 2 — polish.** Read aloud (literally, your inner voice catches bumps). Replace neologisms ("due-times" → "task that came due three times"), kill "actually", strip "we can", tighten cross-references. Each edit should remove or replace text, rarely add.
 - **Pass 2.5: voice sweep.** Load **voice** for a quick craft pass focused on anti-slop, false agency, and filler. Keep edits surgical and preference-light so this reads as an independent quality gate, not a rewrite.
-- **Pass 3 — diagram pass (restate or replace, only lossless).** Scan for prose that describes *shape* — a before/after inversion, a flow, a magnitude comparison — and add a `figure.diagram` only where the picture carries the full content. Proven archetypes: two-panel contrast split by a dashed divider (`svg .dash`, incumbents in `.muted-fill`), equal-scale grouped bar comparison, pipeline flow. If the diagram would summarize rather than restate, skip it.
+- **Pass 3 — diagram pass (restate or replace, only lossless).** Scan for prose that describes *shape* — a before/after inversion, a flow, a magnitude comparison. Load `show-me` to select the narrowest lossless representation from the verified facts, then render that shape with the template's inline SVG/HTML components. Add `figure.diagram` only where the picture carries the full content. Proven archetypes: two-panel contrast split by a dashed divider (`svg .dash`, incumbents in `.muted-fill`), equal-scale grouped bar comparison, pipeline flow. If the diagram would summarize rather than restate, skip it.
 
 ### 7. Re-verify
 

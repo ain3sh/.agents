@@ -108,6 +108,32 @@ Honest acknowledgment beats discovery six weeks later. No regression → omit; d
 
 ## Below Description
 
+### Change Shape — compact structural delta
+
+Use when ownership, call flow, state, or dependency changed and one inline
+representation makes the review path obvious. Load `show-me`, ground every
+label in the diff, and keep the representation at 20 lines or fewer.
+
+````markdown
+## Change Shape
+
+```diff
+ request
+-└── route owns retry + persistence + response
++└── runner
++    ├── owns retry + persistence
++    └── returns final result to route
+```
+
+**Implication:** cancellation and evidence now share one lifecycle owner.
+````
+
+Use `types and signatures` instead when the PR's durable value is a contract
+shape. Use Architecture when the evidence needs multiple subsystems, labeled
+data edges, or a polished before/after artifact. Never include Change Shape and
+Architecture for the same fact, and never follow the representation with a
+prose transcription.
+
 ### Repro Recipe — new feature / fixed bug
 
 **Manual, human-run steps**: `setup -> action -> observed result`, each line something a reviewer *types or clicks* by hand, closing on a result they can eyeball. Bar: someone who's never touched the repo runs it as-is and sees the behavior. Indented (not fenced) block so it nests cleanly.
@@ -203,4 +229,4 @@ When the branch is part of a `stack`-managed chain (see the **stack-cli** skill)
 
 ---
 
-Catalog row 16 (**Changes since last review**) is refresh-only — its template lives in `refresh.md` (Phase 2, the revision-log carve-out), not here.
+Catalog row 17 (**Changes since last review**) is refresh-only — its template lives in `refresh.md` (Phase 2, the revision-log carve-out), not here.

@@ -6,6 +6,10 @@ description: Provide a rich explanation of a code change, diff, branch, or PR us
 
 Please make me a rich, interactive explanation of the specified code change.
 
+This command owns deep standalone HTML walkthroughs. For one compact
+in-conversation representation, use `/show-me` instead; do not expand a
+show-me request into this artifact.
+
 It should have these sections:
 
 - Background: Explain the existing system relevant to this change. (You should broadly explore surrounding code for this.) We don't know how much the reader already knows, so include a deep background for beginners (note that it can be skipped if the reader is already familiar), and then a more narrow background directly relevant to the change.
