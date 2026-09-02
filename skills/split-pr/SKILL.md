@@ -27,7 +27,8 @@ One large branch becomes N small PRs. The split is driven by the **diff**, not t
 - **quality-ship** -- the per-PR validator and commit/push gate. Runs **once per PR**, not once at the end.
 - **pr-description** -- the per-PR body writer. Mandatory hand-off at every `gh pr create`.
 - **git-advanced** -- interactive rebase, cherry-pick, hunk-level commit splitting -- the movement primitives.
-- **pr-context** -- REST replacements for every `gh pr edit` call. Every stacked-PR mutation (body, title, base retarget) goes through REST; `gh pr edit` is broken on any org with Projects (classic) enabled.
+- **stack-cli** -- canonical stacked-PR sync, descendant repair, retargeting, merge, and undo after the initial branch chain exists.
+- **pr-context** -- PR metadata and one-off title/body/base mutations outside the stack lifecycle. `stack-cli` owns retargeting during stack sync and merge.
 
 ## 1. Analyze the diff
 
@@ -182,5 +183,5 @@ If the original branch had an open PR, close it with a comment pointing to the n
 | **PRs that don't stand alone** | Reviewer can't understand PR K without PR K-1 context | Expand each PR's Description to state the standalone intent, or merge the two |
 | **One quality-ship run at the end** | Only the tip branch was validated | `quality-ship` per PR branch -- each must ship clean |
 | **Skipped pr-description hand-off** | `gh pr create` called without re-loading the skill | Re-load and re-emit the section-0 checklist every PR. No exceptions. |
-| **Stack rot** | Child PR diverges from parent after parent moves | See `references/stacked.md` "Restacking" |
+| **Stack rot** | Child PR diverges from parent after parent moves | Load `stack-cli`; preview with `stack sync`, then apply the reviewed repair |
 | **`gh pr edit` used on stacked PRs** | Command fails with Projects-classic GraphQL error | Use `gh api repos/$REPO/pulls/<n> -X PATCH ...` per `pr-context` |

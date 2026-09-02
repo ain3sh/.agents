@@ -1,14 +1,31 @@
 ---
 name: sync-target
-description: Merge this branch's target (open PR's base or repo default) into HEAD, resolve conflicts in branch context, push unless held. Use when the user asks to sync, merge main/dev/target into HEAD, or resolve merge conflicts.
+description: Sync a PR branch with its base while preserving review shape. Use when asked to sync, merge, rebase, update from main/dev/target, or resolve conflicts; merge ordinary branches and replay split/rewritten branches before validating and pushing.
 argument-hint: [--no-push] [--full-scope] [<target-branch>]
 ---
 
-Load skills: **pr-context**, **quality-ship**, **git-advanced**. (**worktree-setup** is lazy — see §5.)
+# Sync Target
 
-## 1. Resolve target
+Sync the target without changing what the PR claims to contain.
 
-Target = where this branch lands. Precedence: explicit arg → open PR's `baseRefName` → repo default (`origin/HEAD`). Never hardcode `dev`/`main`.
+Load skills: **pr-context**, **quality-ship**, **git-advanced**. If the branch
+has a stacked parent or descendants, load **stack-cli** to inspect propagation;
+apply it only when descendants need freshness now. Load **worktree-setup** only
+for missing dependency/build-artifact failures.
+
+## Act
+
+| Goal | Action |
+|---|---|
+| Resolve the target | Explicit argument → open PR base → remote default; never hardcode `dev` or `main`. |
+| Judge stack propagation | Run `stack status` and `stack sync <branch>`; either propagate with `stack-cli` or intentionally sync only the active branch and defer descendants. |
+| Freeze the intended PR shape | Record the expected branch-only count, ordered commit identities, and diff before changing history. |
+| Pick the operation | Merge ordinary published branches; replay/rebase branches already rewritten for a split or cleanup. |
+| Resolve and audit | Inspect conflicts plus files changed by both sides; classify judgment calls. |
+| Validate | Run `quality-ship` on every co-touched file and its owning package. |
+| Gate the push | Refuse if the branch-only series or PR diff is not the recorded shape; use an exact lease for rewritten history. |
+
+## Detect
 
 ```bash
 CURRENT=$(git rev-parse --abbrev-ref HEAD)
@@ -18,84 +35,52 @@ git fetch "$REMOTE" --prune
 TARGET=$(printf '%s\n' $ARGUMENTS | grep -v '^--' | head -1)
 [ -z "$TARGET" ] && TARGET=$(gh pr view --json baseRefName --jq .baseRefName 2>/dev/null)
 [ -z "$TARGET" ] && TARGET=$(git symbolic-ref refs/remotes/"$REMOTE"/HEAD 2>/dev/null | sed "s|refs/remotes/$REMOTE/||")
+
+TARGET_HEAD="$REMOTE/$TARGET"
+FORK=$(git merge-base "$TARGET_HEAD" HEAD)
+
+git rev-list --first-parent --count "$FORK"..HEAD
+git log --first-parent --oneline "$FORK"..HEAD
+git diff --stat "$TARGET_HEAD"...HEAD
 ```
+If `$TARGET` is empty or equals `$CURRENT`, ask. Surface
+`"$TARGET_HEAD" → "$CURRENT"` and confirm; stacked PRs miscall easily.
 
-If `$TARGET` is empty or equals `$CURRENT`, ask. Surface `"$REMOTE/$TARGET" → "$CURRENT"` and confirm — stacked PRs miscall easily.
+## Rules
 
-## 2. Branch context
+1. Never use GitHub `MERGEABLE` as the success invariant—it proves the target
+   can merge, not that the PR contains the intended commit series or diff.
+2. Never merge by reflex after a split, squash, reorder, cherry-pick rebuild,
+   or other deliberate rewrite—replay the recorded commits, not the polluted
+   chain, onto the target.
+3. Never propagate a stack merely because it exists. Compare descendant
+   freshness needs with parent churn and repeated-restack cost.
+4. Never justify extra branch history with the repository's landing strategy.
+   Squash-merging the PR later does not repair a polluted review surface now.
+5. Never push until both the branch-only count/ordered identities and PR diff
+   match the frozen intent.
+6. Never force-push without a backup and an exact lease; never auto-push a
+   Low-confidence resolution.
+7. Never apply a stack preview that mutates branches or PRs beyond the user's
+   explicit scope; summarize the expansion and ask first.
+8. Never leave deferred descendants implicitly stale. Name them, distrust their
+   CI/diffs, and state the event that will trigger `stack sync --apply`.
 
-```bash
-gh pr view --json title,body,headRefName,baseRefName 2>/dev/null
-git log --oneline "$REMOTE/$TARGET".."$CURRENT"
-git diff --stat "$REMOTE/$TARGET".."$CURRENT"
-```
+## Failure map
 
-Note: files this branch owns, what it changes, what to preserve from upstream.
+| Symptom | Action |
+|---|---|
+| Parent is changing rapidly; descendants are dormant | Sync the active branch only, mark descendants intentionally stale, and defer `stack sync --apply`. |
+| Descendant work/review/merge needs current parent behavior | Load `stack-cli`; preview the stack and apply the approved propagation. |
+| Branch was just split or rewritten | Use `references/procedure.md` → **Replay/rebase mode**. |
+| `origin/$TARGET..HEAD` shows merged predecessors or old sync commits | Stop; rebuild from the intended commit list rather than merging again. |
+| Final tree is correct but commit count is larger than planned | Treat as failure; restore/rebuild before push. |
+| Clean merge reports no conflict markers | Still audit the overlap set in `references/procedure.md`. |
 
-## 3. Merge
+## References
 
-```bash
-git merge "$REMOTE/$TARGET" --no-edit
-```
-
-Clean? Still run §4's auto-resolution audit (with `CONFLICTS=""`) — `$OVERLAP` alone still drives §5 — then §5. Else capture `$CONFLICTS` for §4–§5:
-
-```bash
-CONFLICTS=$(git diff --name-only --diff-filter=U)
-```
-
-Hold in memory — the `U` filter empties after staging.
-
-## 4. Resolve conflicts
-
-For each file in `$CONFLICTS`, read both sides and classify. Tag each resolution **High** (mechanical, clear intent) or **Low** (judgment call on business logic) — §6 gates on these tags.
-
-| Type | Action |
-|------|--------|
-| **Non-overlapping** | Integrate both |
-| **Superseding** | Keep ours; adopt new deps/imports/types from theirs |
-| **Upstream improvement** | Take theirs |
-| **Genuine collision** | Judge from branch context |
-
-Stage resolutions, then `git commit --no-edit`.
-
-### Audit auto-resolutions (runs even on clean merges)
-
-Conflict markers are not the only merge risk: hunks git resolved silently can be textually clean yet semantically wrong — a splice that duplicates a function, one side still referencing a symbol the other renamed or deleted, the same guard applied twice. Audit the overlap set, the files both sides changed since the merge-base:
-
-```bash
-MB=$(git merge-base HEAD^1 HEAD^2)
-OVERLAP=$(comm -12 <(git diff --name-only "$MB" HEAD^1 | sort) \
-                   <(git diff --name-only "$MB" HEAD^2 | sort))
-```
-
-For each overlap file not already handled in `$CONFLICTS`: read the merged result around both sides' hunks and confirm the combined logic coheres — no duplicated definitions, no stale references to symbols the other side renamed/moved/deleted (`rg` the old names), no double-applied logic. Anything you fix here is a **Low**-confidence resolution (it gates §6) in its own commit. The whole `$OVERLAP` set joins §5's scope regardless — the manual pass judges semantics, the validators machine-check everything.
-
-## 5. Quality checks (scoped)
-
-**Targeted scope = `$CONFLICTS` + `$OVERLAP`** — every co-touched file, *not* the full merge diff. The merge result is the only code nobody has validated: each side passed its own CI, but their combination is new and can fail lint/format/typecheck even where hunks merged cleanly (an orphaned import, a renamed symbol, one declaration edited from both sides). That is exactly the risk `$OVERLAP` names; anything beyond the union only rebuilds packages this branch never touched.
-
-Run **quality-ship** with that scope:
-- Per-file validators (format, lint, slop-scan, vulture, …): pass `$CONFLICTS` + `$OVERLAP` paths.
-- Package-scoped validators (typecheck, tests, knip, …): scope to the packages owning `$CONFLICTS` + `$OVERLAP` (e.g. `turbo run … --filter={<pkg>…}`).
-
-Worktree repair is **lazy** — load **worktree-setup** only on `Cannot find module` / empty-`dist/` errors for an in-scope package. Don't run `verify.py` proactively; its full-workspace manifest will demand artifacts (electron-forge bundles, …) outside your scope.
-
-`$ARGUMENTS` may include `--full-scope` to opt back into whole-diff validation.
-
-Separate commits for fixes.
-
-## 6. Push gate
-
-**Hold** if any:
-- `$ARGUMENTS` contains `--no-push`
-- User said hold off this session
-- Any **Low**-confidence resolution
-
-When holding: summarize each resolution + confidence; for Low ones, name the ambiguity and the choice; ask before pushing.
-
-Otherwise:
-
-```bash
-git push -u origin HEAD
-```
+- Load on demand; do not reabsorb into this file:
+  `references/procedure.md` — freeze packet, merge and replay commands,
+  conflict/overlap audit, validation scope, topology gate, push, and report.
+- Load on demand; do not reabsorb into this file:
+  `../stack-cli/SKILL.md` — stack-wide inspection, repair, retargeting, and undo.

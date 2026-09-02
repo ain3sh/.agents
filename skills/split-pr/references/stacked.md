@@ -75,92 +75,64 @@ Under `Risk & Impact`, list any risk that is cumulative-over-the-stack (e.g., a 
 
 ## Restacking
 
-When the parent moves -- new commits, a rebase, or merge into `$BASE` -- child PRs must be kept in sync. Three scenarios.
+After the branch chain and PR targets exist, **stack-cli owns stack-wide
+propagation**. Preview the impact whenever a parent moves, but apply only when
+fresh descendants are worth the replay cost.
 
-### Scenario A: Parent gained new commits (e.g., review feedback)
-
-```bash
-git checkout <child-branch>
-git fetch origin
-git rebase "origin/<parent-branch>"
-# resolve any conflicts, then:
-git push --force-with-lease
-```
-
-**Always `--force-with-lease`, never bare `--force`.** The lease prevents overwriting an unexpected remote update from a collaborator or a CI amendment.
-
-For stack depth >=2, propagate bottom-up, rebasing each child on its updated parent:
+Load **stack-cli**, then:
 
 ```bash
-git fetch origin
-git checkout <pr1-branch> && git rebase "origin/$BASE"              && git push --force-with-lease
-git checkout <pr2-branch> && git rebase "origin/<pr1-branch>"       && git push --force-with-lease
-git checkout <pr3-branch> && git rebase "origin/<pr2-branch>"       && git push --force-with-lease
+stack status
+stack sync <any-branch-in-the-stack> # dry run
 ```
 
-### Scenario B: Parent PR merged into `$BASE`
+### Propagate or defer
 
-GitHub auto-retargets child PRs from the merged parent branch to `$BASE`. **Verify**, don't assume -- then rebase locally to drop the now-redundant parent commits:
+Load **stack-cli**'s `references/propagation.md`. It owns the decision inputs,
+apply gate, deferred-descendant contract, and restack triggers.
+
+When propagating, `stack sync` covers:
+
+- **Parent gained commits:** replay descendants onto the updated parent.
+- **Parent squash-merged:** retarget children to the trunk and drop redundant
+  parent history using persisted merge-base anchors.
+- **Trunk moved:** replay the root, then descendants, bottom-up.
+
+Apply the reviewed plan:
 
 ```bash
-gh pr view <child-pr> --json baseRefName --jq '.baseRefName'   # should now be $BASE
-git checkout <child-branch>
-git fetch origin
-git rebase "origin/$BASE"                                      # drops commits already on $BASE via parent
-git push --force-with-lease
+stack sync --apply <any-branch-in-the-stack>
 ```
 
-If auto-retarget didn't happen, retarget via REST (`gh pr edit --base` is broken -- see `pr-context`):
-
-```bash
-gh api "repos/$REPO/pulls/<child-pr>" -X PATCH -f base="$DEFAULT_BRANCH"
-```
-
-**Merge-strategy implications:**
-
-- **Squash-merge** (typical) -- parent's individual commits are replaced by a single squashed commit on `$BASE`. Your rebase onto `$BASE` drops the individual commits as duplicates when hunks match exactly; if the squash introduced editorial changes, expect one round of conflict resolution. Resolve by keeping the squashed form -- that's the canonical history now.
-- **Merge commit** -- parent's commits exist verbatim on `$BASE` already. Rebase is usually a clean no-op.
-- **Rebase-and-merge** -- similar to squash but preserving per-commit granularity; treat like merge commit for restack purposes.
-
-### Scenario C: `$BASE` moved while the stack was open
-
-Other PRs landed on `$BASE` during your stack's review. Rebase the bottom of the stack onto the new `$BASE` first, then walk up:
-
-```bash
-git fetch origin
-git checkout <pr1-branch> && git rebase "origin/$BASE"          && git push --force-with-lease
-git checkout <pr2-branch> && git rebase "origin/<pr1-branch>"   && git push --force-with-lease
-git checkout <pr3-branch> && git rebase "origin/<pr2-branch>"   && git push --force-with-lease
-```
-
-If the rebase produces conflicts you can't resolve inside the current PR's scope, your split is bleeding concerns -- revisit the plan.
+If the dry run reaches unrelated roots or an unexpected PR, stop and inspect
+with `stack status` or `stack doctor`. If the user requested one branch but the
+preview writes descendants, summarize that expanded scope and ask before
+applying it.
+`stack sync --apply` creates backups and an undo journal; on replay failure it
+restores the original branch and names the branch requiring manual conflict
+resolution. Do not replace its exact pushes with bare `--force`.
 
 ## Review and merge discipline
 
-- **Merge bottom-up, one at a time.** A top-of-stack PR targets its parent, not `$BASE` -- merging it lands the top commits into the parent's branch, which is almost never what you want. Land the bottom PR, let GitHub auto-retarget children to `$BASE`, rebase, then merge the next. A misconfigured merge queue can bypass this check and merge a stacked child against the wrong diff; disable the queue for stacked series.
+- **Merge bottom-up, one at a time.** Preview with `stack merge`; use
+  `stack merge --apply` for immediate squash-merge and descendant repair, or
+  `stack merge --auto` to wait for protections before repair. A misconfigured
+  merge queue can merge a child against the wrong diff; disable it for stacks.
 - **Squash-merge each PR** unless project policy forbids it. Squash keeps `$BASE` linear and makes the restack-after-merge step deterministic.
 - **Avoid mid-review rebases on the bottom PR.** Reviewers lose their comment anchors when commit SHAs change. Wait for the current review round to close, then rebase.
 - **Close PRs that become empty after a rebase.** If a PR's diff collapses to zero because an earlier PR absorbed its changes, close it with a one-line explanation -- do not leave empty PRs open.
 - **Do not invite code review on a PR whose parent hasn't received approval yet**, unless the review is explicitly scoped to the delta. Reviewers will otherwise try to review the cumulative diff and conflate feedback across PRs.
 
-## Tooling alternatives (advisory)
-
-Manual stacking is fine for depth <= 3. For deeper or frequent stacking, external tooling automates the restack-and-retarget dance:
-
-- **Graphite (`gt`)** -- hosted + CLI, strong restack automation, visual stack viewer.
-- **ghstack** -- Meta-originated, one-PR-per-commit model, best for monorepos with strict commit hygiene.
-- **git-spice (`gs`) / spr** -- lightweight local CLIs, no hosted service.
-
-This skill does not depend on any of them. Reach for tooling only if you're spending >10% of your time on restacking -- manual is faster otherwise.
+Do not substitute GitHub's `gh stack`; this workflow uses the local squash-safe
+`stack` CLI documented by **stack-cli**.
 
 ## Pitfalls specific to stacked
 
 | Pitfall | Cause | Mitigation |
 |---|---|---|
-| `gh pr edit --base` fails | Projects-classic GraphQL deprecation | `gh api "repos/$REPO/pulls/<n>" -X PATCH -f base="<branch>"` |
-| Child PR diff shows parent's changes too | Opened with `--base $DEFAULT_BRANCH` instead of parent branch | Retarget via `gh api ... -X PATCH -f base="<parent-branch>"` |
+| Child PR diff shows parent's changes too | Opened with `--base $DEFAULT_BRANCH` instead of parent branch | Preview and repair with `stack sync` |
 | Stack rot -- many small rebases churning | Parent under active review, long stack depth | Pause the stack: mark top PRs as draft until the bottom lands |
 | Reviewer comment on PR 2 actually applies to PR 1 | Stack context not clear in body | Lead every stacked PR body with the "part K of N, depends on #X" block |
 | Merge queue rejects stacked PRs | Queue treats each PR as independently targeting `$BASE` | Disable the queue for the stacked series, or flatten to atomic first |
-| CI passes on PR 1 but fails on PR 2 against `$BASE` | PR 2's target is parent, so CI runs against PR 1's state, not `$BASE` | After every parent rebase, push child and let CI re-run before re-requesting review |
-| Force-push clobbered a collaborator's amendment | Used `--force` instead of `--force-with-lease` | Always `--force-with-lease`; if clobber happened, recover from the reflog (see **git-advanced**) |
+| CI passes on PR 1 but fails on PR 2 against `$BASE` | PR 2's target is parent, so CI runs against PR 1's state, not `$BASE` | Run `stack sync --apply` after the parent moves, then wait for child CI |
+| Applied stack repair was wrong | Preview scope was not inspected | Run `stack undo`, inspect it, then `stack undo --apply` |

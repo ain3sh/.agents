@@ -22,6 +22,14 @@
 | `/update-skill` | reflect → update skill → critique ×2 → PR | `/update-skill linear-cli` |
 | `/split-pr` | split long branch into stacked or independent PRs via cherry-pick | `/split-pr feat/big-branch` |
 
+## Git Workflow Skills
+
+| Skill | Owns |
+|---|---|
+| **`sync-target`** | Sync one active PR branch without changing its review shape; inspect stack impact, defer dormant descendants during rapid iteration, otherwise merge ordinary branches or replay rewritten/split branches safely. |
+| **`stack-cli`** | Squash-safe stack lifecycle: preview propagation, judge whether descendants need freshness now, apply root/descendant repair and retargeting, merge bottom-up, or undo mutations. |
+| **`git-advanced`** | Rebase, cherry-pick, commit surgery, reflog recovery, and other history-editing primitives. |
+
 ## Background Atoms (composed by commands, not in `/` menu)
 
 | Atom | Owns | Composed by |

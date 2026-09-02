@@ -75,9 +75,17 @@ stack sync              # preview inferred links and repairs
 stack sync --apply      # record links, repair, retarget, refresh stack blocks
 ```
 
-That's the common loop. Repeat after any parent branch changes or a squash
-merge lands. Prefer this over `stack track`; track manually only when target
-branches don't already describe the stack.
+That's the initial registration loop. After a parent change or squash merge,
+always preview; apply according to **Propagation Judgment** below. Prefer this
+over `stack track`; track manually only when target branches do not already
+describe the stack.
+
+## Propagation Judgment
+
+`stack sync` is always a useful preview; `stack sync --apply` is not always
+worth running immediately. Before applying after parent movement, load
+`references/propagation.md` and judge descendant demand, parent stability,
+evidence value, and repeated-replay cost.
 
 ## Scoping Rules
 
@@ -125,6 +133,8 @@ Set `git config stack.blockLink false` to drop the heading link.
 - Bare `stack sync`, `stack merge`, and `stack undo` never mutate; add
   `--apply` to act. The one exception is `stack merge --auto`, which waits for
   the code host and repairs after the root lands.
+- Preview after parent movement; apply only when Propagation Judgment says
+  descendants need freshness now.
 - Never mutate trunk branches (`dev`, `main`, `master`, or any configured
   trunk).
 - If output is unclear, inspect with `stack status`, `stack history`, or
@@ -135,3 +145,9 @@ Set `git config stack.blockLink false` to drop the heading link.
 Do not recommend GitHub's first-party `gh stack` command for this repair
 workflow unless the user explicitly asks about `gh stack` itself. This skill is
 for the local `stack` CLI.
+
+## References
+
+- Load on demand; do not reabsorb into this file:
+  `references/propagation.md` — decide when to propagate a stack, when to leave
+  descendants intentionally stale, and what evidence becomes invalid.
