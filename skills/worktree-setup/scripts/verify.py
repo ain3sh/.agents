@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Verify a worktree's dev environment: workspace symlinks, package entry points,
 no stale absolute symlinks. See SKILL.md for env vars and the full check list.
-Defaults to the cwd worktree; WORKTREE_VERIFY_ALL=1 sweeps all. Exit 0 ok, 1 fail.
+Defaults to the cwd worktree and primary source; --from selects a registered
+source worktree. WORKTREE_VERIFY_ALL=1 sweeps all. Exit 0 ok, 1 fail.
 """
 
 from __future__ import annotations
@@ -20,7 +21,9 @@ from _common import (
     find_node_modules,
     git_worktrees,
     iter_tree,
+    parse_source_args,
     read_json,
+    select_source,
     select_targets,
     workspaces,
 )
@@ -87,7 +90,7 @@ def check_workspace_links(wt: Path, pkgs: dict[str, Path]) -> list[Finding]:
 
 
 def check_package_entry_points(
-    main_repo: Path, wt: Path, pkgs: dict[str, Path]
+    source_repo: Path, wt: Path, pkgs: dict[str, Path]
 ) -> list[Finding]:
     findings: list[Finding] = []
     for name, rel in pkgs.items():
@@ -112,14 +115,14 @@ def check_package_entry_points(
             if not cleaned or any(char in cleaned for char in "*?["):
                 continue
             target = pkg_root / cleaned
-            main_target = main_repo / rel / cleaned
-            if main_target.exists() and not target.exists():
+            source_target = source_repo / rel / cleaned
+            if source_target.exists() and not target.exists():
                 findings.append(
                     (
                         "error",
                         f"workspace package {name}: {key}={raw} not found at "
-                        f"{target.relative_to(wt)} although main has "
-                        f"{main_target.relative_to(main_repo)} (postinstall build dir was "
+                        f"{target.relative_to(wt)} although source has "
+                        f"{source_target.relative_to(source_repo)} (postinstall build dir was "
                         "not mirrored; rerun repair)",
                     )
                 )
@@ -166,11 +169,11 @@ def run_smoke(wt: Path) -> tuple[bool, str]:
 # ============================================================================
 
 
-def verify_worktree(main_repo: Path, wt: Path) -> bool:
+def verify_worktree(source_repo: Path, wt: Path) -> bool:
     pkgs = workspaces(wt)
     link_findings = check_workspace_links(wt, pkgs)
-    entry_findings = check_package_entry_points(main_repo, wt, pkgs)
-    stale = list(find_stale_absolute_symlinks(wt, [str(wt), str(main_repo)]))
+    entry_findings = check_package_entry_points(source_repo, wt, pkgs)
+    stale = list(find_stale_absolute_symlinks(wt, [str(wt), str(source_repo)]))
     smoke_ok, smoke_msg = run_smoke(wt)
 
     ok = not link_findings and not entry_findings and not stale and smoke_ok
@@ -192,15 +195,20 @@ def verify_worktree(main_repo: Path, wt: Path) -> bool:
 
 
 def main() -> int:
-    main_repo, others = git_worktrees(CWD)
+    source_arg = parse_source_args(__doc__ or "")
+    primary, others = git_worktrees(CWD)
+    source = select_source(CWD, primary, others, source_arg)
     targets = select_targets(
         others,
         sweep=env_flag("WORKTREE_VERIFY_ALL"),
         missing_msg="cwd not inside a non-main worktree; nothing to verify",
     )
-    if msg := disk_pressure_msg(main_repo):
+    if targets == [source]:
+        sys.exit(f"source and target are the same worktree: {source}")
+    targets = [target for target in targets if target != source]
+    if msg := disk_pressure_msg(source):
         print(f"warning: {msg}")
-    fail = sum(1 for wt in targets if not verify_worktree(main_repo, wt))
+    fail = sum(1 for wt in targets if not verify_worktree(source, wt))
     return 1 if fail else 0
 
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Detach a worktree from dependencies and artifacts shared with its main repo.
+"""Detach a worktree from dependencies and artifacts shared with any sibling.
 
 Defaults to the cwd worktree; WORKTREE_BREAK_ALL=1 sweeps all non-main
 worktrees. Removes mirrored node_modules and known mirrored artifact dirs,
-unlinks symlinks into main, and copy-breaks any remaining hardlinks to main.
+unlinks symlinks into registered siblings, and copy-breaks remaining shared
+hardlinks.
 """
 
 from __future__ import annotations
@@ -51,21 +52,14 @@ def find_mirrored_dirs(wt: Path) -> list[Path]:
     return [path for path, rel in zip(present, rels) if rel in ignored]
 
 
-def directory_shares_files(src: Path, dst: Path) -> bool:
-    if dst.is_symlink():
-        try:
-            return is_within(dst.resolve(strict=False), src)
-        except (OSError, RuntimeError):
-            return False
-    if not src.is_dir() or not dst.is_dir():
+def shared_with_source(path: Path, wt: Path, source_repos: list[Path]) -> bool:
+    try:
+        metadata = path.stat(follow_symlinks=False)
+    except OSError:
         return False
-    for entry in iter_tree(dst):
-        if not entry.is_file(follow_symlinks=False):
-            continue
-        path = Path(entry.path)
-        counterpart = src / path.relative_to(dst)
+    for source in source_repos:
+        counterpart = source / path.relative_to(wt)
         try:
-            metadata = entry.stat(follow_symlinks=False)
             source_metadata = counterpart.stat()
         except OSError:
             continue
@@ -77,12 +71,29 @@ def directory_shares_files(src: Path, dst: Path) -> bool:
     return False
 
 
+def directory_shares_files(source_repos: list[Path], wt: Path, directory: Path) -> bool:
+    if directory.is_symlink():
+        try:
+            target = directory.resolve(strict=False)
+        except (OSError, RuntimeError):
+            return False
+        return any(is_within(target, source) for source in source_repos)
+    if not directory.is_dir():
+        return False
+    for entry in iter_tree(directory):
+        if not entry.is_file(follow_symlinks=False):
+            continue
+        if shared_with_source(Path(entry.path), wt, source_repos):
+            return True
+    return False
+
+
 def scan_links(
-    wt: Path, main_repo: Path, exclusions: list[Path]
-) -> tuple[list[Path], list[tuple[Path, int, int]]]:
-    """One walk collecting symlinks into main and multi-link file candidates."""
+    wt: Path, source_repos: list[Path], exclusions: list[Path]
+) -> tuple[list[Path], list[Path]]:
+    """Collect symlinks into siblings and multi-link file candidates."""
     symlinks: list[Path] = []
-    hardlinks: list[tuple[Path, int, int]] = []
+    hardlinks: list[Path] = []
     for entry in iter_tree(wt, exclusions):
         if entry.is_symlink():
             path = Path(entry.path)
@@ -90,7 +101,7 @@ def scan_links(
                 target = path.resolve(strict=False)
             except (OSError, RuntimeError):
                 continue
-            if is_within(target, main_repo):
+            if any(is_within(target, source) for source in source_repos):
                 symlinks.append(path)
         elif entry.is_file(follow_symlinks=False):
             try:
@@ -98,29 +109,8 @@ def scan_links(
             except OSError:
                 continue
             if metadata.st_nlink > 1:
-                hardlinks.append((Path(entry.path), metadata.st_dev, metadata.st_ino))
+                hardlinks.append(Path(entry.path))
     return sorted(symlinks), hardlinks
-
-
-def main_inode_matches(
-    main_repo: Path, candidate_keys: set[tuple[int, int]]
-) -> set[tuple[int, int]]:
-    if not candidate_keys:
-        return set()
-    found: set[tuple[int, int]] = set()
-    for entry in iter_tree(main_repo):
-        if not entry.is_file(follow_symlinks=False):
-            continue
-        try:
-            metadata = entry.stat(follow_symlinks=False)
-        except OSError:
-            continue
-        key = (metadata.st_dev, metadata.st_ino)
-        if key in candidate_keys:
-            found.add(key)
-            if found == candidate_keys:
-                return found
-    return found
 
 
 # ============================================================================
@@ -141,16 +131,16 @@ def copy_break_hardlink(path: Path) -> None:
         temp.unlink(missing_ok=True)
 
 
-def break_worktree(main_repo: Path, wt: Path) -> None:
+def break_worktree(source_repos: list[Path], wt: Path) -> None:
     node_modules = [
         path
         for path in find_node_modules(wt)
-        if directory_shares_files(main_repo / path.relative_to(wt), path)
+        if directory_shares_files(source_repos, wt, path)
     ]
     mirrored_dirs = [
         path
         for path in find_mirrored_dirs(wt)
-        if directory_shares_files(main_repo / path.relative_to(wt), path)
+        if directory_shares_files(source_repos, wt, path)
     ]
     removals = sorted(
         set(node_modules + mirrored_dirs), key=lambda path: len(path.parts)
@@ -160,15 +150,13 @@ def break_worktree(main_repo: Path, wt: Path) -> None:
         for path in sorted(removals, key=lambda item: len(item.parts), reverse=True):
             remove(path)
 
-    symlinks, candidates = scan_links(wt, main_repo, removals if DRY_RUN else [])
+    symlinks, candidates = scan_links(wt, source_repos, removals if DRY_RUN else [])
     if not DRY_RUN:
         for path in symlinks:
             path.unlink()
 
-    candidate_keys = {(device, inode) for _path, device, inode in candidates}
-    shared_keys = main_inode_matches(main_repo, candidate_keys)
     hardlinks = [
-        path for path, device, inode in candidates if (device, inode) in shared_keys
+        path for path in candidates if shared_with_source(path, wt, source_repos)
     ]
     if not DRY_RUN:
         for path in hardlinks:
@@ -178,20 +166,22 @@ def break_worktree(main_repo: Path, wt: Path) -> None:
     print(
         f"{wt.name}: {action} "
         f"(node_modules={len(node_modules)}, mirrored_dirs={len(mirrored_dirs)}, "
-        f"main_symlinks={len(symlinks)}, hardlinks={len(hardlinks)})"
+        f"source_symlinks={len(symlinks)}, hardlinks={len(hardlinks)})"
     )
 
 
 def main() -> None:
-    main_repo, others = git_worktrees(CWD)
+    primary, others = git_worktrees(CWD)
     targets = select_targets(
         others,
         sweep=env_flag("WORKTREE_BREAK_ALL"),
         missing_msg="cwd not inside a non-main worktree; nothing to break",
     )
-    with repo_lock(main_repo):
+    all_worktrees = [primary, *others]
+    with repo_lock(primary):
         for wt in targets:
-            break_worktree(main_repo, wt)
+            sources = [source for source in all_worktrees if source != wt]
+            break_worktree(sources, wt)
 
 
 if __name__ == "__main__":

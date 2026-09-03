@@ -5,7 +5,7 @@
 - **`twitter-cli`** — bounded Twitter/X reads and user-approved account actions through the local `twitter` CLI; YAML default, JSON available with `--format json`
 - **`dsx`** — session search/analytics plus durable `dsx papercut add|list|review`
 - **`harness-optimization`** — reliability optimization for repeated agent/tool failures: trace policy → model → hooks → executor → process → evidence, then replace symptom patches with one lifecycle owner
-- **`worktree-setup`** — node_modules symlink rule; never `npm install` in a worktree
+- **`worktree-setup`** — source-selectable dependency mirrors (`repair|verify|setup --from <worktree>`); never install in a shared worktree
 - **`design-doc`** — Factory-themed single-file RFCs and technical memos; adaptive document modes, proof-band/chart and claim-row callout patterns, full light/dark Playwright capture, hero-thumbnail crop for link sharing, secret-gist publishing
 - **`vscode-workspace`** — on-demand headless VSCode instances for the `vscode:*` MCP tools (live LSP diagnostics/symbols/renames); zero-touch: auto-ensure hook spawns/canonicalizes/warms (workspace_path defaults to cwd), refcounted retirement at SessionEnd, idle reaper at SessionStart; manual: `vscode-ws ensure|retire|reap|list`
 

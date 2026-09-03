@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Repair a git worktree's dev environment from a healthy main: mirror node_modules,
+"""Repair a git worktree's dev environment from a healthy source: mirror node_modules,
 mirror postinstall build outputs, rewire workspace symlinks, link venvs.
 
-Defaults to the cwd worktree; WORKTREE_REPAIR_ALL=1 sweeps all worktrees.
+Defaults to the cwd worktree and primary source; --from selects a registered
+source worktree. WORKTREE_REPAIR_ALL=1 sweeps all worktrees.
 See SKILL.md for env vars. Idempotent. Never installs in the worktree.
 """
 
@@ -25,8 +26,10 @@ from _common import (
     git_ignored_paths,
     git_tracked_paths,
     git_worktrees,
+    parse_source_args,
     remove,
     repo_lock,
+    select_source,
     select_targets,
     workspaces,
 )
@@ -77,7 +80,7 @@ def already_mirrored(src: Path, dst: Path) -> bool:
 
 
 def mirror(src: Path, dst: Path, verbose: bool = False) -> bool:
-    # Non-JS repos have no node_modules in main; nothing to mirror.
+    # Non-JS repos have no node_modules in the source; nothing to mirror.
     if not src.is_dir():
         return False
     if already_mirrored(src, dst):
@@ -86,19 +89,19 @@ def mirror(src: Path, dst: Path, verbose: bool = False) -> bool:
     dst.mkdir(parents=True, exist_ok=True)
     if verbose:
         print(
-            f"  rebuilding {dst} from main (interruptible; rerun resumes)",
+            f"  rebuilding {dst} from source (interruptible; rerun resumes)",
             flush=True,
         )
     # rsnapshot-style converge-in-place: files unchanged vs the link-dest
-    # become hardlinks to main, deltas are fixed up, extras deleted. Unlike
+    # become hardlinks to the source, deltas are fixed up, extras deleted. Unlike
     # rmtree + cp -al this is incremental (cost scales with what changed in
-    # main) and an interrupted run leaves a valid tree that the rerun resumes.
+    # the source) and an interrupted run leaves a valid tree the rerun resumes.
     proc = subprocess.run(
         ["rsync", "-a", "--delete", f"--link-dest={src}/", f"{src}/", f"{dst}/"],
         check=False,
     )
     if proc.returncode == 24:
-        print("  warning: main changed during mirror; rerun repair", file=sys.stderr)
+        print("  warning: source changed during mirror; rerun repair", file=sys.stderr)
     elif proc.returncode != 0:
         sys.exit(f"rsync failed with exit code {proc.returncode}")
     return True
@@ -147,7 +150,7 @@ def rewire(nm: Path, wt: Path, pkgs: dict[str, Path]) -> tuple[int, int]:
         # If a third-party dependency shares the workspace's name (e.g. an app
         # named "storybook" that also depends on the "storybook" package), the
         # real dependency lives in this slot and a self-link would clobber it.
-        # Defer to whatever the node_modules mirror placed from main.
+        # Defer to whatever the node_modules mirror placed from the source.
         if target.resolve() == own_dir:
             continue
         if name.startswith("@"):
@@ -170,15 +173,15 @@ def rewire(nm: Path, wt: Path, pkgs: dict[str, Path]) -> tuple[int, int]:
 # ============================================================================
 
 
-def discover_local_node_modules(main: Path) -> list[Path]:
-    root_nm = main / "node_modules"
-    return [p.relative_to(main) for p in find_node_modules(main) if p != root_nm]
+def discover_local_node_modules(source: Path) -> list[Path]:
+    root_nm = source / "node_modules"
+    return [p.relative_to(source) for p in find_node_modules(source) if p != root_nm]
 
 
-def link_venvs(main: Path, wt: Path) -> str:
+def link_venvs(source: Path, wt: Path) -> str:
     state: list[str] = []
     for env_name in (".venv", "venv"):
-        src, dst = main / env_name, wt / env_name
+        src, dst = source / env_name, wt / env_name
         if not src.exists():
             continue
         desired = os.path.relpath(src, dst.parent)
@@ -191,22 +194,22 @@ def link_venvs(main: Path, wt: Path) -> str:
     return ",".join(state) if state else "none"
 
 
-def mirror_extras(main: Path, wt: Path) -> str:
+def mirror_extras(source: Path, wt: Path) -> str:
     if not EXTRA_MIRROR_DIRS:
         return "none"
     ignored = git_ignored_paths(wt, EXTRA_MIRROR_DIRS)
     parts: list[str] = []
     for rel in EXTRA_MIRROR_DIRS:
-        status = safe_mirror(main / rel, wt / rel, ignored=rel in ignored)
+        status = safe_mirror(source / rel, wt / rel, ignored=rel in ignored)
         parts.append(f"{rel}:{status}")
     return " ".join(parts)
 
 
-def mirror_package_builds(main: Path, wt: Path, pkgs: dict[str, Path]) -> str:
-    """Mirror per-package build output dirs (dist/, lib/, etc.) from main."""
+def mirror_package_builds(source: Path, wt: Path, pkgs: dict[str, Path]) -> str:
+    """Mirror per-package build output dirs (dist/, lib/, etc.) from source."""
     candidates: list[tuple[Path, Path, str]] = []
     for rel in pkgs.values():
-        # Use the worktree's package.json -- branch's build config may differ from main.
+        # Use the target's package.json -- its build config may differ from the source.
         candidates.extend(
             (rel, Path(d), str(rel / d)) for d in detect_package_build_dirs(wt / rel)
         )
@@ -214,16 +217,16 @@ def mirror_package_builds(main: Path, wt: Path, pkgs: dict[str, Path]) -> str:
     rel_dirs = [rel_dir for _rel, _build_dir, rel_dir in candidates]
     tracked = git_tracked_paths(wt, rel_dirs)
     ignored = git_ignored_paths(wt, rel_dirs)
-    rebuilt = fresh = source = 0
+    rebuilt = fresh = source_skips = 0
     for rel, build_dir, rel_dir in candidates:
         # Export maps may point at tracked trees outside a conventional src/
         # directory (for example packages/runtime/auth/src/index.ts). Treat any
         # tracked content conservatively: a mirror must never replace it.
         if rel_dir in tracked:
-            source += 1
+            source_skips += 1
             continue
         status = safe_mirror(
-            main / rel / build_dir, wt / rel / build_dir, ignored=rel_dir in ignored
+            source / rel / build_dir, wt / rel / build_dir, ignored=rel_dir in ignored
         )
         if status == "rebuilt":
             rebuilt += 1
@@ -231,8 +234,8 @@ def mirror_package_builds(main: Path, wt: Path, pkgs: dict[str, Path]) -> str:
             fresh += 1
         # src-missing / src-not-dir / wt-parent-missing: silently skip
     summary = f"rebuilt={rebuilt} fresh={fresh}"
-    if source:
-        summary += f" source-skip={source}"
+    if source_skips:
+        summary += f" source-skip={source_skips}"
     return summary
 
 
@@ -241,16 +244,16 @@ def mirror_package_builds(main: Path, wt: Path, pkgs: dict[str, Path]) -> str:
 # ============================================================================
 
 
-def repair_worktree(main_repo: Path, wt: Path, main_local_nms: list[Path]) -> str:
+def repair_worktree(source_repo: Path, wt: Path, source_local_nms: list[Path]) -> str:
     pkgs = workspaces(wt)
-    root_built = mirror(main_repo / "node_modules", wt / "node_modules", verbose=True)
+    root_built = mirror(source_repo / "node_modules", wt / "node_modules", verbose=True)
     root_changed, root_total = rewire(wt / "node_modules", wt, pkgs)
 
     local_built = local_fresh = local_changed = local_total = 0
-    for rel_nm in main_local_nms:
+    for rel_nm in source_local_nms:
         if not (wt / rel_nm.parent).exists():
             continue
-        if mirror(main_repo / rel_nm, wt / rel_nm, verbose=True):
+        if mirror(source_repo / rel_nm, wt / rel_nm, verbose=True):
             local_built += 1
         else:
             local_fresh += 1
@@ -258,9 +261,9 @@ def repair_worktree(main_repo: Path, wt: Path, main_local_nms: list[Path]) -> st
         local_changed += changed
         local_total += total
 
-    pkg_builds = mirror_package_builds(main_repo, wt, pkgs)
-    extras = mirror_extras(main_repo, wt)
-    venv = link_venvs(main_repo, wt)
+    pkg_builds = mirror_package_builds(source_repo, wt, pkgs)
+    extras = mirror_extras(source_repo, wt)
+    venv = link_venvs(source_repo, wt)
 
     return (
         f"root={'rebuilt' if root_built else 'fresh'} ({root_changed}/{root_total} links); "
@@ -272,7 +275,9 @@ def repair_worktree(main_repo: Path, wt: Path, main_local_nms: list[Path]) -> st
 def main() -> None:
     if RSYNC is None:
         sys.exit("repair requires rsync (sudo pacman -S rsync)")
-    main_repo, others = git_worktrees(CWD)
+    source_arg = parse_source_args(__doc__ or "")
+    primary, others = git_worktrees(CWD)
+    source = select_source(CWD, primary, others, source_arg)
     targets = select_targets(
         others,
         sweep=env_flag("WORKTREE_REPAIR_ALL"),
@@ -283,12 +288,15 @@ def main() -> None:
     )
     if not targets:
         return
+    if targets == [source]:
+        sys.exit(f"source and target are the same worktree: {source}")
+    targets = [target for target in targets if target != source]
 
-    with repo_lock(main_repo):
-        main_local_nms = discover_local_node_modules(main_repo)
+    with repo_lock(primary):
+        source_local_nms = discover_local_node_modules(source)
         for i, wt in enumerate(targets, 1):
-            summary = repair_worktree(main_repo, wt, main_local_nms)
-            print(f"[{i}/{len(targets)}] {wt.name}: {summary}")
+            summary = repair_worktree(source, wt, source_local_nms)
+            print(f"[{i}/{len(targets)}] {wt.name} <- {source.name}: {summary}")
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ Sibling scripts import this via sys.path[0] (the scripts directory), so
 
 from __future__ import annotations
 
+import argparse
 import contextlib
 import fcntl
 import json
@@ -63,7 +64,7 @@ PACKAGE_BUILD_DIRS_OVERRIDE: list[str] | None = (
 
 
 @contextlib.contextmanager
-def repo_lock(main_repo: Path, name: str = "worktree-setup") -> Iterator[None]:
+def repo_lock(primary_repo: Path, name: str = "worktree-setup") -> Iterator[None]:
     """Serialize repair/break runs across all sessions sharing this repo.
 
     Rebuilds are metadata-heavy; overlapping runs (human + concurrent agents)
@@ -73,13 +74,13 @@ def repo_lock(main_repo: Path, name: str = "worktree-setup") -> Iterator[None]:
     try:
         git_dir = Path(
             subprocess.check_output(
-                ["git", "rev-parse", "--git-common-dir"], cwd=main_repo, text=True
+                ["git", "rev-parse", "--git-common-dir"], cwd=primary_repo, text=True
             ).strip()
         )
         if not git_dir.is_absolute():
-            git_dir = main_repo / git_dir
+            git_dir = primary_repo / git_dir
     except (OSError, subprocess.CalledProcessError):
-        git_dir = main_repo / ".git"
+        git_dir = primary_repo / ".git"
     lock_path = git_dir / f"{name}.lock"
     fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
     try:
@@ -193,6 +194,62 @@ def git_worktrees(start: Path) -> tuple[Path, list[Path]]:
     if not paths:
         sys.exit("no git worktrees found")
     return paths[0], paths[1:]
+
+
+def parse_source_args(description: str) -> str | None:
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "--from",
+        dest="source",
+        metavar="WORKTREE",
+        help="registered source worktree path, directory name, or branch",
+    )
+    return parser.parse_args().source
+
+
+def resolve_worktree(start: Path, identifier: str, worktrees: Sequence[Path]) -> Path:
+    """Resolve a registered worktree by path, directory name, or branch."""
+    raw_path = Path(identifier).expanduser()
+    path_candidates = {
+        raw_path.resolve(),
+        (start / raw_path).resolve(),
+    }
+    matches = {path for path in worktrees if path in path_candidates}
+    matches.update(path for path in worktrees if path.name == identifier)
+
+    raw = subprocess.check_output(
+        ["git", "worktree", "list", "--porcelain"], cwd=start, text=True
+    )
+    current: Path | None = None
+    for line in raw.splitlines():
+        if line.startswith("worktree "):
+            current = Path(line.split(" ", 1)[1]).resolve()
+        elif (
+            current is not None
+            and line.startswith("branch refs/heads/")
+            and line.removeprefix("branch refs/heads/") == identifier
+        ):
+            matches.add(current)
+
+    if not matches:
+        sys.exit(f"source worktree not found: {identifier}")
+    if len(matches) > 1:
+        choices = ", ".join(str(path) for path in sorted(matches))
+        sys.exit(f"source worktree is ambiguous: {identifier} ({choices})")
+    return matches.pop()
+
+
+def select_source(
+    start: Path,
+    primary: Path,
+    others: Sequence[Path],
+    identifier: str | None,
+) -> Path:
+    return (
+        primary
+        if identifier is None
+        else resolve_worktree(start, identifier, [primary, *others])
+    )
 
 
 def git_ignored_paths(wt: Path, rels: Sequence[str]) -> set[str]:
