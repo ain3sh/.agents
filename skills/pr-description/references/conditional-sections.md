@@ -14,9 +14,47 @@ One-liner under Description; pre-empts drive-by "while you're here…" comments.
 **Out of scope**: refactoring the legacy `auth/` module — tracked in TEAM-456.
 ```
 
-### Scope map — large or multi-concern diffs
+### Diff composition — large diffs (roughly 1k+ lines or 20+ files)
 
-When a reviewer could ask "why are unrelated changes bundled?", append a scope map to the Description: one bullet per bucket (what it covers + why it must ship here), then an explicit Out-of-scope line. Bullets beat a table when each "why" is a sentence. Typical buckets: core change · plumbing it requires · deliberate behavior changes (cross-link the Reviewer Guide list) · tests/e2e · target-branch merge alignment ("no behavior of its own").
+The reviewer's first question on a large diff is not "why merge?" but "how much of this must I actually read?" Unanswered, it rejects the PR on size alone. Answer it on the first screen, directly under **What**, with a computed table and a per-bucket action, then name the files that carry behavior with their line counts.
+
+Compute, never estimate:
+
+```bash
+python3 ~/.agents/skills/pr-description/scripts/diff-composition.py \
+  "origin/$DEFAULT_BRANCH" HEAD \
+  --core <every file that carries behavior> \
+  --tooling <harness/script prefixes not shipped>
+```
+
+```markdown
+**Where the 26k lines are.** <One sentence naming why the diff is large and how many files carry logic.>
+
+| Share | Lines | Files | What it is | What to do with it |
+| ---: | ---: | ---: | --- | --- |
+| **54%** | 14,077 | 3 | Generated `__ast-snapshots__/*.ast.json` | Skip. CI verifies they match the source. |
+| **18%** | 4,654 | 87 | Mechanical: <the one repeated pattern>; ~750 lines are file moves (`a.ts` → `b.ts`); 56 files change 30 lines or fewer. | Read two owners in full, spot-check the rest. |
+| **14.5%** | 3,771 | 52 | Tests and fixtures (10 new suites, 42 modified). | Read for the invariants they pin, listed under Verification. |
+| **11%** | 2,938 | 14 | **Core logic.** <the four nouns> | This is the review. Breakdown below. |
+| 1.5% | 396 | 12 | Perf harness (`perf-engine/`, `scripts/`); not shipped. | Skim. |
+
+**The 11% that carries behavior**, grouped by the change it makes:
+
+1. **<Change>** (1,612 lines): `bootstrap.ts` (429) is new and owns the flow; `run.ts` (982) is the existing function reshaped around it and shrinks from 827 to 683 lines in six hunks; … <one sentence on what the group changes>.
+2. **<Change>** (791 lines): …
+```
+
+Rules for this block:
+
+- Every number comes from the script. Hand estimates drift (a 57-file, 3.9k-line "tests" guess was 52 files and 3,771 lines when measured).
+- The `--core` list is the honesty check: any file in "mechanical" that changes behavior (a fail-closed branch, a policy seal) moves to core, even at 235 lines. Conversely, a core file whose diff is a reshape, not an addition, says so with before/after line counts and hunk count.
+- Every row ends in a reviewer action: Skip / Skim / Spot-check / Read / This is the review.
+- The core breakdown groups files by the change they make, with per-file line counts, and ends each group with one sentence of behavior. Four groups is typical; more than six means the PR needs `split-pr`.
+- Prose about size ("the diff is mostly mechanical, read honestly…") is not a substitute. A paragraph reads as an excuse; a table with actions reads as a plan. Do not put the table in Reviewer Guide: by then the reviewer has already decided.
+
+### Scope map — multi-concern diffs that are not large
+
+When a reviewer could ask "why are unrelated changes bundled?" and the diff is small enough that size is not the anxiety, append a scope map to the Description: one bullet per bucket (what it covers + why it must ship here), then an explicit Out-of-scope line. Bullets beat a table when each "why" is a sentence. Typical buckets: core change · plumbing it requires · deliberate behavior changes (cross-link the Reviewer Guide list) · tests/e2e · target-branch merge alignment ("no behavior of its own"). Never include both a scope map and a diff composition table; the composition table's "What it is" column carries the why.
 
 ```markdown
 ### Scope map — what is bundled and why

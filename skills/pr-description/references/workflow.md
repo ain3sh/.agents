@@ -13,7 +13,8 @@ pr-description checklist:
 - [ ] Diff analyzed three-dot; what/type/scope/why extracted
 - [ ] Strongest evidence and material merge cost identified
 - [ ] Title: outcome/invariant first, type(scope), imperative, <=72 chars
-- [ ] First screen passes the four-question skim gate
+- [ ] First screen passes the skim gate (five questions on a large diff)
+- [ ] Large diff? Composition table computed by scripts/diff-composition.py, placed under What
 - [ ] Five required sections present; conditional catalog walked row by row
 - [ ] Structural change? Compact Change Shape or Architecture artifact chosen via show-me; no duplicate view
 - [ ] Concrete visual change? Live proof attached high in body (visual-evidence.md)
@@ -71,10 +72,18 @@ Read only the title and first screen. A reviewer must be able to answer:
 2. What changes?
 3. Why believe it works?
 4. What could it cost or break?
+5. On a large diff (roughly 1k+ lines or 20+ files): how much of this must I
+   actually read, and which files carry the behavior?
+
+Question 5 decides whether review starts at all. Answer it with the computed
+composition table from `conditional-sections.md` directly under **What**,
+before **Why**. A reviewer who meets the size before the table has already
+priced the PR as unreviewable.
 
 Use two to four short sentences plus one compact table or list when that scans
 faster. The opening stands alone without the ticket. For a large structural PR,
-use **Why** / **What this PR does** and a one-line **Net effect for users**.
+the order is **What** (outcome + decisive number) → composition table → core
+breakdown → **Why** → **How** → one-line **Net effect for users**.
 Link a design document here when it carries the rationale. Keep anti-goals,
 scope maps, detailed RCA, and file tours in their owning locations.
 A small PR may omit **Why** when the cause is self-evident.
@@ -88,7 +97,7 @@ Description.
 
 | # | Section | Fires when |
 |---|---|---|
-| 1 | Description | always; inline anti-goals, scope map, design link, or RCA as needed |
+| 1 | Description | always; inline diff composition (large diff), anti-goals, scope map, design link, or RCA as needed |
 | 2 | Visual Evidence | concrete UI/TUI/CLI/rendered-media change |
 | 3 | Repro Recipe | new feature or fixed bug with a manual surface |
 | 4 | Change Shape | ownership, call flow, state, or dependency delta fits one compact inline representation |
@@ -132,7 +141,8 @@ Closes TEAM-123
 
 ## Reviewer Guide
 
-**Diff shape:** <attention split; generated/noise files are "skip", never a %>
+**Diff shape:** <attention split in one line; on a large diff, point at the composition table in Description rather than restating it>
+**Three passes:** <large diff only; each pass names the commits or files and the one thing to check; never estimate durations>
 **Review depth:** Skim | Standard | Deep — <one-line reason>
 **Read order:**
 1. `path/to/entry.ts`: <one clause>
@@ -158,6 +168,15 @@ Closes TEAM-123
 Keep it scannable. Use one file or tight pair per numbered line and causal,
 not alphabetical, order. Add deliberate behavior changes that could look like
 merge noise. Drop an empty pushback prompt.
+
+Percentages appear only in the composition table, computed by the script and
+paired with line and file counts; a bare "80% is generated" in prose is a
+hand-wave, not a number. On a large diff the three passes give the reviewer a
+plan: the hot path first (by commit), the contracts second, the repeated
+pattern last with two owners read in full and the rest spot-checked.
+Never attach a duration to a pass or to the review; it reads as a promise the
+author cannot keep. Cite commits by ordinal and subject as well as SHA; a
+rebase invalidates every SHA in the body (`refresh.md`).
 
 ### Risk & Impact
 

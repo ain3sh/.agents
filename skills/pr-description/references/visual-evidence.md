@@ -15,7 +15,7 @@ It does **not** fire for logic / backend / config changes with no visible delta,
 
 ## Timing — after the PR is open, never blocking it
 
-Capture is multi-minute (launch, script the interaction, record, optionally render, upload), so **never block `gh pr create` on it.** Open the PR with the prose body first; *then* run this workflow and PATCH the artifact high into the body — that's a refresh, so `references/refresh.md` owns the write and marker re-stamp. The artifact is a fast follow-up, not a gate on the initial push.
+Capture is slow (launch, script the interaction, record, optionally render, upload), so **never block `gh pr create` on it.** Open the PR with the prose body first; *then* run this workflow and PATCH the artifact high into the body — that's a refresh, so `references/refresh.md` owns the write and marker re-stamp. The artifact is a fast follow-up, not a gate on the initial push.
 
 ## Capture engine — droid-control
 

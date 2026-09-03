@@ -13,6 +13,7 @@ Make the merge case legible from the title and first screen; later sections prov
 | Goal | Action |
 |---|---|
 | Analyze and draft | Load `references/workflow.md`; use three-dot diff analysis, outcome-first title selection, `What / Why / How`, and the first-screen skim gate. |
+| Large diff (roughly 1k+ lines or 20+ files) | Run `scripts/diff-composition.py BASE HEAD --core <behavior files> --tooling <prefixes>`; put the composition table and core breakdown under **What** (template in `references/conditional-sections.md`). |
 | Add conditional sections | Load `references/conditional-sections.md` only when a catalog trigger fires. |
 | Show a structural change | Load `show-me` to select one grounded shape; load `references/artifacts.md` only when inline evidence cannot carry it. |
 | Show a visual change | Open the PR first, then load `references/visual-evidence.md` and capture live proof. |
@@ -49,7 +50,13 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 6. Never fabricate magnitude, proof, mitigation, or rollout state. Preview
    only evidence the diff or live verification actually supports.
 7. Never compose the body through shell heredocs or publish with `gh pr edit`;
-   use a file tool and REST, then verify the live body byte-for-byte.
+   use a file tool and `gh api -F body=@file`, stamp the `pr-desc-base`
+   marker last, then verify the live body byte-for-byte.
+8. Never describe a large diff's size in prose or with estimated percentages;
+   a reviewer prices the PR from the first screen, so the computed composition
+   table with a per-row action goes there, before **Why**.
+9. Never attach durations to review passes or to the review; name the commits,
+   files, and the one thing to check per pass.
 
 ## Failure map
 
@@ -57,7 +64,9 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 |---|---|
 | Title is valid but says only how | Apply the abstraction ladder in `workflow.md`; choose the highest proven delta. |
 | Impact is vague despite strong evidence | Preview the decisive fact in **What**; keep full proof in its conditional section. |
-| Reviewer must scroll to know why to merge | Run the four-question skim gate in `workflow.md` and rewrite the first screen. |
+| Reviewer must scroll to know why to merge | Run the skim gate in `workflow.md` and rewrite the first screen. |
+| Diff is large and the body explains the size in prose, or the composition sits in Reviewer Guide | Run `scripts/diff-composition.py`; move the table and core breakdown under **What** (`conditional-sections.md`, Diff composition). |
+| Body cites SHAs after a rebase or force-push | Sweep with the stale-SHA step in `refresh.md`; rerun the composition script. |
 | Refresh says no-op but the user asked for prose/title improvement | Use the explicit-audit bypass in `refresh.md`. |
 | Repeated refreshes read like commit history | Replace the revision log with only changes since the last human review. |
 | Diagram or recording adds no reviewer signal | Follow `artifacts.md` or `visual-evidence.md`; remove net-zero evidence. |
@@ -77,4 +86,7 @@ Load on demand; do not reabsorb into this file:
   handoff.
 - `references/refresh.md` — marker-based staleness, decision-hierarchy audit,
   revision log, and explicit-audit bypass.
-- `references/publish.md` — GitHub REST operations and safe body composition.
+- `references/publish.md` — GitHub REST operations, marker stamp, and
+  round-trip verification.
+- `scripts/diff-composition.py` — buckets a three-dot diff by review weight
+  (generated / mechanical / tests / core / tooling / docs) from `git numstat`.
