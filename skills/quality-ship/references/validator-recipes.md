@@ -20,6 +20,18 @@ Canonical shape:
 - the wrapper returns the validator's exact exit status
 - only the 50 newest logs are retained
 - `--cwd` and repeatable `--env` options replace shell prelude composition
+- the nearest `.nvmrc` above the check cwd selects Node through NVM before the
+  validator starts
+
+Pass extra executable directories without shell composition:
+
+```bash
+~/.agents/scripts/run-check lint --env PATH="$HOME/.local/bin:$PATH" -- custom-lint src/foo.ts
+```
+
+This PATH override supplies additional tools and selects runtimes in
+repositories without `.nvmrc`. When `.nvmrc` exists, its NVM selector remains
+the Node runtime owner.
 
 The no-composition and cancellation rules live in `SKILL.md`. This file owns
 only validator argv and setup recipes.

@@ -133,6 +133,43 @@ def _write(stream: object, log: object, data: bytes) -> None:
     log.write(data)
 
 
+def _nearest_nvmrc(cwd: str | None) -> Path | None:
+    directory = Path(cwd or os.getcwd()).resolve()
+    for candidate in (directory, *directory.parents):
+        nvmrc = candidate / ".nvmrc"
+        if nvmrc.is_file():
+            return nvmrc
+    return None
+
+
+def _node_command(
+    command: list[str],
+    cwd: str | None,
+    env: dict[str, str],
+) -> tuple[list[str], str | None]:
+    nvmrc = _nearest_nvmrc(cwd)
+    if nvmrc is None:
+        return command, None
+
+    nvm_dir = Path(env.get("NVM_DIR", str(Path.home() / ".nvm"))).expanduser()
+    nvm_exec = nvm_dir / "nvm-exec"
+    if not nvm_exec.is_file():
+        raise FileNotFoundError(f"{nvmrc} requires NVM, but {nvm_exec} does not exist")
+
+    selector = nvmrc.read_text().strip()
+    if not selector:
+        raise OSError(f"{nvmrc} is empty")
+
+    env["NODE_VERSION"] = selector
+    return [
+        str(nvm_exec),
+        "env",
+        "-u",
+        "NODE_VERSION",
+        *command,
+    ], f"{selector} ({nvmrc})"
+
+
 def _run(options: Options) -> int:
     log_dir = _log_dir()
     log_path, log = _create_log(log_dir, options.label)
@@ -146,8 +183,15 @@ def _run(options: Options) -> int:
     env = os.environ.copy()
     env.update(options.env)
     try:
-        child = subprocess.Popen(
+        command, node_version = _node_command(
             options.command,
+            options.cwd,
+            env,
+        )
+        if node_version is not None:
+            emit(f"[run-check] node: {node_version}\n")
+        child = subprocess.Popen(
+            command,
             cwd=options.cwd,
             env=env,
             stdout=subprocess.PIPE,

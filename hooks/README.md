@@ -12,6 +12,11 @@ High-level, reusable hooks for Factory Droid that prioritize clear behavior, rel
 
 ```
 hooks/
+├── tests/
+│   ├── test_check_guard.py
+│   ├── test_env_vars.py
+│   ├── test_io.py
+│   └── test_tool_wrappers.py
 ├── utils/
 │   ├── __init__.py
 │   ├── types.py
@@ -42,6 +47,14 @@ hooks/
 │   └── retire_vscode_workspaces.py
 └── user_prompt_submit/
     └── conflict_guard.py
+```
+
+## Tests
+
+All hook tests live under `hooks/tests/`:
+
+```bash
+python -m unittest discover -s hooks/tests
 ```
 
 ## Quick Start (Minimal Hook)

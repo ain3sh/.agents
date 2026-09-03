@@ -47,7 +47,7 @@
 | Tool | Install | Wired into |
 |---|---|---|
 | `rtk` | `curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh \| sh` | `hooks/pre_tool_use/rtk_rewrite.py` — transparent `Execute` rewriter. Per-surface toggles in `configs/droid.toml`. |
-| check runner + guard | built-in (`scripts/run-check`, `hooks/pre_tool_use/check_guard.py`) | One no-shell grammar: `run-check <label> [--cwd ...] [--env ...] -- <argv...>`. The Python runner forwards cancellation signals and keeps 50 logs; the guard denies recognized raw validators and composition around the canonical runner. Toggle/`tools` vocabulary in `configs/droid.toml`. |
+| check runner + guard | built-in (`scripts/run-check`, `hooks/pre_tool_use/check_guard.py`) | One no-shell grammar: `run-check <label> [--cwd ...] [--env ...] -- <argv...>`. The Python runner applies the nearest `.nvmrc` through NVM, forwards cancellation signals, and keeps 50 logs; the guard denies recognized raw validators and composition around the canonical runner. Toggle/`tools` vocabulary in `configs/droid.toml`. |
 | `slop-scan` | `npm install -g slop-scan` | `/retrospective`, `/review-pr`, `quality-ship` |
 | `react-doctor` | `npm install -g react-doctor` (Node >=22) | `quality-ship` (React branch), `react-doctor` skill |
 | `vulture` | `uv tool install vulture` | `quality-ship` (Python branch) |

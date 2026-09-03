@@ -22,14 +22,19 @@ Examples:
 ```bash
 ~/.agents/scripts/run-check test -- npx vitest run src/foo.test.ts
 ~/.agents/scripts/run-check lint -- npx eslint src/foo.ts
-~/.agents/scripts/run-check e2e --cwd apps/cli --env PATH="$HOME/.nvm/versions/node/v22.19.0/bin:$PATH" -- npm run test:e2e:run -- e2e-tests/chat-input.test.ts
+~/.agents/scripts/run-check e2e --cwd apps/cli -- npm run test:e2e:run -- e2e-tests/chat-input.test.ts
+~/.agents/scripts/run-check custom --env PATH="$HOME/.local/bin:$PATH" -- custom-validator src/foo.ts
 ```
 
 `run-check` streams complete merged stdout/stderr to the attached Execute
 call, writes the same bytes under `/tmp/droid-checks/`, waits, prints the log
 path and exit status, and exits with the validator's exact status. It owns the
 check's cwd, environment, cancellation forwarding, and bounded log retention;
-do not compose shell setup around it.
+do not compose shell setup around it. When the check cwd is inside a repository
+with `.nvmrc`, it also runs the validator through NVM with that selector and
+fails before the validator starts if the pinned runtime cannot be resolved.
+Use `--env PATH="...:$PATH"` for additional tool directories or repositories
+without `.nvmrc`; an `.nvmrc` remains the canonical Node selector when present.
 
 1. Never use `fireAndForget`, shell `&`, or a detached task for checks -- an
    unattended process can fail while the model sleeps or polls stale output.

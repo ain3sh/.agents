@@ -15,7 +15,7 @@ from hooks.pre_tool_use.check_guard import _validator_re, _violation
 
 VALIDATORS = _validator_re(["pytest", "vitest", "eslint", "tsc"])
 RUN_CHECK = Path(__file__).resolve().parents[2] / "scripts" / "run-check"
-CHECK_GUARD = Path(__file__).with_name("check_guard.py")
+CHECK_GUARD = Path(__file__).resolve().parents[1] / "pre_tool_use" / "check_guard.py"
 
 
 def _load_run_check():
@@ -195,6 +195,83 @@ class RunCheckTest(unittest.TestCase):
                 log_path.read_text(),
                 f"{log_line}{cwd}\nstderr-live\nfinished\n[run-check] exit: 7\n",
             )
+
+    def test_uses_the_nearest_nvmrc_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "repo"
+            cwd = root / "packages" / "cli"
+            nvm_dir = Path(temp_dir) / "nvm"
+            cwd.mkdir(parents=True)
+            nvm_dir.mkdir()
+            (root / ".nvmrc").write_text("20\n")
+            (root / "packages" / ".nvmrc").write_text("22.19\n")
+            nvm_exec = nvm_dir / "nvm-exec"
+            nvm_exec.write_text(
+                '#!/bin/sh\nprintf "selector=%s\\n" "$NODE_VERSION"\nexec "$@"\n'
+            )
+            nvm_exec.chmod(0o755)
+
+            result = subprocess.run(
+                [
+                    str(RUN_CHECK),
+                    "node-version",
+                    "--cwd",
+                    str(cwd),
+                    "--",
+                    sys.executable,
+                    "-c",
+                    "import os; print('child=' + str(os.getenv('NODE_VERSION')))",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                env={
+                    **os.environ,
+                    "DROID_CHECK_LOG_DIR": str(Path(temp_dir) / "logs"),
+                    "NVM_DIR": str(nvm_dir),
+                },
+            )
+
+            self.assertEqual(result.returncode, 0)
+            self.assertIn(
+                f"[run-check] node: 22.19 ({root / 'packages' / '.nvmrc'})\n",
+                result.stdout,
+            )
+            self.assertIn("selector=22.19\n", result.stdout)
+            self.assertIn("child=None\n", result.stdout)
+
+    def test_fails_before_starting_when_nvmrc_cannot_be_resolved(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "repo"
+            cwd = root / "packages" / "cli"
+            cwd.mkdir(parents=True)
+            (root / ".nvmrc").write_text("22.19\n")
+            marker = Path(temp_dir) / "started"
+
+            result = subprocess.run(
+                [
+                    str(RUN_CHECK),
+                    "node-version",
+                    "--cwd",
+                    str(cwd),
+                    "--",
+                    sys.executable,
+                    "-c",
+                    f"from pathlib import Path; Path({str(marker)!r}).touch()",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                env={
+                    **os.environ,
+                    "DROID_CHECK_LOG_DIR": str(Path(temp_dir) / "logs"),
+                    "NVM_DIR": str(Path(temp_dir) / "missing-nvm"),
+                },
+            )
+
+            self.assertEqual(result.returncode, 127)
+            self.assertIn("requires NVM", result.stdout)
+            self.assertFalse(marker.exists())
 
     def test_forwards_termination_to_the_child_process_group(self) -> None:
         with tempfile.TemporaryDirectory() as log_dir:
