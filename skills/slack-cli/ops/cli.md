@@ -126,6 +126,66 @@ slack msg thread "$CH" "$TS"
 If `conversations.join` returns `missing_scope`, add `channels:join` at
 https://api.slack.com/apps/A0AN5RUFSNB/oauth and Reinstall to Workspace.
 
+### DMs and file sharing (when slck hits `ratelimited`)
+
+`slack msg send <USER_ID>` resolves DMs by listing every channel, which trips
+`conversations.list` rate limits that persist for minutes across both token
+buckets (symptom: `failed to list channels: slack API error: ratelimited`).
+Skip the resolution: find the DM channel ID once via the API, then post to the
+D-id directly. Token scopes force the split below; `conversations.open` fails
+with `missing_scope` on both, so you can only reuse an existing DM.
+
+| Token | Has | Lacks |
+| --- | --- | --- |
+| bot (`xoxb-`) | `chat:write`, `files:write` | `im:read`, `im:write` |
+| user (`xoxp-`) | `im:read` (list DMs), search | `im:write`, `files:write` |
+
+Identify the parties: `slack whoami -o json` → the human's user ID (the user
+token's identity); `auth.test` with the bot token → `user_id` (the bot's user
+ID, distinct from its `B…` bot ID).
+
+**Resolve the DM channel ID** (user token lists; the `user` field in each IM is
+the other party):
+
+```bash
+TOKEN=$(rg -o 'xoxp-[A-Za-z0-9-]+' ~/.config/slack-chat-api/credentials | head -1)
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  "https://slack.com/api/conversations.list?types=im&limit=200" \
+  -o /tmp/slack-ims.json
+# Match the D-id whose "user" equals the target user ID:
+rg -o '"id":"(D[A-Z0-9]+)"[^}]*"user":"<TARGET_USER_ID>"' /tmp/slack-ims.json
+```
+
+**Post the message** (bot token, direct to the D-id — bypasses slck's listing):
+
+```bash
+BTOKEN=$(rg -o 'xoxb-[A-Za-z0-9-]+' ~/.config/slack-chat-api/credentials | head -1)
+curl -sS -H "Authorization: Bearer $BTOKEN" -d "channel=D0XXXXXXX" \
+  --data-urlencode "text@/tmp/msg.txt" https://slack.com/api/chat.postMessage
+```
+
+**Upload + share a file** — Files API v2; legacy `files.upload` is dead
+(`method_deprecated`):
+
+1. `files.getUploadURLExternal` (GET, `filename` + `length`) → `upload_url`.
+   The JSON escapes slashes (`\/`) — unescape (`sed 's/\\\//\//g'`) before
+   use, or curl rejects the URL.
+2. `curl -X POST -F "file=@./file.patch" "$UPLOAD_URL"` → `OK - <bytes>`.
+3. `files.completeUploadExternal` to share. **Pass the channel via the legacy
+   `channels` param — `channel_ids` is silently ignored**: `ok:true`, the file
+   never appears, and `files.info` shows `"ims":[]`.
+4. Verify with `files.info` → `"ims"` must contain the channel.
+
+A completed-but-unshared file ID is spent — completion cannot be re-run and
+the share cannot be retro-fitted. If the share silently failed, do a fresh
+upload with the `channels` param.
+
+**Message + file as one unit**: a file cannot be attached to an existing
+message. Share the file, read its message ts from
+`"shares":{"private":{"<CHANNEL_ID>":[{"ts":"…"` in the completion response,
+post the prose as a threaded reply (`thread_ts=<ts>`), then delete the
+standalone text message if one exists.
+
 ## Known Limitations
 
 - Bot tokens (`xoxb-`) cannot unarchive channels — bot is removed on archive. Use a user token or the Slack UI.

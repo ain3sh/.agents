@@ -30,6 +30,8 @@ Thread URLs: use the `thread_ts` query param (the parent), not the `p<ts>` path 
 ## Gotchas that bite
 
 - `--thread-ts` is not a flag; it's `--thread`. The mistake only surfaces as a failed send after you've drafted the whole message.
+- `msg send <USER_ID>` resolves DMs by listing every channel → `ratelimited` for minutes, both token buckets. Resolve the D-id once via the API and post to it directly — see "DMs and file sharing" in `ops/cli.md`.
+- `files.completeUploadExternal` **silently ignores `channel_ids`** — file uploads but nobody sees it; the legacy `channels` param is what shares. Details in `ops/cli.md`.
 - Inline shell quoting of long messages breaks on backticks/quotes; draft in a file and pass `"$(cat file)"`.
 - Slack mrkdwn ≠ Markdown: `*bold*` single-asterisk, `•` bullets, no headers/tables — see `comms/voice.md`.
 - Reading requires channel membership even with `channels:history`; see "Resolve `not_in_channel`" in `ops/cli.md`.
