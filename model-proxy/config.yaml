@@ -11,6 +11,11 @@
 port: 8317 # server port
 auth-dir: "${ENV:HOME}/.cli-proxy-api" # oauth token store
 request-retry: 3 # max retries
+streaming:
+  bootstrap-retries: 2
+  keepalive-seconds: 30
+codex:
+  stream-bootstrap-buffering: true
 quota-exceeded:
   switch-project: true
   switch-preview-model: true
@@ -40,6 +45,11 @@ codex-instructions-enabled: true
 # ------------------------------------------------------------------------------
 payload:
   override: # always set parameters, overwriting any existing values
+    - models:
+        - name: "gpt-6-astra"
+          protocol: "codex"
+      params:
+        "text.verbosity": "medium"
     - models:
         - name: "gpt-5.6-sol-fast"
           protocol: "codex"
