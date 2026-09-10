@@ -1,15 +1,10 @@
----
-description: Address reviewer feedback on your PR -- read comments, fix code, respond to threads
-argument-hint: <PR-number-or-URL>
----
-
 Load skills: **pr-context**, **quality-ship**, **voice**.
 
 Treat **voice** as mandatory for reviewer-facing replies: load it before drafting responses, declines, or alternative-rationale text so the reply states a position with specifics instead of sounding generically agreeable.
 
 ## 1. Gather Feedback
 
-Follow the **pr-context** skill to fetch full PR context from `$ARGUMENTS`.
+Follow the **pr-context** skill to fetch full PR context from the text supplied after the slash command.
 
 Fetch all three PR-comment surfaces plus **GraphQL thread IDs** (needed for resolving review threads later):
 

@@ -9,7 +9,12 @@
 - **`design-doc`** — Factory-themed single-file RFCs and technical memos; adaptive document modes, proof-band/chart and claim-row callout patterns, full light/dark Playwright capture, hero-thumbnail crop for link sharing, secret-gist publishing
 - **`vscode-workspace`** — on-demand headless VSCode instances for the `vscode:*` MCP tools (live LSP diagnostics/symbols/renames); zero-touch: auto-ensure hook spawns/canonicalizes/warms (workspace_path defaults to cwd), refcounted retirement at SessionEnd, idle reaper at SessionStart; manual: `vscode-ws ensure|retire|reap|list`
 
-## Workflow Commands
+## Workflow Skills
+
+Slash workflows live in `skills/<name>/SKILL.md`; there is no `commands/`
+directory. `address-review`, `explain-diff`, `implement`, and `post-review` are
+human-only (`disable-model-invocation: true`). `user-invocable` defaults to
+`true`; `/zoom-out` also allows model invocation.
 
 | Command | Replaces | Usage |
 |---|---|---|
@@ -17,6 +22,9 @@
 | `/open-pr` | ticket + branch + verify + lint + ship mega-prompt (handles fresh + mid-fix) | `/open-pr FAC-456` |
 | `/review-pr` | full review workflows, now a skill: first-pass (per-type verification, repro for bugs) / `deeper` (paired confirm-or-kill wave) / `follow-up` (three-lane re-review from worktree dossier `./.agents/review.md`); `/post-review` publishes + writes dossier | `/review-pr 123`, `deeper`, `re-review` |
 | `/address-review` | read reviewer feedback → triage → fix → respond to threads | `/address-review 123` |
+| `/post-review` | publish approved inline findings + review verdict | `/post-review 123` |
+| `/explain-diff` | standalone HTML walkthrough with diagrams + interactive quiz | `/explain-diff 123` |
+| `/zoom-out` | broader module and caller context in the project's vocabulary | `/zoom-out` |
 | `/demo-pr` | tuistory before/after filming | `/demo-pr 123` |
 | `/implement` | spec-first exploration + planning; waits for approval before coding | `/implement FAC-789` or `/implement "<description>"` |
 | `/retrospective` | stranger-review your own diff for entropy (dead weight / junk / perf / drift / scope) | `/retrospective` |
@@ -31,7 +39,7 @@
 | **`stack-cli`** | Squash-safe stack lifecycle: preview propagation, judge whether descendants need freshness now, apply root/descendant repair and retargeting, merge bottom-up, or undo mutations. |
 | **`git-advanced`** | Rebase, cherry-pick, commit surgery, reflog recovery, and other history-editing primitives. |
 
-## Background Atoms (composed by commands, not in `/` menu)
+## Background Atoms (composed by workflow skills)
 
 | Atom | Owns | Composed by |
 |---|---|---|

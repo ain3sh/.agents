@@ -1,8 +1,3 @@
----
-description: Implement a work item -- Linear ticket, pasted content, or plain description: explore, plan, spec, then code
-argument-hint: <TICKET-ID | pasted content | plain description>
----
-
 ## Skill loading (phased)
 
 Load skills at the moment their work begins — not everything up front. Deferring a load to the phase that consumes it is correct; skipping the load is not. Beyond this list, load any other skill the moment the work matches its trigger (dispatch table in AGENTS.md).
@@ -36,7 +31,7 @@ Fire `TodoWrite` in parallel with the first tool call of each phase.
 
 ## 1. Understand the Work
 
-- If `$ARGUMENTS` contains a ticket ID (e.g., `TEAM-123`), fetch it:
+- If the text supplied after the slash command contains a ticket ID (e.g., `TEAM-123`), fetch it:
   ```bash
   linear i get <ID> --output json --comments
   ```

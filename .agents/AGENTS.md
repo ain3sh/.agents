@@ -10,9 +10,9 @@ skills, slash commands, lifecycle hooks, prompts, and configs.
 - `skills/<name>/SKILL.md` (+ optional `references/`, `templates/`, `agents/`,
   `data/`) — skill packages. Many are composable **atoms** (`pr-context`,
   `quality-ship`, `ticket-branch`, `pr-description`, `repo-conventions`) that
-  workflow skills/commands pull in.
-- `commands/*.md` — slash-command definitions; larger workflows live as skills
-  (`open-pr`, `split-pr`, `update-skill`, ...).
+  workflow skills pull in. Slash workflows live here too; there is no
+  `commands/` directory. Human-only skills set `disable-model-invocation: true`;
+  `user-invocable` defaults to `true`.
 - `hooks/` — Python lifecycle hooks grouped by event (`pre_tool_use/`,
   `session_start/`, `session_end/`, ...) over typed helpers in `hooks/utils/`.
   Start at `hooks/README.md`.
@@ -28,8 +28,8 @@ skills, slash commands, lifecycle hooks, prompts, and configs.
 
 Local-only (gitignored): `.agents/`, `logs/`, `*.env`, `__pycache__/`,
 `.ruff_cache/`. `hooks/session_end/store_artifacts.py` writes session tails and
-todo snapshots to `.agents/{MM_DD_YYYY}/`. The droid TUI auto-loads skills and
-commands straight from this `~/.agents/` entrypoint (the same way it does for
+todo snapshots to `.agents/{MM_DD_YYYY}/`. The droid TUI auto-loads skills
+straight from this `~/.agents/` entrypoint (the same way it does for
 `~/.factory/`), so there's no install/sync step and `~/.factory/skills` stays
 empty.
 
@@ -43,7 +43,7 @@ empty.
   `hooks/session_start/debug.sh` dumps env/tool diagnostics.
 - **`configs/droid.toml`**: keep it valid TOML; it drives all hook behavior, so a
   mistake here silently changes what runs.
-- **Markdown** (skills/commands/prompts) has no build step; just keep `SKILL.md`
+- **Markdown** (skills/prompts) has no build step; just keep `SKILL.md`
   frontmatter (`name`, `description`) intact, since `description` is the trigger.
 
 ## Pushing changes
@@ -62,7 +62,7 @@ push → `gh auth switch --user factory-ain3sh`.
 ## Conventions
 
 - **One concern per skill.** Keep `SKILL.md` a lean entrypoint and push depth
-  into `references/*.md` loaded on demand. Atoms compose into commands; see
+  into `references/*.md` loaded on demand. Atoms compose into workflow skills; see
   `CHEATSHEET.md` for the map.
 - **Hooks fail open.** Best-effort features (rtk, tirith) pass through on missing
   tools or errors instead of blocking; mirror that, and gate new behavior behind

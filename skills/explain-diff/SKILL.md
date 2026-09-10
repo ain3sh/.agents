@@ -1,12 +1,16 @@
 ---
-description: Provide a rich explanation of a code change, diff, branch, or PR using HTML.
+name: explain-diff
+description: Explain a code change in self-contained HTML with diagrams and a quiz.
+disable-model-invocation: true
 ---
 
 # Explain Diff
 
+Usage: `/explain-diff <diff, branch, PR, or change description>`. Use the text supplied after the slash command as the target.
+
 Please make me a rich, interactive explanation of the specified code change.
 
-This command owns deep standalone HTML walkthroughs. For one compact
+This skill owns deep standalone HTML walkthroughs. For one compact
 in-conversation representation, use `/show-me` instead; do not expand a
 show-me request into this artifact.
 

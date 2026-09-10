@@ -1,8 +1,3 @@
----
-description: Post a reviewed PR's findings to GitHub -- threaded line comments + verdict.
-argument-hint: [<PR-number-or-URL>]
----
-
 Load skills: **pr-context**, **voice**.
 
 **voice** is required here: use its severity taxonomy and craft rules for every posted body instead of rephrasing approved findings into generic review-speak.
@@ -11,7 +6,7 @@ The posting half of the review workflow. Findings come from an upstream `/review
 
 ## 1. Resolve PR Identity
 
-Use `REPO` and `HEAD_SHA` from context if present (typical post-`/review-pr`); otherwise follow **pr-context** with `$ARGUMENTS`. Ask for the PR ref via `AskUser` if neither is available.
+Use `REPO` and `HEAD_SHA` from context if present (typical post-`/review-pr`); otherwise follow **pr-context** with the text supplied after the slash command. Ask for the PR ref via `AskUser` if neither is available.
 
 ## 2. Source the Findings
 
