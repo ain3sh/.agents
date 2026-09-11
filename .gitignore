@@ -10,3 +10,7 @@ __pycache__/
 *.pyc
 *:Zone.Identifier
 *.json.bak
+
+# Factory-generated mission droids share the personal discovery directory.
+/droids/scrutiny-feature-reviewer.md
+/droids/user-testing-flow-validator.md

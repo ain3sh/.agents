@@ -34,11 +34,14 @@ Plus, always: **scenarios attempted that did not break** (with evidence), and **
 
 "Checked, safe (evidence)" is a fully successful result. Worker success is validated coverage, never finding count — do not manufacture marginal findings to appear useful.
 
-## Probe & worktree hygiene (probing workers)
+## Verification-target ownership & probe hygiene (probing workers)
 
-- Probes are **new untracked files only** (e.g. `__probe__.test.ts`); reuse existing fixture builders. Delete when done; `git status` must show only pre-existing dirty entries.
+The **parent owns verification targets**: it coordinates a stable revision and environment (builds, shared GUI state, dependency setup) and prepares disposable isolated snapshots for before/after source+test comparisons, preserving the real harness. Workers never replace tracked source in the active checkout and never change source under another worker. Workers never create worktrees without authorization, and a shared dependency mirror is never isolation: it does not separate mutable dependencies or build artifacts, so when the comparison requires it the parent arranges genuinely isolated state. Snapshot preparation is parent work; probing is worker work.
+
+- Probes are **new untracked files only** (e.g. `__probe__.test.ts`) in the owning harness; reuse existing fixture builders. Delete when done; `git status` must show only pre-existing dirty entries. A probe is never a durable tracked edit.
 - Never modify tracked files, never commit, never touch `.factory/settings.json`, `AGENTS.md`, `context/`.
-- Scoped runs only: `cd <pkg> && flock -w 600 /tmp/droid-tests.lock ./node_modules/.bin/vitest run --no-file-parallelism --coverage.enabled=false <probe path>`.
+- Scoped runs only, through the attached runner — the parent supplies the actual scoped argv, including how the workspace binary resolves (a local `node_modules/.bin` does not exist in every workspace): `~/.agents/scripts/run-check probe --cwd <pkg> -- flock -w 600 /tmp/droid-tests.lock ./node_modules/.bin/vitest run --no-file-parallelism --coverage.enabled=false <probe path>`.
+- No safe, faithful verification target available? Do not improvise one — report exactly what remains unverified.
 - A probe is optional: when the source contract is decisive, say so and cite the chain instead of executing.
 - Read-only auditors: no file writes, no tests, no commits — state this in their prompt.
 

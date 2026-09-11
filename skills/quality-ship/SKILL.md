@@ -90,7 +90,7 @@ argv placed after `run-check ... --`:
   they can chain every tool across the monorepo. A package-scoped aggregate is
   valid when the package script is the canonical owner; record the scope and
   reason in the checklist evidence.
-- Fix any issues found. Re-run until clean.
+- Fix any issues found. Re-run until clean. As orchestrator you are not the coding owner: have the coding owner land each durable fix, then verify and re-run.
 
 ## Fix the cause, don't suppress the validator
 

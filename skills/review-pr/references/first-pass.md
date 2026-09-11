@@ -30,7 +30,7 @@ Two disciplines apply to **every** PR type; then the type-specific checks.
 The diff won't tell you whether the fix is at the right layer. Before accepting the approach:
 
 - **Trace source → sink.** Follow the data through the real pipeline (producer → transform → consumer/render), not just the changed lines. Confirm the layer the PR touches is where the invariant it claims actually lives.
-- **Verify claimed invariants.** Treat every "this makes X stable / Y safe / Z green" as a hypothesis. Build the adversarial case; if it breaks, **prove it with a throwaway probe** (append a temp test → run → restore via `git checkout`/backup) and quote the concrete before/after. An overstated invariant is a `warning`.
+- **Verify claimed invariants.** Treat every "this makes X stable / Y safe / Z green" as a hypothesis. Build the adversarial case; if it breaks, **prove it with a throwaway probe** on a parent-arranged disposable snapshot (mechanics in `worker-contracts.md` — never temp-test-then-`git checkout` in the live checkout) and quote the concrete before/after. An overstated invariant is a `warning`.
 - **Hunt prior/parallel art.** Mine the PR's own "related work"/linked refs first, then search merged + open PRs on the same files or root cause (`gh pr list --search "<area>" --state all`; compare changed-file overlap). If a larger in-flight PR already fixes the cause idiomatically, the patch may be net-zero or on a collision course — make that the headline finding (symptom vs root cause), citing the other PR's mechanism.
 - **Name it.** State the actual invariant being violated, the layer it belongs to, and whether this change establishes it or just patches one manifestation.
 - **Record suspicions you cannot settle inline.** An adversarial case you can settle with one bounded probe or trace, settle now — that is this section's job. What remains genuinely open after that goes to the notes as a `candidate` entry (assign its `F<id>`; exact hypothesis, path, evidence so far, what would settle it) and surfaces in the review-state summary's *unresolved suspicions* — the raw material for `deeper`. Do not silently drop them, and do not spawn ad-hoc worker waves mid-pass to chase them (that's overcoverage's job, done with pairing and reconciliation).
@@ -49,9 +49,9 @@ If CI was **inconclusive** (e.g. typecheck OOM'd before reaching the relevant pa
 
 **Reproduce the real thing first** — catches fixes that mask a symptom instead of curing it. A passing test (especially mock-heavy) is the *author's* proxy, not your repro: reproduce the actual user-facing behavior yourself, even when handed a repro command or a green test.
 
-1. **Faithful repro (default, delegated).** Reproduce the real symptom at the highest fidelity available — drive the actual app via **droid-control** (CLI/TUI/web/Electron) or a real request/integration run (services); base shows the bug, HEAD shows it gone, capture before/after as proof. Don't settle for a unit-level stand-in just because the author did. **Delegate to a heavy worker** (per `worker-contracts.md`; it owns setup — `repair.py`, build) so you stay on review judgment.
+1. **Faithful repro (default, delegated).** Reproduce the real symptom at the highest fidelity available — drive the actual app via **droid-control** (CLI/TUI/web/Electron) or a real request/integration run (services); base shows the bug, HEAD shows it gone, capture before/after as proof. Don't settle for a unit-level stand-in just because the author did. **Delegate to a heavy worker** (per `worker-contracts.md`; the parent arranges the stable environment — `repair.py`, build, snapshots — the worker executes the repro) so you stay on review judgment.
    - **Death-spiral guard:** if the worker comes back inconclusive/flaky, *you* own the call — bound any retry, and if it still won't repro, record "couldn't faithfully repro (why)" as a finding and fall through to code-level root-cause analysis. Never recurse into an unbounded repro grind.
-2. **Test-level cross-check.** Run the PR's **own new tests against base source**: keep the test files, revert only the source (`git show <base>:<path> > <path>`), run — they MUST fail, for the bug's stated reason (not an import/compile error). Restore (`git checkout HEAD -- <paths>`), confirm green on HEAD. Validates the regression net; does **not** replace step 1.
+2. **Test-level cross-check.** Run the PR's **own new tests against base source** on parent-arranged disposable snapshots (mechanics owned by `worker-contracts.md` — never revert or restore source inside the live checkout): they MUST fail on base for the bug's stated reason (not an import/compile error) and pass on HEAD. Validates the regression net; does **not** replace step 1 — a source-only trace is not a faithful runtime repro.
 3. Root-cause review per the discipline above: actual cause or papering over a symptom? Right layer?
 
 ### Feature
@@ -78,20 +78,13 @@ Plus the repo's **own documented conventions** — hold the author to the same s
 
 Plus the **structural sweep** (every PR): dispatch a heavy worker with the **structural-review** skill as its objective — the behavior-preserving reframing hunt that correctness review misses. Findings return in **voice** tiers; fold them in, dedupe against slop-scan hits on the same lines, and hold the flag-not-fix line. A one-file typo PR still gets the sweep, inline instead of dispatched.
 
-Plus the **AI-slop validator** (JS/TS only):
+Plus the **AI-slop validator** (JS/TS only): build base/HEAD changed-files temp dirs per **quality-ship**'s slop-scan recipe in `validator-recipes.md` — never worktrees or full source scans — then run it attached:
 
 ```bash
-BASE_REF=$(gh pr view <PR> --json baseRefName --jq '.baseRefName')
-git fetch origin "$BASE_REF"
-BASE_SHA=$(git merge-base "origin/$BASE_REF" "$HEAD_SHA")
-BASE_WT=$(mktemp -d); HEAD_WT=$(mktemp -d)
-git worktree add --detach "$BASE_WT" "$BASE_SHA"
-git worktree add --detach "$HEAD_WT" "$HEAD_SHA"
-slop-scan delta "$BASE_WT" "$HEAD_WT" --json
-git worktree remove --force "$BASE_WT" && git worktree remove --force "$HEAD_WT"
+~/.agents/scripts/run-check ai-slop -- slop-scan delta <base-tmp-dir> <head-tmp-dir> --json --fail-on added,worsened
 ```
 
-Detached source snapshots — slop-scan reads source, not built artifacts. **Don't repair/verify.** Install if missing: `npm install -g slop-scan`; otherwise skip.
+slop-scan reads source, not built artifacts; the temp dirs hold changed files only. **Don't repair/verify.** Install if missing: `npm install -g slop-scan`; otherwise skip.
 
 Hits (swallowed errors, placeholder comments, generic casts, pass-through wrappers, duplicate signatures, …) fold into findings at `warning` (likely to fire / hides real failure) or `opinion` (structural smell).
 

@@ -75,6 +75,13 @@ Load at the moment of match, **before** acting on that moment — not after bein
 A subagent receives your prompt and nothing else — no conversation history, no unstated context. Write every handoff to one bar: convey the same information *more effectively*, in *action-oriented language*, with *far fewer words*.
 Include: the goal as a verb phrase, the facts you already established (never make it rediscover them), hard constraints, and a checkable definition of done.
 For QA/verification workers especially: exact commands to run and pass/fail criteria, not narrative about the code.
+
+Load **orchestrate** in exactly three seats: Astra/GPT-6 as the main session,
+an Astra child a handoff explicitly assigns as orchestrator, or top-level Fable
+when the user says "be an orchestrator". Ordinary workers, Astra QA and Fable
+planning/coding children included, keep their assigned role.
+Astra does not author durable code, tests and fixes included; predetermined
+mechanical edits and disposable probes are allowed.
 </subagents>
 
 <verification>

@@ -49,6 +49,24 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 | **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review`, `/demo-pr` |
 | **voice** | Craft (every-word-earns-its-slot: specifics, named actors, calibrated warmth/humility, anti-slop) for any authored/reviewed content + reviewer-reply load-bearing test (cut reflexive sycophancy/recap/performative future tense/status footers; keep them when they own a miss, anchor a thread, scope deferred work, or propose a path) + the canonical review severity taxonomy | `/review-pr`, `/post-review`, `/address-review`, pr-description, linear-cli |
 | **structural-review** | Code-judo simplification hunt + structural tripwires (1k-line crossings, spaghetti growth, boundary leaks, contract muddying, orchestration smells); defers severity to voice | `/review-pr` (heavy-worker sweep) |
+| **orchestrate** | Staffing preferences for the four droids, single writer per coherent change, stable prerequisites before consumers, QA on a stable revision, resume vs fresh, restaff-or-block on an unresolved model. Three seats only: Astra main session, an Astra child assigned orchestrator, or top-level Fable told "be an orchestrator" | orchestrator seats (background) |
+
+## Droids (model-pinned)
+
+Definitions live in `~/.agents/droids/<name>.md` (canonical); `~/.factory/droids`
+is a symlink to that directory, so the runtime discovers them with no copy step.
+All four pin an exact custom model id at `reasoningEffort: high` and omit
+`tools`/`mcpServers`: the definitions restrict nothing, though runtime policy
+may still withhold tools (children currently lack Task). Factory-generated mission
+droids land in the same directory and are gitignored. Staffing policy is the
+**orchestrate** atom; ordinary workers never load it.
+
+| Droid | Model | Prefer for |
+|---|---|---|
+| `glm` | `custom:factory://glm-5-3-flash` | bounded implementation, evidence gathering, writing |
+| `sol` | `custom:openai://gpt-5-6-sol-fast` | persistent implementation, research, adversarial review |
+| `fable` | `custom:factory://fable-5-1` | approach design, coupled or taste-sensitive code, UI, structural review |
+| `astra` | `custom:openai://gpt-6` | diagnosis, QA, computer use; no durable code |
 
 ## Installed Tooling
 

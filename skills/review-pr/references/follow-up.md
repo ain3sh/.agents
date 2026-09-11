@@ -33,7 +33,7 @@ For each dossier finding, verify the response **at mechanism depth**:
 
 - did the change land at the owning locus, or move the symptom elsewhere?
 - does the intended invariant now hold? Trace it, don't take the reply's word.
-- where tests were added/changed to close a finding, confirm they fail against the previously reviewed source for the stated reason and pass on the new head (same revert/restore mechanics as first-pass §3).
+- where tests were added/changed to close a finding, confirm they fail against the previously reviewed source for the stated reason (not an import/compile error) and pass on the new head — comparisons run on parent-arranged disposable snapshots per `worker-contracts.md`, never revert/restore inside the live checkout.
 - classify: **resolved / unresolved / partially resolved / superseded / no longer applicable**.
 
 An author reply of "fixed" with a commit that doesn't establish the invariant is an unresolved finding — say so plainly.

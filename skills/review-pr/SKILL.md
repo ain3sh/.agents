@@ -54,6 +54,6 @@ When a step needs setup or a validator (repro, slop-scan, scoped test runs), use
 ## Environment / tooling gotchas (all modes)
 
 - **Search:** use `rg` (the `Grep` tool and shell `grep`/`git grep` are policy-blocked here). `rg -n` for line numbers — `-N` *disables* them; never pass `-nN`.
-- **Tests:** run the workspace binary directly (`./node_modules/.bin/vitest …`); `npx vitest` may pull a different major. Single-file runs can trip global coverage thresholds — add `--coverage.enabled=false`.
+- **Tests:** run through **quality-ship**'s attached runner — `~/.agents/scripts/run-check test --cwd <pkg> -- ./node_modules/.bin/vitest run …` — never `npx vitest`, which may pull a different major. Single-file runs can trip global coverage thresholds — add `--coverage.enabled=false`.
 - **Worktree:** no `node_modules`? Run **worktree-setup**'s `repair.py` (never `npm install` in a worktree; never `verify.py` — its full-workspace manifest demands out-of-scope artifacts). `repair.py` does **not** run package `generate`/`prepare-*` bun scripts, so generated-dep imports (`@/generated/*`, prepared harnesses like `@factory/tui-test`) may surface as type errors — environment artifacts, not PR defects.
-- **Base-repro side effects:** reverting files touches mtimes → "file modified externally" reminders are expected; re-read before editing.
+- **Base/HEAD comparisons:** never revert or restore source in the live checkout — verification-target and snapshot ownership live in `worker-contracts.md`.

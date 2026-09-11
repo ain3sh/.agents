@@ -112,7 +112,7 @@ On spec approval, a paired `.agents/specs/<spec>.notes.md` is auto-scaffolded fo
 
 ## 4b. Coverage step (non-optional, bug fixes and features)
 
-After spec approval, before implementing the change, apply **consolidate-test-suites** to place the test, then write it. Only *what it proves* and *how you confirm it can fail* differ by type.
+After spec approval, before implementing the change, apply **consolidate-test-suites** to place the test, then write it. Only *what it proves* and *how you confirm it can fail* differ by type. When you are orchestrating, the durable test and implementation are the coding owner's work -- author neither; verify red/green (below) and record the evidence yourself.
 
 ### Place the test
 
@@ -163,6 +163,6 @@ Once the environment is ready, **re-load the quality-ship skill** and strictly f
 
 - Detect and run **every** applicable validator (format, lint, knip, typecheck, tests).
 - Scope correctly in monorepos (turbo or per-package).
-- Fix all issues and re-run until clean.
+- Fix all issues per quality-ship's coding-owner rule; re-run until clean.
 
 Do not skip this step or defer it to a follow-up command. The implementation is not done until validators pass.
