@@ -53,14 +53,16 @@ Fire `TodoWrite` in parallel with the first tool call of each phase.
 
 When the work describes a bug, apply the **root-cause-analysis** methodology before moving to Step 3:
 
-1. **Reproduce**: Identify or write a minimal repro (test case, script, or manual steps) that demonstrates the failure on the current base branch. If reproduction fails, revisit exploration -- a bug you can't trigger is a bug you don't yet understand.
+1. **Reproduce**: Identify or write a minimal repro (test case, script, or manual steps) that demonstrates the failure on the current base branch. If reproduction fails, revisit exploration -- a bug you can't trigger is a bug you don't yet understand. The repro is the oracle for every later step: make it deterministic and cheap.
 
 2. **Trace root cause**: Do not stop at the first error. Follow the root-cause-analysis workflow:
    - State the expected behavior and invariant in plain language.
+   - Pick the opening move: narrow (bisect over history, input, layer, writers) when a known-good reference exists or you cannot name the call path in one sentence; read when the path fits in one head. Switch to narrowing the moment reading turns into guessing.
    - Trace the causal chain from intended action to observed effect.
    - Ask whether the request or mutation should have happened at all.
    - Find the first unintended side effect -- that is the root cause, not the downstream error.
    - Audit hidden writes: lifecycle hooks, subscribers, watchers, background jobs, persistence restore, cache refreshers.
+   - Prove the hypothesis against the repro: toggle the named cause off and on and confirm the oracle flips. A failed prediction is a new boundary; narrow again.
 
 3. **Step through** (when applicable): If the bug involves multi-actor sequencing, async callbacks, background refreshes, recovery paths, queues, retries, or state machines, apply the **step-through** skill: walk the broken flow with explicit state (`actor = {...}`) at every transition, taking each actor's perspective, until an invariant breaks. Do not skip to "walk the fix" -- step through the broken flow first.
 
