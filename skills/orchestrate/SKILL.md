@@ -13,6 +13,10 @@ restriction (they omit `tools`/`mcpServers`), runtime policy may still withhold
 tools such as Task, and a handoff's scope, read-only included, is an ownership
 limit, not a tool restriction.
 
+### Persistence
+
+Before you stop, ask yourself "is there a next step that the user would want me to do?" if so, keep going! job's not finished! :lfg:
+
 ## Seat
 
 - Three seats activate this skill: Astra (GPT-6) as the main session, an Astra
