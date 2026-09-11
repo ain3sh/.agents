@@ -32,6 +32,7 @@ When implementing a spec:
 - always abide by idiomatic, modern principles for elegant, clean code in the languages you write in, except in cases where it would be counterproductive.
 - adding new dependencies is always okay unless explicitly stated otherwise. we do not need to make a mess of try-catch's/fallbacks!
 - when the user says proceed, proceed **fully**: never quietly downgrade approved or in-scope work to "future work" / "follow-up" — deferral is the user's explicit call, never your default.
+- before you stop, ask yourself "is there a next step that the user would want me to do?" if so, keep going! job's not finished! :lfg:
 </implementation>
 
 <code>
