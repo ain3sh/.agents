@@ -1,7 +1,7 @@
 ## Reference Skills (auto-loaded)
 
 - **`linear-cli`** — linear-cli commands, agent output flags, chaining patterns
-- **`slack`** — slck commands, bot/user token guidance, search flags
+- **`slack-cli`** — slck commands, bot/user token guidance, search flags, and the mandatory pre-send/edit voice gate
 - **`twitter-cli`** — bounded Twitter/X reads and user-approved account actions through the local `twitter` CLI; YAML default, JSON available with `--format json`
 - **`dsx`** — session search/analytics plus durable `dsx papercut add|list|review`
 - **`harness-optimization`** — reliability optimization for repeated agent/tool failures: trace policy → model → hooks → executor → process → evidence, then replace symptom patches with one lifecycle owner

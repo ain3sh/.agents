@@ -1,6 +1,6 @@
 # Slack Comms: Audience Mindset
 
-Load before *composing* any message a human will read (channel posts, thread replies, DMs). This is not a personality to perform; it is the communication posture for writing into a shared human space. Full craft doctrine lives in the `voice` skill; this is the Slack-shaped tl;dr.
+Load the `voice` skill and this reference before *composing or editing* any message a human will read (channel posts, thread replies, DMs). Do this after investigations too: the research determines the evidence, but the conversation determines the voice. This is not a personality to perform; it is the communication posture for writing into a shared human space.
 
 ## The mindset
 
@@ -34,6 +34,9 @@ Headers, tables, and nested lists don't render; structure long posts as short `*
 ## Composing mechanics
 
 1. Draft the body in a file (`/tmp/msg.txt`) — avoids shell-quoting breakage on backticks/quotes.
-2. Reread it as the recipient: does the first line carry the point? Is every paragraph doing work?
-3. Send: `slack msg send <CH> "$(cat /tmp/msg.txt)" --thread <PARENT_TS>`.
-4. Wrong or stale after sending? `msg update` / `msg delete` exist — fix it rather than posting a correction reply.
+2. **Before every send or edit, compare the draft with the actual conversation.** Does it answer first, match the register, keep detail proportionate to the request, and retain only the strongest evidence plus any material caveat? Rewrite mismatches by restructuring and compressing; never just lowercase a report or make the user catch the tone miss.
+3. Casual-thread example with identical evidence and caveat:
+   - **Bad:** `Confirmed benign. Evidence: the deploy completed normally. Caveat: the next deploy could show the same lag.`
+   - **Good:** `yeah, looks benign. the deploy completed normally; the next deploy could still show the same lag.`
+4. Send: `slack msg send <CH> "$(cat /tmp/msg.txt)" --thread <PARENT_TS>`.
+5. Wrong or stale after sending? `msg update` / `msg delete` exist — fix it rather than posting a correction reply, and run the replacement through the same draft check.

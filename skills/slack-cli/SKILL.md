@@ -10,7 +10,7 @@ description: Reference for using slck (aliased as `slack`) to manage Slack chann
 ## Route by task
 
 - **`ops/`** — operating Slack. [`ops/cli.md`](ops/cli.md) is the full command reference: reading threads, channel admin, search, files, auth, `not_in_channel` fixes, flag surface.
-- **`comms/`** — writing to humans. Read [`comms/voice.md`](comms/voice.md) *before composing* any channel post, thread reply, or DM: the audience/communication mindset plus Slack mrkdwn rules, not a personality script. Future workflow docs (e.g. reply-to-thread) land here.
+- **`comms/`** — writing to humans. Load the `voice` skill and read [`comms/voice.md`](comms/voice.md) *before composing or editing* any channel post, thread reply, or DM. Check the draft against the actual conversation and rewrite any voice mismatch before the send or edit, even after an investigation.
 
 Doing both (the common case: read a thread, then reply)? Load both.
 
