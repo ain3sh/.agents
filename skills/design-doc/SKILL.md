@@ -7,6 +7,11 @@ A design doc here is one self-contained HTML file — fonts via Google Fonts, al
 
 Output target: ~1.5k–3k lines, ~80–200 KB, prints to A4, dark-mode aware, publishable as a secret gist viewed via `gistpreview.github.io`.
 
+This skill owns the document's argument, scaffold, visual system, full-document
+verification, and publishing. Load **show-me** for visual explanations: pass
+the verified facts, reader question, and this template's components/tokens;
+it owns representation, rendering, code companions, and asset embedding.
+
 ## When to use
 
 - Engineer asks for an RFC, design doc, ADR, monograph, technical spec, or sync-prep brief.
@@ -60,11 +65,11 @@ Before styling, search the repo for `DESIGN.md`, brand guidance, or live tokens.
 For RFC mode, fill the scaffold top-down:
 
 1. `<title>`, eyebrow, `h1.title`, `.tagline`, `.linkline`. The linkline is one borderless mono row for links that earn their slot (tracker project/ticket, PRs). Status, author, date, and reviewer rosters are fat — provenance lives in `footer.doc`. A conceptual title ("Where judgment sits") wins the argument but fails search and Slack recall; keep it and add `<span class="subtitle">` carrying the literal subject ("Converging Factory's PR review flows"), then sweep the tagline so it doesn't repeat the subtitle.
-2. **Optional** `figure.demo` if there's a demo video — see [Embedding video](#embedding-video).
+2. **Optional** `figure.demo` if there's a demo video; follow [show-me's asset embedding](../show-me/references/surfaces.md#reusing-and-embedding-assets) for source access and playback.
 3. §1 Summary — `.lede` with `.dropcap` + 1 supporting paragraph (zero-context rules below).
 4. §2 Context — reader primer first, then what breaks today (tickets spelled out), why now.
 5. §3 Goals & non-goals — `.two-col > .panel`.
-6. §4 Proposal — `.pullquote` thesis + `figure.diagram` SVG + prose.
+6. §4 Proposal — `.pullquote` thesis, a view from `show-me` when useful, and the prose that the view does not replace.
 7. §5 Key decisions — `article.decision` × N. **Usually 60–70% of the doc by length.**
 8. §6 Tradeoffs — `table.kv` or short prose.
 9. §7 Rollout & verification — feature-flag posture, telemetry, rollback.
@@ -103,14 +108,16 @@ node ~/.agents/skills/design-doc/references/screenshot.js <abs-path-to-html>
 
 Playwright must resolve. The script walks up from your **CWD** looking for `node_modules/playwright`, so run it from inside (or under) any project that has Playwright installed. If that project is elsewhere, pass `PLAYWRIGHT_NODE_MODULES=/abs/path/to/node_modules`. Last resort: `cd /tmp && npm i playwright && npx playwright install chromium`.
 
-⚠️ **`NODE_PATH=… node script.js` does not work.** Node resolves a bare `require('playwright')` from the *script's own directory* and ignores `NODE_PATH` — so a script in `/tmp` or `~/.agents/` misses no matter where you `cd`. The bundled scripts carry an explicit CWD walk-up to compensate; an ad-hoc one you write will only resolve if you place the file *inside* the project. Use the reference scripts.
+**Use the bundled helpers for module resolution.** A bare
+`require('playwright')` starts from the script's directory, not CWD. These
+helpers explicitly search CWD ancestors, `PLAYWRIGHT_NODE_MODULES`, and
+`NODE_PATH`; changing CWD alone does not give an arbitrary script that behavior.
 
 The script clears stale captures with these filenames before rendering, then captures the full document in both color schemes. **Read every light and dark PNG with the `Read` tool at `image_quality="high"`.** A dark hero alone is insufficient: charts, tables, diagrams, and callouts often fail several viewports below it. Fix layout, contrast, and overflow bugs visually before tightening prose. Bugs you will only catch this way:
 - `dl > dd` falling under `dt` instead of into column 2 → the template pins `grid-column: 2`; if you copied a card and removed it, restore it.
 - Dark-mode contrast failures on `--code-bg` and `--accent-soft`.
-- SVG text overflowing on narrow viewports.
+- Check embedded views against [show-me's render checks](../show-me/references/surfaces.md#browser) at the document's actual content width.
 - **TOC rail clipping**: the collapsed `nav.toc` must fit its widest roman numeral — at 56px "VIII" clipped to "VII"; the template now ships 68px. Recheck if you shrink the rail or exceed 8 sections.
-- **SVG box captions touching or crossing rect edges**: in the template's 780-unit viewBox, `.cap` mono text runs ~6.5 units/char (titles wider). Size each `rect` to its longest caption plus ~30 units, or shorten the caption. Confirm with `image_quality="high"` reads — default quality hides near-edge overflow.
 
 If layout is mysterious, run `inspect.js`:
 ```bash
@@ -132,7 +139,11 @@ After visual layout is clean:
   - *coda* → isolate the one-sentence conclusion as its own paragraph.
 - **Pass 2 — polish.** Read aloud (literally, your inner voice catches bumps). Replace neologisms ("due-times" → "task that came due three times"), kill "actually", strip "we can", tighten cross-references. Each edit should remove or replace text, rarely add.
 - **Pass 2.5: voice sweep.** Load **voice** for a quick craft pass focused on anti-slop, false agency, and filler. Keep edits surgical and preference-light so this reads as an independent quality gate, not a rewrite.
-- **Pass 3 — diagram pass (restate or replace, only lossless).** Scan for prose that describes *shape* — a before/after inversion, a flow, a magnitude comparison. Load `show-me` to select the narrowest lossless representation from the verified facts, then render that shape with the template's inline SVG/HTML components. Add `figure.diagram` only where the picture carries the full content. Proven archetypes: two-panel contrast split by a dashed divider (`svg .dash`, incumbents in `.muted-fill`), equal-scale grouped bar comparison, pipeline flow. If the diagram would summarize rather than restate, skip it.
+- **Pass 3 — visual explanations.** Apply `show-me` to structural or quantitative
+  questions still buried in prose, using the facts verified in step 2 and this
+  document's components. Place each accepted view where its question arises;
+  cut the prose it replaces, keeping rationale and caveats. A diagram and its
+  code companion are one explanation, not two sections.
 
 ### 7. Re-verify
 
@@ -171,14 +182,13 @@ Use `text-wrap: balance` on headings, taglines, pullquotes, figcaptions, and dec
 
 ## Quantitative proof and charts
 
-Internal selling docs often succeed or fail on the chart:
+Put a **four-stat proof band** directly under the hero when four numbers carry
+the thesis. Values use orange; labels and explanations stay neutral. The
+shipped/recommended row gets the sole orange bar and a subtle orange-tinted
+surface; incumbents, controls, and reference rows stay gray.
 
-- Put a **four-stat proof band** directly under the hero when four numbers carry the thesis. Values use orange; labels and explanations stay neutral.
-- Scale bars to the meaningful range, not mechanically from zero. For ROC-AUC, a `0.5 → 1.0` axis exposes useful signal far better than `0 → 1.0`. State the truncated baseline in the axis and caption.
-- Give the shipped/recommended row the sole orange bar and a subtle orange-tinted surface. Render incumbents, controls, and frontier references in gray.
-- If benchmark frames differ, separate them into visibly distinct groups and state that they are not directly comparable. Never imply a head-to-head comparison with color or proximity alone.
-- Put the delta beside the winning value (`+12.5 pts`), not in a detached prose paragraph.
-- Use 1px grid lines or pseudo-elements for reference marks. Do not use gradients to fake chart structure.
+Load `show-me` for the comparison itself, including scale and measurement-frame
+discipline ([quantitative comparison](../show-me/references/representations.md#quantitative-comparison)).
 
 ## The "so what" layer
 
@@ -214,8 +224,8 @@ All defined in `references/template.html` — read it for any pattern you're uns
 | `.panel > .claim` + `.rows` + `.note` | Product callout: memorable line, three scannable rows, one caveat | Under the statband, when the numbers need a "so what" — see [The "so what" layer](#the-so-what-layer) |
 | `article.decision` | D-card: Decision / Rationale / Alternatives / Consequence | Every key decision — the load-bearing component. Reviewers skim titles, then dt/dd rows. **Bullets are not a substitute.** |
 | `aside.pullquote` | Mental-model or thesis quote | 1 per ~1500 words; should literally state the thesis in ≤25 words |
-| `figure.diagram` + inline `<svg>` | Architecture/sequence diagrams | When the picture is faster than prose |
-| `pre.code` w/ `.k`/`.s`/`.t`/`.fn`/`.hl` spans | Syntax-highlighted snippets | When citing actual call sites |
+| `figure.diagram` + inline `<svg>` | Container for a show-me visual explanation | Placement chosen by the document's argument |
+| `pre.code` w/ `.k`/`.s`/`.t`/`.fn`/`.hl` spans | Selectable code or a show-me code companion | Source and labelling rules belong to show-me |
 | `.callout` (`.rose`) | Notes, warnings | Sparingly — every callout devalues the rest |
 | `table.kv` | Tradeoff matrices, limits, disposition tables | Comparing N options; function-by-function fate of a displaced system |
 | `ol.numbered` | Roman-numeralled list | Open questions |
@@ -225,7 +235,10 @@ All defined in `references/template.html` — read it for any pattern you're uns
 
 ## Publishing
 
-For internal docs, **secret gist + gistpreview** is the only path that reliably works without org infra:
+Publish only when the user requests sharing or updating the document. For an
+authorized gist publication, use **secret gist + gistpreview** by default.
+Secret gists are unlisted, not access-controlled; use only when the material
+and intended audience permit link-based sharing.
 
 ```bash
 gh gist create <path>/<slug>-design.html --desc "<title>"   # add --public only if the user asks
@@ -252,7 +265,12 @@ gh api gists/<gist-id> --jq '.files["<slug>-design.html"].content' > current.htm
 gh api gists/<gist-id> -X PATCH --input /tmp/gist-patch.json
 ```
 
-**Keep the file under ~1 MB.** The gist *contents* API truncates files past roughly that size: `GET gists/<id>` returns only the first ~1 MB and sets `"truncated": true`, and gistpreview renders through that API — so an oversized doc renders only partway through (the tail sections and footer silently vanish) even though the PATCH succeeded and the source is intact. A PATCH that bloats the file past the limit therefore *breaks* the preview without any error. After any PATCH, verify: `gh api gists/<id> --jq '.files["<name>"].truncated'` must be `false`. Almost always the bloat is inlined base64 images — see [Embedding diagrams (raster)](#embedding-diagrams-raster) for the SVG-not-PNG fix.
+**Keep the file under ~1 MB.** The gist *contents* API can truncate large files:
+`GET gists/<id>` sets `"truncated": true`, and gistpreview renders through that
+API, so the tail may disappear despite a successful write. After create or
+update, verify `gh api gists/<id> --jq '.files["<name>"].truncated'` is `false`
+and the preview reaches the footer. If embedded images cause bloat, follow
+[show-me's vector embedding](../show-me/references/surfaces.md#reusing-and-embedding-assets).
 
 ### Publishing dead ends (verified failures)
 
@@ -264,26 +282,6 @@ gh api gists/<gist-id> -X PATCH --input /tmp/gist-patch.json
 | GitHub Pages on a private repo | Requires GitHub Enterprise |
 
 If the doc must be public-link-shareable AND render reliably: make the gist public and use `gistcdn.githack.com`. **Confirm with the user first** — public gists list under their GH profile.
-
-## Embedding video
-
-GitHub `user-attachments/assets/...` URLs are **session-gated**: they only resolve to a streamable file when loaded inside `github.com` with a logged-in session. They will **not** play as `<video src>` from `file://` or from a gist. Trying to fetch them with `curl` + `gh auth token` returns an HTML stub, not the asset binary.
-
-The template ships a poster-card pattern (`figure.demo`) that opens the asset in a new tab where the user's GitHub session resolves it. Use that. For embeddable playback, host the file on a CDN (S3, Cloudflare R2) or convert to GIF — or accept the poster card.
-
-## Embedding diagrams (raster)
-
-Default to the template's inline-`<svg>` `figure.diagram` — it inherits both themes via CSS classes. When a polished excalidraw diagram already exists (e.g., built for the PR), embed its renders instead of redrawing, but never hotlink: GitHub `user-attachments` image URLs are session-gated like video and 404 from gistpreview. Inline as base64 `data:` URIs:
-
-⚠️ **Render diagrams to SVG, not PNG.** excalirender emits SVG (`-o name.svg`), and excalidraw vector diagrams are an order of magnitude smaller as SVG than as base64 PNG — typically ~20–40 KB vs ~300–500 KB *each*. Four base64 PNGs at `-s 2` blew one doc past 2 MB, which the gist API truncated and gistpreview rendered only halfway (the SVG re-do landed the same doc at ~290 KB). Reach for PNG only when the source is itself raster (a real screenshot/photo); for excalidraw/vector content, SVG is mandatory.
-
-1. Render two transparent theme variants so the diagram inherits the doc's paper/dark background:
-   `excalirender d.excalidraw -o light.svg --transparent -s 2` and `… -o dark.svg --transparent --dark -s 2`.
-2. Inside `figure.diagram`, swap themes with `<picture>` and base64-`data:image/svg+xml` URIs:
-   `<picture><source srcset="data:image/svg+xml;base64,DARK" media="(prefers-color-scheme: dark)"><img src="data:image/svg+xml;base64,LIGHT" alt="…"></picture>` + a `<figcaption>`.
-3. Add `figure.diagram img, figure.diagram picture { width: 100%; height: auto; display: block; }` beside the existing `svg` rule.
-4. Author the HTML with placeholder tokens and inject the base64 with a small python pass — don't paste large strings through editor tools.
-5. After publishing, confirm the gist is not truncated (see [Publishing](#publishing)) and verify both themes with the screenshot loop.
 
 ## Hero thumbnail
 
@@ -325,6 +323,7 @@ Before declaring done:
 - [ ] If the doc is being shared as a link, a hero thumbnail was generated, inspected at high quality, and handed to the user with the URL.
 
 **Visual**
+- [ ] Embedded explanations passed show-me's acceptance and render checks using the document's components.
 - [ ] Every light and dark Playwright segment was inspected; no contrast failures on charts, tables, diagrams, code blocks, or accent surfaces.
 - [ ] No scroll-point is a single unbroken paragraph block — every segment shows at least one structural break.
 - [ ] Print stylesheet renders without overflow (Chrome → Cmd-P → check pagination).
@@ -333,7 +332,7 @@ Before declaring done:
 - [ ] Orange identifies the primary path or proof point; controls and reference rows remain neutral.
 
 **Publish**
-- [ ] After any gist create/PATCH, `gh api gists/<id> --jq '.files["<name>"].truncated'` is `false` (file under ~1 MB), and the live gistpreview renders through the footer — not just the first sections. Diagrams are SVG, not base64 PNG.
+- [ ] After any gist create/PATCH, the [Publishing](#publishing) truncation and footer checks passed.
 
 ## Dead ends (warnings)
 
@@ -343,14 +342,13 @@ Before declaring done:
 - ⚠️ **Don't put the same enumeration in §3 Goals AND §5 Decisions.** Pick the canonical home (usually a decision card) and forward-reference from elsewhere.
 - ⚠️ **Don't remove `.decision dd { grid-column: 2 }`.** Without it, `dd` falls under `dt` instead of into column 2. Most browsers won't warn.
 - ⚠️ **Don't revert the auto-hide TOC** (`nav.toc` → 68px rail expanding to 248px on hover) **to a sticky 220px sidebar.** Content reads worse with the sidebar always present. Don't shrink the rail below 68px either — 56px clips "VIII" to "VII".
-- ⚠️ **Don't hotlink auth-gated assets** (GitHub `user-attachments` images, private CDNs) — they 404 from gistpreview. Inline base64 per [Embedding diagrams (raster)](#embedding-diagrams-raster).
-- ⚠️ **Don't inline excalidraw/vector diagrams as base64 PNG.** A handful at `-s 2` push the doc past the gist API's ~1 MB truncation limit; gistpreview then renders only partway through with no error. Use SVG renders — see [Embedding diagrams (raster)](#embedding-diagrams-raster).
 - ⚠️ **Don't let decision cards mint product surface unexamined.** New verbs, flags, config axes, parallel stores, and named presets reliably draw "this is ugly" review — one session took three consecutive rounds, each one level deeper (CLI flags → a dual dossier store → presets layered over existing settings). Audit each card for the smallest vocabulary that still composes into the full feature set: prefer composition of existing primitives over any new surface, and one orthogonal primitive over a parallel mechanism. When the design genuinely adds no surface, say so — "the primitive already ships" is the strongest selling line.
 - ⚠️ **Don't answer "make it punchier" by trimming sentences.** Shorter paragraphs are still paragraphs, and still get skipped. Change the *structure* — claim line, scannable rows, one caveat ([The "so what" layer](#the-so-what-layer)). Restructuring cut one doc's body copy ~60% and its panel height from 393px to ~280px; word-level trimming would not have.
 - ⚠️ **Don't make a secret-gist URL public-shareable** without confirming with the user. The doc may reference internal Linear tickets, employees, or unmerged architecture.
 
 ## References
 
+- [show-me rendering and embedding](../show-me/references/surfaces.md) — shared visual-explanation owner; load through `show-me`, not as a second document workflow.
 - `references/template.html` — full Factory-themed HTML scaffold to copy, with RFC components and an optional memo proof band.
 - `references/screenshot.js` — Playwright capture. `node screenshot.js <abs-path-to-html> [out-dir]`.
 - `references/inspect.js` — DOM probe for layout debugging. `node inspect.js <abs-path> "<selector>"`.

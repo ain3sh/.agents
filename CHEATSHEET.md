@@ -6,7 +6,7 @@
 - **`dsx`** — session search/analytics plus durable `dsx papercut add|list|review`
 - **`harness-optimization`** — reliability optimization for repeated agent/tool failures: trace policy → model → hooks → executor → process → evidence, then replace symptom patches with one lifecycle owner
 - **`worktree-setup`** — source-selectable dependency mirrors (`repair|verify|setup --from <worktree>`); never install in a shared worktree
-- **`design-doc`** — Factory-themed single-file RFCs and technical memos; adaptive document modes, proof-band/chart and claim-row callout patterns, full light/dark Playwright capture, hero-thumbnail crop for link sharing, secret-gist publishing
+- **`design-doc`** — Factory-themed single-file RFCs and technical memos; document structure, components, full light/dark capture, hero thumbnails, and authorized secret-gist publishing; visual explanations come from **show-me**
 - **`vscode-workspace`** — on-demand headless VSCode instances for the `vscode:*` MCP tools (live LSP diagnostics/symbols/renames); zero-touch: auto-ensure hook spawns/canonicalizes/warms (workspace_path defaults to cwd), refcounted retirement at SessionEnd, idle reaper at SessionStart; manual: `vscode-ws ensure|retire|reap|list`
 
 ## Workflow Skills
@@ -18,7 +18,7 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 
 | Command | Replaces | Usage |
 |---|---|---|
-| `/show-me` | walls of prose for code shape, flow, state, ownership, dependencies, and before/after structure; also composed by design/review workflows | `/show-me`, `/show-me auth retry as sequence` |
+| `/show-me` | canonical visual explanations: reader question → verified relation/code → destination render; terminal text, GitHub Mermaid/code/images, HTML/SVG, selectable code companions, themes and embedding; composed by PR/design workflows without taking over publishing | `/show-me`, `/show-me auth retry as sequence`, `/show-me checkout tree as html` |
 | `/open-pr` | ticket + branch + verify + lint + ship mega-prompt (handles fresh + mid-fix) | `/open-pr FAC-456` |
 | `/review-pr` | full review workflows, now a skill: first-pass (per-type verification, repro for bugs) / `deeper` (paired confirm-or-kill wave) / `follow-up` (three-lane re-review from worktree dossier `./.agents/review.md`); `/post-review` publishes + writes dossier | `/review-pr 123`, `deeper`, `re-review` |
 | `/address-review` | read reviewer feedback → triage → fix → respond to threads | `/address-review 123` |
@@ -45,7 +45,7 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 |---|---|---|
 | **ticket-branch** | Ticket resolve/create, direct parent/child context, branch checkout | `/open-pr`, `/update-skill`, `/split-pr` |
 | **quality-ship** | Quality checks (foreground live + logged evidence), commit, push. Not PR creation. | `/open-pr`, `/update-skill`, `/split-pr`, `/address-review` |
-| **pr-description** | Diff analysis, outcome-first title, first-screen skim gate, structured PR body, computed diff-composition table for large diffs (`scripts/diff-composition.py`), live visual evidence (post-open) | `/open-pr`, `/update-skill`, `/split-pr` |
+| **pr-description** | Diff analysis, outcome-first title, first-screen skim gate, PR structure/publication, computed diff composition, live visual evidence (post-open); **Architecture** consumes show-me rather than selecting/rendering diagrams itself | `/open-pr`, `/update-skill`, `/split-pr` |
 | **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review`, `/demo-pr` |
 | **voice** | Lean router to craft, external replies, review judgment, and anti-slop references. Audience-aware prose across apps; cut ceremony while preserving reasoning, evidence, scope, caveats, and action. Owns load-bearing warmth/humility and the canonical review severity taxonomy. | `/review-pr`, `/post-review`, `/address-review`, pr-description, linear-cli, slack-cli, external messages/replies |
 | **structural-review** | Code-judo simplification hunt + structural tripwires (1k-line crossings, spaghetti growth, boundary leaks, contract muddying, orchestration smells); defers severity to voice | `/review-pr` (heavy-worker sweep) |
@@ -81,8 +81,8 @@ droids land in the same directory and are gitignored. Staffing policy is the
 | `tirith` | [release tarball](https://github.com/sheeki03/tirith/releases/latest) | Shell hook only (activated in `~/.zshrc`); not wired into droids |
 | `witr` | `go install github.com/pranshuparmar/witr/cmd/witr@latest` | Standalone "why is this running?" tracer |
 | `nlsh` | `go install github.com/abakermi/nlsh@latest` | Wrapper + inlined config in `~/.zshrc` (materializes `~/.nlshrc` on call); uses OpenRouter via `OPENROUTER_API_KEY` |
-| `excalirender` | At `~/.local/bin/`; if missing: `curl -fsSL https://raw.githubusercontent.com/JonRC/excalirender/main/install.sh \| PREFIX=$HOME/.local sh` | Renders `.excalidraw` → PNG/SVG/PDF, no browser. Excalidraw is a *format*, not an app. `pr-description` (artifacts.md), `excalidraw` skill |
-| `gh-attach` | At `~/.local/bin/` | Uploads images/clips to GitHub's CDN for PR bodies. `pr-description` (artifacts.md, visual-evidence.md), `excalidraw` skill |
+| `excalirender` | At `~/.local/bin/`; if missing: `curl -fsSL https://raw.githubusercontent.com/JonRC/excalirender/main/install.sh \| PREFIX=$HOME/.local sh` | Renders `.excalidraw` → PNG/SVG/PDF. `excalidraw` owns commands; **show-me** selects the destination format and embedding. |
+| `gh-attach` | At `~/.local/bin/` | Uploads images/clips to GitHub's CDN for authorized PR publication. `pr-description` owns upload and placement (artifacts.md, visual-evidence.md). |
 | `paperclip` MCP | HTTP MCP + `paperclip login` | Biomedical lit (`~/.factory/mcp.json`) |
 | `paper-search` MCP | `npx -y paper-search-mcp-nodejs` | 14 academic platforms (`~/.factory/mcp.json`) |
 

@@ -11,7 +11,7 @@ The diff makes a **concrete visual change** a reviewer would otherwise have to b
 - Rendered media — generated images, diagrams, exported docs
 - Native desktop GUI
 
-It does **not** fire for logic / backend / config changes with no visible delta, or refactors that preserve the exact rendering (those lean on Verification prose, plus a diagram via `references/artifacts.md` when structure moved). If you can't name the on-screen difference a reviewer would look for, there's nothing to capture — skip the section, don't manufacture a clip.
+It does **not** fire for logic / backend / config changes with no visible delta, or refactors that preserve the exact rendering (those lean on Verification prose, plus an Architecture view via `show-me` when structure moved). If you can't name the on-screen difference a reviewer would look for, there's nothing to capture — skip the section, don't manufacture a clip.
 
 ## Timing — after the PR is open, never blocking it
 

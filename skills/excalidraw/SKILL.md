@@ -7,7 +7,14 @@ description: Create Excalidraw diagrams in two registers: clean technical (defau
 
 Create diagrams by writing standard Excalidraw element JSON and saving as `.excalidraw` files. These files can be drag-and-dropped onto [excalidraw.com](https://excalidraw.com) for viewing and editing. No accounts, no API keys, no rendering libraries -- just JSON.
 
-**"Excalidraw" is a file format, not an app -- there's nothing by that name to install.** The only runtime tools are `excalirender` (render) and `gh-attach` (upload), both normally at `~/.local/bin/`; if `command -v` shows one missing, self-install it (below) and continue. A missing or unchecked tool is never a reason to skip the diagram or drop to plain markdown/Mermaid.
+Use `show-me` to select the relationship and destination format. This skill
+owns Excalidraw JSON, its visual registers, and `excalirender` commands, not PR
+placement or publishing. A render failure is not a reason to silently replace
+an explicitly requested Excalidraw artifact with another format.
+
+**Excalidraw files need no editor installation.** Write JSON and use
+`excalirender` (normally at `~/.local/bin/`) to render it. Check `command -v`
+before installing anything.
 
 ## Visual register
 
@@ -20,24 +27,20 @@ Pick one register per diagram; mixing reads as broken.
 
 ## Defaults you must apply
 
-- **Author every file in light theme; render dark.** Use pastel fills from `references/colors.md`, `#1e1e1e` text, and either `"viewBackgroundColor": "#ffffff"` or no `appState` override. `--dark` is Excalidraw's own theme inverter -- it expects a light source file and emits a dark PNG. Pre-coloring elements dark (`#1e3a5f` fills, `#e5e5e5` text, `"viewBackgroundColor": "#1e1e2e"`, etc.) double-inverts to a washed-out pastel-on-pale-gray render. See `references/dark-mode.md` for the exact failure modes.
+- **Author every file in light theme.** Use pastel fills from `references/colors.md`, `#1e1e1e` text, and either `"viewBackgroundColor": "#ffffff"` or no `appState` override. Select the output theme at render time; `references/dark-mode.md` owns the inversion rules and failure modes.
 - **Never add a full-canvas background rectangle** as element 0 (or anywhere). It inflates the scene bbox so `excalirender` produces a giant near-empty PNG with your diagram as an unreadable speck. `--dark` also inverts its fill, so the footgun compounds.
-- **Always render to PNG with `excalirender`** before shipping a diagram anywhere a human will read it (PR body, Slack, docs, Notion). An editable-link on its own is not a deliverable -- GitHub, Slack, and most doc surfaces will not inline-render it.
-- **Always render at `-s 2 --dark`** (2x scale, dark output). Drop `--dark` only when the user explicitly asks for light; drop `-s 2` never (1x looks mushy on retina).
-
-The canonical render command, which you should be able to type from memory:
-
-```bash
-excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2
-```
+- **Render in the destination format selected by `show-me`.** Keep PNG at
+  `-s 2` for crisp raster output; SVG stays vector. Use `--dark` for a dark
+  variant and omit it for light. Theme-aware delivery may need both.
 
 ## Workflow
 
 1. Write the elements JSON -- an array of Excalidraw element objects authored in light theme (pastel fills, `#1e1e1e` text). No background rectangle element.
 2. Save the file as `.excalidraw` wrapped in the envelope below.
-3. Render to dark PNG with `excalirender --dark -s 2`. `--dark` handles all theme inversion; the source stays light.
-4. Embed the PNG (via `gh-attach` for GitHub, or direct upload for Slack/Notion).
-5. Optionally upload the raw `.excalidraw` for an editable companion link tucked in a `<details>` block.
+3. Render and inspect the chosen format using the commands below and show-me's
+   render checks.
+4. Return the local source and renders to the caller for embedding and any
+   authorized publication. Do not upload merely because a file was rendered.
 
 ### Saving a diagram
 
@@ -59,71 +62,39 @@ Wrap your elements array in the standard `.excalidraw` envelope. Keep `viewBackg
 uv run --with cryptography python ~/.agents/skills/excalidraw/scripts/upload.py diagram.excalidraw
 ```
 
-Uploads to excalidraw.com (no account needed) and prints a shareable URL.
+Run only when uploading the editable source to excalidraw.com is authorized.
+It prints a shareable editing URL (no account needed); this is not an image.
 
 **Note:** This produces a shareable *editing* link, not an embeddable image. GitHub markdown will not render it inline -- it's just a clickable URL. Use the rendering workflow below to get an inline image.
 
 ### Rendering to PNG/SVG (excalirender) -- required step
 
-Use `excalirender` to render `.excalidraw` files directly to PNG, SVG, or PDF without a browser. This is not an optional polish step -- a diagram that never gets rendered to PNG does not count as delivered.
+Use `excalirender` to render `.excalidraw` files to PNG, SVG, or PDF. Inspect
+the actual render; successful JSON authoring alone is not rendering proof.
 
 **Install if missing** (native binary, no deps):
 ```bash
 curl -fsSL https://raw.githubusercontent.com/JonRC/excalirender/main/install.sh | PREFIX=$HOME/.local sh
 ```
 
-**Render.** Dark output at 2x is the default -- deviate only when the user explicitly requests otherwise:
+**Render the chosen format and theme:**
 
 ```bash
-excalirender diagram.excalidraw -o output.png --dark -s 2   # DEFAULT -- use this
-excalirender diagram.excalidraw -o output.svg --dark -s 2   # SVG, dark
-excalirender diagram.excalidraw --transparent --dark -s 2   # Transparent, dark (overlays)
-excalirender diagram.excalidraw -o output.png -s 2          # Light -- only when explicitly requested
+excalirender diagram.excalidraw -o dark.png --dark -s 2
+excalirender diagram.excalidraw -o light.png -s 2
+excalirender diagram.excalidraw -o dark.svg --transparent --dark
+excalirender diagram.excalidraw -o light.svg --transparent
 ```
 
-If you catch yourself typing `excalirender` without `--dark -s 2`, stop and add both flags.
-
-**After rendering, `Read` the PNG** and re-render if anything overflows or collides -- excalirender glyphs run wider than naive width estimates, so size boxes and label gaps generously.
-
-**Authoring stays light even when output is dark.** `--dark` is Excalidraw's theme inverter; it expects light source colors. Dark fills, light text, or a dark `viewBackgroundColor` in the JSON get double-inverted into a washed-out pastel render on a pale-gray canvas -- see `references/dark-mode.md`. Don't pre-color for dark; `--dark` does it.
-
-**Also:** don't add a full-canvas background rectangle element. The bbox inflation alone turns a tight 400x200 diagram into a 20000x15000 PNG with the real content as a few-pixel speck -- `--dark` making the fill pale gray is just extra insult.
+Read PNGs directly; inspect SVGs in the browser at the intended display size.
+Excalirender glyphs can run wider than estimated, so check the rendered bounds
+before handing the files back.
 
 ### Embedding in GitHub PRs
 
-To get a diagram rendering inline in a PR body on GitHub:
-
-1. Create the `.excalidraw` file
-2. Render to PNG: `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
-3. Upload to GitHub CDN via `gh-attach`: `gh-attach --repo owner/repo --md /tmp/diagram.png`
-   - This prints a markdown image link with a `user-attachments.githubusercontent.com` URL
-   - Use this URL in the PR body: `![Diagram](https://github.com/user-attachments/assets/...)`
-4. Optionally upload an editable link: `uv run --with cryptography python ~/.agents/skills/excalidraw/scripts/upload.py diagram.excalidraw`
-5. Put the editable link in a collapsible section directly below the image so it's visually attached to the diagram:
-
-```markdown
-![Architecture](https://github.com/user-attachments/assets/...)
-
-<details>
-<summary>Edit diagram</summary>
-
-Source: https://excalidraw.com/#json=...
-
-Rendered with: `excalirender diagram.excalidraw -o /tmp/diagram.png --dark -s 2`
-
-</details>
-```
-
-**Do NOT:**
-- Commit the PNG to the branch -- use `gh-attach` for hosting
-- Use `raw.githubusercontent.com` URLs -- they 404 on private repos
-- Put the Excalidraw edit link as a bare clickable link -- it shows a scary "Loading external drawing will replace your existing content" warning to anyone who clicks it
-
-**If `gh-attach` has no browser cookies** (e.g., headless CI or remote dev machine), SSH to a machine that has them:
-```bash
-scp /tmp/diagram.png user@laptop:/tmp/diagram.png
-ssh laptop "gh-attach --repo owner/repo --md /tmp/diagram.png"
-```
+Return to [PR artifact publication](../pr-description/references/artifacts.md)
+for upload, captions, editable-link placement, and the PR body update.
+For HTML documents, use [show-me's embedding rules](../show-me/references/surfaces.md#reusing-and-embedding-assets).
 
 ## Element format reference
 

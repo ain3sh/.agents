@@ -1,6 +1,6 @@
 # Dark-mode rendering
 
-**Dark output is a render-time concern, not an authoring concern.** `excalirender --dark -s 2` applies Excalidraw's own theme inversion to a file that was authored in light colors. Your `.excalidraw` source stays light; the PNG comes out dark.
+**Dark output is a render-time concern, not an authoring concern.** `excalirender --dark` applies Excalidraw's own theme inversion to a file authored in light colors. The `.excalidraw` source stays light; the render comes out dark.
 
 ## What `--dark` actually does
 
@@ -14,7 +14,7 @@ The source file is untouched. One file, two possible outputs:
 
 ```bash
 excalirender diagram.excalidraw -o light.png -s 2          # light output
-excalirender diagram.excalidraw -o dark.png --dark -s 2    # dark output (our default)
+excalirender diagram.excalidraw -o dark.png --dark -s 2    # dark output
 ```
 
 ## Failure modes (what droids keep doing wrong)

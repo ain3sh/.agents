@@ -146,31 +146,18 @@ Honest acknowledgment beats discovery six weeks later. No regression → omit; d
 
 ## Below Description
 
-### Change Shape — compact structural delta
+### Architecture — the relationship a reviewer needs before the diff
 
-Use when ownership, call flow, state, or dependency changed and one inline
-representation makes the review path obvious. Load `show-me`, ground every
-label in the diff, and keep the representation at 20 lines or fewer.
+When a structural or code-shape question blocks understanding, load `show-me`
+with that question, the verified diff/source, and the GitHub destination.
+Place the resulting view under `## Architecture`, after Repro Recipe if
+present, otherwise after Visual Evidence or Description. The heading does
+not select the renderer: show-me owns that choice and the acceptance checks.
 
-````markdown
-## Change Shape
-
-```diff
- request
--└── route owns retry + persistence + response
-+└── runner
-+    ├── owns retry + persistence
-+    └── returns final result to route
-```
-
-**Implication:** cancellation and evidence now share one lifecycle owner.
-````
-
-Use `types and signatures` instead when the PR's durable value is a contract
-shape. Use Architecture when the evidence needs multiple subsystems, labeled
-data edges, or a polished before/after artifact. Never include Change Shape and
-Architecture for the same fact, and never follow the representation with a
-prose transcription.
+If show-me returns local files, use `references/artifacts.md` to upload them
+during the authorized publish step. If it finds no useful relationship, omit
+the section; the PR's file inventory already belongs in Reviewer Guide or
+Implementation map.
 
 ### Repro Recipe — new feature / fixed bug
 
@@ -267,4 +254,4 @@ When the branch is part of a `stack`-managed chain (see the **stack-cli** skill)
 
 ---
 
-Catalog row 17 (**Changes since last review**) is refresh-only — its template lives in `refresh.md` (Phase 2, the revision-log carve-out), not here.
+**Changes since last review** is refresh-only; its template lives in `refresh.md` (Phase 2, the revision-log carve-out), not here.

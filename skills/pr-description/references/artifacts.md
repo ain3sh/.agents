@@ -1,49 +1,43 @@
-# Visual artifacts — diagrams, screenshots, recordings
+# PR artifact publication
 
-Architecture artifacts are the escalation path, not the default representation.
-Load `show-me` first. If one grounded responsibility tree, call flow, state
-table, signature block, or structural diff fits inline, use the PR body's
-`Change Shape` section instead. Use this file when the evidence needs a polished
-multi-subsystem artifact or live visual proof. Never render both forms for the
-same fact.
+`show-me` owns explanatory diagrams and code views, including format, render
+checks, and theme-aware embedding. `references/visual-evidence.md` owns live
+proof of a visual change. This file owns their PR upload and placement.
 
-Attach anything that clarifies behavior or eases validation. **Upload via `gh-attach`** so the file lands at `user-attachments.githubusercontent.com`; never commit images/videos to the repo, never use `raw.githubusercontent.com`, never embed secrets, tokens, or machine-specific paths. If the local machine lacks a browser-authed GitHub session, run `gh-attach` from a trusted machine (SSH is fine) or pass `--session-file`, keeping the wording generic in public PRs.
+## Upload
+
+Upload only as part of an authorized PR publish/update request. **Use
+`gh-attach`** for GitHub user attachments; never commit images/videos to the
+repo or use `raw.githubusercontent.com`. Exclude secrets, tokens, and
+machine-specific paths from the artifact and its caption.
+
+```bash
+gh-attach --repo owner/repo --url /absolute/path/diagram.png
+```
+
+For theme variants, upload each file and substitute its URL into the
+[show-me picture pattern](../../show-me/references/surfaces.md#reusing-and-embedding-assets).
+If the local machine lacks a browser-authenticated GitHub session, use a
+trusted machine or `--session-file`; don't expose session material. Keep
+machine/auth details out of public PR prose.
+
+## Placement
+
+- Explanatory views go under `## Architecture`, whether Mermaid, code, or an
+  uploaded image. Return to `references/publish.md` for the body write.
+- Live screenshots and recordings go under `## Visual Evidence`, per
+  `references/visual-evidence.md`.
+- Carry over show-me's caption and selectable code companion; don't add a
+  prose transcription or a second rendering of the same view.
+- An editable Excalidraw link is optional and needs authorization to upload
+  the source to that host (`excalidraw` owns the command). Put it immediately
+  below its image in `<details><summary>Edit diagram</summary>`, with the
+  render command if useful. Don't make the editing link the primary
+  deliverable: opening it can prompt readers to replace their current drawing.
 
 ## Screenshots & recordings
 
-**Capturing** live proof of a concrete visual change is its own workflow — `references/visual-evidence.md` owns the decision tree (screenshot vs video, raw vs showcase, what to show, fail-loud-on-bug). This section owns what every artifact needs regardless of source: the caption discipline below, and the upload mechanics (top of file).
-
-A before/after **recording** earns its place with a caption: capture conditions (tool, dimensions, playback speed), what to watch, and a quantified delta (e.g., terminal-write bytes/events, request count, p95 latency). A bare clip with no caption is net-zero — the reviewer can't tell what changed or by how much.
-
-## Diagrams
-
-Draw when the PR adds or alters multiple components, service boundaries,
-integration points, or a temporal before/after that cannot stay legible within
-`show-me`'s 20-line embedded limit. Signal: the compact form would omit
-decision-relevant actors, data labels, or transitions. **Excalidraw is the
-primary path**; Mermaid (below) is the fallback only when you truly can't
-install the toolchain on this host, or for a throwaway flow.
-
-### Primary: excalidraw
-
-**Invoke the `excalidraw` skill for authoring, render, and embed** — it owns the visual register, colors, dark-mode, `excalirender --dark -s 2`, and the `gh-attach` + editable-link `<details>` workflow; don't re-derive any of it here. For a PR it's the **technical** register (reviewer-grade), embedded under `## Architecture`.
-
-**A diagram must carry what prose can't.** Box-and-arrow renderings of the section headings are net-zero and reviewers call them out. Earn the space with real symbol/file names in the boxes, the data labeled on each arrow, and — for behavior changes — a before/after timeline (old failure mode vs new invariant, with example rows).
-
-**Two diagrams often beat one for a complex behavior change**: a component/data-flow pipeline *and* a before/after timeline of the observable effect, each with its own editable-link `<details>`.
-
-### Fallback: Mermaid
-
-A tool you *could* install is never a reason to land here — Mermaid is for hosts where you genuinely can't (locked-down/headless), or a throwaway flow. It renders natively in the GitHub body (no upload, editable in-PR, diffable) but trades away layout control, pastel/dark theming, and clean wrapping of wide labels; prefer excalidraw for anything multi-subsystem or with a before/after timeline.
-
-The same quality bar applies: real symbol/file names in the nodes, data labeled on each edge — never box-and-arrow restatements of the section headings. Embed the fenced block directly under `## Architecture` (no upload, no `<details>`):
-
-````markdown
-## Architecture
-
-```mermaid
-flowchart LR
-  Worker["eval_queue/worker.py"] -- "stale secret key" --> SQS[(SQS)]
-  SQS --> Status["github / slack status"]
-```
-````
+Caption live evidence with capture conditions (tool, dimensions, playback
+speed), what to watch, and a measured delta where one exists (for example,
+terminal-write bytes, request count, or p95 latency). Never invent a number
+to fill the caption. A clip with no reading cue leaves the reviewer guessing.
