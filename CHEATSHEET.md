@@ -22,7 +22,7 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 | `/open-pr` | ticket + branch + verify + lint + ship mega-prompt (handles fresh + mid-fix) | `/open-pr FAC-456` |
 | `/review-pr` | first-pass: bounded, source-first Astra architecture gate → hands-on acceptance with Astra where isolation permits; audits bodies against **pr-description**, admits evidence at the exercised boundary, and preserves unverified scope; `deeper` is a paired confirm-or-kill wave; `follow-up` reviews source/body/evidence deltas from `./.agents/review.md`; `/post-review` publishes approved findings | `/review-pr 123`, `deeper`, `re-review` |
 | `/address-review` | read reviewer feedback → triage → fix → respond to threads | `/address-review 123` |
-| `/post-review` | publish approved inline findings + review verdict | `/post-review 123` |
+| `/post-review` | publish the full approved review: reread the whole ledger, preserve every final finding's substance, severity, and gating stance, and name every blocker in the verdict; only explicit subset selection narrows the default | `/post-review 123` |
 | `/explain-diff` | standalone HTML walkthrough with diagrams + interactive quiz | `/explain-diff 123` |
 | `/zoom-out` | broader module and caller context in the project's vocabulary | `/zoom-out` |
 | `/demo-pr` | tuistory before/after filming | `/demo-pr 123` |
