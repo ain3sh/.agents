@@ -20,7 +20,7 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 |---|---|---|
 | `/show-me` | canonical visual explanations: reader question → verified relation/code → destination render; terminal text, GitHub Mermaid/code/images, HTML/SVG, selectable code companions, themes and embedding; composed by PR/design workflows without taking over publishing | `/show-me`, `/show-me auth retry as sequence`, `/show-me checkout tree as html` |
 | `/open-pr` | ticket + branch + verify + lint + ship mega-prompt (handles fresh + mid-fix) | `/open-pr FAC-456` |
-| `/review-pr` | full review workflows, now a skill: first-pass (per-type verification, repro for bugs) / `deeper` (paired confirm-or-kill wave) / `follow-up` (three-lane re-review from worktree dossier `./.agents/review.md`); `/post-review` publishes + writes dossier | `/review-pr 123`, `deeper`, `re-review` |
+| `/review-pr` | first-pass: bounded, source-first Astra architecture gate → hands-on acceptance with Astra where isolation permits; audits bodies against **pr-description**, admits evidence at the exercised boundary, and preserves unverified scope; `deeper` is a paired confirm-or-kill wave; `follow-up` reviews source/body/evidence deltas from `./.agents/review.md`; `/post-review` publishes approved findings | `/review-pr 123`, `deeper`, `re-review` |
 | `/address-review` | read reviewer feedback → triage → fix → respond to threads | `/address-review 123` |
 | `/post-review` | publish approved inline findings + review verdict | `/post-review 123` |
 | `/explain-diff` | standalone HTML walkthrough with diagrams + interactive quiz | `/explain-diff 123` |
@@ -45,10 +45,10 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 |---|---|---|
 | **ticket-branch** | Ticket resolve/create, direct parent/child context, branch checkout | `/open-pr`, `/update-skill`, `/split-pr` |
 | **quality-ship** | Quality checks (foreground live + logged evidence), commit, push. Not PR creation. | `/open-pr`, `/update-skill`, `/split-pr`, `/address-review` |
-| **pr-description** | Diff analysis, outcome-first title, first-screen skim gate, PR structure/publication, computed diff composition, live visual evidence (post-open); **Architecture** consumes show-me rather than selecting/rendering diagrams itself | `/open-pr`, `/update-skill`, `/split-pr` |
+| **pr-description** | Diff analysis, outcome-first title, first-screen skim gate, PR structure/publication, computed diff composition, live visual evidence (post-open); **Architecture** consumes show-me rather than selecting/rendering diagrams itself | `/open-pr`, `/update-skill`, `/split-pr`, `/review-pr` (read-only body criteria) |
 | **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review`, `/demo-pr` |
 | **voice** | Lean router to craft, external replies, review judgment, and anti-slop references. Audience-aware prose across apps; cut ceremony while preserving reasoning, evidence, scope, caveats, and action. Owns load-bearing warmth/humility and the canonical review severity taxonomy. | `/review-pr`, `/post-review`, `/address-review`, pr-description, linear-cli, slack-cli, external messages/replies |
-| **structural-review** | Code-judo simplification hunt + structural tripwires (1k-line crossings, spaghetti growth, boundary leaks, contract muddying, orchestration smells); defers severity to voice | `/review-pr` (heavy-worker sweep) |
+| **structural-review** | Code-judo simplification hunt + structural tripwires (1k-line crossings, spaghetti growth, boundary leaks, contract muddying, orchestration smells); defers severity to voice | `/review-pr` (parent + heavy Astra architecture gate) |
 | **orchestrate** | Coordination reference: four-droid staffing, one writer per change, stable prerequisites/QA, resume vs fresh, restaff-or-block. Readability gate: inspect the diff, clarify with its author or reject avoidable complexity; obfuscated code is not mergeable. Three seats: Astra main, explicitly assigned Astra child, or top-level Fable told "be an orchestrator". | orchestrator seats (background) |
 
 ## Droids (model-pinned)

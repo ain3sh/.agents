@@ -5,7 +5,9 @@ An adversarial second wave with two objectives, run from a completed first pass 
 - **A. Adjudicate** every unresolved suspicion from the review-state summary — workers exist to prove findings real *or* kill them as false positives, red herrings, or pre-existing behavior.
 - **B. Expand** into high-risk changed surfaces the first pass did not deeply cover.
 
-It is **not** a generic duplicate scan. Completed first-pass axes (conventions, structural sweep, slop scan, CI triage, repro) stay closed unless new evidence reopens them.
+It is **not** a generic duplicate scan. Completed first-pass axes (architecture gate, conventions, slop scan, CI triage, acceptance) stay closed unless new evidence reopens them. An **open** acceptance scenario (`acceptance.md`) is coverage-map input, never a category: no wave substitutes for a scenario that is not `passed`, and it keeps its actual state in the merged summary (§5).
+
+**Precondition: the first pass ruled `continue` at the architecture gate.** After a `revise`, the shape itself is contested and the next step is the author's revision, then follow-up; a wave over the rejected shape runs only when the user explicitly asks for it despite that, and the review-state summary never recommends it.
 
 ## 1. Build the category ledger
 

@@ -43,14 +43,14 @@ Append triggers — each is a moment where unique state exists only in-context:
 - **dispatch** — workers sent: category, session ids, modality pairing.
 - **reconcile** — a worker returned: outcome per proposition, modality agreement or disagreement (a disagreement is itself the named open question). Write before processing the next return.
 - **env** — environment quirk discovered (runtime version pins, filesystem constraints, hoisted binaries); later worker prompts inherit these from the dossier's env notes.
-- **gate** — approval-gate outcomes: user edits, drops, re-severities, verdict choice.
+- **gate** — the architecture-gate ruling (`continue` / `revise`, reason, unreviewed areas on `revise`; a re-rule after the worker returns is a second entry), acceptance admissions and waivers (`acceptance.md`), and approval-gate outcomes: user edits, drops, re-severities, verdict choice.
 - **post** — review submitted: review id, comment ids → anchors.
 
 The notes file persists across passes append-only — follow-ups continue the same log.
 
 ## Dossier file (`review.md`)
 
-Refreshed at checkpoints, not per event (the notes carry the loss-proof burden): after the review-state summary, at each category close, at the approval gate, and after posting — `/post-review` owns the final write of a pass. Replace state sections each pass; append one history line.
+Refreshed at checkpoints, not per event (the notes carry the loss-proof burden): after the architecture-gate ruling, after the review-state summary, at each category close, at the approval gate, and after posting — `/post-review` owns the final write of a pass. Replace state sections each pass; append one history line.
 
 Findings carry **stable IDs** (`F1, F2, …`, assigned at candidate time, never renumbered or reused) and a **status**: `candidate | confirmed | killed | folded→Fn | posted`. Notes entries reference these IDs; tier changes appear in the notes as `retier` entries, the dossier shows only the current tier.
 
@@ -63,14 +63,29 @@ On load (routing/follow-up): verify the dossier's PR number matches the target �
 
 repo: <owner>/<repo>
 reviewed_head: <SHA>
+body_seen: <fingerprint of the raw body (e.g. sha256 of `gh pr view --json body`) + last-edit timestamp>
 base: <base ref> @ <merge-base SHA>
 mode: <first-pass | first-pass+deeper | follow-up>
 verdict: <APPROVE | COMMENT | not yet issued>
 date: <ISO date>
 
 ## Root-cause / invariant model
-<2-6 lines: what the PR claims to establish, the layer it lives in,
-and whether the review confirmed that model.>
+<2-6 lines: the required behavior and hard constraints, the layer each invariant lives in,
+the admitted gate report (`architecture-gate.md` "Gate report": case, owner and consumers, rows; split-only dispatch predicate, remaining range, paired loci),
+the simplest viable shape you formed, and whether the review confirmed the PR's model.>
+
+## Architecture gate
+decision: <continue | revise>
+reason: <one line: why the shape stands, or the structural defect and the direction>
+unreviewed: <areas skipped on revise; "none" on continue>
+
+## Description audit
+<claims: verified / false / stale / unverifiable / not checked, with F-ids; required material missing>
+evidence: <per cited artifact: identity (URL/attachment), access state when observed, commit anchor — one line each>
+audited_body: <body_seen value this audit covers>
+
+## Acceptance
+- <scenario — surface/platform/mode>: <state, acceptance.md §4 vocabulary verbatim; failed → observation + attribution (F<id> once attributed to the PR | pre-existing → out-of-scope route | unsettled); blocked → blocker + next decision; waived → unverified limit; n/a → source reason>; evidence <probe | integration | end-to-end workflow>, <artifact ref, contents inspected>, target <revision/build as established from the evidence>
 
 ## Findings
 - F<id> <status> <severity> <file:line> — <claim> — <evidence, one line> — thread: <comment id, once posted>
@@ -79,7 +94,7 @@ and whether the review confirmed that model.>
 - <suspicion> — killed by <invariant | probe result>, <one-line evidence>
 
 ## Coverage map
-- <surface>: <main | static worker | probe worker> — <outcome>
+- <surface>: <main | static worker | probe worker | acceptance worker> at <source inspection | probe | integration | end-to-end workflow> — <outcome>
 - <surface>: not deeply covered — risk <low | medium | high>
 
 ## Unresolved
@@ -92,7 +107,7 @@ and whether the review confirmed that model.>
 - <category>: <static sid?, heavy sid?> — <conclusion, incl. cancellations and why>
 
 ## History
-- <date> first-pass @ <SHA>: <verdict>, <n> findings
+- <date> first-pass @ <SHA>: <verdict>, gate <continue | revise>, acceptance <passed x/y; other states listed>, <n> findings
 - <date> follow-up @ <SHA>: <verdict>, <resolved x/y, new z>
 ```
 
