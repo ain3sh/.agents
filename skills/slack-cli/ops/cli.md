@@ -44,6 +44,29 @@ Shell-quoting long messages inline is fragile (backticks, quotes, parens). Write
 slack msg send C0123456789 "$(cat /tmp/message.txt)" --thread 1700000000.000000
 ```
 
+### Slack message formatting
+
+Audience and drafting rules live in **voice**, especially
+[external replies](../../voice/references/external-replies.md). Use Slack's
+mrkdwn for delivery rather than general Markdown:
+
+| Want | Write |
+|---|---|
+| bold | `*bold*` (single asterisk) |
+| italic | `_italic_` |
+| strike | `~strike~` |
+| code | `` `code` `` / triple-backtick blocks (no language tag) |
+| bullet | `•` literal character (no `-`/`*` lists) |
+| link | `<https://url|label>` |
+| mention | `<@U0123456789>` (user ID, not name) |
+| section header | use a `*bold line*` |
+
+Markdown headers, tables, and nested lists do not render as such. Structure
+long posts as short bold-titled sections with `•` bullets when needed.
+After an authorized send or edit, read the thread or history to verify the
+message. For corrections, use `msg update` or `msg delete` as appropriate;
+voice owns the replacement's audience and completeness checks.
+
 ## Users
 
 ```bash

@@ -1,6 +1,6 @@
 # Anti-Slop Catalog
 
-The full catalog of AI writing tells, tuned for technical writing. `SKILL.md` carries the high-frequency subset; open this when editing or reviewing prose.
+The phrase and structure catalog for editing technical prose. Load [craft](craft.md) for the governing test and [external replies](external-replies.md) for conversation and completeness checks. These are editing signals, not a word-count target: never remove a meaningful distinction, caveat, or expression of uncertainty to satisfy a pattern.
 
 ## Quick checks (run before delivering prose)
 
@@ -28,9 +28,9 @@ State the content directly. "Here's the thing", "Here's what/why X", "The uncomf
 They add no meaning. "Full stop.", "Period.", "Let that sink in.", "Make no mistake", "This matters because", "Here's why that matters".
 
 ### Empty intensifiers and hedges
-Delete. really, just, literally, genuinely, honestly, simply, actually, basically, deeply, truly, fundamentally, inherently, inevitably, interestingly, importantly, crucially. Plus filler: "At its core", "It's worth noting", "At the end of the day", "When it comes to", "The reality is".
+Cut these when empty: really, just, literally, genuinely, honestly, simply, actually, basically, deeply, truly, fundamentally, inherently, inevitably, interestingly, importantly, crucially. Plus filler: "At its core", "It's worth noting", "At the end of the day", "When it comes to", "The reality is".
 
-Keep adverbs that carry technical meaning: *explicitly*, *idempotently*, *atomically*, *synchronously*. The test is whether deleting the word loses information.
+Keep adverbs that carry technical meaning: *explicitly*, *idempotently*, *atomically*, *synchronously*, and uncertainty that reflects the evidence ("likely", "not yet verified"). The test is whether deleting the word loses information.
 
 ### Business jargon
 
@@ -74,7 +74,7 @@ Status belongs in the agent loop, not in the reply body. "Waiting for your confi
 ## Structures to break
 
 ### Binary contrasts
-False drama through telegraphed reversal. State the point directly.
+Cut false drama through telegraphed reversal. State the point directly. Preserve real technical contrasts, such as tested versus inspected or local versus remote; rephrase them without erasing the distinction.
 
 | Pattern | Fix |
 |---|---|
@@ -114,7 +114,7 @@ Passive hides the actor and drains energy: "X was created" becomes "the migratio
 Wh- openers become a crutch: "What makes this hard is..." becomes "The constraint is..." or, better, the named constraint. Drop leading "So," and "Look,".
 
 ### Rhythm
-Vary sentence length. Avoid em dashes. Don't stack staccato fragments. Two items often beat three. Don't end every paragraph on a punchy one-liner.
+Vary sentence length. Avoid em dashes. Don't stack staccato fragments. Use as many items as the distinct points need rather than forcing a stock triad. Don't end every paragraph on a punchy one-liner.
 
 ## Before / after (our world)
 

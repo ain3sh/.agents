@@ -5,33 +5,47 @@ description: Reference for using slck (aliased as `slack`) to manage Slack chann
 
 # Slack CLI (`slack`)
 
-`slck` (aliased `slack`) drives the workspace from the terminal. Bot token (`xoxb-`) is stored via config — verify with `slack config show`. Search and DM-reads need a user token (`xoxp-`) via `slack config set-token` or `SLACK_USER_TOKEN`.
+Use `slck` (aliased `slack`) for Slack operations; **voice** owns how messages
+read, and this skill owns how they are formatted and delivered.
 
-## Route by task
+## Act
 
-- **`ops/`** — operating Slack. [`ops/cli.md`](ops/cli.md) is the full command reference: reading threads, channel admin, search, files, auth, `not_in_channel` fixes, flag surface.
-- **`comms/`** — writing to humans. Load the `voice` skill and read [`comms/voice.md`](comms/voice.md) *before composing or editing* any channel post, thread reply, or DM. Check the draft against the actual conversation and rewrite any voice mismatch before the send or edit, even after an investigation.
+| Goal | Action |
+|---|---|
+| Read, search, or manage Slack | Load [ops/cli.md](ops/cli.md) for commands, auth, threads, channels, files, and recovery. |
+| Compose or edit a post, reply, or DM | Load **voice** and its [external-replies reference](../voice/references/external-replies.md) before drafting, including after an investigation. |
+| Send or update an authorized message | Use the [Slack formatting](ops/cli.md#slack-message-formatting) and command recipes in ops; verify the resulting message in its thread or history. |
 
-Doing both (the common case: read a thread, then reply)? Load both.
+## Detect
 
-## Quick reference
+For Slack URLs, messages, DMs, searches, or channel operations, load ops. For
+writing to people, also load voice; do not duplicate its communication rules
+here or restrict them to Slack.
 
-```bash
-slack msg thread C0123 THREAD_TS -o json           # Read a thread (parent + replies)
-slack msg send C0123 "text" --thread THREAD_TS     # Reply (flag is --thread, NOT --thread-ts)
-slack msg send C0123 "$(cat /tmp/msg.txt)" --thread TS  # Long bodies: draft in a file first
-slack msg history C0123 --limit 50                 # Channel history
-slack s messages "query" --in "#general"           # Search (user token)
-slack whoami                                       # Current identity
-```
+## Rules
 
-Thread URLs: use the `thread_ts` query param (the parent), not the `p<ts>` path segment — details and edge cases in `ops/cli.md`.
+1. Never send or edit before applying voice's audience and substance-preservation
+   checks. Natural phrasing does not justify dropping material details.
+2. Never confuse thread-reply syntax with API field names: CLI replies use
+   `--thread`, not `--thread-ts`.
+3. Never interpolate a long message into shell syntax. Draft it in a file and
+   pass its contents as one quoted argument; see ops.
 
-## Gotchas that bite
+## Failure map
 
-- `--thread-ts` is not a flag; it's `--thread`. The mistake only surfaces as a failed send after you've drafted the whole message.
-- `msg send <USER_ID>` resolves DMs by listing every channel → `ratelimited` for minutes, both token buckets. Resolve the D-id once via the API and post to it directly — see "DMs and file sharing" in `ops/cli.md`.
-- `files.completeUploadExternal` **silently ignores `channel_ids`** — file uploads but nobody sees it; the legacy `channels` param is what shares. Details in `ops/cli.md`.
-- Inline shell quoting of long messages breaks on backticks/quotes; draft in a file and pass `"$(cat file)"`.
-- Slack mrkdwn ≠ Markdown: `*bold*` single-asterisk, `•` bullets, no headers/tables — see `comms/voice.md`.
-- Reading requires channel membership even with `channels:history`; see "Resolve `not_in_channel`" in `ops/cli.md`.
+| Symptom | Action |
+|---|---|
+| Thread context is missing | Use the parent `thread_ts`; see [thread URLs](ops/cli.md#read-a-thread-from-its-url). |
+| `not_in_channel` | Follow [membership recovery](ops/cli.md#resolve-not_in_channel). |
+| DM sends rate-limit or an upload is invisible | Follow [DMs and file sharing](ops/cli.md#dms-and-file-sharing-when-slck-hits-ratelimited). |
+| Markdown renders incorrectly | Use [Slack message formatting](ops/cli.md#slack-message-formatting). |
+| Reply is stiff or too terse to evaluate | Re-run [voice's reply checks](../voice/references/external-replies.md#preserve-substance-before-sending). |
+
+## References
+
+Load on demand; do not reabsorb into this file:
+
+- [ops/cli.md](ops/cli.md): Slack command reference, auth, formatting, delivery,
+  and error recovery.
+- [../voice/SKILL.md](../voice/SKILL.md): canonical craft and judgment routing
+  for human-facing prose across apps.

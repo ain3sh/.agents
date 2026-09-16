@@ -1,7 +1,7 @@
 ## Reference Skills (auto-loaded)
 
 - **`linear-cli`** — linear-cli commands, agent output flags, chaining patterns
-- **`slack-cli`** — slck commands, bot/user token guidance, search flags, and the mandatory pre-send/edit voice gate
+- **`slack-cli`** — slck commands, bot/user token guidance, search flags, Slack formatting/delivery, and the shared **voice** gate before sending or editing
 - **`twitter-cli`** — bounded Twitter/X reads and user-approved account actions through the local `twitter` CLI; YAML default, JSON available with `--format json`
 - **`dsx`** — session search/analytics plus durable `dsx papercut add|list|review`
 - **`harness-optimization`** — reliability optimization for repeated agent/tool failures: trace policy → model → hooks → executor → process → evidence, then replace symptom patches with one lifecycle owner
@@ -47,9 +47,9 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 | **quality-ship** | Quality checks (foreground live + logged evidence), commit, push. Not PR creation. | `/open-pr`, `/update-skill`, `/split-pr`, `/address-review` |
 | **pr-description** | Diff analysis, outcome-first title, first-screen skim gate, structured PR body, computed diff-composition table for large diffs (`scripts/diff-composition.py`), live visual evidence (post-open) | `/open-pr`, `/update-skill`, `/split-pr` |
 | **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review`, `/demo-pr` |
-| **voice** | Craft (every-word-earns-its-slot: specifics, named actors, calibrated warmth/humility, anti-slop) for any authored/reviewed content + reviewer-reply load-bearing test (cut reflexive sycophancy/recap/performative future tense/status footers; keep them when they own a miss, anchor a thread, scope deferred work, or propose a path) + the canonical review severity taxonomy | `/review-pr`, `/post-review`, `/address-review`, pr-description, linear-cli |
+| **voice** | Lean router to craft, external replies, review judgment, and anti-slop references. Audience-aware prose across apps; cut ceremony while preserving reasoning, evidence, scope, caveats, and action. Owns load-bearing warmth/humility and the canonical review severity taxonomy. | `/review-pr`, `/post-review`, `/address-review`, pr-description, linear-cli, slack-cli, external messages/replies |
 | **structural-review** | Code-judo simplification hunt + structural tripwires (1k-line crossings, spaghetti growth, boundary leaks, contract muddying, orchestration smells); defers severity to voice | `/review-pr` (heavy-worker sweep) |
-| **orchestrate** | Staffing preferences for the four droids, single writer per coherent change, stable prerequisites before consumers, QA on a stable revision, resume vs fresh, restaff-or-block on an unresolved model. Three seats only: Astra main session, an Astra child assigned orchestrator, or top-level Fable told "be an orchestrator" | orchestrator seats (background) |
+| **orchestrate** | Coordination reference: four-droid staffing, one writer per change, stable prerequisites/QA, resume vs fresh, restaff-or-block. Readability gate: inspect the diff, clarify with its author or reject avoidable complexity; obfuscated code is not mergeable. Three seats: Astra main, explicitly assigned Astra child, or top-level Fable told "be an orchestrator". | orchestrator seats (background) |
 
 ## Droids (model-pinned)
 
