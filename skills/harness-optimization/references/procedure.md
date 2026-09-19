@@ -68,7 +68,14 @@ sense under the control plane it actually saw?
 
 ## 5. Choose the fix by hierarchy
 
-Apply the first sufficient move:
+**Preserve the working default.** Name the specific decision that failed and
+change the narrowest rule that controls it. An overbroad restriction usually
+needs a narrower boundary, not a replacement policy. Broaden the intervention
+only when evidence shows the local correction cannot satisfy the intended
+behavior. Updating duplicate instructions for consistency does not justify
+expanding the policy.
+
+For execution-protocol defects, apply the first sufficient move:
 
 1. **Delete the bad affordance.** Remove examples and mechanisms that normalize
    the failure.
@@ -86,6 +93,11 @@ Apply the first sufficient move:
 If the patch adds more exception branches than states it removes, redesign it.
 
 ## 6. Verify the lifecycle matrix
+
+Replay the incident and a representative successful case whose behavior must
+remain unchanged. For judgment-policy fixes, inspect the agent's actual
+decisions; consistent prose alone is not proof. For affected execution paths,
+also exercise the matrix:
 
 | Path | Proof required |
 |---|---|
@@ -110,6 +122,10 @@ ownership.
 The optimization is complete only when:
 
 - the incident replay reaches the intended state without retries
+- the representative successful behavior remains intact
+
+For affected execution protocols, also require:
+
 - the bad path is unrepresentable or rejected before side effects
 - one primitive owns the full lifecycle
 - policy, examples, guard, runner, and runtime registration speak one grammar
@@ -127,7 +143,7 @@ Include:
 - first locally rational wrong choice
 - root classification and owning layer
 - competing owners or grammars
-- canonical replacement primitive
-- mechanisms deleted
-- verification matrix results
+- corrected decision boundary or replacement primitive
+- rules narrowed or mechanisms deleted
+- incident, preservation, and applicable lifecycle verification results
 - residual detection limits, stated as limits rather than hidden fallbacks

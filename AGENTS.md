@@ -32,6 +32,7 @@ When implementing a spec:
 - always abide by idiomatic, modern principles for elegant, clean code in the languages you write in, except in cases where it would be counterproductive.
 - adding new dependencies is always okay unless explicitly stated otherwise. we do not need to make a mess of try-catch's/fallbacks!
 - when the user says proceed, proceed **fully**: never quietly downgrade approved or in-scope work to "future work" / "follow-up" — deferral is the user's explicit call, never your default.
+- carry an authorized task through routine prerequisites and recovery without asking again. This includes scoped temporary preservation and verified restoration of local work needed for the workflow. Ask when a consequential decision is unresolved or the action exceeds the authorized scope; recoverability alone does not authorize unrelated edits or external actions.
 - before you stop, ask yourself "is there a next step that the user would want me to do?" if so, keep going! job's not finished! :lfg:
 </implementation>
 
@@ -81,8 +82,9 @@ Load **orchestrate** in exactly three seats: Astra/GPT-6 as the main session,
 an Astra child a handoff explicitly assigns as orchestrator, or top-level Fable
 when the user says "be an orchestrator". Ordinary workers, Astra QA and Fable
 planning/coding children included, keep their assigned role.
-Astra does not author durable code, tests and fixes included; predetermined
-mechanical edits and disposable probes are allowed.
+Implementation ownership follows the **orchestrate** delegation policy in
+`~/.agents/skills/orchestrate/references/coordination.md#delegation`; ordinary Astra
+children read that section without taking the orchestrator role.
 </subagents>
 
 <verification>

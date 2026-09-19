@@ -18,6 +18,7 @@ for missing dependency/build-artifact failures.
 | Goal | Action |
 |---|---|
 | Resolve the target | Explicit argument → open PR base → remote default; never hardcode `dev` or `main`. |
+| Preserve local work | Follow **Freeze the operation** in `references/procedure.md`; preserve only what blocks the sync and own restoration through verification. |
 | Judge stack propagation | Run `stack status` and `stack sync <branch>`; either propagate with `stack-cli` or intentionally sync only the active branch and defer descendants. |
 | Freeze the intended PR shape | Record the expected branch-only count, ordered commit identities, and diff before changing history. |
 | Pick the operation | Merge ordinary published branches; replay/rebase branches already rewritten for a split or cleanup. |
@@ -43,8 +44,9 @@ git rev-list --first-parent --count "$FORK"..HEAD
 git log --first-parent --oneline "$FORK"..HEAD
 git diff --stat "$TARGET_HEAD"...HEAD
 ```
-If `$TARGET` is empty or equals `$CURRENT`, ask. Surface
-`"$TARGET_HEAD" → "$CURRENT"` and confirm; stacked PRs miscall easily.
+Surface `"$TARGET_HEAD" → "$CURRENT"`. Ask if the target is empty, equals the
+current branch, conflicts with the user's request, or leaves stack scope
+ambiguous. Otherwise proceed with the authorized sync without reconfirming it.
 
 ## Rules
 

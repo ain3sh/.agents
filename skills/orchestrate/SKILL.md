@@ -13,7 +13,7 @@ does not make its implementation understandable or ready to merge.
 
 | Goal | Action |
 |---|---|
-| Assign or resume work | Load [coordination](references/coordination.md); choose one owner and send a bounded `Task` handoff. |
+| Assign or resume work | Apply [delegation](references/coordination.md#delegation); handle small changes directly or send one owner a bounded `Task` handoff. |
 | Accept an implementation | Read the decisive diff and apply the [readability gate](references/readability.md) before accepting the report. |
 | Understand an unexplained block | Ask its existing author for the mechanism, evidence, and clearer code or local rationale. Without an author to resume, investigate directly. |
 | Reject an obscure implementation | Return the specific block and required simplification to its owner; do not pass it to the user as merge-ready. |
@@ -35,9 +35,9 @@ too and run the readability gate.
 1. Never accept obfuscated code as mergeable code, even with green tests or a
    confident author. Require simplification or verified necessity with a
    discoverable explanation; see the readability gate.
-2. Never author durable implementation from this seat. Delegate it; mechanical
-   edits and disposable probes remain allowed. Do not spawn a swarm for a
-   small task; follow the seat and staffing rules in coordination.
+2. Never turn a small local fix into a mandatory handoff. Follow the
+   [delegation boundary](references/coordination.md#delegation); substantive
+   implementation still goes to a coding owner.
 3. Never let parallel writers share a changing contract or write ownership.
    Settle prerequisites and approvals before dispatching consumers.
 4. Never replace missing Task access with shell-spawned agents. Return a

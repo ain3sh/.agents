@@ -4,7 +4,7 @@
 - **`slack-cli`** — slck commands, bot/user token guidance, search flags, Slack formatting/delivery, and the shared **voice** gate before sending or editing
 - **`twitter-cli`** — bounded Twitter/X reads and user-approved account actions through the local `twitter` CLI; YAML default, JSON available with `--format json`
 - **`dsx`** — session search/analytics plus durable `dsx papercut add|list|review`
-- **`harness-optimization`** — reliability optimization for repeated agent/tool failures: trace policy → model → hooks → executor → process → evidence, then replace symptom patches with one lifecycle owner
+- **`harness-optimization`** — reliability optimization for repeated agent/tool failures: trace policy → model → hooks → executor → process → evidence, then fix the owning rule or protocol while preserving working defaults
 - **`worktree-setup`** — source-selectable dependency mirrors (`repair|verify|setup --from <worktree>`); never install in a shared worktree
 - **`design-doc`** — Factory-themed single-file RFCs and technical memos; document structure, components, full light/dark capture, hero thumbnails, and authorized secret-gist publishing; visual explanations come from **show-me**
 - **`vscode-workspace`** — on-demand headless VSCode instances for the `vscode:*` MCP tools (live LSP diagnostics/symbols/renames); zero-touch: auto-ensure hook spawns/canonicalizes/warms (workspace_path defaults to cwd), refcounted retirement at SessionEnd, idle reaper at SessionStart; manual: `vscode-ws ensure|retire|reap|list`
@@ -35,7 +35,7 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 
 | Skill | Owns |
 |---|---|
-| **`sync-target`** | Sync one active PR branch without changing its review shape; inspect stack impact, defer dormant descendants during rapid iteration, otherwise merge ordinary branches or replay rewritten/split branches safely. |
+| **`sync-target`** | Sync one active PR branch without changing its review shape; proceed on clear authorization, preserve/restore blocking local work, inspect stack impact, and merge ordinary branches or replay rewritten/split branches safely. |
 | **`stack-cli`** | Squash-safe stack lifecycle: preview propagation, judge whether descendants need freshness now, apply root/descendant repair and retargeting, merge bottom-up, or undo mutations. |
 | **`git-advanced`** | Rebase, cherry-pick, commit surgery, reflog recovery, and other history-editing primitives. |
 
@@ -49,7 +49,7 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 | **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review`, `/demo-pr` |
 | **voice** | Lean router to craft, external replies, review judgment, and anti-slop references. Audience-aware prose across apps; cut ceremony while preserving reasoning, evidence, scope, caveats, and action. Owns load-bearing warmth/humility and the canonical review severity taxonomy. | `/review-pr`, `/post-review`, `/address-review`, pr-description, linear-cli, slack-cli, external messages/replies |
 | **structural-review** | Code-judo simplification hunt + structural tripwires (1k-line crossings, spaghetti growth, boundary leaks, contract muddying, orchestration smells); defers severity to voice | `/review-pr` (parent + heavy Astra architecture gate) |
-| **orchestrate** | Coordination reference: four-droid staffing, one writer per change, stable prerequisites/QA, resume vs fresh, restaff-or-block. Readability gate: inspect the diff, clarify with its author or reject avoidable complexity; obfuscated code is not mergeable. Three seats: Astra main, explicitly assigned Astra child, or top-level Fable told "be an orchestrator". | orchestrator seats (background) |
+| **orchestrate** | Coordination reference: delegate substantive implementation, handle small complete fixes directly, preserve read-only scope and one writer per change; stable prerequisites/QA, resume vs fresh, restaff-or-block. Readability gate: inspect the diff, clarify with its author or reject avoidable complexity; obfuscated code is not mergeable. Three seats: Astra main, explicitly assigned Astra child, or top-level Fable told "be an orchestrator". | orchestrator seats (background) |
 
 ## Droids (model-pinned)
 
@@ -66,7 +66,7 @@ droids land in the same directory and are gitignored. Staffing policy is the
 | `glm` | `custom:factory://glm-5-3-flash` | bounded implementation, evidence gathering, writing |
 | `sol` | `custom:openai://gpt-5-6-sol-fast` | persistent implementation, research, adversarial review |
 | `fable` | `custom:factory://fable-5-1` | approach design, coupled or taste-sensitive code, UI, structural review |
-| `astra` | `custom:openai://gpt-6` | diagnosis, QA, computer use; no durable code |
+| `astra` | `custom:openai://gpt-6` | diagnosis, QA, computer use; small local fixes within assigned scope |
 
 ## Installed Tooling
 

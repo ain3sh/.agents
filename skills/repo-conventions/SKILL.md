@@ -37,7 +37,7 @@ Get the change's shape -- **gate:** `git diff --name-only HEAD` + `--cached`; **
 
 ## 3. Apply
 
-Read the **selected** docs in full, extract their concrete rules, and make the change conform -- fix the code, never annotate around a rule. The doc is the spec; the diff must match it. Applying these fixes is the coding owner's work: as orchestrator, hand each violation to the coding owner and verify the final diff conforms.
+Read the **selected** docs in full, extract their concrete rules, and make the change conform -- fix the code, never annotate around a rule. The doc is the spec; the diff must match it. Orchestrators follow **orchestrate**'s delegation boundary, preserve the existing coding owner's write ownership, and verify the final diff conforms.
 
 - **Axes don't overlap:** tools own mechanics (format/lint/types); docs own what tools can't check -- error idioms, organization, naming, test placement, flag usage.
 - **Stale doc:** if one contradicts lived repo reality (surrounding code consistently does otherwise), flag it as a *consider* rather than silently follow -- the user makes the call.

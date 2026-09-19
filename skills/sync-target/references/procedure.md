@@ -24,8 +24,30 @@ than guessing about stack scope.
 
 ## 1. Freeze the operation
 
-Run from a clean working tree. Stop if any uncommitted or untracked work could
-be overwritten.
+Inspect the index, working tree, and untracked paths before changing history.
+Leave unrelated work untouched when the chosen operation can safely preserve
+it. If local work blocks the sync, scoped stash/restore is authorized
+preparation, not a reason to ask again:
+
+1. Record the exact paths, staged and unstaged changes, and untracked contents.
+   Ensure no other writer is changing them; a branch backup does not preserve
+   uncommitted work.
+2. Stash only the necessary paths with `git stash push -- <paths>`; add
+   `--include-untracked` only for explicitly selected untracked paths. Record
+   the new stash's object ID and verify its contents before proceeding.
+   Never stash the whole tree by reflex or include ignored files indiscriminately.
+3. Own restoration on success, abort, or failure. After completing or aborting
+   the Git operation, use `git stash apply --index <recorded-stash-oid>`, not
+   `pop`, then verify content and staged/unstaged state against the record.
+   Preserve local changes atop upstream changes; never overwrite the synced
+   file with an old whole-file copy.
+4. Retain the stash until restoration is verified. If application conflicts
+   or recovery is uncertain, keep the recovery copy, hold the push, and resolve
+   only what the recorded intent determines; ask for unresolved choices.
+   Drop only this operation's verified stash, not a guessed `stash@{0}`.
+
+Keep preserved user edits out of sync commits. Stop if work cannot be preserved
+reliably or has concurrent ownership; do not discard it to obtain a clean tree.
 
 ```bash
 CURRENT=$(git rev-parse --abbrev-ref HEAD)
@@ -65,8 +87,9 @@ Write down:
 - the cut commit immediately before the intended series, if replay is needed
 - what upstream behavior must be preserved
 
-The backup is the recovery source. Do not use `git reset --hard`, checkout, or
-rebase until it exists.
+The backup is the committed-history recovery source. Do not use
+`git reset --hard`, checkout, or rebase until it exists and any local work the
+operation would disturb has been preserved.
 
 ## 2. Choose one mode
 
@@ -212,12 +235,17 @@ worktree is stale.
 
 Commit semantic repairs separately.
 
+Restore any preserved local work using the recorded stash before the push gate.
+Re-run affected checks if restoration changes validated paths, distinguishing
+the committed sync result from the user's uncommitted changes.
+
 ## 7. Push gate
 
 Hold if any:
 
 - `$ARGUMENTS` contains `--no-push`
 - the user said hold off this session
+- preserved local work has not been restored and verified
 - any conflict or auto-resolution is Low confidence
 - the branch-only commit series differs from the frozen intended series
 - the three-dot PR diff contains unexpected files or behavior
@@ -252,3 +280,4 @@ CI start. Report:
 - validation commands and results
 - pushed SHA or why the push is held
 - backup branch name
+- local-work restoration status and any retained stash object ID

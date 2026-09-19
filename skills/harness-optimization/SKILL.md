@@ -7,7 +7,8 @@ description: Optimize agent-harness reliability by tracing instructions, model c
 
 Treat the agent harness as a control plane: a model choice is locally rational
 until the loaded policy, available affordances, and runtime semantics prove
-otherwise. Optimization means removing representable failure states, not
+otherwise. Correct failed decisions while preserving working behavior;
+remove representable failure states in execution protocols. This is not
 micro-tuning latency or token usage.
 
 First question: **did the agent disobey, or did the harness make the bad choice
@@ -21,8 +22,8 @@ locally correct?**
 | Establish the intended contract | State one invariant covering observation, ownership, completion, and failure reporting. |
 | Trace the control plane | Walk instruction → model choice → hook rewrite/decision → executor → child process → output surface → operator response. |
 | Classify the first break | Name it as policy-induced behavior, enforcement gap, runtime drift, executor mismatch, observability distortion, split ownership, or recovery-loop amplification. |
-| Fix the owning layer | Remove the bad affordance, give one primitive the full lifecycle, and make policy plus enforcement teach that same grammar. |
-| Prove the fix | Replay the incident and the lifecycle matrix in `references/procedure.md`. |
+| Fix the owning layer | Preserve the working default; choose the narrowest sufficient correction in `references/procedure.md` → **Choose the fix by hierarchy**. |
+| Prove the fix | Replay the incident and the behavior to preserve; exercise the applicable lifecycle matrix in `references/procedure.md`. |
 
 ## Detect
 
@@ -57,8 +58,8 @@ generic model latency/cost tuning.
    grammar; reject known violations and fail open on uncertainty.
 6. Never call an interrupted run a test failure, or a stored log complete
    evidence unless live observation and process termination are also proven.
-7. Never accept unit-only proof. Exercise the registered hook and real
-   executor through the lifecycle matrix.
+7. Never accept prose or unit-only proof. Replay agent decisions for policy
+   fixes; exercise the registered hook and real executor for execution fixes.
 
 ## Failure map
 

@@ -1,6 +1,6 @@
 # Coordination
 
-In this seat you sequence the work and judge the results; durable
+In this seat you sequence the work and judge the results; substantive
 implementation goes to the droids in `~/.agents/droids/`. This is assignment
 policy, not sandbox enforcement: droid definitions impose no tool or MCP
 restriction (they omit `tools`/`mcpServers`), runtime policy may still withhold
@@ -20,12 +20,20 @@ Before you stop, ask yourself "is there a next step that the user would want me 
   role. Seeing the name Fable is not a role switch.
 - You own the workflow, approvals, spec notes, todos, and the review dossier,
   and you form your own judgment from the evidence children return.
-- Orchestrators delegate durable implementation. Astra additionally never
-  authors durable code in any seat (implementation, maintained tests, fixes);
-  predetermined mechanical edits and disposable probes are fine. Outside this
-  seat, ordinary Fable coding is unaffected.
-- No mandatory swarm. A simple task takes one coder, or none when the work is
-  mechanical or investigative and allowed for your seat.
+
+## Delegation
+
+Orchestrators and Astra in any seat delegate substantive implementation.
+Handle small, well-understood local changes directly, including their focused
+tests, when a handoff adds more coordination than useful work. Assess the
+complete change by uncertainty and coupling, not line count; do not split
+substantive work into small edits to avoid delegation.
+
+Read-only assignments remain read-only. Resume an existing coding owner for
+corrections rather than editing underneath it. Direct changes receive the same
+readability and validation gates as delegated work. Mechanical edits and
+disposable probes remain allowed within assigned scope; ordinary Fable coding
+outside the orchestrator seat is unaffected. No mandatory swarm.
 
 ## Staff
 
@@ -36,7 +44,7 @@ Preferences, not routing. Match the shape of the work:
 | glm | bounded implementation, evidence gathering, writing | its scout interpretations are input to verify, not evidence |
 | sol | persistent implementation, research, adversarial review | ask for practical consequence, not pedantry |
 | fable | substantive approach design, coupled or taste-sensitive code, UI, structural review | must inspect the decisive code itself |
-| astra | diagnosis, QA, verification, computer use | disposable probes only; promoting one to a durable test needs a coder |
+| astra | diagnosis, QA, verification, computer use | direct fixes follow the delegation boundary and assigned scope |
 
 - Prefer a fresh fable for coupled or taste-sensitive implementation; a
   bounded plan can go to glm or sol. Resume the coding owner for local
@@ -45,8 +53,8 @@ Preferences, not routing. Match the shape of the work:
 - Newly configured or changed model: preflight a read-only assignment and
   confirm the runtime-reported model and effort (not the child's self-report)
   before handing it code. A model that fails to resolve gets an explicit
-  restaff to an allowed coder or a blocker; fallback never routes
-  implementation to Astra.
+  restaff to an allowed coder or a blocker; model failure does not widen
+  Astra's implementation scope.
 
 ## Sequence
 
@@ -73,8 +81,9 @@ Preferences, not routing. Match the shape of the work:
 ## Dispatch
 
 - Your Task tool launches, resumes, and observes children. A child assigned
-  orchestrator without Task returns dispatch requests (droid, handoff, order)
-  to its parent and stops; shell spawning is not a substitute.
+  orchestrator without Task returns work that needs delegation as dispatch
+  requests (droid, handoff, order) to its parent; shell spawning is not a
+  substitute.
 - Handoff shape is the `<subagents>` rule in AGENTS.md: verb-phrase goal,
   established facts, constraints, checkable done.
 
