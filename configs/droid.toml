@@ -47,6 +47,10 @@ include = ["instructions/OPERATOR.md"]
 [[hooks.session_start.instructions.rules]]
 when = ["compact"]
 include = ["instructions/POST_COMPACT.md"]
+[[hooks.session_start.instructions.rules]]
+when = ["startup", "resume", "clear", "compact"]
+include_text = ["""[Session history]
+Current session ID: ${session_id}. Recover pre-compression history with `dsx search "<query>" --session ${session_id} --json`. Search when the summary lacks details, a prior decision needs checking, or you risk repeating work."""]
 # Operational principles live in ~/.agents/AGENTS.md (loaded natively by the
 # harness every session), not in an injected prompt file.
 

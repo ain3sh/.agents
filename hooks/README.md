@@ -137,7 +137,7 @@ if __name__ == "__main__":
 
 ### SessionStart
 - **`env_vars.py`**: loads inline config env vars plus optional secrets file on `startup`, `resume`, and `clear`. With `export_session_id = true` also persists the session id as `DROID_SESSION_ID`.
-- **`instructions.py`**: injects instructions via ordered rules (`when` + `include`/`include_text`) with interpolation support.
+- **`instructions.py`**: injects instructions via ordered rules (`when` + `include`/`include_text`) with interpolation support. On `startup`, `resume`, `clear`, and `compact`, the configured session-history rule includes the current session ID and a targeted dsx search reminder for recovering pre-compression details.
 - **`reap_vscode_workspaces.py`**: retires vscode workspaces idle beyond `[hooks.session_start.vscode_workspaces] idle_hours` (default 12h); catches orphans from crashed sessions. Fails open.
 - **`debug.sh`**: emits detailed diagnostics for env discovery and tool availability.
 
