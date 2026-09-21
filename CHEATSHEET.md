@@ -4,6 +4,7 @@
 - **`slack-cli`** — slck commands, bot/user token guidance, search flags, Slack formatting/delivery, and the shared **voice** gate before sending or editing
 - **`twitter-cli`** — bounded Twitter/X reads and user-approved account actions through the local `twitter` CLI; YAML default, JSON available with `--format json`
 - **`dsx`** — session search/analytics plus durable `dsx papercut add|list|review`
+- **`disk-cleanup`** — bounded dry-run/apply scripts for reclaiming `/tmp` and home caches/toolchains/containers; hard-protects Factory sessions, supports explicit protected paths, and verifies before/after snapshots
 - **`harness-optimization`** — reliability optimization for repeated agent/tool failures: trace policy → model → hooks → executor → process → evidence, then fix the owning rule or protocol while preserving working defaults
 - **`worktree-setup`** — source-selectable dependency mirrors (`repair|verify|setup --from <worktree>`); never install in a shared worktree
 - **`design-doc`** — Factory-themed single-file RFCs and technical memos; document structure, components, full light/dark capture, hero thumbnails, and authorized secret-gist publishing; visual explanations come from **show-me**
