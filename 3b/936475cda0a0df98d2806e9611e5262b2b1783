@@ -1,0 +1,27 @@
+CHEATSHEET.md
+  0ffb35ab444713d4 68,70
+model-proxy/config.yaml
+  0ffb35ab444713d4 54,56,149-151,154-156
+model-proxy/README.md
+  0ffb35ab444713d4 5,7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.2",
+  "base_commit_sha": "3b936475cda0a0df98d2806e9611e5262b2b1783",
+  "prompts": {
+    "0ffb35ab444713d4": {
+      "agent_id": {
+        "tool": "droid",
+        "id": "28ea73a5-7588-4089-b5ee-1a66b102fc44",
+        "model": "custom:factory://glm-5-3-flash"
+      },
+      "human_author": "ain3sh",
+      "messages": [],
+      "total_additions": 15,
+      "total_deletions": 15,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    }
+  }
+}
