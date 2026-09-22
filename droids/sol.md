@@ -1,7 +1,7 @@
 ---
 name: sol
 description: GPT-5.6 Sol Fast for implementation, research, and adversarial review.
-model: custom:openai://gpt-5-6-sol-fast
+model: custom:openai://gpt-6-sol-fast
 reasoningEffort: high
 ---
 

@@ -65,9 +65,9 @@ droids land in the same directory and are gitignored. Staffing policy is the
 | Droid | Model | Prefer for |
 |---|---|---|
 | `glm` | `custom:factory://glm-5-3-flash` | bounded implementation, evidence gathering, writing |
-| `sol` | `custom:openai://gpt-5-6-sol-fast` | persistent implementation, research, adversarial review |
+| `sol` | `custom:openai://gpt-6-sol-fast` | persistent implementation, research, adversarial review |
 | `fable` | `custom:factory://fable-5-1` | approach design, coupled or taste-sensitive code, UI, structural review |
-| `astra` | `custom:openai://gpt-6` | diagnosis, QA, computer use; small local fixes within assigned scope |
+| `astra` | `custom:factory-dev://gpt-6` | diagnosis, QA, computer use; small local fixes within assigned scope |
 
 ## Installed Tooling
 

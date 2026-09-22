@@ -51,9 +51,9 @@ payload:
       params:
         "text.verbosity": "medium"
     - models:
-        - name: "gpt-5.6-sol-fast"
+        - name: "gpt-6-sol-fast"
           protocol: "codex"
-        - name: "gpt-5.6-luna-fast"
+        - name: "gpt-6-luna-fast"
           protocol: "codex"
       params:
         # Fast is service_tier=priority on the base model, not a separate upstream model.
@@ -146,14 +146,14 @@ remote-management: # api settings
   disable-control-panel: true # skip asset download and http route
 oauth-model-alias:
   codex:
-    - name: gpt-5.6-sol
-      alias: gpt-5.6-sol-fast
-      display-name: GPT-5.6 Sol Fast
+    - name: gpt-6-sol
+      alias: gpt-6-sol-fast
+      display-name: GPT-6 Sol Fast
       fork: true
       force-mapping: true
-    - name: gpt-5.6-luna
-      alias: gpt-5.6-luna-fast
-      display-name: GPT-5.6 Luna Fast
+    - name: gpt-6-luna
+      alias: gpt-6-luna-fast
+      display-name: GPT-6 Luna Fast
       fork: true
       force-mapping: true
   antigravity:
