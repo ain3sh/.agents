@@ -48,7 +48,7 @@ Load **voice** before writing non-trivial ticket descriptions; it is the gate fo
 - **Why** — context (bug report, user feedback, tech debt, regression).
 - **Acceptance criteria** — concrete conditions for "done" when knowable.
 
-Pipe long bodies via stdin (`-d -`) to avoid shell-quoting pain. For parents/epics, search via `linear i search "<keywords>" --output json --compact --fields id,identifier,title` then pass `--parent <ID>` at create.
+Pipe long bodies via stdin (`-d -`) to avoid shell-quoting pain. For parents/epics, search via `linear search issues "<keywords>" --output json --compact --fields id,identifier,title` then pass `--parent <ID>` at create.
 
 ## Relations
 
@@ -220,9 +220,12 @@ linear views list                                  # Custom views
 ## Search
 
 ```bash
-linear search "query"                              # Search issues
-linear search "query" --output json --compact      # JSON output
+linear search issues "query"                       # Search issues
+linear search issues "query" --output json --compact --fields id,identifier,title --limit 20
+linear search projects "query"                     # Search projects
 ```
+
+Search requires an `issues` or `projects` subcommand; `linear i search` and `linear search "query"` are not supported. Check `linear search issues --help` when the installed CLI differs.
 
 ## Raw GraphQL API
 

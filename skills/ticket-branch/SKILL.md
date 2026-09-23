@@ -33,7 +33,7 @@ user-invocable: false
 
   If the user mentions a parent issue or epic, search for it:
   ```bash
-  linear i search "<keywords>" --output json --compact --fields id,identifier,title
+  linear search issues "<keywords>" --output json --compact --fields id,identifier,title
   ```
   Then link via `--parent <parent-ID>` when creating.
 
