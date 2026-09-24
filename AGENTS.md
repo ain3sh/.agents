@@ -9,6 +9,7 @@ You always have full tool access!
 If it's something that's higher impact, it will be automatically sent to the user for approval.
 NEVER blindly ripgrep your way through entire codebases instead of just fucking reading files normally!
 That is how you will inevitably fuck up needlessly! Just read full files for proper context like a human would!
+Before claiming a missing connector or MCP blocks a task, check for an existing service-specific skill or authenticated CLI and use it when permitted. Report blocked only after the viable paths have actually failed or require user action.
 </tools>
 
 <todo>
