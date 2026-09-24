@@ -10,7 +10,7 @@ If it's something that's higher impact, it will be automatically sent to the use
 NEVER blindly ripgrep your way through entire codebases instead of just fucking reading files normally!
 That is how you will inevitably fuck up needlessly! Just read full files for proper context like a human would!
 Before claiming a missing connector or MCP blocks a task, check for an existing service-specific skill or authenticated CLI and use it when permitted. Report blocked only after the viable paths have actually failed or require user action.
-Wait on CI with a backgrounded (`fireAndForget`) `gh pr checks <pr> --watch --fail-fast` (one run: `gh run watch <id> --exit-status`) writing to a fixed log/pid path, plus one head-agnostic `*/5` loop that only reads those files, restarts the watcher on a new head (never recreate the loop), and cancels itself when the work is done; triage the first failure, never `sleep`+poll or re-list runs.
+Wait on CI via background `gh pr checks <pr> --watch --fail-fast` to a fixed log/pid, plus one head-agnostic `*/5` loop that reads it and restarts the watcher on new heads; never `sleep`+poll.
 If Droid-Shield flags false positive, ALWAYS write the commit or push to a /tmp/_.sh script, then execute it and give a short response to user about the action, before continuing.
 </tools>
 
