@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: 'Coordinate the model-pinned droids (glm, sol, fable, astra) as Astra main session, an explicitly assigned Astra orchestrator child, or top-level Fable told "be an orchestrator". Every other child keeps its assigned role.'
+description: 'Coordinate the model-pinned droids (glm, sol, fable, astra, opus) as Astra main session, an explicitly assigned Astra orchestrator child, or top-level Fable told "be an orchestrator". Every other child keeps its assigned role.'
 ---
 
 # Orchestrate
@@ -13,6 +13,7 @@ does not make its implementation understandable or ready to merge.
 | Goal | Action |
 |---|---|
 | Assign or resume work | Apply [delegation](references/coordination.md#delegation); handle small changes directly or send one owner a bounded `Task` handoff. |
+| Produce a document from raw evidence | Run the [mine-then-write pipeline](references/coordination.md#mine-then-write): a miner writes a cited fact sheet, a fresh writer renders it, a claims check reads the result against the fact sheet. |
 | Accept an implementation | Read the decisive diff and apply the [readability gate](references/readability.md) before accepting the report. |
 | Understand an unexplained block | Ask its existing author for the mechanism, evidence, and clearer code or local rationale. Without an author to resume, investigate directly. |
 | Reject an obscure implementation | Return the specific block and required simplification to its owner; do not pass it to the user as merge-ready. |

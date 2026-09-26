@@ -45,6 +45,7 @@ Preferences, not routing. Match the shape of the work:
 | sol | persistent implementation, research, adversarial review | ask for practical consequence, not pedantry |
 | fable | substantive approach design, coupled or taste-sensitive code, UI, structural review | must inspect the decisive code itself |
 | astra | diagnosis, QA, verification, computer use | direct fixes follow the delegation boundary and assigned scope |
+| opus | clean code, UI/UX, any writing, prose, or copy | not data gathering or extensive due diligence: hand it the facts already mined, never a corpus to search |
 
 - Prefer a fresh fable for coupled or taste-sensitive implementation; a
   bounded plan can go to glm or sol. Resume the coding owner for local
@@ -55,6 +56,32 @@ Preferences, not routing. Match the shape of the work:
   before handing it code. A model that fails to resolve gets an explicit
   restaff to an allowed coder or a blocker; model failure does not widen
   Astra's implementation scope.
+
+## Mine, then write
+
+For any document built from raw evidence (retrospective, findings write-up,
+Slack summary, a new section of an existing doc), split mining from writing.
+One agent doing both either invents when the corpus is large or writes flat
+when it has spent its context on reading.
+
+1. **Mine (astra, or sol for a ledger-shaped corpus).** Handoff names the raw
+   sources by path (session JSONL, ledger, findings, Slack export), the exact
+   questions, and a deliverable file. Output is a fact sheet: tables and
+   short notes with UTC timestamps, ids, verbatim quotes, and a cite for each
+   surprising claim (line number, message ts). Read-only apart from the file.
+   Cap it (≤300 lines); the writer will not read a second corpus.
+2. **Write (fresh opus).** Handoff names the fact sheet as the only source of
+   facts, the sibling text to match for voice (by path and line range), the
+   exact heading and structure, a length cap, and the rule "every number, id,
+   quote and verdict verbatim; no invented facts". Do not resume a busy or
+   unrelated Opus; a fresh one reads the fact sheet cold, which is the point.
+3. **Check (astra).** Read the written prose against the fact sheet and
+   primary sources, list corrections with evidence; the orchestrator applies
+   them. Repeat once when the first pass finds many.
+
+The orchestrator inserts the result, rebuilds any render, and verifies the
+render itself. The chain generalizes to design tasks: mine, then hand opus the
+screenshot and the render source to restyle, with "numbers verbatim" intact.
 
 ## Sequence
 
