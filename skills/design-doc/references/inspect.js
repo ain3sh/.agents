@@ -14,40 +14,9 @@
 //   - dark-mode color falling back to inherited because variable wasn't
 //     redefined in the @media (prefers-color-scheme: dark) block
 
-const path = require('path');
-// See screenshot.js: bare require() resolves from THIS FILE, not the CWD,
-// so we walk up from the invocation directory to find playwright.
-function loadPlaywright() {
-  const candidates = ['playwright'];
+const { loadModule, fileUrl, CAPTURE_CSS } = require('./lib');
 
-  for (const envDir of [process.env.PLAYWRIGHT_NODE_MODULES, process.env.NODE_PATH]) {
-    for (const entry of (envDir || '').split(path.delimiter).filter(Boolean)) {
-      candidates.push(path.join(entry, 'playwright'));
-    }
-  }
-
-  for (let dir = process.cwd(); ; dir = path.dirname(dir)) {
-    candidates.push(path.join(dir, 'node_modules', 'playwright'));
-    if (dir === path.dirname(dir)) break;
-  }
-
-  candidates.push(
-    '/tmp/node_modules/playwright',
-    '/usr/lib/node_modules/playwright',
-    '/usr/local/lib/node_modules/playwright',
-  );
-
-  for (const c of candidates) {
-    try { return require(c); } catch (_) { /* try next */ }
-  }
-  console.error(
-    'playwright not found. Run from (or under) a project that has it installed,\n' +
-    'or set PLAYWRIGHT_NODE_MODULES=/abs/path/to/node_modules,\n' +
-    'or: cd /tmp && npm i playwright && npx playwright install chromium',
-  );
-  process.exit(1);
-}
-const { chromium } = loadPlaywright();
+const { chromium } = loadModule('playwright');
 
 (async () => {
   const arg = process.argv[2];
@@ -56,8 +25,6 @@ const { chromium } = loadPlaywright();
     console.error('Usage: node inspect.js <abs-path-to-html> "<css-selector>"');
     process.exit(1);
   }
-  const fileUrl = arg.startsWith('file://') ? arg : `file://${path.resolve(arg)}`;
-
   const browser = await chromium.launch();
   const ctx = await browser.newContext({
     viewport: { width: 1360, height: 1400 },
@@ -65,7 +32,8 @@ const { chromium } = loadPlaywright();
     colorScheme: 'light',
   });
   const page = await ctx.newPage();
-  await page.goto(fileUrl, { waitUntil: 'networkidle' });
+  await page.goto(fileUrl(arg), { waitUntil: 'networkidle' });
+  await page.addStyleTag({ content: CAPTURE_CSS });
   await page.waitForTimeout(1500);
 
   const results = await page.evaluate((sel) => {

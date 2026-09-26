@@ -271,6 +271,7 @@
     header.doc > *:nth-child(2) { animation-delay: 0.16s; }
     header.doc > *:nth-child(3) { animation-delay: 0.28s; }
     header.doc > *:nth-child(4) { animation-delay: 0.4s; }
+    header.doc > *:nth-child(n + 5) { animation-delay: 0.48s; }
 
     .eyebrow {
       font-family: var(--mono);
@@ -1180,6 +1181,26 @@
     table.kv code { font-size: 12.5px; }
     table.kv tr:hover td {
       background: color-mix(in oklab, var(--accent-soft) 18%, transparent);
+    }
+    .table-wrap { overflow-x: auto; margin: 22px 0; }
+    .table-wrap > table.kv { margin: 0; }
+
+    /* Effect glyphs for changes-and-impact tables: ↓ improved, = no effect,
+       ↑ regressed, · not the target. Only the win carries the accent. */
+    .g { font-family: var(--mono); font-weight: 500; display: inline-block; min-width: 1.1em; }
+    .g-down { color: var(--accent); }
+    .g-up { color: var(--ink); background: var(--line-strong); border-radius: 3px; padding: 0 3px; }
+    .g-flat, .g-na { color: var(--fog); }
+
+    figure.diagram img { width: 100%; height: auto; display: block; }
+
+    /* Report mode: provenance prose rendered under the hero. */
+    header.doc .preamble {
+      font-size: 14.5px;
+      color: var(--graphite);
+      border-top: 1px solid var(--line);
+      margin-top: 28px;
+      padding-top: 18px;
     }
 
     /* ---- Section animation ---------------------------------------- */

@@ -1,21 +1,27 @@
 ---
 name: design-doc
-description: Author a publication-grade single-file HTML design doc or technical memo. Factory visual system, adaptive RFC/memo structure, fact-checked references, full light/dark Playwright verification, and secret-gist publishing.
+description: Author a publication-grade single-file HTML design doc, technical memo, or rendered report/retrospective, plus 1600x900 Slack cards and a hero thumbnail. Factory visual system, adaptive RFC/memo/report structure, markdown-to-HTML builder, fact-checked references, light/dark Playwright verification, and secret-gist publishing.
 ---
 
 A design doc here is one self-contained HTML file — fonts via Google Fonts, all styles inline, no JS framework — with the precision of an internal engineering artifact and the visual confidence of Factory product surfaces. The aesthetic exists to make reviewers actually read it; the structure exists to make the argument legible.
 
-Output target: ~1.5k–3k lines, ~80–200 KB, prints to A4, dark-mode aware, publishable as a secret gist viewed via `gistpreview.github.io`.
+Output target: ~1.5k–3k lines, under ~1 MB (80–300 KB typical), prints to A4, dark-mode aware, publishable as a secret gist viewed via `gistpreview.github.io`. Shareable outputs next to it: a hero thumbnail and, when asked or when the argument has several beats, 1600×900 Slack cards ([share images](references/share-images.md)).
 
 This skill owns the document's argument, scaffold, visual system, full-document
 verification, and publishing. Load **show-me** for visual explanations: pass
 the verified facts, reader question, and this template's components/tokens;
 it owns representation, rendering, code companions, and asset embedding.
 
+**Two rules outrank every visual rule below.**
+
+1. **Numbers survive verbatim.** Every number, id, verdict, and claim in the doc, stat band, thumbnail, and cards matches its source character for character, with its block, ticket, or file. Re-derive nothing, round nothing differently, drop no hedge. When rendering an existing source (report mode), prose passes through unchanged too; only layout is added.
+2. **Voice before polish.** Load **voice** for every fresh sentence (tagline, captions, card headings, callout claims): no slop, no false agency, no filler. A handsome doc with one inflated claim loses its most careful reader.
+
 ## When to use
 
 - Engineer asks for an RFC, design doc, ADR, monograph, technical spec, or sync-prep brief.
 - Engineer needs an internal technical memo that sells a shipped capability with evidence rather than proposal boilerplate.
+- A retrospective, measurement report, or changes-and-impact memo exists in markdown and needs rendering as a shareable doc and cards ([report mode](references/report-mode.md)).
 - A PR has architectural weight (≥2 reviewers, multiple sub-decisions) and needs framing beyond the PR description.
 - A change touches a contract, persistence, or cross-component ownership and needs one shareable artifact.
 
@@ -32,8 +38,9 @@ Choose the mode before touching HTML:
 - **RFC / proposal:** problem → primer → goals/non-goals → proposal → decision cards → tradeoffs → rollout → open questions.
 - **Technical memo / internal sell:** demand → structural constraint → evidence → shipped artifact → limits → deployment. Lead with a four-stat proof band plus the callout panels in [The "so what" layer](#the-so-what-layer), and use charts/tables instead of decision-card boilerplate.
 - **Sync prep:** decision needed → evidence → options → recommendation → unresolved questions.
+- **Report / retrospective:** the argument already exists as markdown (retro, findings, measurement report). TL;DR per goal → figures → changes-and-impact table (one row per change, `↓ = ↑ ·` goal glyphs) → numbered sections. Render it with `build-md.js`; prose passes through verbatim. Spine, glyph legend, and builder flags: [report mode](references/report-mode.md).
 
-Do not force the RFC scaffold onto a memo. A selling document should not read like a budget request, research diary, or next-cycle roadmap.
+Do not force the RFC scaffold onto a memo or a report. A selling document should not read like a budget request, research diary, or next-cycle roadmap.
 
 Name three things:
 - **The single structural claim** — one sentence, ≤25 words. This becomes the tagline + §1 lede.
@@ -48,15 +55,18 @@ For every constant, file path, function signature, enum, and limit you intend to
 - **Numeric limits.** Prior session caught `LOOP_MIN_INTERVAL_MS` referenced in prose — it didn't exist; the actual guard was `intervalMs < MINUTE_MS` inline.
 - **Caps with multiple terms.** Prior session caught "jitter capped at 10%" that should have been "10% of period, capped at 15min."
 
-When the PR description disagrees with the code, **the code wins** and you flag the discrepancy to the user.
+When the PR description disagrees with the code, **the code wins** and you flag the discrepancy to the user. In report mode the source document is the truth for its own numbers: copy them, and flag (do not fix) any that contradict each other.
 
-### 3. Copy the template
+### 3. Start from the template or the builder
 
 ```bash
+# RFC / memo / sync prep: fill the scaffold
 cp ~/.agents/skills/design-doc/references/template.html <project>/.agents/specs/<slug>-design.html
+# Report mode: render the markdown source on the same stylesheet
+node ~/.agents/skills/design-doc/references/build-md.js <source.md> <out.html> --eyebrow="..." --hero=hero.html
 ```
 
-Do not start from scratch. The styles encode hard-won decisions (Factory tokens, Geist hierarchy, `text-wrap: balance`, decision-card grid, auto-hide nav, dark/light modes, print stylesheet). The template is a working scaffold — render it once with the screenshot script in step 5 to confirm it loads before filling.
+Do not start from scratch, and do not write a second stylesheet: `build-md.js` reads `template.html`'s styles at build time. The styles encode hard-won decisions (Factory tokens, Geist hierarchy, `text-wrap: balance`, decision-card grid, auto-hide nav, dark/light modes, print stylesheet). The template is a working scaffold — render it once with the screenshot script in step 5 to confirm it loads before filling.
 
 Before styling, search the repo for `DESIGN.md`, brand guidance, or live tokens. **The repo's design canon wins.** In Factory repos, read `packages/core-ui/src/DESIGN.md`; the bundled template follows that dark-first system.
 
@@ -80,6 +90,8 @@ Skip a section only if it's genuinely empty for this change — don't pad.
 
 For memo mode, replace the goals/decision-card spine with the structure selected in step 1. Keep the same components and verification loop, but remove unused template furniture rather than leaving empty RFC sections.
 
+For report mode, the source's sections are the spine. Hand-write only the `--hero` fragment (tagline quoted from the source, `.statband` with the final numbers, optional callout panels) and the footer provenance.
+
 **Write for a reader with zero context (review-tested — violating these draws "hard to read, context implicit and out of order" feedback):**
 
 - **§1 Summary lede = 1–2 sentences a completely new reader understands**: the user-visible problem in plain words, then the fix in plain words. No internal vocabulary that only makes sense after §4 ("separate liveness from commit"-style taglines read as meaningless), and never open with a non-goal ("the visual shape is unchanged") — it buries the why.
@@ -100,24 +112,24 @@ For memo mode, replace the goals/decision-card spine with the structure selected
 Write → capture → inspect → fix:
 
 ```bash
-node ~/.agents/skills/design-doc/references/screenshot.js <abs-path-to-html>
-# → /tmp/doc-previews/scroll-light-NN.png
-#   /tmp/doc-previews/scroll-dark-NN.png
-#   /tmp/doc-previews/hero-dark-v2.png
+node ~/.agents/skills/design-doc/references/screenshot.js <abs-path-to-html>            # full sweep
+# → /tmp/doc-previews/scroll-{light,dark}-NN.png, hero-dark-v2.png
+node ~/.agents/skills/design-doc/references/screenshot.js <abs-path-to-html> --sample   # hero + one per component
+# → /tmp/doc-previews/sample-{light,dark}-NN-<component>.png
 ```
 
-Playwright must resolve. The script walks up from your **CWD** looking for `node_modules/playwright`, so run it from inside (or under) any project that has Playwright installed. If that project is elsewhere, pass `PLAYWRIGHT_NODE_MODULES=/abs/path/to/node_modules`. Last resort: `cd /tmp && npm i playwright && npx playwright install chromium`.
+Playwright must resolve. Every script (and `build-md.js` for `marked`) resolves modules through `references/lib.js`, which searches `PLAYWRIGHT_NODE_MODULES`, `NODE_PATH`, then every `node_modules` above your **CWD**; a bare `require('playwright')` would start from the script's directory instead. Run from inside (or under) a project that has Playwright, or set `PLAYWRIGHT_NODE_MODULES=/abs/path/to/node_modules`. If Chromium is missing: `npx playwright install chromium`. Last resort: `cd /tmp && npm i playwright && npx playwright install chromium`. The scripts work on any HTML page, not only the template's markup, and force `scroll-behavior: auto` so smooth scrolling cannot freeze every segment at the top.
 
-**Use the bundled helpers for module resolution.** A bare
-`require('playwright')` starts from the script's directory, not CWD. These
-helpers explicitly search CWD ancestors, `PLAYWRIGHT_NODE_MODULES`, and
-`NODE_PATH`; changing CWD alone does not give an arbitrary script that behavior.
+**Which sweep, and how to read it.** A dark hero alone is never enough: charts, tables, diagrams, and callouts fail several viewports below it.
 
-The script clears stale captures with these filenames before rendering, then captures the full document in both color schemes. **Read every light and dark PNG with the `Read` tool at `image_quality="high"`.** A dark hero alone is insufficient: charts, tables, diagrams, and callouts often fail several viewports below it. Fix layout, contrast, and overflow bugs visually before tightening prose. Bugs you will only catch this way:
+- **Full sweep, every segment, both schemes**: first render of a hand-authored doc, after any CSS or template edit, after adding a new component type or a `show-me` view, and once before sharing. Read the hero, tables, charts, diagrams, and code segments at `image_quality="high"`; prose-only segments can be read at default quality and re-read high only if something looks off.
+- **`--sample` is sufficient** while iterating on content in a doc whose layout already passed a full sweep, and for builder output (`build-md.js`), where one stylesheet renders every instance of a component identically. Read every sample at high quality.
+
+Fix layout, contrast, and overflow bugs visually before tightening prose. Bugs you will only catch this way:
 - `dl > dd` falling under `dt` instead of into column 2 → the template pins `grid-column: 2`; if you copied a card and removed it, restore it.
 - Dark-mode contrast failures on `--code-bg` and `--accent-soft`.
 - Check embedded views against [show-me's render checks](../show-me/references/surfaces.md#browser) at the document's actual content width.
-- **TOC rail clipping**: the collapsed `nav.toc` must fit its widest roman numeral — at 56px "VIII" clipped to "VII"; the template now ships 68px. Recheck if you shrink the rail or exceed 8 sections.
+- **TOC rail clipping**: the collapsed `nav.toc` must fit its widest roman numeral — at 56px "VIII" clipped to "VII"; the template now ships 68px, which fits every four-character numeral (through XVII, so 17 sections). Recheck if you shrink the rail; past 17 sections, merge sections rather than widening it.
 
 If layout is mysterious, run `inspect.js`:
 ```bash
@@ -127,7 +139,7 @@ It dumps bounding rects + computed styles for the first 12 matches.
 
 ### 6. Content passes
 
-After visual layout is clean:
+After visual layout is clean. In report mode these passes apply only to text you wrote (hero, captions you added, cards); the source's prose stays verbatim, and problems in it go back to its author as flags.
 
 - **Pass 1 — structural cuts.** If a fact appears in §1 and §5, delete it from §1 and link forward ("full list: D7"). The doc gets *shorter* in this pass, not longer. **Cut template furniture** — scaffolding prose users reliably nuke as fat:
   - Section meta-intros that describe the section instead of adding content ("Eight decisions carry this PR…", "The parts where good engineers could disagree…", "Each row is independently checkable."). The heading already does that work; open on the first real item.
@@ -149,9 +161,9 @@ After visual layout is clean:
 
 Re-run `screenshot.js`. **`scrollHeight` should drop, not grow** — prior session went 18820 → 18429 px and 17 → 14 segments with no information lost. The only sanctioned growth is Pass-3 diagrams; prose height still shrinks.
 
-### 8. Publish (optional)
+### 8. Share images and publish (optional)
 
-See [Publishing](#publishing).
+Generate the hero thumbnail for any shared link, and Slack cards when requested or when the argument has more than one postable beat: [share images](references/share-images.md). Publish only on request: [publishing](references/publishing.md), size budget first.
 
 ## Aesthetic foundation
 
@@ -228,84 +240,36 @@ All defined in `references/template.html` — read it for any pattern you're uns
 | `pre.code` w/ `.k`/`.s`/`.t`/`.fn`/`.hl` spans | Selectable code or a show-me code companion | Source and labelling rules belong to show-me |
 | `.callout` (`.rose`) | Notes, warnings | Sparingly — every callout devalues the rest |
 | `table.kv` | Tradeoff matrices, limits, disposition tables | Comparing N options; function-by-function fate of a displaced system |
+| `.table-wrap` | Horizontal scroll for wide tables | Wrap any table with more than ~5 columns |
+| `.g-down` / `.g-flat` / `.g-up` / `.g-na` | Effect glyphs `↓ = ↑ ·` (only `↓` is orange) | Goal columns of a changes-and-impact table; `build-md.js` adds them |
+| `figure.diagram > img` | Raster figure with caption | Report figures; budget per [publishing](references/publishing.md#size-budget-first) |
+| `header.doc .preamble` | Small provenance prose under the hero | Report mode: the source's text before its first section |
 | `ol.numbered` | Roman-numeralled list | Open questions |
 | `footer.doc` | Provenance (PR · ticket · HEAD sha · file path) | Once, at end |
 
 **Citing code.** Use `<code>name</code>` for function/component names inline. File paths get one explicit anchor at the point of citation: "(see `apps/cli/src/services/scheduled-tasks/loopSchedule.ts:42`)". Reviewers `rg` from names; they don't click.
 
-## Publishing
+## Sharing: thumbnail, cards, publishing
 
-Publish only when the user requests sharing or updating the document. For an
-authorized gist publication, use **secret gist + gistpreview** by default.
-Secret gists are unlisted, not access-controlled; use only when the material
-and intended audience permit link-based sharing.
+Three outputs can accompany the doc; each has one owning reference.
 
-```bash
-gh gist create <path>/<slug>-design.html --desc "<title>"   # add --public only if the user asks
-# → https://gist.github.com/<user>/<gist-id>
-```
+- **Hero thumbnail** for every shared link: `node references/thumbnail.js <abs-path> [out.png] [ratio] [--hero=<selector>]`. Works on any page with an `<h1>`; contract and crop rules in [share images](references/share-images.md#hero-thumbnail).
+- **Slack cards** (1600×900): headline numbers, what ships, negatives kept. Skeletons in `references/cards.html`, rendered by `references/render-cards.js`; what belongs on a card in [share images](references/share-images.md#slack-cards). Cards obey the verbatim-numbers rule and carry their measurement frame in the footer.
+- **Publishing** only on request: secret gist + gistpreview, the ~1 MB truncation budget, the image re-encoding recipe, update flow, and verified dead ends (including why the link never unfurls into a preview) in [publishing](references/publishing.md). Flat charts: palette PNG (`magick in.png -resize '1400x>' -colors 128 out.png`) or SVG, never JPEG.
 
-Share: `https://gistpreview.github.io/?<gist-id>/<slug>-design.html` (filename suffix required for multi-file gists, harmless otherwise)
-
-Update (single-file gist, preferred — no JSON assembly needed):
-
-```bash
-gh gist edit <gist-id> -f <filename-in-gist> <local-path>
-```
-
-`-f` names the file **inside** the gist; the positional arg is the local source. Get the gist's filename with `gh gist view <gist-id> --files`. Match it exactly — a mismatch silently adds a second file instead of updating, and gistpreview then needs the `/<filename>` suffix to find the right one. Without `-f`, `gh` opens an interactive editor, which fails in a non-TTY agent session.
-
-**Revising an already-published doc** — keep the same gist id and filename so the gistpreview link already shared in PRs/Slack stays valid. `gh gist edit -f` above handles the common case. Drop to the API only to change the **description** or to touch several files at once:
-
-```bash
-# pull the live copy to revise against (strip tags to a text outline if you only need structure)
-gh api gists/<gist-id> --jq '.files["<slug>-design.html"].content' > current.html
-# push: content is too large for -f flags; build {"description": ..., "files": {"<name>": {"content": ...}}}
-# with a short python script, then
-gh api gists/<gist-id> -X PATCH --input /tmp/gist-patch.json
-```
-
-**Keep the file under ~1 MB.** The gist *contents* API can truncate large files:
-`GET gists/<id>` sets `"truncated": true`, and gistpreview renders through that
-API, so the tail may disappear despite a successful write. After create or
-update, verify `gh api gists/<id> --jq '.files["<name>"].truncated'` is `false`
-and the preview reaches the footer. If embedded images cause bloat, follow
-[show-me's vector embedding](../show-me/references/surfaces.md#reusing-and-embedding-assets).
-
-### Publishing dead ends (verified failures)
-
-| Endpoint | Status |
-|---|---|
-| `gistcdn.githack.com/...`, `raw.githack.com/...` | **403 for secret gists** — public only |
-| `htmlpreview.github.io/?<raw-url>` | Works for public gists, slow first-load, occasionally CSP-blocks Google Fonts |
-| Direct gist raw URL | Served as `text/plain` — browser shows source, not rendered HTML |
-| GitHub Pages on a private repo | Requires GitHub Enterprise |
-
-If the doc must be public-link-shareable AND render reliably: make the gist public and use `gistcdn.githack.com`. **Confirm with the user first** — public gists list under their GH profile.
-
-## Hero thumbnail
-
-A published doc link is just a URL — in chat it renders as one, and people scroll past it. Generate a hero image and hand it to the user alongside the link so they can lead with the title and the numbers.
-
-```bash
-node ~/.agents/skills/design-doc/references/thumbnail.js <abs-path-to-html> [out.png] [ratio]
-```
-
-Dark mode, 2× DPR, default 1.6:1. It crops eyebrow → title → tagline → stat band (falling back to the `.meta` strip or `.linkline` in RFC mode), hides the TOC rail, and hides every sibling after the anchor. Those rules are not cosmetic — naive captures fail three ways: the auto-hide TOC renders as a stray column of numerals, whatever follows the hero bleeds a sliver of accent color into the bottom edge, and centering on `header.doc` leaves the image visibly off-center because the stat band is wider than the header.
-
-Present the PNG path with the doc link and let the user place it. Verify it with a `Read` at `image_quality="high"` first — the same bleed and centering bugs are invisible at default quality.
-
-⚠️ **Do not try to make the link auto-unfurl into a preview card.** Verified dead end: `gistpreview.github.io` serves a 2.7 KB JavaScript shell with `<title>Gist HTML Preview</title>` and zero `og:` tags, then fetches your document client-side — crawlers don't run JS, so they never see the doc. A secret gist compounds it: `gist.github.com/<id>` returns **404** to an anonymous crawler. Public gists *do* carry `og:`/`twitter:` tags, but `og:image` is GitHub's generic gist logo, not your document. Adding `og:` tags to the HTML changes nothing, because nothing crawler-visible serves them. A real card would require hosting both the doc and the image at anonymously-fetchable URLs — which defeats the point of an internal memo, and yields a ~360px card that is smaller than an attached image anyway.
+Present each PNG path with the doc link and let the user place them.
 
 ## Verification checklist
 
 Before declaring done:
 
 **Facts**
+- [ ] Every number, id, and verdict in the doc, stat band, thumbnail, and cards matches its source verbatim; in report mode, source prose is unchanged.
 - [ ] Every cited constant / file path / function signature was verified with `rg` against source.
 - [ ] PR description and code agree on numerics; if not, code wins and the discrepancy is flagged.
+- [ ] Every sentence you wrote passed the **voice** sweep.
 
-**Reader**
+**Reader** (RFC and memo; in report mode, flag gaps to the source's author)
 - [ ] §1 lede passes the zero-context test (plain-words problem + fix, no internal jargon, no leading non-goal).
 - [ ] §2 opens with the primer; every motivating ticket is described in-doc — the reader never needs to open the tracker.
 
@@ -321,10 +285,11 @@ Before declaring done:
 - [ ] If callout panels are present: each has a `.claim`, one is `.rose` carrying the honest limit, and no headline number is repeated verbatim from the adjacent statband.
 - [ ] After inserting any block, the tagline and the section that previously owned the point were swept for duplication.
 - [ ] If the doc is being shared as a link, a hero thumbnail was generated, inspected at high quality, and handed to the user with the URL.
+- [ ] If cards were made: each is 1600×900 with no overflow warning from `render-cards.js`, carries its measurement frame, and was inspected at high quality.
 
 **Visual**
 - [ ] Embedded explanations passed show-me's acceptance and render checks using the document's components.
-- [ ] Every light and dark Playwright segment was inspected; no contrast failures on charts, tables, diagrams, code blocks, or accent surfaces.
+- [ ] The sweep matched step 5 (full sweep where required, `--sample` otherwise); no contrast failures on charts, tables, diagrams, code blocks, or accent surfaces.
 - [ ] No scroll-point is a single unbroken paragraph block — every segment shows at least one structural break.
 - [ ] Print stylesheet renders without overflow (Chrome → Cmd-P → check pagination).
 - [ ] `scrollHeight` after Pass 2 is ≤ `scrollHeight` after Pass 1. If it grew and no Pass-3 diagram was added, you bloated.
@@ -332,7 +297,8 @@ Before declaring done:
 - [ ] Orange identifies the primary path or proof point; controls and reference rows remain neutral.
 
 **Publish**
-- [ ] After any gist create/PATCH, the [Publishing](#publishing) truncation and footer checks passed.
+- [ ] The file is under ~1 MB (flat charts palette-encoded or SVG).
+- [ ] After any gist create/PATCH, the [publishing](references/publishing.md) truncation and footer checks passed.
 
 ## Dead ends (warnings)
 
@@ -349,7 +315,13 @@ Before declaring done:
 ## References
 
 - [show-me rendering and embedding](../show-me/references/surfaces.md) — shared visual-explanation owner; load through `show-me`, not as a second document workflow.
-- `references/template.html` — full Factory-themed HTML scaffold to copy, with RFC components and an optional memo proof band.
-- `references/screenshot.js` — Playwright capture. `node screenshot.js <abs-path-to-html> [out-dir]`.
+- `references/template.html` — full Factory-themed HTML scaffold to copy, with RFC components and an optional memo proof band; also the one stylesheet `build-md.js` renders with.
+- `references/report-mode.md` — report/retrospective spine, changes-table glyphs, builder usage, and the AC-949 worked example.
+- `references/build-md.js` — markdown → design-doc HTML. `node build-md.js <source.md> <out.html> [--eyebrow=..] [--hero=f.html] [--footer=f.html] [--linked-images]`.
+- `references/share-images.md` — hero thumbnail contract and Slack card guidance.
+- `references/cards.html` + `references/render-cards.js` — three card archetypes; `node render-cards.js <cards.html> [out-dir]`.
+- `references/publishing.md` — gist flow, size budget and image encoding, dead ends.
+- `references/screenshot.js` — Playwright capture. `node screenshot.js <abs-path-to-html> [out-dir] [--sample]`.
 - `references/inspect.js` — DOM probe for layout debugging. `node inspect.js <abs-path> "<selector>"`.
-- `references/thumbnail.js` — hero crop for sharing a doc link. `node thumbnail.js <abs-path> [out.png] [ratio]`.
+- `references/thumbnail.js` — hero crop for sharing a doc link. `node thumbnail.js <abs-path> [out.png] [ratio] [--hero=<selector>]`.
+- `references/lib.js` — shared module resolution and arg parsing for the scripts.
