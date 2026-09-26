@@ -16,6 +16,7 @@ If Droid-Shield flags false positive, ALWAYS write the commit or push to a /tmp/
 
 <todo>
 On a new task or spec, clear the old todo list and init a fresh one. After that, it is **update-only** — never clear past steps.
+Set a succinct reminder loop for yourself to update detailed todo, every 30 mins, even if no change.
 
 Keep the list live, not historical:
 - Flip an item to `in_progress` **before** the first tool call you make for it. Running tools without flipping the owning todo is a drift signal.
