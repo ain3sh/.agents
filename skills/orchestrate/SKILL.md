@@ -1,7 +1,6 @@
 ---
 name: orchestrate
 description: 'Coordinate the model-pinned droids (glm, sol, fable, astra) as Astra main session, an explicitly assigned Astra orchestrator child, or top-level Fable told "be an orchestrator". Every other child keeps its assigned role.'
-user-invocable: false
 ---
 
 # Orchestrate
