@@ -1,109 +1,146 @@
 ---
 name: consolidate-test-suites
-description: Decide where test coverage belongs for bug fixes and features. Use before adding, moving, or deleting tests after a fix, feature, or architectural change. Select one owning layer, reuse existing canonical suites, preserve distinct stress/adversarial coverage, block weakly placed tests, and remove weaker duplicates. Also loaded by /implement during the coverage step.
+description: Decide where test coverage belongs, and cut test suites down to what actually defends the change. Use before adding, moving, or deleting tests after a fix, feature, or refactor, and whenever a diff is test-heavy or hard to review. Journeys first, one owning layer per invariant, a junk taxonomy for deletion, preserved stress/adversarial coverage, and a measured audit mode. Also loaded by /implement during the coverage step.
 ---
 
 # Consolidate Test Suites
 
-Purpose: place each invariant in one owning test layer only.
+A test is a liability until it proves otherwise. It costs review time, CI time, and refactor friction forever. It earns its place only by pinning an invariant that would otherwise break silently, at the one layer that owns it.
 
-Definitions:
+Target: **the smallest suite that defends the change just as well.** A PR drowning in tests gets skimmed, not reviewed, so an unreviewed test defends nothing.
 
-- **Invariant**: the rule that must stay true.
-- **Owning layer**: the lowest layer that truly owns and can prove that rule.
-- **Canonical suite**: the normal existing suite for that owning layer, including its existing harness, fixtures, and mocks.
+## Stance
 
-Default: reuse an existing canonical suite. Do not create a new standalone regression test unless the exception rule allows it.
+1. **Journeys first.** Start from the handful of real user journeys the change enables or protects. One deterministic journey test that walks a user path end to end (open → act → observe → recover) replaces a dozen unit tests that each poke one prop through a mock.
+2. **Units for what journeys can't pin.** Keep a unit or integration test only for an invariant a journey cannot hit deterministically: race and ordering windows, durable-before-acknowledged ordering, replay/dedupe idempotency, failure and rollback paths, pure math (sizing, offsets, parsing), and protocol/schema contracts.
+3. **Stress is its own owner.** Concurrency, replay, malformed input, boundary sizes, and scale are distinct failure modes from the nominal path. Their tests are owned coverage, never duplicates to delete.
+4. **One invariant, one owner.** The same rule asserted at two layers is a duplicate unless each layer catches a different failure mode you can name.
+5. **Every kept test states its invariant in one line.** If you cannot write that line, delete the test.
+
+Definitions: an **invariant** is the rule that must stay true. The **owning layer** is the lowest layer that truly owns and can prove it. The **canonical suite** is that layer's existing suite, with its harness, fixtures, and mocks. A **journey** is a user-observable path driven through the real boundary (CLI/TUI harness, protocol client, browser) with deterministic inputs (mock LLM fixtures, recorded responses).
+
+## Pick the mode
+
+- **Place**: you are about to add a test for a fix or feature. Go to [Place](#place).
+- **Audit**: the diff already has tests. Audit when any of these holds:
+  - test lines exceed production lines;
+  - a refactor deleted or merged a mechanism;
+  - reviewers push back on size;
+  - you inherited a branch.
+  Go to [Audit](#audit).
+- Both: audit first, then place the gaps the audit exposed.
+
+## Layer rules
+
+Choose **unit** when one module owns the rule and it reproduces without I/O, transport, persistence, retries, IPC, orchestration, or lifecycle coupling.
+
+Choose **integration** when the rule lives at a boundary between components, or depends on serialization, persistence, ordering, replay, retries, IPC, process lifecycle, or multi-component coordination.
+
+Choose **end-to-end / journey** when:
+- the contract is user-visible and cannot be trusted from lower layers alone;
+- the contract only holds under conditions lower layers cannot fake faithfully (real concurrency, cross-process ordering, full transport round-trips);
+- or a single journey replaces several lower-layer tests that each re-assert one step of it.
+
+Tie-breakers:
+- Torn between unit and integration: choose integration.
+- Never choose e2e to compensate for uncertainty, or because it is easier to reproduce there.
+- A journey must be deterministic. Flaky e2e is worse than none: fix the determinism (fixtures, explicit waits on observable state) or pick another layer.
+
+**Wiring invariants** ("X is derived correctly AND X reaches runtime") have two distinct failure modes; split them deliberately:
+- a unit test owns the derivation, asserting on the returned value;
+- the highest harness that observes the wired effect owns the "takes effect" contract, asserting on the boundary capture.
+Never make the same assertion in both.
+
+## Junk taxonomy: delete on sight
+
+These fail the "names an invariant that can fail" bar. Delete them unless the test is the only owner of a real invariant hiding behind the bad shape. In that case rewrite it into a correct shape.
+
+| Pattern | Tell |
+|---|---|
+| **Self-mocked SUT** | The test mocks the module the unit depends on and re-implements its logic in the mock (e.g. a filtering store mock under a hook that filters). It tests the mock. |
+| **Mock echo** | It asserts that a mock returned what it was configured to return, or was called with the args the test just passed in. |
+| **Implementation-detail assertions** | Call order on internal mocks, private state, which helper ran, intermediate render counts. Refactor-hostile, behaviour-blind. |
+| **Prop plumbing** | Asserts that prop `a` reaches child prop `a`. The type system plus one journey covers it. |
+| **Copy / i18n / snapshot text** | Asserts exact strings or big snapshots with no behaviour behind them. Translation-completeness gates already exist. |
+| **Journey fragments** | Each test re-asserts one step of a flow an e2e journey already walks. |
+| **Dead mechanism** | It tests a component, option, or path that no longer exists, or only exists for the test (a test-only export). |
+| **Type-guaranteed** | It asserts what the compiler already enforces, `typeof x === 'function'`, or that an import exists. |
+| **Unfalsifiable** | An absence check not gated behind a positive completion signal, a loop assertion over a possibly empty set, or `expect(true)`. |
+| **Near-duplicate cases** | Five `it`s differing by one input. Collapse them into one `it.each`, or keep the most adversarial case. |
+
+CI-gated artifacts (ownership/export snapshots, registry parity tables, pack smoke tests) stay, but kept to the minimal entries the change needs.
+
+## Place
+
+1. Name the invariant and the owning layer. If you cannot, STOP: placement is not justified.
+2. If the invariant belongs to a user journey, extend the journey test that owns that path first (add a step or an assertion) before writing anything new.
+3. Otherwise use the first option that fits:
+   1. add to an existing test in an existing file of the owning layer;
+   2. add a new test to an existing canonical file;
+   3. create a new file inside the canonical suite;
+   4. create a standalone regression test, only if ALL of these hold: no canonical suite can express it cleanly, it is deterministic, it has durable incident or contract value, and folding it in would make the suite less clear.
+4. Reuse the owning layer's harness, fixtures, and mocks. Never build a parallel assertion mechanism for evidence the harness already captures.
+5. Assert the specific expected value, not that work happened. Gate every negative assertion behind a positive completion signal.
+6. Add stress/adversarial cases as their own tests when the contract must hold under them.
+
+## Audit
+
+Run this over a diff (`<base>` = the merge base), a directory, or a suite.
+
+1. **Measure.** Split the diff into test and production lines:
+   ```bash
+   git diff <base> --numstat | awk '$3 ~ /(\.test\.|\.spec\.|e2e|__tests__|\/tests?\/)/ {t+=$1} $3 !~ /(\.test\.|\.spec\.|e2e|__tests__|\/tests?\/)/ {p+=$1} END {print "test +"t"  prod +"p}'
+   ```
+   Rank test files by added lines. More test lines than production lines is a strong audit signal. Unless the change is a pure safety net for untested legacy code, target at least a 50–60% cut of added test lines.
+2. **List the journeys.** Write the 3–7 user journeys the change must keep working, and map each to an existing e2e test (or mark it as a gap). This list is the yardstick for "covered elsewhere".
+3. **Triage every added or modified test** as DELETE (junk taxonomy, or covered by a listed journey or a kept test), KEEP (a one-line invariant that no journey pins deterministically), or COMPRESS (keep the invariant, cut the bulk). Tests that predate the change stay unless the change altered the behaviour they cover; then update them minimally.
+4. **Before each delete**, confirm the invariant is either worthless or covered elsewhere. If it is real and uncovered, add it to the journey gaps; never delete it silently.
+5. **Port, don't transplant.** When a refactor folds mechanism A into canonical primitive B, move only A's genuine invariants into B's canonical suite, rewritten against B's API. Delete A's test file; do not keep a renamed copy.
+6. **Fill the journey gaps.** Extend existing e2e files; each new journey walks a real path with several observations. Prefer 1–3 excellent journeys over broad scatter.
+7. **Sweep the leftovers.** Delete test-only exports, fixtures, and helpers the deletions orphaned (run knip or an equivalent). Remove comments that describe deleted tests.
+8. **Split large audits** by file ownership (e.g. daemon, services, UI, frontend), with one worker per area sharing the same rubric and the journey list. No two workers edit the same file. Each reports before/after numstat.
 
 ## Hard rules
 
-- You MUST identify the invariant before adding or moving any test.
-- You MUST identify one primary owning layer: unit, integration, or end-to-end.
-- You MUST first try to place coverage in an existing canonical suite for that layer.
-- You MUST prefer editing an existing test file over creating a new test file.
-- You MUST NOT add the same invariant in multiple layers unless each layer covers a different failure mode; name the distinct failure mode for each you keep. A stress, concurrency, replay, or boundary-input condition counts as distinct from the nominal path, so its test is owned coverage in its own right.
-- You MUST NOT add tests that lock in implementation details unless that implementation unit itself owns the invariant.
-- You MUST NOT create a standalone regression test because it is faster or easier.
-- You MUST reuse the owning layer's existing harness, fixtures, and mocks. Do not build a parallel assertion mechanism for evidence the canonical suite already produces (e.g. scraping a log/state file when the harness already captures the boundary).
-- You MUST ensure each placed test can fail. Assert the specific expected value, not that work merely happened. Gate any absence/negative assertion behind a positive completion signal so it cannot pass vacuously (e.g. an absence check that is trivially true because the awaited work has not run yet).
-- If you cannot name the invariant and the owning layer, STOP. Report that placement is not justified.
-
-## Required decision order
-
-Choose the first option that fits:
-
-1. Add to an existing test in an existing file in the owning layer.
-2. Add a new test to an existing canonical file in the owning layer.
-3. Create a new file inside the existing canonical suite in the owning layer.
-4. Create a standalone regression-style test only if the exception rule passes.
-
-## Owning layer rules
-
-Choose **unit** when:
-- one module owns the rule, and
-- the bug reproduces without I/O, transport, persistence, retries, IPC, orchestration, or lifecycle coupling.
-
-Choose **integration** when:
-- the rule lives at a boundary between components, or
-- the bug depends on serialization, persistence, ordering, replay, retries, IPC, process lifecycle, or multi-component coordination.
-
-Choose **end-to-end** only when:
-- the user-visible contract cannot be trusted from lower-layer tests alone, or
-- the contract only holds under conditions lower layers cannot reproduce faithfully (real concurrency, cross-process ordering, full transport/serialization round-trips, load).
-
-Tie-breakers:
-- If torn between unit and integration, choose integration.
-- Never choose end-to-end to compensate for uncertainty.
-- Never choose a higher layer just because it is easier to reproduce there.
-
-### Wiring / discovery invariants (the common two-layer case)
-
-When the rule is "X is derived correctly AND X reaches runtime", it has two genuinely distinct failure modes. Split it deliberately; do not duplicate:
-
-- **unit** owns the derivation: the pure resolver that produces X (e.g. which paths, values, or config are computed).
-- the **highest harness that observes the wired effect** owns the contract that X actually takes effect (reaches the process, model, request, or UI).
-
-Name both failure modes explicitly. Assert each layer on its own evidence — unit on the returned value, the higher layer on the observable effect captured at the boundary — never the same assertion in both.
-
-## Exception rule for standalone regression tests
-
-A standalone regression-style test is allowed only if ALL are true:
-
-- no existing canonical suite can express the case cleanly
-- the reproduction is deterministic
-- the case has durable incident or contract value
-- adding it to the canonical suite would make that suite less clear
-
-If any condition is false, fold the coverage into the canonical suite.
-
-## Duplicate cleanup
-
-After placing coverage:
-
-1. Search for tests that assert the same invariant.
-2. Keep the strongest owned location.
-3. Merge any unique assertions into that location.
-4. Delete or simplify weaker duplicates (a distinct stress/adversarial case is not a duplicate).
-5. Rename tests by behavior and owner, not by ticket number or bug history.
+- Name the invariant and owning layer before adding, moving, or keeping any test.
+- Reuse an existing canonical suite before creating a file; extend a journey before adding units for its steps.
+- Never assert the same invariant at two layers unless each catches a distinct, named failure mode.
+- Never delete stress, concurrency, replay, boundary, or failure-path coverage as a "duplicate" of the nominal path.
+- Never lock in implementation details unless that unit itself owns the invariant.
+- Every placed or kept test must be able to fail: break the code path or invert the expectation once, see red, then revert.
+- Never write a standalone regression test because it is faster or easier.
 
 ## Verification
 
-Before finishing:
+1. Run the narrowest target first: every touched test file, then the journey suites you extended.
+2. Red check each new or edited test once.
+3. Run the typecheck, lint, and knip steps for touched packages.
+4. Report exactly what ran and whether it passed.
 
-1. Run the narrowest relevant test target first.
-2. Confirm each new or edited test can fail — invert the expectation or break the code path once, see it go red, then revert.
-3. Run required typecheck, build, or lint steps for touched code.
-4. Report exactly what was run and whether it passed.
+## Output
 
-## Default output format
+Place:
 
 ```
 Invariant:
-Owning layer: <unit | integration | end-to-end>
+Owning layer: <unit | integration | end-to-end/journey>
 Target suite/file:
-Action: <reuse existing test | add to existing suite | create file in canonical suite | keep standalone regression>
+Action: <extend journey | reuse existing test | add to existing suite | create file in canonical suite | keep standalone regression>
 Why this layer owns it:
-Duplicates to merge/delete: <list or "none">
+Duplicates merged/deleted: <list or "none">
 Verification run:
-Residual risk: <what is still not covered, if anything>
+Residual risk:
+```
+
+Audit:
+
+```
+Test lines: +<before> → +<after> (<pct> cut); production: +<n>
+Journeys: <journey> → <e2e test | GAP filled in <file>>
+Per file: <file>  +<before> → +<after>
+  kept: <one-line invariant> (× each)
+Moved to journeys: <invariant → journey>
+Orphans removed: <helpers/exports/fixtures>
+Verification run:
+Residual risk:
 ```
