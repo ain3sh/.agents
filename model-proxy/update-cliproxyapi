@@ -11,6 +11,7 @@ readonly REDACT_BETA='redact-thinking-[0-9]{4}-[0-9]{2}-[0-9]{2}'
 readonly CLAUDE_REQUEST_REL='internal/runtime/executor/claude_executor_request.go'
 readonly CODEX_WS_REL='internal/runtime/executor/codex_websockets_executor.go'
 readonly CODEX_WS_STREAM_REL='internal/runtime/executor/codex_websockets_stream.go'
+readonly GPT61_PATCH="$HOME/.agents/model-proxy/gpt61-sol.patch"
 readonly CONFIG_FILE="${CLIPROXY_CONFIG:-$HOME/.agents/model-proxy/config.yaml}"
 readonly PROXY_CTL="$HOME/.agents/model-proxy/model-proxy"
 
@@ -108,16 +109,16 @@ import sys
 path = Path(sys.argv[1])
 source = path.read_text()
 
-old_imports = '''\t"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
-\tcliproxyauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
-\tcliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
+old_imports = '''\t"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+\tcliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+\tcliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
 '''
-new_imports = '''\t"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
-\t"github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor/helps"
-\t"github.com/router-for-me/CLIProxyAPI/v7/internal/thinking"
-\tcliproxyauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
-\tcliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
-\tsdktranslator "github.com/router-for-me/CLIProxyAPI/v7/sdk/translator"
+new_imports = '''\t"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+\t"github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor/helps"
+\t"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
+\tcliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+\tcliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+\tsdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 \t"github.com/tidwall/gjson"
 '''
 old_condition = '''\tif cliproxyexecutor.DownstreamWebsocket(ctx) && codexWebsocketsEnabled(auth) {
@@ -203,6 +204,14 @@ path.write_text(source)
 PY
 echo "Patch: applied (sanitized unsupported Codex WebSocket fields)"
 
+# PR #6207 registers the exact upstream ID for Codex Team, Plus, and Pro.
+# Keep the local catalog pinned until the matching remote catalog PR lands.
+if ! grep -q '"id": "gpt-6.1-sol"' "$workdir/source/internal/registry/models/models.json"; then
+    git -C "$workdir/source" apply --check "$GPT61_PATCH"
+    git -C "$workdir/source" apply "$GPT61_PATCH"
+    echo "Patch: applied (registered GPT-6.1 Sol for Codex OAuth)"
+fi
+
 echo "[3/4] Testing and building..."
 # Compile a focused regression test against the patched source. This verifies
 # behavior instead of rejecting harmless constant, comment, and detector uses.
@@ -213,8 +222,9 @@ import (
     "strings"
     "testing"
 
-    cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
-    sdktranslator "github.com/router-for-me/CLIProxyAPI/v7/sdk/translator"
+    "github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
+    cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+    sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 )
 
 func TestLocalNoForcedRedactThinkingBeta(t *testing.T) {
@@ -230,12 +240,12 @@ func TestLocalPriorityWebsocketBridgeDetection(t *testing.T) {
     executor := NewCodexAutoExecutor(nil)
     opts := cliproxyexecutor.Options{SourceFormat: sdktranslator.FromString("openai-response")}
     priority := cliproxyexecutor.Request{
-        Model: "gpt-5.6-sol",
-        Payload: []byte(`{"model":"gpt-5.6-sol","service_tier":"priority","input":"hi"}`),
+        Model: "gpt-6.1-sol",
+        Payload: []byte(`{"model":"gpt-6.1-sol","service_tier":"priority","input":"hi"}`),
     }
     standard := cliproxyexecutor.Request{
-        Model: "gpt-5.6-sol",
-        Payload: []byte(`{"model":"gpt-5.6-sol","input":"hi"}`),
+        Model: "gpt-6.1-sol",
+        Payload: []byte(`{"model":"gpt-6.1-sol","input":"hi"}`),
     }
     if !executor.priorityWebsocketRequested(priority, opts) {
         t.Fatal("priority request did not select the WebSocket bridge")
@@ -244,9 +254,28 @@ func TestLocalPriorityWebsocketBridgeDetection(t *testing.T) {
         t.Fatal("standard request unexpectedly selected the WebSocket bridge")
     }
 }
+
+func TestLocalGPT61SolCatalog(t *testing.T) {
+    for _, models := range [][]*registry.ModelInfo{
+        registry.GetCodexTeamModels(),
+        registry.GetCodexPlusModels(),
+        registry.GetCodexProModels(),
+    } {
+        found := false
+        for _, model := range models {
+            if model.ID == "gpt-6.1-sol" {
+                found = true
+                break
+            }
+        }
+        if !found {
+            t.Fatal("GPT-6.1 Sol is missing from a paid Codex catalog")
+        }
+    }
+}
 EOF
 go -C "$workdir/source" test ./internal/runtime/executor \
-    -run '^(TestLocalNoForcedRedactThinkingBeta|TestLocalPriorityWebsocketBridgeDetection|TestApplyClaudeHeaders_FastModeBetaIsConditional)$' -count=1
+    -run '^(TestLocalNoForcedRedactThinkingBeta|TestLocalPriorityWebsocketBridgeDetection|TestLocalGPT61SolCatalog|TestApplyClaudeHeaders_FastModeBetaIsConditional)$' -count=1
 version="${tag#v}"
 commit="$(git -C "$workdir/source" rev-parse --short HEAD)"
 build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

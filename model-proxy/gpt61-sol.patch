@@ -1,0 +1,130 @@
+diff --git a/internal/registry/models/models.json b/internal/registry/models/models.json
+index 735526b..2e1a209 100644
+--- a/internal/registry/models/models.json
++++ b/internal/registry/models/models.json
+@@ -2812,6 +2812,41 @@
+       },
+       "support_configuration_update": true
+     },
++    {
++      "id": "gpt-6.1-sol",
++      "object": "model",
++      "created": 1790630400,
++      "owned_by": "openai",
++      "type": "openai",
++      "display_name": "GPT 6.1 Sol",
++      "version": "gpt-6.1",
++      "description": "GPT-6.1 Sol delivers near-Astra performance at a lower cost for complex coding and professional work.",
++      "context_length": 272000,
++      "max_completion_tokens": 128000,
++      "supported_parameters": [
++        "tools"
++      ],
++      "thinking": {
++        "levels": [
++          "low",
++          "medium",
++          "high",
++          "xhigh",
++          "max"
++        ]
++      },
++      "supportedInputModalities": [
++        "text",
++        "image"
++      ],
++      "supportedOutputModalities": [
++        "text"
++      ],
++      "native_capabilities": {
++        "web_search": true
++      },
++      "support_configuration_update": true
++    },
+     {
+       "id": "gpt-6-sol",
+       "object": "model",
+@@ -3093,6 +3128,41 @@
+       },
+       "support_configuration_update": true
+     },
++    {
++      "id": "gpt-6.1-sol",
++      "object": "model",
++      "created": 1790630400,
++      "owned_by": "openai",
++      "type": "openai",
++      "display_name": "GPT 6.1 Sol",
++      "version": "gpt-6.1",
++      "description": "GPT-6.1 Sol delivers near-Astra performance at a lower cost for complex coding and professional work.",
++      "context_length": 272000,
++      "max_completion_tokens": 128000,
++      "supported_parameters": [
++        "tools"
++      ],
++      "thinking": {
++        "levels": [
++          "low",
++          "medium",
++          "high",
++          "xhigh",
++          "max"
++        ]
++      },
++      "supportedInputModalities": [
++        "text",
++        "image"
++      ],
++      "supportedOutputModalities": [
++        "text"
++      ],
++      "native_capabilities": {
++        "web_search": true
++      },
++      "support_configuration_update": true
++    },
+     {
+       "id": "gpt-6-sol",
+       "object": "model",
+@@ -3374,6 +3444,41 @@
+       },
+       "support_configuration_update": true
+     },
++    {
++      "id": "gpt-6.1-sol",
++      "object": "model",
++      "created": 1790630400,
++      "owned_by": "openai",
++      "type": "openai",
++      "display_name": "GPT 6.1 Sol",
++      "version": "gpt-6.1",
++      "description": "GPT-6.1 Sol delivers near-Astra performance at a lower cost for complex coding and professional work.",
++      "context_length": 272000,
++      "max_completion_tokens": 128000,
++      "supported_parameters": [
++        "tools"
++      ],
++      "thinking": {
++        "levels": [
++          "low",
++          "medium",
++          "high",
++          "xhigh",
++          "max"
++        ]
++      },
++      "supportedInputModalities": [
++        "text",
++        "image"
++      ],
++      "supportedOutputModalities": [
++        "text"
++      ],
++      "native_capabilities": {
++        "web_search": true
++      },
++      "support_configuration_update": true
++    },
+     {
+       "id": "gpt-6-sol",
+       "object": "model",
