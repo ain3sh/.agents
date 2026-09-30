@@ -147,7 +147,7 @@ func (e *CodexAutoExecutor) priorityWebsocketRequested(req cliproxyexecutor.Requ
 \t}
 \toriginalTranslated, body := translateCodexRequestPair(from, to, baseModel, original, req.Payload, false, helps.APIKeyModelIsCompat(req))
 \trequestedModel := helps.PayloadRequestedModel(opts, req.Model)
-\tbody = helps.ApplyPayloadConfigWithRequest(e.httpExec.cfg, baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, helps.PayloadRequestPath(opts), opts.Headers)
+\tbody = helps.ApplyPayloadConfigWithRequestForExecutor(e.httpExec.cfg, "codex-websockets", baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, helps.PayloadRequestPath(opts), opts.Headers)
 \treturn strings.EqualFold(strings.TrimSpace(gjson.GetBytes(body, "service_tier").String()), "priority")
 }
 
@@ -183,10 +183,10 @@ old_import = '''\t"github.com/tidwall/gjson"
 new_import = '''\t"github.com/tidwall/gjson"
 \t"github.com/tidwall/sjson"
 )'''
-old_body = '''\tbody = helps.ApplyPayloadConfigWithRequest(e.cfg, baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, requestPath, opts.Headers)
+old_body = '''\tbody = helps.ApplyPayloadConfigWithRequestForExecutor(e.cfg, "codex-websockets", baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, requestPath, opts.Headers)
 \tbody = helps.SetStringIfDifferent(body, "model", baseModel)
 '''
-new_body = '''\tbody = helps.ApplyPayloadConfigWithRequest(e.cfg, baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, requestPath, opts.Headers)
+new_body = '''\tbody = helps.ApplyPayloadConfigWithRequestForExecutor(e.cfg, "codex-websockets", baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, requestPath, opts.Headers)
 \tbody, _ = sjson.DeleteBytes(body, "prompt_cache_retention")
 \tbody, _ = sjson.DeleteBytes(body, "safety_identifier")
 \tbody = helps.SetStringIfDifferent(body, "model", baseModel)
@@ -204,8 +204,7 @@ path.write_text(source)
 PY
 echo "Patch: applied (sanitized unsupported Codex WebSocket fields)"
 
-# PR #6207 registers the exact upstream ID for Codex Team, Plus, and Pro.
-# Keep the local catalog pinned until the matching remote catalog PR lands.
+# Register the exact upstream ID only when the release catalog lacks it.
 if ! grep -q '"id": "gpt-6.1-sol"' "$workdir/source/internal/registry/models/models.json"; then
     git -C "$workdir/source" apply --check "$GPT61_PATCH"
     git -C "$workdir/source" apply "$GPT61_PATCH"
@@ -274,6 +273,7 @@ func TestLocalGPT61SolCatalog(t *testing.T) {
     }
 }
 EOF
+gofmt -w "$codex_ws" "$codex_ws_stream" "$workdir/source/internal/runtime/executor/zz_local_no_redact_thinking_test.go"
 go -C "$workdir/source" test ./internal/runtime/executor \
     -run '^(TestLocalNoForcedRedactThinkingBeta|TestLocalPriorityWebsocketBridgeDetection|TestLocalGPT61SolCatalog|TestApplyClaudeHeaders_FastModeBetaIsConditional)$' -count=1
 version="${tag#v}"

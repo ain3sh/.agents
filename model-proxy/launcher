@@ -64,7 +64,7 @@ def main() -> None:
     runtime_config = RUNTIME_DIR / f"{digest}.yaml"
     runtime_config.write_text(rendered)
     runtime_config.chmod(0o600)
-    os.execv(BINARY, [str(BINARY), "-config", str(runtime_config), "--local-model", *args])
+    os.execv(BINARY, [str(BINARY), "-config", str(runtime_config), *args])
 
 
 if __name__ == "__main__":
