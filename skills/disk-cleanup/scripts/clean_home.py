@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
 import subprocess
@@ -164,14 +165,25 @@ def main() -> int:
     if aggressive and not args.drop_all_vscode_extensions:
         keep_extensions.append("rust-lang.rust-analyzer-")
     sessions = home / ".factory" / "sessions"
-    protected = [sessions, *(expanded(raw) for raw in args.protect)]
-    missing = [path for path in protected[1:] if not path.exists()]
+    dsx_cache = expanded(os.environ.get("DSX_CACHE_DIR") or str(
+        expanded(os.environ.get("XDG_CACHE_HOME") or str(home / ".cache")) / "dsx"
+    ))
+    protected = [sessions, home / ".cache" / "dsx", dsx_cache]
+    if os.environ.get("DSX_DB_PATH"):
+        protected.append(expanded(os.environ["DSX_DB_PATH"]))
+    protected.extend(expanded(raw) for raw in args.protect)
+    missing = [expanded(raw) for raw in args.protect if not expanded(raw).exists()]
     if missing and not args.allow_missing_protected:
         for path in missing:
             print(f"ERROR protected path missing: {path}", file=sys.stderr)
         return 2
 
-    targets: list[tuple[Path, bool, str]] = [(home / ".cache", True, "cache contents")]
+    cache = home / ".cache"
+    targets: list[tuple[Path, bool, str]] = [
+        (child, False, "cache contents")
+        for child in cache.iterdir()
+        if not any(overlaps(child.resolve(strict=False), path) for path in protected)
+    ] if cache.is_dir() else []
     targets.extend(
         (
             home / relative,

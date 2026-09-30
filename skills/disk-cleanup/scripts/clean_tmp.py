@@ -85,6 +85,9 @@ def remove(path: Path) -> None:
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--tmp-root", default="/tmp")
+    result.add_argument(
+        "--protect", action="append", default=[], help="Retain a path's temporary container"
+    )
     result.add_argument("--min-age-hours", type=float, default=0)
     result.add_argument("--include-foreign", action="store_true")
     result.add_argument("--apply", action="store_true")
@@ -100,13 +103,32 @@ def main() -> int:
     if root in {Path("/"), Path.home().resolve()}:
         sys.exit(f"refusing unsafe temporary root: {root}")
 
+    missing = [raw for raw in args.protect if not Path(raw).expanduser().exists()]
+    if missing:
+        sys.exit("ERROR protected path missing: " + ", ".join(missing))
+
     active, processes = active_roots(root)
+    home = Path.home()
+    dsx_cache = os.environ.get("DSX_CACHE_DIR") or str(
+        Path(os.environ.get("XDG_CACHE_HOME") or str(home / ".cache")) / "dsx"
+    )
+    protected: set[str] = set()
+    for raw in (*args.protect, dsx_cache, os.environ.get("DSX_DB_PATH")):
+        if not raw:
+            continue
+        path = Path(raw).expanduser()
+        for location in (Path(os.path.abspath(path)), path.resolve()):
+            if location == root or location in root.parents:
+                protected.update(child.name for child in root.iterdir())
+            elif name := top_level(str(location), root):
+                protected.add(name)
     if args.apply and processes == 0:
         sys.exit("refusing apply: could not inspect /proc")
 
     cutoff = time.time() - args.min_age_hours * 3600
     candidates: list[Path] = []
-    skipped_active = skipped_system = skipped_foreign = skipped_young = 0
+    skipped_active = skipped_protected = skipped_system = 0
+    skipped_foreign = skipped_young = 0
     uid = os.getuid()
 
     for path in root.iterdir():
@@ -116,6 +138,8 @@ def main() -> int:
             continue
         if path.name in active:
             skipped_active += 1
+        elif path.name in protected:
+            skipped_protected += 1
         elif matches_system_path(path.name):
             skipped_system += 1
         elif stat.st_uid != uid and not args.include_foreign:
@@ -128,6 +152,7 @@ def main() -> int:
     print(
         f"mode={'apply' if args.apply else 'dry-run'} "
         f"candidates={len(candidates)} active={skipped_active} "
+        f"protected={skipped_protected} "
         f"system={skipped_system} foreign={skipped_foreign} "
         f"young={skipped_young}"
     )
