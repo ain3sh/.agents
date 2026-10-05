@@ -10,7 +10,6 @@ readonly BINARY="$HOME/.local/bin/cli-proxy-api"
 readonly REDACT_BETA='redact-thinking-[0-9]{4}-[0-9]{2}-[0-9]{2}'
 readonly CLAUDE_REQUEST_REL='internal/runtime/executor/claude_executor_request.go'
 readonly CODEX_WS_REL='internal/runtime/executor/codex_websockets_executor.go'
-readonly CODEX_WS_STREAM_REL='internal/runtime/executor/codex_websockets_stream.go'
 readonly GPT61_PATCH="$HOME/.agents/model-proxy/gpt61-sol.patch"
 readonly CONFIG_FILE="${CLIPROXY_CONFIG:-$HOME/.agents/model-proxy/config.yaml}"
 readonly PROXY_CTL="$HOME/.agents/model-proxy/model-proxy"
@@ -166,44 +165,6 @@ path.write_text(source)
 PY
 echo "Patch: applied (bridged Codex priority SSE requests to upstream WebSocket)"
 
-codex_ws_stream="$workdir/source/$CODEX_WS_STREAM_REL"
-if [[ ! -f "$codex_ws_stream" ]]; then
-    echo "error: upstream Codex WebSocket stream moved: $CODEX_WS_STREAM_REL" >&2
-    exit 1
-fi
-python3 - "$codex_ws_stream" <<'PY'
-from pathlib import Path
-import sys
-
-path = Path(sys.argv[1])
-source = path.read_text()
-
-old_import = '''\t"github.com/tidwall/gjson"
-)'''
-new_import = '''\t"github.com/tidwall/gjson"
-\t"github.com/tidwall/sjson"
-)'''
-old_body = '''\tbody = helps.ApplyPayloadConfigWithRequestForExecutor(e.cfg, "codex-websockets", baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, requestPath, opts.Headers)
-\tbody = helps.SetStringIfDifferent(body, "model", baseModel)
-'''
-new_body = '''\tbody = helps.ApplyPayloadConfigWithRequestForExecutor(e.cfg, "codex-websockets", baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, requestPath, opts.Headers)
-\tbody, _ = sjson.DeleteBytes(body, "prompt_cache_retention")
-\tbody, _ = sjson.DeleteBytes(body, "safety_identifier")
-\tbody = helps.SetStringIfDifferent(body, "model", baseModel)
-'''
-
-for old, new, label in (
-    (old_import, new_import, "sjson import"),
-    (old_body, new_body, "unsupported field sanitation"),
-):
-    if old not in source:
-        raise SystemExit(f"error: failed to apply Codex WebSocket sanitation patch ({label}); upstream changed")
-    source = source.replace(old, new, 1)
-
-path.write_text(source)
-PY
-echo "Patch: applied (sanitized unsupported Codex WebSocket fields)"
-
 # Register the exact upstream ID only when the release catalog lacks it.
 if ! grep -q '"id": "gpt-6.1-sol"' "$workdir/source/internal/registry/models/models.json"; then
     git -C "$workdir/source" apply --check "$GPT61_PATCH"
@@ -273,7 +234,7 @@ func TestLocalGPT61SolCatalog(t *testing.T) {
     }
 }
 EOF
-gofmt -w "$codex_ws" "$codex_ws_stream" "$workdir/source/internal/runtime/executor/zz_local_no_redact_thinking_test.go"
+gofmt -w "$codex_ws" "$workdir/source/internal/runtime/executor/zz_local_no_redact_thinking_test.go"
 go -C "$workdir/source" test ./internal/runtime/executor \
     -run '^(TestLocalNoForcedRedactThinkingBeta|TestLocalPriorityWebsocketBridgeDetection|TestLocalGPT61SolCatalog|TestApplyClaudeHeaders_FastModeBetaIsConditional)$' -count=1
 version="${tag#v}"

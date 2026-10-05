@@ -130,6 +130,16 @@ payload:
         "reasoning.effort": "high"
         "reasoning.summary": "auto"
         "parallel_tool_calls": true
+  filter: # remove parameters after overrides
+    - models:
+        - name: "gpt-6.1-sol-fast"
+          protocol: "codex"
+        - name: "gpt-6-luna-fast"
+          protocol: "codex"
+      params:
+        # Fast requests are bridged to Codex WebSockets, which rejects these fields.
+        - "prompt_cache_retention"
+        - "safety_identifier"
         # default: # only set parameters when they are missing in the payload
         #   - models:
         #       - name: "" # supports wildcards (e.g., "gemini-*")
