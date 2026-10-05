@@ -1,7 +1,7 @@
 ---
 name: quality-ship
-description: Shared atom for running quality checks, committing, and pushing. Background knowledge for workflow commands -- not invoked directly.
-user-invocable: false
+description: Run scoped quality checks with live, logged evidence, then commit and push when authorized.
+user-invocable: true
 ---
 
 # Quality Checks + Ship
@@ -14,15 +14,15 @@ react-doctor, or anything in a monorepo.
 ## Act: run checks through one primitive
 
 ```bash
-~/.agents/scripts/run-check <label> [--cwd <dir>] [--env KEY=VALUE]... -- <scoped-validator-argv>
+~/.agents/scripts/run-check <label> [--cwd <dir>] [--env KEY=VALUE]... [--exclusive] -- <scoped-validator-argv>
 ```
 
 Examples:
 
 ```bash
-~/.agents/scripts/run-check test -- npx vitest run src/foo.test.ts
+~/.agents/scripts/run-check test --exclusive -- npx vitest run --no-file-parallelism src/foo.test.ts
 ~/.agents/scripts/run-check lint -- npx eslint src/foo.ts
-~/.agents/scripts/run-check e2e --cwd apps/cli -- npm run test:e2e:run -- e2e-tests/chat-input.test.ts
+~/.agents/scripts/run-check e2e --exclusive --cwd apps/cli -- npm run test:e2e:run -- e2e-tests/chat-input.test.ts
 ~/.agents/scripts/run-check custom --env PATH="$HOME/.local/bin:$PATH" -- custom-validator src/foo.ts
 ```
 
@@ -35,6 +35,12 @@ with `.nvmrc`, it also runs the validator through NVM with that selector and
 fails before the validator starts if the pinned runtime cannot be resolved.
 Use `--env PATH="...:$PATH"` for additional tool directories or repositories
 without `.nvmrc`; an `.nvmrc` remains the canonical Node selector when present.
+
+Use `--exclusive` for compiler-backed lint, typechecks, builds, and pooled/E2E
+tests. It queues heavy checks across sessions/worktrees on this host while
+cheap checks remain concurrent. Also serialize the validator's own workspace
+and worker fan-out; a host slot does not serialize its children. Exact recipes
+and the hardcoded-Turbo-concurrency trap: `references/validator-recipes.md`.
 
 1. Never use `fireAndForget`, shell `&`, or a detached task for checks -- an
    unattended process can fail while the model sleeps or polls stale output.
@@ -145,7 +151,7 @@ ship as `no signal` lies.
    go before the script name's `--`; Turbo/test-runner flags passed through an
    npm script go after `--`. Inspect the script before choosing. Per-runner
    dialects and the npm/Turbo trap: references.
-2. **A "scoped" check that runs minutes is mis-scoped.** Suspect the flag position or dialect before blaming the repo.
+2. **Scope and memory are separate.** Verify the flag owner when a scoped check runs unexpectedly long; type-aware lint can still load a large imported graph. Use the heavy-check recipe rather than assuming a changed-file list bounds compiler memory.
 3. **HARD RULE: never run a full test suite to validate a diff.** A bare `npm test` / `run test` / `turbo run test` with no path argument is a defect -- stop and re-scope before it runs. Full-suite runs are CI's job. The one exception -- a genuinely cross-cutting change -- must be logged: `tests: full-suite (reason: <why>)`.
 4. **Tests have two scope axes; you need both.** The package filter picks *which suite*; only a changed-file subset narrows *which tests*: positional paths, or Jest `--findRelatedTests <changed src files>`. Derive from `git diff --name-only` vs the base. Serial workers by default (flags in references).
 5. This governs how you **run** tests, not how broad the tests you **write** should be -- never let "run narrow" leak into "write narrow" (see **consolidate-test-suites**).

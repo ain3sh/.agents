@@ -4,7 +4,7 @@
 Accepted shape:
 
     ~/.agents/scripts/run-check <label> \
-      [--cwd <directory>] [--env KEY=VALUE]... -- <validator argv...>
+      [--cwd <directory>] [--env KEY=VALUE]... [--exclusive] -- <validator argv...>
 
 The hook tokenizes with Python's standard shell lexer. It does not interpret,
 repair, or reconstruct arbitrary shell. A check command either speaks the
@@ -33,7 +33,7 @@ HOOK_EVENT = "PreToolUse"
 RUNNER = "~/.agents/scripts/run-check"
 RUNNER_PATH = Path.home() / ".agents" / "scripts" / "run-check"
 CANONICAL = (
-    f"{RUNNER} <label> [--cwd <directory>] [--env KEY=VALUE]... "
+    f"{RUNNER} <label> [--cwd <directory>] [--env KEY=VALUE]... [--exclusive] "
     "-- <same scoped validator argv...>"
 )
 
@@ -165,6 +165,9 @@ def _valid_run_check(tokens: list[str]) -> bool:
         token = tokens[index]
         if token == "--":
             return bool(tokens[index + 1 :])
+        if token == "--exclusive":
+            index += 1
+            continue
         if token == "--cwd":
             if index + 1 >= len(tokens):
                 return False

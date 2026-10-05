@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import fcntl
 import importlib.machinery
 import importlib.util
 import os
+import select
+import signal
 import subprocess
 import sys
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
 from pathlib import Path
 
 from hooks.pre_tool_use.check_guard import _validator_re, _violation
@@ -38,7 +42,7 @@ class CheckGuardTest(unittest.TestCase):
 
     def test_allows_only_the_canonical_shape(self) -> None:
         command = (
-            "~/.agents/scripts/run-check e2e "
+            "~/.agents/scripts/run-check e2e --exclusive "
             '--cwd "/tmp/project with spaces" '
             '--env PATH="/opt/node/bin:$PATH" -- '
             "npm run test:e2e:run -- e2e-tests/chat-input.test.ts"
@@ -135,6 +139,115 @@ class ExecutableModeTest(unittest.TestCase):
 
 
 class RunCheckTest(unittest.TestCase):
+    def test_exclusive_queue_cancellation_and_failure_release_across_worktrees(
+        self,
+    ) -> None:
+        # Removing the host-wide lock permits the second validator to start.
+        with tempfile.TemporaryDirectory() as temp_dir, ExitStack() as cleanup:
+            root = Path(temp_dir)
+            first_cwd, second_cwd = root / "first", root / "second"
+            first_cwd.mkdir()
+            second_cwd.mkdir()
+            marker = root / "cancelled-validator-started"
+
+            def stop(process):
+                if process.poll() is None:
+                    process.terminate()
+                process.communicate(timeout=5)
+
+            def start(label, cwd, child):
+                process = subprocess.Popen(
+                    [
+                        str(RUN_CHECK),
+                        label,
+                        "--exclusive",
+                        "--cwd",
+                        str(cwd),
+                        "--",
+                        sys.executable,
+                        "-c",
+                        child,
+                    ],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    bufsize=0,
+                    env={**os.environ, "DROID_CHECK_LOG_DIR": str(cwd / "logs")},
+                )
+                cleanup.callback(stop, process)
+                return process
+
+            def line(process):
+                self.assertTrue(select.select([process.stdout], [], [], 5)[0])
+                result = process.stdout.readline().decode()
+                self.assertTrue(result, "runner exited before the expected transition")
+                return result
+
+            owner = start(
+                "owner",
+                first_cwd,
+                "import sys; print('owner-running', flush=True); "
+                "sys.stdin.read(1); raise SystemExit(7)",
+            )
+            line(owner)
+            self.assertIn("exclusive: waiting", line(owner))
+            self.assertIn("exclusive: acquired", line(owner))
+            self.assertEqual(line(owner), "owner-running\n")
+            with Path(f"/tmp/droid-checks-{os.getuid()}.exclusive.lock").open(
+                "a+b"
+            ) as slot:
+                with self.assertRaises(BlockingIOError):
+                    fcntl.flock(slot, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+            queued = start(
+                "cancelled",
+                second_cwd,
+                f"from pathlib import Path; Path({str(marker)!r}).touch()",
+            )
+            queued_log = Path(line(queued).removeprefix("[run-check] log: ").strip())
+            self.assertIn("exclusive: waiting", line(queued))
+            queued.terminate()
+            queued_output = queued.communicate(timeout=5)[0].decode()
+            self.assertEqual(queued.returncode, 143)
+            self.assertIn("[run-check] exit: 143", queued_output)
+            self.assertIn("[run-check] exit: 143", queued_log.read_text())
+            self.assertFalse(marker.exists())
+
+            cheap = subprocess.run(
+                [
+                    str(RUN_CHECK),
+                    "cheap",
+                    "--cwd",
+                    str(second_cwd),
+                    "--",
+                    sys.executable,
+                    "-c",
+                    "print('cheap-ran')",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+                env={**os.environ, "DROID_CHECK_LOG_DIR": str(second_cwd / "logs")},
+            )
+            self.assertEqual(cheap.returncode, 0)
+            self.assertIn("cheap-ran", cheap.stdout)
+            self.assertIsNone(owner.poll())
+
+            next_check = start("next", second_cwd, "print('next-ran')")
+            line(next_check)
+            self.assertIn("exclusive: waiting", line(next_check))
+            # A pipe gate makes overlap observable without timing sleeps.
+            owner.stdin.write(b"x")
+            owner.stdin.flush()
+            owner_output = owner.communicate(timeout=5)[0].decode()
+            self.assertEqual(owner.returncode, 7)
+            self.assertIn("[run-check] exit: 7", owner_output)
+            next_output = next_check.communicate(timeout=5)[0].decode()
+            self.assertEqual(next_check.returncode, 0)
+            self.assertIn("exclusive: acquired", next_output)
+            self.assertIn("next-ran", next_output)
+
     def test_owns_cwd_env_stream_log_and_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             log_dir = Path(temp_dir) / "logs"
@@ -274,33 +387,60 @@ class RunCheckTest(unittest.TestCase):
             self.assertFalse(marker.exists())
 
     def test_forwards_termination_to_the_child_process_group(self) -> None:
-        with tempfile.TemporaryDirectory() as log_dir:
+        for nested in (False, True):
+            with self.subTest(nested=nested), tempfile.TemporaryDirectory() as log_dir:
+                self._assert_group_terminated(log_dir, nested)
+
+    def _assert_group_terminated(self, log_dir: str, nested: bool) -> None:
+        child = (
+            "import os, signal, time; "
+            "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+            "print(os.getpid(), flush=True); "
+            "time.sleep(60)"
+        )
+        if nested:
             child = (
-                "import os, signal, time; "
-                "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
-                "print(os.getpid(), flush=True); "
-                "time.sleep(60)"
+                "import subprocess, sys; "
+                f"subprocess.run([sys.executable, '-c', {child!r}])"
             )
-            process = subprocess.Popen(
-                [str(RUN_CHECK), "signal", "--", sys.executable, "-c", child],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                env={**os.environ, "DROID_CHECK_LOG_DIR": log_dir},
-            )
-            assert process.stdout is not None
+        process = subprocess.Popen(
+            [
+                str(RUN_CHECK),
+                "signal",
+                "--exclusive",
+                "--",
+                sys.executable,
+                "-c",
+                child,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env={**os.environ, "DROID_CHECK_LOG_DIR": log_dir},
+        )
+        assert process.stdout is not None
 
-            process.stdout.readline()
-            child_pid = int(process.stdout.readline())
-            process.terminate()
-            remaining = process.stdout.read()
-            status = process.wait(timeout=5)
-            process.stdout.close()
+        process.stdout.readline()
+        process.stdout.readline()
+        process.stdout.readline()
+        child_pid = int(process.stdout.readline())
+        process.terminate()
+        try:
+            remaining = process.communicate(timeout=5)[0]
+        finally:
+            if process.poll() is None:
+                os.kill(child_pid, signal.SIGKILL)
+                process.communicate(timeout=5)
 
-            self.assertEqual(status, 143)
-            self.assertIn("[run-check] exit: 143\n", remaining)
-            with self.assertRaises(ProcessLookupError):
-                os.kill(child_pid, 0)
+        self.assertEqual(process.returncode, 143)
+        self.assertIn("[run-check] exit: 143\n", remaining)
+        state = subprocess.run(
+            ["ps", "-p", str(child_pid), "-o", "stat="],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertTrue(state.returncode != 0 or state.stdout.strip().startswith("Z"))
 
     def test_bounds_retained_logs(self) -> None:
         with tempfile.TemporaryDirectory() as log_dir:

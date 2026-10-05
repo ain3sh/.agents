@@ -8,7 +8,7 @@ Exact invocations and known dead ends for the heavier validators. Policy
 Canonical shape:
 
 ```bash
-~/.agents/scripts/run-check <label> [--cwd <dir>] [--env KEY=VALUE]... -- <scoped-validator-argv>
+~/.agents/scripts/run-check <label> [--cwd <dir>] [--env KEY=VALUE]... [--exclusive] -- <scoped-validator-argv>
 ```
 
 `run-check` is the only output/process owner for validators:
@@ -22,6 +22,8 @@ Canonical shape:
 - `--cwd` and repeatable `--env` options replace shell prelude composition
 - the nearest `.nvmrc` above the check cwd selects Node through NVM before the
   validator starts
+- `--exclusive` owns a per-user host-wide heavy-check slot, independent of
+  cwd and log directory; queued checks stay attached and cancellable
 
 Pass extra executable directories without shell composition:
 
@@ -65,7 +67,47 @@ Scoped direct shapes:
 - Do not invent `-c <config>` when the package script omits it. Explicit config
   selection can bypass a separate root or auto-discovered config pass.
 - Keep resource limits from repository instructions. `--threads=1` is the
-  safe default for shared machines and narrow checks.
+  safe default for shared machines and narrow checks. For type-aware runs,
+  also use the heavy-check recipe below.
+
+## Heavy checks: serialize both scheduling layers
+
+Use `run-check --exclusive` for compiler-backed lint, typechecks, builds, and
+pooled/E2E tests. The runner holds one host-wide slot through child termination,
+releases it on failure/cancellation, and logs queue/acquisition status. Do not
+add per-worktree/session locks or put `flock` in validator argv: those split
+resource ownership and can leave different worktrees competing for RAM.
+The slot is cooperative, not a memory cap; existing processes and commands
+outside this runner are not constrained.
+
+Independently serialize the command's internal fan-out: one workspace task
+and serial test workers at a time. A single exclusive Turbo invocation can
+still launch multiple compiler processes. Read the package script first;
+names such as `lint:es` can delegate to a full multi-engine `lint` task.
+
+Factory's root `lint:es` script hardcodes `--concurrency=2` and supplies Go/Node
+memory settings. Turbo rejects a second concurrency flag, so invoke that
+canonical script once per affected workspace, in separate attached calls:
+
+```bash
+~/.agents/scripts/run-check lint-backend --exclusive -- npm run lint:es -- --filter=backend
+~/.agents/scripts/run-check lint-cli --exclusive -- npm run lint:es -- --filter=@factory/cli
+```
+
+For a script without a baked-in concurrency flag, pass `--concurrency=1`
+to Turbo on the owning side of `--`. Inspect its dry-run task graph: selected
+dependencies may add tasks even with one workspace filter. Preserve required
+root/config passes and all lint engines; do not rerun a package pass already
+covered by its aggregate just because the aggregate name suggests ESLint.
+
+Type-aware Oxlint invokes `tsgolint`, which builds TypeScript project/import
+graphs beyond the files receiving lint diagnostics. Narrow file scope does
+not guarantee low memory, and `--threads=1` alone does not bound project size.
+`GOMEMLIMIT` is a Go GC target, not a hard RSS cap; Node's heap limit applies
+to Node, not a separate Go checker. Do not lower these blindly to force a
+large live graph into a smaller budget. If one serialized check still causes
+pressure, measure that process and profile retention before changing project
+scope, tool versions, or rules; no leak verdict from RSS alone.
 
 ## Documentation validation
 
@@ -157,13 +199,13 @@ Inspect the script before choosing:
 
 ```bash
 # Root script delegates to Turbo: Turbo owns --filter, so pass it through.
-~/.agents/scripts/run-check test -- npm run test -- --filter=@scope/pkg
+~/.agents/scripts/run-check test --exclusive -- npm run test -- --filter=@scope/pkg -- src/foo.test.ts
 
 # Run the package's own script: npm owns --workspace.
-~/.agents/scripts/run-check test -- npm run test --workspace=@scope/pkg -- src/foo.test.ts
+~/.agents/scripts/run-check test --exclusive -- npm run test --workspace=@scope/pkg -- src/foo.test.ts
 
 # Direct Turbo invocation.
-~/.agents/scripts/run-check test -- turbo run test --filter=@scope/pkg -- src/foo.test.ts
+~/.agents/scripts/run-check test --exclusive -- turbo run test --filter=@scope/pkg --concurrency=1 -- src/foo.test.ts
 ```
 
 Wrong:
@@ -200,15 +242,15 @@ when droids share a host. Forward flags + paths past the script/task boundary
 with `--`:
 
 ```bash
-~/.agents/scripts/run-check test -- npm test -- --runInBand --findRelatedTests src/foo.ts
-~/.agents/scripts/run-check test -- pnpm vitest run --no-file-parallelism src/foo.test.ts
-~/.agents/scripts/run-check test -- turbo run test --filter=@app/web -- --runInBand src/foo.test.ts
+~/.agents/scripts/run-check test --exclusive -- npm test -- --runInBand --findRelatedTests src/foo.ts
+~/.agents/scripts/run-check test --exclusive -- pnpm vitest run --no-file-parallelism src/foo.test.ts
+~/.agents/scripts/run-check test --exclusive -- turbo run test --filter=@app/web --concurrency=1 -- --runInBand src/foo.test.ts
 ```
 
 Additional mitigations when concurrent droid activity is likely:
 
-- **Mutex**: put `flock -w 600 /tmp/droid-tests.lock` first in run-check's
-  validator argv -- one test run at a time across droid instances.
+- Cross-session exclusion is owned by the heavy-check recipe above, not by
+  shell locks specific to tests or worktrees.
 - **Heap cap**: pass
   `--env NODE_OPTIONS=--max-old-space-size=2048` to run-check -- fail fast
   instead of swap-thrashing.

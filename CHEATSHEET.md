@@ -21,6 +21,7 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 |---|---|---|
 | `/show-me` | canonical visual explanations: reader question → verified relation/code → destination render; terminal text, GitHub Mermaid/code/images, HTML/SVG, selectable code companions, themes and embedding; composed by PR/design workflows without taking over publishing | `/show-me`, `/show-me auth retry as sequence`, `/show-me checkout tree as html` |
 | `/open-pr` | ticket + branch + verify + lint + ship mega-prompt (handles fresh + mid-fix) | `/open-pr FAC-456` |
+| `/quality-ship` | scoped checks with live/logged evidence; host-exclusive heavy checks and serial child fan-out; commit/push only when authorized | `/quality-ship` |
 | `/review-pr` | first-pass: bounded, source-first Astra architecture gate → hands-on acceptance with Astra where isolation permits; audits bodies against **pr-description**, admits evidence at the exercised boundary, and preserves unverified scope; `deeper` is a paired confirm-or-kill wave; `follow-up` reviews source/body/evidence deltas from `./.agents/review.md`; `/post-review` publishes approved findings | `/review-pr 123`, `deeper`, `re-review` |
 | `/address-review` | read reviewer feedback → triage → fix → respond to threads | `/address-review 123` |
 | `/post-review` | publish the full approved review: reread the whole ledger, preserve every final finding's substance, severity, and gating stance, and name every blocker in the verdict; only explicit subset selection narrows the default | `/post-review 123` |
@@ -74,7 +75,7 @@ droids land in the same directory and are gitignored. Staffing policy is the
 | Tool | Install | Wired into |
 |---|---|---|
 | `rtk` | `curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh \| sh` | `hooks/pre_tool_use/rtk_rewrite.py` — transparent `Execute` rewriter. Per-surface toggles in `configs/droid.toml`. |
-| check runner + guard | built-in (`scripts/run-check`, `hooks/pre_tool_use/check_guard.py`) | One no-shell grammar: `run-check <label> [--cwd ...] [--env ...] -- <argv...>`. The Python runner applies the nearest `.nvmrc` through NVM, forwards cancellation signals, and keeps 50 logs; the guard denies recognized raw validators and composition around the canonical runner. Toggle/`tools` vocabulary in `configs/droid.toml`. |
+| check runner + guard | built-in (`scripts/run-check`, `hooks/pre_tool_use/check_guard.py`) | One no-shell grammar: `run-check <label> [--cwd ...] [--env ...] [--exclusive] -- <argv...>`. The Python runner applies the nearest `.nvmrc` through NVM, forwards cancellation signals, and keeps 50 logs. `--exclusive` queues heavy checks across sessions/worktrees; serialize child task/worker fan-out too. The guard denies recognized raw validators and composition around the canonical runner. Toggle/`tools` vocabulary in `configs/droid.toml`. |
 | `slop-scan` | `npm install -g slop-scan` | `/retrospective`, `/review-pr`, `quality-ship` |
 | `react-doctor` | `npm install -g react-doctor` (Node >=22) | `quality-ship` (React branch), `react-doctor` skill |
 | `vulture` | `uv tool install vulture` | `quality-ship` (Python branch) |

@@ -26,13 +26,14 @@ class Options:
     label: str
     cwd: str | None
     env: dict[str, str]
+    exclusive: bool
     command: list[str]
 
 
 def _usage() -> None:
     print(
         "usage: run-check <label> [--cwd <directory>] "
-        "[--env KEY=VALUE]... -- <command> [args...]",
+        "[--env KEY=VALUE]... [--exclusive] -- <command> [args...]",
         file=sys.stderr,
     )
     raise SystemExit(64)
@@ -45,6 +46,7 @@ def _parse(argv: list[str]) -> Options:
     label = argv[0]
     cwd: str | None = None
     env: dict[str, str] = {}
+    exclusive = False
     index = 1
 
     while index < len(argv):
@@ -53,7 +55,11 @@ def _parse(argv: list[str]) -> Options:
             command = argv[index + 1 :]
             if not command:
                 _usage()
-            return Options(label, cwd, env, command)
+            return Options(label, cwd, env, exclusive, command)
+        if token == "--exclusive":
+            exclusive = True
+            index += 1
+            continue
         if token == "--cwd":
             if index + 1 >= len(argv):
                 _usage()
@@ -118,13 +124,17 @@ def _terminate_group(child: subprocess.Popen[bytes], signum: int) -> None:
         return
 
     deadline = time.monotonic() + TERMINATION_GRACE_SECONDS
-    while child.poll() is None and time.monotonic() < deadline:
-        time.sleep(0.05)
-    if child.poll() is None:
+    while time.monotonic() < deadline:
+        child.poll()
         try:
-            os.killpg(child.pid, signal.SIGKILL)
+            os.killpg(child.pid, 0)
         except ProcessLookupError:
-            pass
+            return
+        time.sleep(0.05)
+    try:
+        os.killpg(child.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
 
 
 def _write(stream: object, log: object, data: bytes) -> None:
@@ -182,7 +192,27 @@ def _run(options: Options) -> int:
 
     env = os.environ.copy()
     env.update(options.env)
+    child: subprocess.Popen[bytes] | None = None
+    received_signal: int | None = None
+
+    def forward(signum: int, _frame: object) -> None:
+        nonlocal received_signal
+        received_signal = signum
+        if child is None:
+            raise InterruptedError("check interrupted before validator startup")
+        _terminate_group(child, signum)
+
+    for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        signal.signal(signum, forward)
+
+    lock = None
     try:
+        if options.exclusive:
+            lock_path = Path(f"/tmp/droid-checks-{os.getuid()}.exclusive.lock")
+            lock = lock_path.open("a+b")
+            emit(f"[run-check] exclusive: waiting for {lock_path}\n")
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            emit("[run-check] exclusive: acquired\n")
         command, node_version = _node_command(
             options.command,
             options.cwd,
@@ -198,41 +228,34 @@ def _run(options: Options) -> int:
             stderr=subprocess.STDOUT,
             start_new_session=True,
         )
-    except FileNotFoundError as exc:
-        emit(f"[run-check] error: {exc}\n")
-        emit("[run-check] exit: 127\n")
-        log.close()
-        return 127
-    except OSError as exc:
-        emit(f"[run-check] error: {exc}\n")
-        emit("[run-check] exit: 1\n")
-        log.close()
-        return 1
-
-    received_signal: int | None = None
-
-    def forward(signum: int, _frame: object) -> None:
-        nonlocal received_signal
-        received_signal = signum
-        _terminate_group(child, signum)
-
-    for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
-        signal.signal(signum, forward)
-
-    assert child.stdout is not None
-    try:
+        assert child.stdout is not None
         while chunk := os.read(child.stdout.fileno(), READ_SIZE):
             _write(stdout, log, chunk)
         returncode = child.wait()
+        status = (
+            128 + received_signal
+            if received_signal is not None
+            else _status(returncode)
+        )
+    except InterruptedError:
+        if received_signal is None:
+            raise
+        status = 128 + received_signal
+    except FileNotFoundError as exc:
+        emit(f"[run-check] error: {exc}\n")
+        status = 127
+    except OSError as exc:
+        emit(f"[run-check] error: {exc}\n")
+        status = 1
     finally:
-        child.stdout.close()
-        if child.poll() is None:
-            _terminate_group(child, signal.SIGTERM)
-            child.wait()
-
-    status = (
-        128 + received_signal if received_signal is not None else _status(returncode)
-    )
+        if child is not None:
+            if child.stdout is not None:
+                child.stdout.close()
+            if child.poll() is None:
+                _terminate_group(child, signal.SIGTERM)
+                child.wait()
+        if lock is not None:
+            lock.close()
     emit(f"[run-check] exit: {status}\n")
     log.close()
     return status
