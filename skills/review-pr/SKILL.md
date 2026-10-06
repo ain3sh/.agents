@@ -8,7 +8,7 @@ user-invocable: true
 
 Router + shared policy only. The mode playbooks live in `references/`; load exactly the one you route to. Do not reabsorb mode content into this file.
 
-Load order for a first pass: `references/first-pass.md` → at its §3, `references/architecture-gate.md` (the gate's single owner; also the **only** review file the architecture worker receives, alongside **structural-review**) → on `continue`, the rest of first-pass, including `references/acceptance.md` (sole owner of hands-on acceptance; the only review file the acceptance worker receives).
+Load order for a first pass: `references/first-pass.md` → at its §3, `references/architecture-gate.md` (the gate's single owner; also the **only** review file the architecture worker receives, alongside **structural-review**) → on `continue`, the rest of first-pass, including the standing structural sweep (`first-pass.md` §4; its worker receives **structural-review** and **voice**, no review file) and `references/acceptance.md` (sole owner of hands-on acceptance; the only review file the acceptance worker receives).
 
 ## Invocation
 
@@ -49,7 +49,7 @@ Rules:
 
 ## Shared skill loads
 
-All modes load: **pr-context**, **linear-cli**, **voice**, **repo-conventions**, **worktree-setup**, **quality-ship**. First-pass additionally uses **structural-review** — loaded by you for the architecture gate (`references/architecture-gate.md`) and by the architecture worker dispatched there; hands-on acceptance (`references/acceptance.md`) has its worker load **droid-control** and the surface-fidelity skill a claim triggers; multi-finding reconciliation uses **patch-coherence**. The **description audit** (`first-pass.md` §1) loads **pr-description** in read-only audit posture: that skill is the sole owner of what a good PR body requires; review owns only when to check it and how to tie its claims to evidence. Loading it authorizes no drafting, PATCH, capture, or upload.
+All modes load: **pr-context**, **linear-cli**, **voice**, **repo-conventions**, **worktree-setup**, **quality-ship**. First-pass additionally uses **structural-review** — loaded by you for the architecture gate (`references/architecture-gate.md`), by the architecture worker dispatched there, and by the structural sweep worker on `continue` (`first-pass.md` §4); hands-on acceptance (`references/acceptance.md`) has its worker load **droid-control** and the surface-fidelity skill a claim triggers; multi-finding reconciliation uses **patch-coherence**. The **description audit** (`first-pass.md` §1) loads **pr-description** in read-only audit posture: that skill is the sole owner of what a good PR body requires; review owns only when to check it and how to tie its claims to evidence. Loading it authorizes no drafting, PATCH, capture, or upload.
 
 When a step needs setup or a validator (repro, slop-scan, scoped test runs), use **worktree-setup**'s `repair.py` and **quality-ship**'s validator patterns; don't wing it — improvised invocations derail focus (and an unfiltered turbo run eats ~9 GB RAM).
 

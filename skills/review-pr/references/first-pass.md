@@ -39,7 +39,7 @@ Admit the worker's report first (`architecture-gate.md` "Admission"): incomplete
 
 Record it as a `gate` notes entry — decision, reason quoting the deciding loci (or the verified absence/necessity), and on `revise` the areas left unreviewed — and mirror it in the dossier's *Architecture gate* section.
 
-- **`continue`** → the rest of this section and §4, in full.
+- **`continue`** → dispatch the standing **structural sweep** (§4) now, so it runs alongside the rest of this section; then the rest of this section and §4, in full.
 - **`revise`** → skip the rest of §3 and §4; go to §5 with the ruling, then §6 with a standalone `COMMENT` verdict. Severe defects already observed while tracing stay in the findings — a structural stop hides nothing, and nothing is hunted to justify it. Description-audit claims already settled while tracing keep their outcome; the remaining ones are reported as *not checked*, and required-material gaps established at readiness stay as findings. `deeper` never runs on a rejected shape unless the user explicitly asks for it.
 
 ### Root-cause discipline
@@ -99,7 +99,14 @@ Runs on `continue` only (§3). Load **voice** here if not already active. It own
 
 Plus the repo's **own documented conventions** — hold the author to the same standard we hold ourselves. Follow **repo-conventions** (discover + diff-scope against the PR's changed files, then read the selected docs) and reconcile the diff against them. **Flag, not fix**: fold each deviation into findings at `warning` (a clear written rule — error handling, file organization, test placement, flags — broken) or `suggestion` (softer guidance). A repo-provided pre-PR checklist is itself review criteria — check the diff against each item.
 
-Plus the **architecture worker**'s structural findings — already reconciled at the gate (§3); there is no second structural sweep and nothing here waits on a return. Fold them in **voice** tiers, dedupe against slop-scan hits on the same lines, and hold the flag-not-fix line.
+Plus the **structural sweep** — the standing whole-PR **structural-review** pass, dispatched the moment the gate rules `continue` (§3); §5 waits on its return. The gate judges one boundary against a region-replacement threshold; the sweep judges every changed file against **structural-review**'s full bar, so defects too local to warrant `revise` are exactly what it exists to surface. Dispatch as `subagent_type: fable`, heavy — a read-only structural reviewer, not an orchestrator. If that subagent type is unavailable, report a specialist blocker; never downgrade silently, and a missing return is a coverage gap in §5, never a clean sweep. A genuinely trivial PR (one-file typo) runs the sweep inline.
+
+- **Scope:** every changed file at `HEAD_SHA`, read whole, plus the callers and owners needed to judge them. The admitted gate report rides along as established fact so the worker does not relitigate the gate ruling; every smaller structural property inside that boundary, and everything outside it, is the sweep's to judge.
+- **Objective:** **structural-review**'s full hunt — behavior-preserving reframings, tripwires, boundary leaks, contract muddying, duplicated or bypassed owners, abstractions that don't earn their keep, avoidable mechanisms.
+- **Loads:** **structural-review** and **voice** only — never this file, `architecture-gate.md`, or `acceptance.md`.
+- **Return:** findings in **voice** tiers, each with owning locus, the quoted source that shows it, and a direction preserving the change's verified constraints; plus surfaces checked with no finding. Read-only per `worker-contracts.md` hygiene: no probes, tests, tracked-file writes, or commits.
+
+Admit each returned finding against source before keeping it — adjudication stays yours. Fold admitted findings and the architecture worker's gate findings in **voice** tiers, dedupe against slop-scan hits on the same lines, and hold the flag-not-fix line.
 
 Plus the **AI-slop validator** (JS/TS only): build base/HEAD changed-files temp dirs per **quality-ship**'s slop-scan recipe in `validator-recipes.md` — never worktrees or full source scans — then run it attached:
 
@@ -120,6 +127,7 @@ REVIEW STATE — PR <number> @ <HEAD_SHA>
 
 Architecture gate: <continue | revise> — <one-line reason: the shape stands, or the defect and the direction>
 Gate report: <the admitted, reconciled architecture-gate.md "Gate report" — case, dispatch predicate or n/a, remaining range, rows with quoted deciders>
+Structural sweep (continue only): <returned — findings admitted / killed | blocked — specialist blocker>
 Description audit: <claims settled: verified/false/stale/unverifiable; not checked: <remaining, on revise>; required material missing: list>
 Acceptance (acceptance.md):
 - <scenario — surface/platform/mode>: <state, acceptance.md §4 vocabulary verbatim; failed → observation + attribution (F<id> once attributed to the PR | pre-existing → out-of-scope route | unsettled); blocked → blocker + next decision; waived → unverified limit; n/a → source reason>; evidence <probe | integration | end-to-end workflow>, <artifact ref, contents inspected>
