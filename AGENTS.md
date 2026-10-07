@@ -96,6 +96,8 @@ Existence is not evidence. Before claiming work is "already landed", "subsumed",
 - Lineage: did the specific commits/PR actually merge (`git log --follow`, ancestor check), or is this an older implementation with the same filenames?
 - Behavior: does it actually function — gates that block, baselines that advance, tests that can fail?
 A green CI run, a populated file, or a matching path proves nothing by itself. When a "this is redundant / already done" conclusion would delete or deprioritize work, it must survive both checks first.
+
+PR approvals: a new commit does **not** dismiss prior reviews unless that repo's branch protection says so, and most don't. Never re-request review or wait on review because you pushed. Read `reviewDecision` / `latestReviews` (see **pr-context**) and never re-request anyone who has approved.
 </verification>
 
 <diagnostics>

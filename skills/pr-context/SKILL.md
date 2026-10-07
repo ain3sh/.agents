@@ -13,8 +13,21 @@ Accept PR reference as: `#123`, `123`, or a full GitHub URL. Extract the number.
 ## Fetch PR Metadata
 
 ```bash
-gh pr view <number> --json title,body,headRefName,baseRefName,additions,deletions,changedFiles,commits,labels,reviewRequests,headRefOid
+gh pr view <number> --json title,body,headRefName,baseRefName,additions,deletions,changedFiles,commits,labels,reviewRequests,headRefOid,reviewDecision,latestReviews
 ```
+
+## Review State
+
+**Pushing commits does not dismiss approvals.** Dismissing stale approvals is an opt-in branch-protection setting, and most repos leave it off. Never infer from a push that a PR lost its approval or needs review again. Read the state GitHub reports instead:
+
+```bash
+gh pr view <number> --json reviewDecision,latestReviews \
+  --jq '{reviewDecision, latest: [.latestReviews[] | {login: .author.login, state}]}'
+```
+
+- `reviewDecision` is the merge-gating verdict after branch protection, dismissals included. `APPROVED` means the approval held: do not wait on review and do not re-request it.
+- A dismissed approval shows up as `state: "DISMISSED"` in `latestReviews`. Only that, never the push itself, is evidence of dismissal.
+- Re-check after pushing when the answer matters. Even a dismissed approver is never re-requested automatically; the user does that manually.
 
 ## Fetch Conversation
 
