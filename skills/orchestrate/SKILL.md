@@ -12,7 +12,9 @@ does not make its implementation understandable or ready to merge.
 
 | Goal | Action |
 |---|---|
-| Assign or resume work | Apply [delegation](references/coordination.md#delegation); handle small changes directly or send one owner a bounded `Task` handoff. |
+| Assign or resume work | Apply [delegation](references/coordination.md#delegation); handle small changes directly or send one owner a bounded `Task` handoff, [launched in the background](references/coordination.md#dispatch). |
+| Run a campaign that outlives a turn | Locate the primary artifact and persist the [anchor](references/coordination.md#anchor) before launching any probe, then keep it moving with the loops in [persistence](references/coordination.md#persistence). |
+| Ship taste-sensitive or deletion-heavy structural work | Run [design, build, attack](references/coordination.md#design-build-attack): fable designs with concerns you rule on, a fresh fable builds red-first, a fresh astra attacks with live probes, fixes fold into their owning commits. |
 | Produce a document from raw evidence | Run the [mine-then-write pipeline](references/coordination.md#mine-then-write): a miner writes a cited fact sheet, a fresh writer renders it, a claims check reads the result against the fact sheet. |
 | Accept an implementation | Read the decisive diff and apply the [readability gate](references/readability.md) before accepting the report. |
 | Understand an unexplained block | Ask its existing author for the mechanism, evidence, and clearer code or local rationale. Without an author to resume, investigate directly. |
@@ -59,7 +61,7 @@ too and run the readability gate.
 
 Load on demand; do not reabsorb into this file:
 
-- [references/coordination.md](references/coordination.md): seats, staffing,
-  handoffs, ownership, recovery, QA, and workflow gates.
+- [references/coordination.md](references/coordination.md): loops, anchor,
+  seats, staffing, pipelines, handoffs, ownership, recovery, QA, and gates.
 - [references/readability.md](references/readability.md): comprehend, clarify,
   simplify or justify, and re-check before accepting an implementation.
