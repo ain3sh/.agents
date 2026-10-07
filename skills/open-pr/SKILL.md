@@ -74,6 +74,8 @@ Re-load `pr-description`, emit the Pre-flight checklist from its `references/wor
 
 Re-run the branch-name gate immediately before `gh pr create`. Do not open a PR from any branch except the exact expected idiomatic branch.
 
+Stamp the `pr-desc-base` marker as the body's final line (`pr-description/references/publish.md`, Operations) before `gh pr create`, and run that file's round-trip verification after it. A body without the marker has skipped the hand-off.
+
 ```bash
 DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
 gh pr create --base "$DEFAULT_BRANCH" --title "<title>" --body-file /tmp/pr-body.md

@@ -84,12 +84,10 @@ that otherwise forbid posting outside the workstream.
    run prompt supplies (`app.factory.ai/software-factory/changes/<id>`) and
    the line `Opened by Ainesh's <workstream name> workstream.` PR Shepherd
    recognizes workstream PRs by that link.
-7. Open it ready for review with reviewers requested: the code owners of the
-   touched paths, plus the diff-path reviewers in
-   `~/.agents/skills/slack-cli/ops/review-request.md` when CODEOWNERS covers
-   none of them, never factory-ain3sh. Request with `publish.md`'s Request
-   reviewer row (pr-description), then re-read `reviewRequests`; it must list
-   at least one reviewer before the run moves on.
+7. Open it ready for review. Reviewers are requested once the PR is finished,
+   not at open: `~/.agents/skills/slack-cli/ops/review-request.md` owns the
+   readiness gate and whom to ask, and PR Shepherd's review request carries it
+   out for workstream PRs. Never request factory-ain3sh.
 
 ## When a run measures a target
 
