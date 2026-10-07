@@ -8,6 +8,7 @@ Changing the renderer never fixes a badly chosen relationship.
 |---|---|---|
 | Terminal (chat reply, CLI, tool output) | Markdown text and fenced code; a ```` ```mermaid ```` or HTML block appears as raw source unless the client is known to render it | typed fences, indented trees, aligned tables, numbered sequence lines |
 | GitHub body or comment | Markdown, fenced code, Mermaid at the host's pinned version and theme, uploaded images; strips HTML styles and scripts | Mermaid for interaction, state, and graph; Markdown code for code shape; trees and hunks for structure |
+| Slack message or thread | mrkdwn: bold, italic, code spans, unhighlighted code blocks that rewrap on narrow panes, `•` bullets, links; uploaded images. No tables, headers, Mermaid, or highlighting | a short code-block tree or sequence; everything else an image |
 | Browser file or document | HTML, inline SVG, embedded images, selectable code | one focused file, or a figure inside the caller's document |
 
 This skill owns visual selection, construction, rendering, and embedding.
@@ -40,7 +41,7 @@ not a second diagram policy.
 - `diff` fences hold real source hunks or real structure lines, never summary
   bullets ("Layout must encode a relation" in `representations.md`).
 - A browser HTML view does not embed. Capture the diagram, not the whole
-  explanation page, as PNG at 2× display resolution. Keep its code companion
+  explanation page, as PNG at 2× display resolution ([capture](#capture-to-png)). Keep its code companion
   as Markdown text so it stays selectable. Render light and dark variants for
   theme-aware destinations; use the picture pattern below. Return files to
   `pr-description/references/artifacts.md` for authorized upload and placement.
@@ -51,6 +52,29 @@ not a second diagram policy.
   characters that look harmless in prose. When rendering is delegated, hand
   over only after the passing result is back; when no renderer is reachable,
   deliver only a draft labelled `render unverified`.
+
+## Slack
+
+`slack-cli` owns mrkdwn formatting and delivery; this section owns what the
+view becomes.
+
+- Text only when the view survives rewrapping: a numbered sequence or a tree
+  of about 10 lines under about 60 columns, in a code block.
+- Everything else is an image: before/after panels, tables (including policy
+  before/after), wide call trees, several views in one answer. Build one
+  self-contained HTML view (Browser recipe) and [capture it](#capture-to-png).
+  Never post ASCII panels or a Markdown table in a code block: the reader gets
+  an unhighlighted grid that rewraps on a phone, and asks for an image.
+- Image: opaque background, because Slack shows one file in both themes and
+  has no `<picture>` switch; 1200 to 1400 CSS px wide with body text of at
+  least 14px, so the expanded view reads; a title naming the question and a
+  one-sentence subtitle with the takeaway; real symbols and paths in
+  monospace. Before/after panels keep matching rows in matching positions and
+  badge each row (unchanged, new, moved); the trade-off goes in a footer line.
+- Text reply: answer the question in its first sentence ("Yes, one change:
+  ..."), point at the image, and keep only what the image cannot carry or the
+  reader will copy, such as the function to search for. Never restate the image.
+- Hand the PNG and the reply to `slack-cli` delivery.
 
 ## Browser
 
@@ -94,6 +118,21 @@ Recipe:
   capture). Inspect arrow endpoints, label/box collisions, contrast, code
   clipping, and page overflow. Reuse passing captures of the unchanged view;
   don't repeat full-document or authenticated-UI checks for a local figure.
+
+### Capture to PNG
+
+Wrap the view in one element (`<main id="view">`) and capture that element at
+2× device scale:
+
+```bash
+agent-browser --session showme open file:///tmp/<view>.html
+agent-browser --session showme set viewport 1400 900 2   # width >= the view's width; scale 2
+agent-browser --session showme screenshot '#view' /tmp/<view>.png
+agent-browser --session showme close
+```
+
+Then `Read` the PNG at `image_quality="high"`; clipping and overlap are
+invisible at default quality.
 
 ## Reusing and embedding assets
 

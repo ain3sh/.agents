@@ -14,6 +14,7 @@ read, and this skill owns how they are formatted and delivered.
 |---|---|
 | Read, search, or manage Slack | Load [ops/cli.md](ops/cli.md) for commands, auth, threads, channels, files, and recovery. |
 | Compose or edit a post, reply, or DM | Load **voice** and its [external-replies reference](../voice/references/external-replies.md) before drafting, including after an investigation. |
+| Show a flow, structure, or before/after | Load **show-me**; its [Slack surface](../show-me/references/surfaces.md#slack) decides text or image. Deliver an image with [thread uploads](ops/cli.md#slack-message-formatting). |
 | Send or update an authorized message | Use the [Slack formatting](ops/cli.md#slack-message-formatting) and command recipes in ops; verify the resulting message in its thread or history. |
 | Ask a pod to review a finished PR | Load [ops/review-request.md](ops/review-request.md): readiness gate, channel, reviewer scope from the diff, post shape, thread discipline. |
 

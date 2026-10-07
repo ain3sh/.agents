@@ -16,6 +16,7 @@ skill's wording. A scenario passes only when every grading row holds.
 | 6 | Scenario 5's file requested inside a PR body | GitHub body | HTML is not pasted into the body; any rendering goes through `pr-description/references/artifacts.md` in that workflow's publish step; code stays Markdown in the body; nothing is uploaded from a bare `/show-me`. |
 | 7 | "Reuse this PR diagram in the design doc" with local Excalidraw source, a gated attachment URL, and an existing themed template | Browser document | Reuse the verified drawing as SVG, with theme variants if needed; no base64 PNG or auth-gated hotlink. Preserve selectable code and the caller's components. The document workflow retains full-page verification and its gist truncation check. No publication unless requested. |
 | 8 | "Show the component ownership and then the failure timeline" with evidence supporting both questions | PR or document | Two complementary views, each answering its own question, not a forced single mega-diagram or duplicate illustrations. Both use the same verified actors. |
+| 9 | "/show-me how the triggers change, Slack-friendly" in a Slack thread, on a before/after across 4+ triggers | Slack | Before/after panels rendered from one HTML file to an opaque 2× PNG, checked with a high-quality `Read`; delivered through `slack-cli` only when the reply is authorized. The text reply answers the question first and does not restate the image. No ASCII panels or Markdown table in a code block. |
 
 ## Grading
 
@@ -23,7 +24,7 @@ skill's wording. A scenario passes only when every grading row holds.
 |---|---|
 | Recoverable | A reader who sees only the view reads off the relationship, order, or code shape it answers; every indentation, arrow, and row encodes a relation. |
 | Faithful | Every symbol, file, edge, and quoted line resolves in the source at the cited revision; pseudocode, illustrative blocks, and elisions are labelled. |
-| Surface-correct | Plain-terminal output contains no ```` ```mermaid ```` or HTML; GitHub output contains no styled or scripted HTML. |
+| Surface-correct | Plain-terminal output contains no ```` ```mermaid ```` or HTML; GitHub output contains no styled or scripted HTML; Slack output contains no Markdown table, header, Mermaid, or ASCII panels. |
 | Renders | Mermaid parses and its render is inspected; HTML and its core diagram reflow legibly at about 400px (code-only horizontal scroll allowed when syntax cannot wrap). A blocked renderer means an unverified draft, not a pass. |
 | Source access | Reachable links resolve; blocked links are reported as unchecked. Downloaded image content decodes as an image, never a login/SAML HTML page. |
 | Authorized | No upload, publish, or PR edit happened outside the owning workflow's publish step; a requested output path was honored, otherwise a unique file was written. |

@@ -25,6 +25,7 @@ slack ch set-purpose C0123456789 "purpose"         # Set purpose
 slack msg send C0123456789 "text"                  # Send
 slack msg send C0123456789 "reply" --thread TS     # Thread reply (flag is --thread, NOT --thread-ts)
 slack msg send C0123456789 --file ./doc.pdf        # Upload file
+slack msg send C0123 --file ./view.png --file-title "Title" --thread TS   # Image as a thread reply
 slack msg send --channel "#general" "text"         # By channel name
 slack msg send C0123 --blocks-file ./blocks.json   # Block Kit payload
 slack msg update C0123 TS "new text"               # Edit; only `send` reads stdin via `-`, update posts a literal "-"
@@ -62,7 +63,11 @@ mrkdwn for delivery rather than general Markdown:
 | section header | use a `*bold line*` |
 
 Markdown headers, tables, and nested lists do not render as such. Structure
-long posts as short bold-titled sections with `•` bullets when needed.
+long posts as short bold-titled sections with `•` bullets when needed. A
+table, diagram, or before/after view goes out as an image: **show-me** builds
+it ([Slack surface](../../show-me/references/surfaces.md#slack)). Upload the
+PNG as a thread reply (`msg send --file --file-title --thread`), then post the
+text reply under it so it reads as the image's caption.
 After an authorized send or edit, read the thread or history to verify the
 message. For corrections, use `msg update` or `msg delete` as appropriate;
 voice owns the replacement's audience and completeness checks.

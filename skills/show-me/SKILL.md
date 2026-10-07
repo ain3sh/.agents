@@ -114,7 +114,7 @@ and boundary the question needs and nothing it does not.
 |---|---|
 | `/show-me [target] [as <form>]` | Resolve the target from arguments or the current topic, reread its source, write the reader's question, choose the shape above. Honor `as <form>` unless it would distort the evidence; then name the mismatch in one sentence and use the closest lossless form. |
 | Compose into a PR, design doc, or review | Take the caller's verified facts, reader question, destination, and theme; return the checked view and any companion. The caller owns placement, document-wide checks, and publishing. Do not restart its analysis. |
-| Render or embed | `references/surfaces.md`: terminal text, GitHub Mermaid/code/images, browser HTML/SVG, reused Excalidraw renders. |
+| Render or embed | `references/surfaces.md`: terminal text, GitHub Mermaid/code/images, Slack images, browser HTML/SVG, reused Excalidraw renders. |
 | A simple fact | One sentence, no view. |
 
 ## Detect
@@ -171,6 +171,7 @@ concerns); say so and let the owning workflow omit its section.
 | Two views answer the same question | Keep the clearer one; a companion fills a detail, it does not repeat the view. |
 | Inline output too dense | Reduce scope, not font size; move to a browser HTML view only when the detail is essential. |
 | Mermaid or HTML would land in a plain terminal | Use the terminal grammar in `references/surfaces.md`. |
+| Panels, a table, or a wide tree would land in Slack as a code block | Send an image (`references/surfaces.md#slack`). |
 | Output is a full walkthrough or RFC | Cut to the views; `/explain-diff` owns walkthroughs, `design-doc` owns RFCs and memos. |
 
 ## References
@@ -178,5 +179,5 @@ concerns); say so and let the owning workflow omit its section.
 Load on demand; do not reabsorb into this file:
 
 - `references/representations.md`: question-to-view matrix, layout gate, code fidelity, companion, and the grammars that need rules (sequence, state, dependency, causal, quantitative, policy before/after, graphical panels).
-- `references/surfaces.md`: rendering, themes, embedding, source access, checks, and local handover.
+- `references/surfaces.md`: rendering per destination (terminal, GitHub, Slack, browser), PNG capture, themes, embedding, source access, checks, and local handover.
 - `references/replay.md`: behavioral replay scenarios and grading.
