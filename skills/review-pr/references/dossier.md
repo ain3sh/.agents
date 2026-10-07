@@ -108,7 +108,7 @@ audited_body: <body_seen value this audit covers>
 
 ## History
 - <date> first-pass @ <SHA>: <verdict>, gate <continue | revise>, acceptance <passed x/y; other states listed>, <n> findings
-- <date> follow-up @ <SHA>: <verdict>, <resolved x/y, new z>
+- <date> follow-up @ <SHA>: <verdict>, <resolved x/y, new z>, wave <n categories | skipped: reason>
 ```
 
 Keep the dossier under ~100 lines: one-line evidence with pointers (thread ids, worker session ids, notes timestamps) — transcripts and reasoning chains live in the notes. Empty section → keep the header with "none"; follow-up relies on the distinction between "none" and "not recorded".

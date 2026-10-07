@@ -1,6 +1,6 @@
 # Architecture gate
 
-A phase of first-pass, before detailed verification. One question, answered from **current source**: is this the right shape, or would detailed review of it be wasted? Output: `continue` / `revise` with quoted evidence. Not a correctness review — hunt no defects to justify a ruling, invent no runtime failures. Two seats in parallel: the **main reviewer** (owns the ruling) and the **architecture worker** (§8). Both load **structural-review**.
+A phase of first-pass, before detailed verification, and of follow-up when its §2 reruns the gate. One question, answered from **current source**: is this the right shape, or would detailed review of it be wasted? Output: `continue` / `revise` with quoted evidence. Not a correctness review — hunt no defects to justify a ruling, invent no runtime failures. Two seats in parallel: the **main reviewer** (owns the ruling) and the **architecture worker** (§8). Both load **structural-review**.
 
 ## 1. Problem and constraints
 

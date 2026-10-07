@@ -1,13 +1,13 @@
 # Overcoverage (`deeper`)
 
-An adversarial second wave with two objectives, run from a completed first pass (review-state summary in-context — or seeded from the dossier per SKILL.md routing; `worker-contracts.md` loaded):
+An adversarial second wave with two objectives, run from a completed first pass (review-state summary in-context — or seeded from the dossier per SKILL.md routing) or as the default tail of a follow-up (`follow-up.md` §5); `worker-contracts.md` loaded:
 
 - **A. Adjudicate** every unresolved suspicion from the review-state summary — workers exist to prove findings real *or* kill them as false positives, red herrings, or pre-existing behavior.
 - **B. Expand** into high-risk changed surfaces the first pass did not deeply cover.
 
-It is **not** a generic duplicate scan. Completed first-pass axes (architecture gate, conventions, slop scan, CI triage, acceptance) stay closed unless new evidence reopens them. An **open** acceptance scenario (`acceptance.md`) is coverage-map input, never a category: no wave substitutes for a scenario that is not `passed`, and it keeps its actual state in the merged summary (§5).
+It is **not** a generic duplicate scan. Completed first-pass axes (architecture gate, conventions, slop scan, CI triage, acceptance) and completed follow-up lanes stay closed unless new evidence reopens them. An **open** acceptance scenario (`acceptance.md`) is coverage-map input, never a category: no wave substitutes for a scenario that is not `passed`, and it keeps its actual state in the merged summary (§5).
 
-**Precondition: the first pass ruled `continue` at the architecture gate.** After a `revise`, the shape itself is contested and the next step is the author's revision, then follow-up; a wave over the rejected shape runs only when the user explicitly asks for it despite that, and the review-state summary never recommends it.
+**Precondition: the latest architecture-gate ruling is `continue`.** After a `revise`, the shape itself is contested and the next step is the author's revision, then follow-up; a wave over the rejected shape runs only when the user explicitly asks for it despite that, and the review-state summary never recommends it.
 
 ## 1. Build the category ledger
 
@@ -68,4 +68,4 @@ The third worker receives the prior results and the exact remaining question —
 
 ## 5. Merge into the review
 
-Fold surviving findings into the first-pass finding set (voice severities, dedupe against existing findings — keep stable `F<id>`s, never renumber), update the review-state summary (confirmed / verified-safe / coverage map), and return to the first-pass **approval gate** (§6 of `first-pass.md`) with the combined set. By this point the wave is already fully in the ledger — categories, worker sids, conclusions, kills — so the post-time dossier refresh is a distillation, not a reconstruction.
+Fold surviving findings into the first-pass finding set (voice severities, dedupe against existing findings — keep stable `F<id>`s, never renumber), update the review-state summary (confirmed / verified-safe / coverage map), and return to the first-pass **approval gate** (§6 of `first-pass.md`) with the combined set; a follow-up wave returns to `follow-up.md` §6 instead. By this point the wave is already fully in the ledger — categories, worker sids, conclusions, kills — so the post-time dossier refresh is a distillation, not a reconstruction.
