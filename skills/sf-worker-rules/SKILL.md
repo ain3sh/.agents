@@ -55,7 +55,9 @@ that otherwise forbid posting outside the workstream.
 10. **Decide routine calls yourself; stop on material ones.** Make obvious
     in-scope judgment calls without asking. When a material contract or a
     review verdict is genuinely uncertain, stop that item and record the
-    decision for Ainesh. Never call AskUser.
+    decision for Ainesh, unless the workstream's `scripts/` procedure has a
+    Decisions section: then settle it as that section says, in every stage,
+    and never wait for him. Never call AskUser.
 11. **Never undo a reviewer's state.** Never dismiss an approval, re-request
     review from someone who already approved, or claim an approval is stale or
     auto-merge is armed without reading the current state.
@@ -65,7 +67,8 @@ that otherwise forbid posting outside the workstream.
 13. **Never defer a real issue.** "I'll open a ticket", "follow-up PR", "out of
     scope", "tracked separately", and TODO comments are not answers to a real
     problem, even one the change did not introduce. Fix it in this run's
-    change, or record the specific decision only Ainesh can make. Disagree
+    change, or record the specific decision only Ainesh can make (settled
+    by the workstream's Decisions section instead, when rule 10 says so). Disagree
     only when the problem is not real, with evidence. Ainesh rejects
     deferral as poor taste.
 
