@@ -89,7 +89,7 @@ One row per thread. No prose, no rationale -- just the label. The `Locus` column
 
 Permitted actions: `Fix`, `Respond`, `Ack`, `Investigate`, `Resolved`, `Decline`.
 
-**Provenance is not a decline reason.** "Pre-existing", "inherited", or "worth a follow-up" never justifies `Decline` or a deferral note when the issue is real and lies within a locus this PR already touches: the action is `Fix`. `Decline` requires an actual constraint — a design decision, an external compatibility boundary, or genuine out-of-scope distance. Deferral is the **user's** call to make at the confirmation gate, never yours to propose as the default.
+**Provenance is not a decline reason.** "Pre-existing", "inherited", or "worth a follow-up" never justifies `Decline` or a deferral note when the issue is real and lies within a locus this PR already touches: the action is `Fix`. `Decline` is only for a suggestion that is wrong or would make things worse, shown with evidence (the design decision or external compatibility boundary it violates). A real issue is never declined as out of scope or deferred: it is `Fix`, or, when fixing it needs a product or design call, an open thread whose exact decision you name for the user at the confirmation gate.
 
 ### 4b. Approach (Fix loci and Decline rows)
 
@@ -104,7 +104,7 @@ Why here:    <one sentence on why this layer subsumes every thread above>
 Verify:      <test/check that proves the fix across every thread>
 ```
 
-For `Decline` rows, write a one-paragraph rationale citing the constraint or design decision that overrides the request. Declines are per-thread, not aggregated. If the declined issue is a **real bug** (genuinely out of scope, but real), a decline alone loses it: file a ticket, route it tentatively to a team + project + owner, and cite the ticket ID in both the rationale and the reviewer reply.
+For `Decline` rows, write a one-paragraph rationale citing the constraint or design decision that overrides the request. Declines are per-thread, not aggregated. A real bug is never a `Decline` row: move it to `Fix`, or keep the thread open and name the exact decision for the user in the plan.
 
 For `Fix` rows, draft the reply text inline under the table row alongside the locus's approach block: 1-3 sentences restating `Change` + `Why here` in the reviewer's frame, plus a pointer to where to look in the diff. The approach block is for the user; the reply is for the reviewer, whose context is only thread + diff -- not your locus blocks or this chat. Multi-thread loci produce one draft per thread, each in its reviewer's frame. **Bare `Fixed in <sha>.` is forbidden** -- it forces the reviewer to re-derive substance you produced upstream.
 

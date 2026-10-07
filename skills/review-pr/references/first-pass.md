@@ -132,7 +132,7 @@ Gate report: <the admitted, reconciled architecture-gate.md "Gate report" — ca
 Structural sweep (continue only): <returned — findings admitted / killed | blocked — specialist blocker>
 Description audit: <claims settled: verified/false/stale/unverifiable; not checked: <remaining, on revise>; required material missing: list>
 Acceptance (acceptance.md):
-- <scenario — surface/platform/mode>: <state, acceptance.md §4 vocabulary verbatim; failed → observation + attribution (F<id> once attributed to the PR | pre-existing → out-of-scope route | unsettled); blocked → blocker + next decision; waived → unverified limit; n/a → source reason>; evidence <probe | integration | end-to-end workflow>, <artifact ref, contents inspected>
+- <scenario — surface/platform/mode>: <state, acceptance.md §4 vocabulary verbatim; failed → observation + attribution (F<id> once attributed to the PR | pre-existing → Pre-existing defects list | unsettled); blocked → blocker + next decision; waived → unverified limit; n/a → source reason>; evidence <probe | integration | end-to-end workflow>, <artifact ref, contents inspected>
 
 Confirmed findings:
 - <severity> <file:line> — <claim> — <evidence>
@@ -182,8 +182,8 @@ Cover, roughly in order:
 3. **Evidence, woven in** — attach the probe or scenario to the claim it backs (*"the new tests fail on base for the stated reason"*; *"the workflow completes on head at the real entry"*), inline, as the observed fact, at the boundary it actually exercised. **Never the commands behind it**: CLI invocations, tool names, "Checks run:" paragraphs, CI counts, and sweep inventories are process narration that buries the findings. A probe that supports no specific claim doesn't appear.
 4. **Headline opinion** — the unprompted call from **voice** (architecture, scope drift, missing invariant) that doesn't map to a line. Skip if none; don't pad.
 
-Unrelated pre-existing defects discovered en route ("worth a ticket", fast-follows) go to a ticket or a PR conversation comment, not a verdict paragraph. That exclusion covers the defect finding only: a required acceptance scenario that `failed` with pre-existing attribution (same failure on base and head) stays in the verdict as an evidence and completeness limit — still required, unresolved until satisfied or waived, and never presented as a defect this PR introduced.
+Pre-existing defects discovered en route go in the verdict as a short **Pre-existing defects** list after the non-gating paragraph: severity, `file:line`, one line each, marked as not introduced by this PR. They never gate on their own, and never go to a ticket, a conversation comment, or a "fast-follow"; the author decides whether to fix them in this PR. Separately, a required acceptance scenario that `failed` with pre-existing attribution (same failure on base and head) stays in the verdict as an evidence and completeness limit — still required, unresolved until satisfied or waived, and never presented as a defect this PR introduced.
 
-Shape: one ruling sentence, the numbered blockers, a short non-gating paragraph. A verdict longer than the diff is its own smell.
+Shape: one ruling sentence, the numbered blockers, a short non-gating paragraph, then the pre-existing list when there is one. A verdict longer than the diff is its own smell.
 
 Once confirmed: hand off to `/post-review <PR>` with findings and verdict body (suggestion-block decisions live there — review judgment must not be biased toward apply-clickable issues). Posting appends the `post` notes entry (review id, comment ids → anchors) and refreshes the dossier per `dossier.md`.

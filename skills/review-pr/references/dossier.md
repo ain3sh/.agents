@@ -85,7 +85,7 @@ evidence: <per cited artifact: identity (URL/attachment), access state when obse
 audited_body: <body_seen value this audit covers>
 
 ## Acceptance
-- <scenario — surface/platform/mode>: <state, acceptance.md §4 vocabulary verbatim; failed → observation + attribution (F<id> once attributed to the PR | pre-existing → out-of-scope route | unsettled); blocked → blocker + next decision; waived → unverified limit; n/a → source reason>; evidence <probe | integration | end-to-end workflow>, <artifact ref, contents inspected>, target <revision/build as established from the evidence>
+- <scenario — surface/platform/mode>: <state, acceptance.md §4 vocabulary verbatim; failed → observation + attribution (F<id> once attributed to the PR | pre-existing → Pre-existing defects list | unsettled); blocked → blocker + next decision; waived → unverified limit; n/a → source reason>; evidence <probe | integration | end-to-end workflow>, <artifact ref, contents inspected>, target <revision/build as established from the evidence>
 
 ## Findings
 - F<id> <status> <severity> <file:line> — <claim> — <evidence, one line> — thread: <comment id, once posted>

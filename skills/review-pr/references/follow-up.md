@@ -63,7 +63,7 @@ Present to the user at the approval gate, sections kept separate (this is the ga
 - fresh delta findings;
 - interaction-regression findings;
 - suspicions killed during this pass;
-- unrelated pre-existing defects (→ tickets, not verdict; a required acceptance scenario `failed` with pre-existing attribution keeps its state in the verdict as a completeness limit, per first-pass §6);
+- pre-existing defects (→ the verdict's **Pre-existing defects** list per first-pass §6, never blockers; a required acceptance scenario `failed` with pre-existing attribution keeps its state in the verdict as a completeness limit, per first-pass §6);
 - current `APPROVE` / `COMMENT` rationale.
 
 Then the standard first-pass **approval gate** and verdict-body rules apply (§6 of `first-pass.md`) — read that section; "never restate the threads" and requirements-stated-flatly bind here too. On approval: hand off to `/post-review`, append the `post` notes entry, and update the dossier per `dossier.md` (replace state sections, append history line).

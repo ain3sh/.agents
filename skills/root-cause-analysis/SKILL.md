@@ -76,7 +76,7 @@ Check these while reading. Any one firing means the region is bigger than one he
 
 - Do not make the contract more permissive unless you can prove the observed payload is intended in the final design.
 - Prefer fixing the upstream logic bug over accepting bad downstream data.
-- Separate symptom, trigger, root cause, minimal safe fix, and architectural follow-up.
+- Separate symptom, trigger, root cause, minimal safe fix, and architectural fix. The architectural fix is done in this change, or named as the decision the user must make; never left as a follow-up.
 - If a low-level fix is still needed, explain why the upstream fix is not sufficient or why both are required.
 - Identify the correct layer to fix first.
 - Name the first visible wrong behavior, not only the final error.
@@ -111,7 +111,7 @@ Treat non-explicit writes as suspicious by default.
 - Repro verification: prediction, toggle run, oracle result
 - Correct layer to fix first
 - Minimal safe fix
-- Architectural follow-up
+- Architectural fix (in this change, or the decision the user must make)
 - Proposed patch
 
 Keep the output textual when the chain is simple. When `show-me` fires, its

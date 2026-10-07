@@ -8,10 +8,10 @@ mention: preview any fact that changes the merge decision in Description.
 
 ### Anti-goals — scope deliberately constrained
 
-One-liner under Description; pre-empts drive-by "while you're here…" comments. Stack multiples as sub-bullets. If *every* PR has anti-goals, the scope was never honest.
+One-liner under Description; pre-empts drive-by "while you're here…" comments. Stack multiples as sub-bullets. If *every* PR has anti-goals, the scope was never honest. An anti-goal is a separate change this PR deliberately does not make, never a known defect in code it touches: fix that here, or name the decision it needs in the Description.
 
 ```markdown
-**Out of scope**: refactoring the legacy `auth/` module — tracked in TEAM-456.
+**Out of scope**: moving the remaining `auth/` callers to the new session API — a separate migration with its own rollout; none of those callers is broken today.
 ```
 
 ### Diff composition — large diffs (roughly 1k+ lines or 20+ files)
@@ -59,7 +59,7 @@ When a reviewer could ask "why are unrelated changes bundled?" and the diff is s
 ```markdown
 ### Scope map — what is bundled and why
 - **<bucket>** — <files/areas>. <why the core change requires it.>
-**Out of scope:** <excluded work + where it's tracked.>
+**Out of scope:** <separate change this PR deliberately does not make + why it is separate; never a known defect in touched code.>
 ```
 
 ### Root Cause Analysis — bug fixes
@@ -207,7 +207,7 @@ Current diff: `52 files changed, +3418 / -1650`.
 
 ### Implementation Notes — `.agents/specs/<spec>.notes.md` exists
 
-The `/implement` hook scaffolds this on spec approval. Ingest, then thread entries back into the always-on sections so they're not siloed: `deviation` → Description, `tradeoff` → Risk & Impact, `surprise` → Verification (Behavior verified), `followup` → Verification (Not tested).
+The `/implement` hook scaffolds this on spec approval. Ingest, then thread entries back into the always-on sections so they're not siloed: `deviation` → Description, `tradeoff` → Risk & Impact, `surprise` → Verification (Behavior verified), `open-decision` → Description (the decision the reviewer or author must make).
 
 ```bash
 TICKET=$(linear context --output json 2>/dev/null | jq -r '.identifier // empty' | tr '[:upper:]' '[:lower:]')
@@ -221,7 +221,7 @@ Source: `.agents/specs/<basename>.notes.md`
 **Deviations from spec**: <one per `Type: deviation`>
 **Tradeoffs**: <one per `Type: tradeoff` — alternative rejected + reason>
 **Discovered constraints**: <one per `Type: surprise`>
-**Follow-ups not in this PR**: <one per `Type: followup` — link tickets>
+**Open decisions**: <one per `Type: open-decision` — the issue, the options, and who decides>
 
 </details>
 ```

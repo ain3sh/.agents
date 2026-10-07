@@ -22,11 +22,11 @@ User comment: <tool response `userComment`, or "none">
 
 ```
 ## <ISO timestamp> — <one-line title>
-**Type**: decision | deviation | tradeoff | surprise | followup
+**Type**: decision | deviation | tradeoff | surprise | open-decision
 **Context**: <2-3 lines>
 **Resolution**: <what was done, why, what alternative was rejected>
 ```
 
-Append when the spec didn't anticipate the decision, the implementation deviated from the planned file list or approach, a real tradeoff was chosen (alternative + reason), an unforeseen constraint bit, or followup work emerged.
+Append when the spec didn't anticipate the decision, the implementation deviated from the planned file list or approach, a real tradeoff was chosen (alternative + reason), an unforeseen constraint bit, or a real issue surfaced that needs the user's decision (`open-decision`: the issue, the options, who decides). A real issue you can fix is fixed in this change, never logged for later.
 
 ---

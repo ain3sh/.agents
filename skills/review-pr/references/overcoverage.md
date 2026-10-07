@@ -46,7 +46,7 @@ Lightweight categories (one narrow suspicion, one file) get a single worker, not
 When a pair returns:
 
 - Compare static vs executed evidence; where they disagree, the disagreement itself becomes the named open question.
-- Remove false positives, red herrings, and pre-existing behavior (pre-existing issues route to tickets/conversation comments, not findings).
+- Remove false positives, red herrings, and pre-existing behavior (pre-existing issues move to the verdict's **Pre-existing defects** list per `first-pass.md` §6, not findings against the PR).
 - Apply **patch-coherence** across surviving candidates: cluster by violated invariant and owning locus; collapse downstream manifestations into the upstream finding; merge duplicates.
 - Record killed suspicions with the exact invariant/probe that killed them — these go in the dossier's verified-safe section and, where they contradict a headline concern, into the review narrative.
 - State what, if anything, remains verdict-relevant and unresolved.

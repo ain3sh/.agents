@@ -26,7 +26,7 @@ Each investigated proposition returns **exactly one** outcome:
 
 1. **Confirmed** — PR-introduced defect or structural defect, each with owning locus and severity in **voice** tiers. Defect: violated invariant, mechanism, concrete trigger/reachability, evidence (probe output or quoted source chain). Structural defect: the design property violated — wrong boundary, duplicated or bypassed owner, needlessly broad state or contract, avoidable mechanism, unjustified coupling — shown in quoted source (both loci and the diverging callers when duplication is alleged), plus a direction that preserves the change's verified constraints and genuine contribution. Settled by source alone; a design proposition that needs an invented runtime failure to stand is not confirmed.
 2. **Verified safe / killed** — the exact guard, invariant, or probe result that settles it.
-3. **Pre-existing / out of scope** — real behavior, not introduced or worsened by the PR (evidence of pre-existence required).
+3. **Pre-existing** — real behavior, not introduced or worsened by the PR (evidence of pre-existence required). It goes to the verdict's **Pre-existing defects** list (`first-pass.md` §6) with severity and `file:line`, separate from the PR's own findings; it does not block the verdict by itself, and the author decides whether to fix it in this PR.
 4. **Duplicate / subsumed** — names the owning finding or upstream locus.
 5. **Unresolved** — the one exact decisive next probe, not a shrug.
 

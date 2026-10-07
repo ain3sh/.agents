@@ -79,7 +79,7 @@ For any JS/TS diff, run `slop-scan delta <base-dir> <head-dir> --json` on temp d
 
 - Edits unrelated to the stated goal. Split into a separate PR, revert, or retain only with explicit justification in the PR body.
 - Auto-formatter noise in files you did not intend to touch. Revert those hunks.
-- "Since I was here anyway" refactors that outgrew the ticket. Roll them back and log a follow-up.
+- "Since I was here anyway" refactors that outgrew the ticket. Roll them back; if one fixed a real defect, keep that fix in its own commit on this branch or name it as a decision for the user.
 
 ## 4. Triage
 
@@ -99,7 +99,7 @@ Each finding: `<path>:<line-range>` + one-line reason. No essays.
 - More edits than that, or prior work is already committed → separate commit: `refactor(<scope>): retrospective cleanup`.
 - Re-run the project's formatter, linter, and typechecker on changed files. Do not push until clean.
 
-**Hard rule**: do not escalate into an unrelated refactor. If the cleanup starts sprouting new abstractions, touching files outside the original diff, or invalidating its own triage, stop and log the idea as a follow-up ticket. The retrospective is a scalpel, not an excavator.
+**Hard rule**: do not escalate into an unrelated refactor. If the cleanup starts sprouting new abstractions, touching files outside the original diff, or invalidating its own triage, stop. A refactor idea that fixes no defect is dropped and named in the report as an optional decision for the user; a real defect found on the way is fixed in its own commit on this branch, or named as a decision the user must make. The retrospective is a scalpel, not an excavator.
 
 ## 6. Second pass (stop when empty)
 

@@ -70,9 +70,10 @@ their own comment. Anchor to a thread or line if ambiguous; skip the recap.
   the comment. Otherwise explain the change's mechanism. "Replacing `chdir()`
   with a `process.cwd()` spy because Vitest workers reject `chdir`" names the
   move without a commitment preamble.
-- **Real future work:** retain scope and prerequisites. A proposed follow-up
-  or choice of paths is substantive; a status footer announcing the agent's
-  next tools is not. Do not imply work is complete or approved when it isn't.
+- **Real future work:** retain scope and prerequisites. A choice of paths for
+  the reviewer is substantive; a status footer announcing the agent's next
+  tools is not. A real issue is fixed in this PR or named as a decision, never
+  offered as a follow-up. Do not imply work is complete or approved when it isn't.
 - **Ownership and uncertainty:** keep "Missed the race" when owning a miss;
   keep "I haven't traced the timeout path" when that limits the conclusion.
   Phrase-level examples and the load-bearing warmth test live in anti-slop.

@@ -172,7 +172,8 @@ PRs created:   <count>
     Size:       +<added> / -<removed> across <files> files
 
 Merge order:   <any | #1 -> #2 -> #3>
-Follow-up:     <staging branches to delete, deferred work, etc.>
+Cleanup:       <staging branches to delete after merge>
+Decisions:     <anything the user must decide; none is deferred silently>
 ```
 
 If the original branch had an open PR, close it with a comment pointing to the new series (URLs + shape + merge order). Do not delete the source branch until every new PR is merged -- it's the only remaining reference to the pre-split work if a split PR needs to be rebuilt.

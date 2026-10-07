@@ -17,7 +17,7 @@ The phrase and structure catalog for editing technical prose. Load [craft](craft
 - Reviewer reply opens with an acknowledgement ("Good catch", "You're right", "Agreed.", "Fair")? Apply the load-bearing test: did the catch take unusual work, or are you owning a position you held? Keep one beat when earned; cut when reflexive.
 - Reviewer reply paraphrases the comment back before answering? Cut the recap (the reviewer wrote it) unless you're anchoring a specific thread or line.
 - Reply contains "I'm going to fix..." / "I'll address..." without the change-shape? Drop the wrapper and lead with the diff shape. Keep future tense only when the work is genuinely future and scoped.
-- Reply ends with a status footer ("Waiting for your confirmation", "Will run tests then push")? Cut, unless it's a substantive proposal that asks the reviewer to choose a path ("Want to land as-is and file a follow-up?").
+- Reply ends with a status footer ("Waiting for your confirmation", "Will run tests then push")? Cut, unless it's a substantive proposal that asks the reviewer to choose a path ("Should the retry cap apply to the auth path too, or only to uploads?").
 
 ## Phrases to cut
 
@@ -64,12 +64,12 @@ Restating the reviewer's comment back to them. "The e2e smoke covers X, but this
 ### Performative future tense
 "I'm going to fix the test with a `process.cwd()` spy" wraps the actual content (`process.cwd()` spy) in commitment ceremony. Drop the wrapper. "Replacing `process.chdir()` with a `process.cwd()` spy" carries the same information without the preamble.
 
-*Real* future tense earns its slot when the work is genuinely future and scoped: "Adding the stress test in a follow-up; this PR is already 800 lines, and the test infra needs a refactor first." The test: is the future-tense clause describing work that lives outside this turn, or disguising "I'm about to type the fix" as commitment?
+*Real* future tense earns its slot when the work is genuinely future and scoped: "The soak suite takes 20 minutes; posting its result on this thread when it finishes." Deferring a real issue to a later PR is not future tense, it is a dropped fix: fix it here or name the decision. The test: is the future-tense clause describing work that lives outside this turn, or disguising "I'm about to type the fix" as commitment?
 
 ### Status footers
 Status belongs in the agent loop, not in the reply body. "Waiting for your confirmation before I patch, run checks, push, reply, and...", "Let me know if you'd like me to proceed", "Will run tests and push once you confirm", "Standing by for your go-ahead". If the user wants a confirmation gate, it's a turn boundary; the reply carries technical content.
 
-*Substantive proposals* aren't footers, even when they ask a question: "Want to land as-is and file a follow-up?", "Should I scope this to the auth path only, or land it everywhere?" That's content. The difference: a footer announces what the agent will do; a proposal asks the reviewer to choose between concrete paths.
+*Substantive proposals* aren't footers, even when they ask a question: "Should the retry cap apply to the auth path too, or only to uploads?", "Should I scope this to the auth path only, or land it everywhere?" That's content. The difference: a footer announces what the agent will do; a proposal asks the reviewer to choose between concrete paths.
 
 ## Structures to break
 

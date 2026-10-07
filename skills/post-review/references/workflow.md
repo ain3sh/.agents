@@ -68,7 +68,7 @@ Approval at the `/review-pr` gate covered the findings and disposition, not the 
 - **Persuasion on standard asks**: blockers that are ordinary due diligence (test coverage, ticket reference, meeting a CI gate) are flat imperative requirements with their concrete mechanism -- never hedged, argued for, or defended against imagined pushback ("worth satisfying rather than labeling away", "the gate is genuinely red"). The real-vs-flake triage call stays as a stated fact backing the disposition, not woven into the ask as a plea. Asking for standard protocol needs no apology; spend justification only on genuinely discretionary calls.
 - **Command narration**: the CLI invocations, tool names, and worker dispatches behind a probe (`gh run view`, vitest flags, `slop-scan delta`, typechecker choice). Report the observed fact -- *"the new tests fail on base for the stated reason"* -- never the transcript that produced it. How you learned something is your business; what's true is the review.
 - **Methodology paragraphs**: "Checks run:", "Also verified:", CI pass counts, sweep inventories. If a probe backs a claim, it's already inline in that claim; standalone it's an essay about your process.
-- **Fast-follow / "worth a ticket" material**: pre-existing issues belong in a ticket or a PR conversation comment, not the verdict.
+- **Fast-follow / "worth a ticket" framing**: pre-existing issues stay in the verdict's **Pre-existing defects** list (severity, `file:line`, one line each); cut any "worth a ticket", "fast-follow", or "separate PR" framing around them.
 
 This applies to line-comment bodies too: findings state the defect and the fix, never the commands run to find it.
 
