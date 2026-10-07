@@ -10,7 +10,7 @@
 #   coordinator judges a worker alive by its cloud session, and requeues the
 #   activity (while the original keeps running) when that session is missing.
 set -euo pipefail
-for slug in pr-shepherd ownership-incident-fixer; do
+for slug in pr-shepherd ownership-incident-fixer re-review; do
   dir="$HOME/.factory/software-factory/workstreams/$slug/.factory"
   mkdir -p "$dir"
   printf '%s\n' '{"cloudSessionSync":true,"sessionDefaultSettings":{"model":"claude-fable-5.1","reasoningEffort":"high"}}' >"$dir/settings.json"
