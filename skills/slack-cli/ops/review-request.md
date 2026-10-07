@@ -56,8 +56,11 @@ Reference post (CLI + agent core): `#pod-cli` ts `1791365435.282049`.
 slack msg send C08867C315E "$(cat /tmp/review-N.txt)"      # draft in a file first
 slack msg history C08867C315E --limit 1                      # verify; keep the ts
 slack msg send C08867C315E "<update>" --thread <TS>          # every follow-up
+slack msg react C08867C315E <TS> merged                      # once the PR merges
 ```
 
 New head after review feedback, answers to questions, and the merge notice are
-thread replies on that ts. A second top-level post for the same PR is noise;
-if the first post is wrong, `msg update` it.
+thread replies on that ts. When the PR merges, also react `:merged:` on the
+post itself, so anyone scanning the channel sees the request is closed without
+opening the thread. A second top-level post for the same PR is noise; if the
+first post is wrong, `msg update` it.
