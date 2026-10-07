@@ -27,10 +27,9 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 | `/post-review` | publish the full approved review: reread the whole ledger, preserve every final finding's substance, severity, and gating stance, and name every blocker in the verdict; only explicit subset selection narrows the default | `/post-review 123` |
 | `/explain-diff` | standalone HTML walkthrough with diagrams + interactive quiz | `/explain-diff 123` |
 | `/zoom-out` | broader module and caller context in the project's vocabulary; self-loaded before changing, reviewing, or diagnosing unmapped code (`/implement`, `/review-pr`, root-cause-analysis) | `/zoom-out` |
-| `/demo-pr` | tuistory before/after filming | `/demo-pr 123` |
 | `/implement` | spec-first exploration + planning; waits for approval before coding | `/implement FAC-789` or `/implement "<description>"` |
 | `/retrospective` | stranger-review your own diff for entropy (dead weight / junk / perf / drift / scope) | `/retrospective` |
-| `/update-skill` | load harness-optimization (+ RCA/zoom-out/single-canon/patch-coherence as needed) → reflect → update skill → critique ×2 → PR | `/update-skill linear-cli` |
+| `/update-skill` | load harness-optimization (+ RCA/zoom-out/single-canon/patch-coherence as needed) → reflect → update skill → critique ×2 | `/update-skill linear-cli` |
 | `/split-pr` | split long branch into stacked or independent PRs via cherry-pick | `/split-pr feat/big-branch` |
 
 ## Git Workflow Skills
@@ -45,10 +44,10 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 
 | Atom | Owns | Composed by |
 |---|---|---|
-| **ticket-branch** | Ticket resolve/create, direct parent/child context, branch checkout | `/open-pr`, `/update-skill`, `/split-pr` |
-| **quality-ship** | Quality checks (foreground live + logged evidence), commit, push. Not PR creation. | `/open-pr`, `/update-skill`, `/split-pr`, `/address-review` |
-| **pr-description** | Diff analysis, outcome-first title, first-screen skim gate, PR structure/publication, computed diff composition, live visual evidence (post-open); **Architecture** consumes show-me rather than selecting/rendering diagrams itself | `/open-pr`, `/update-skill`, `/split-pr`, `/review-pr` (read-only body criteria), any PR open or title/body update (global AGENTS trigger) |
-| **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review`, `/demo-pr` |
+| **ticket-branch** | Ticket resolve/create, direct parent/child context, branch checkout | `/open-pr`, `/split-pr` |
+| **quality-ship** | Quality checks (foreground live + logged evidence), commit, push. Not PR creation. | `/open-pr`, `/split-pr`, `/address-review` |
+| **pr-description** | Diff analysis, outcome-first title, first-screen skim gate, PR structure/publication, computed diff composition, live visual evidence (post-open); **Architecture** consumes show-me rather than selecting/rendering diagrams itself | `/open-pr`, `/split-pr`, `/review-pr` (read-only body criteria), any PR open or title/body update (global AGENTS trigger) |
+| **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review` |
 | **voice** | Lean router to craft, external replies, review judgment, and anti-slop references. Audience-aware prose across apps; cut ceremony while preserving reasoning, evidence, scope, caveats, and action. Owns load-bearing warmth/humility and the canonical review severity taxonomy. | `/review-pr`, `/post-review`, `/address-review`, pr-description, linear-cli, slack-cli, external messages/replies |
 | **structural-review** | Code-judo simplification hunt + structural tripwires (1k-line crossings, spaghetti growth, boundary leaks, contract muddying, orchestration smells); defers severity to voice | `/review-pr` (parent + heavy Astra architecture gate + heavy Fable whole-PR sweep) |
 | **orchestrate** | Coordination reference: delegate substantive implementation, handle small complete fixes directly, preserve read-only scope and one writer per change; stable prerequisites/QA, resume vs fresh, restaff-or-block. Readability gate: inspect the diff, clarify with its author or reject avoidable complexity; obfuscated code is not mergeable. Three seats: Astra main, explicitly assigned Astra child, or top-level Fable told "be an orchestrator". | orchestrator seats (background) |
