@@ -1,6 +1,6 @@
 ---
 name: linear-cli
-description: Reference for using linear-cli (aliased as `linear`) to manage Linear.app issues, projects, cycles, and sprints from the terminal. Use when the user mentions Linear tickets, issues, project management, or sprint planning.
+description: "Use the linear CLI to read and manage Linear issues, projects, and cycles from the terminal when the user mentions Linear tickets or sprints."
 ---
 
 # Linear CLI (`linear`)

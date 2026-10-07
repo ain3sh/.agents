@@ -1,6 +1,7 @@
 ---
 name: disk-cleanup
-description: Reclaim Linux home and /tmp disk space with bounded, repeatable cleanup scripts. Use when disks fill, /tmp balloons, caches/toolchains/containers accumulate, or cleanup must preserve Factory sessions, models, source data, and active temp files.
+description: "Reclaim Linux home and /tmp disk space with bounded, repeatable cleanup scripts. Use when disks fill, /tmp balloons, caches/toolchains/containers accumulate, or cleanup must preserve Factory sessions, models, source data, and active temp files."
+disable-model-invocation: true
 ---
 
 # Disk Cleanup

@@ -1,6 +1,6 @@
 ---
 name: dsx
-description: Search and analyze past Factory Droid sessions with the dsx CLI. Use for previous work, session history, usage analysis, or proactively after two failed attempts at the same tooling, environment, deployment, or operational problem that may have been solved before.
+description: "Use to search past Droid sessions for prior work or usage, and after two failed attempts at the same tooling or environment problem."
 ---
 
 # dsx: Droid Session Explorer

@@ -1,6 +1,7 @@
 ---
 name: paperclip
-description: Search and read full-text biomedical papers, regulatory documents, and clinical trials with the paperclip CLI. Run `paperclip skill` to load the full documentation before using it.
+description: "Search and read full-text biomedical papers, regulatory documents, and clinical trials with the paperclip CLI. Run `paperclip skill` to load the full documentation before using it."
+disable-model-invocation: true
 ---
 
 # Paperclip

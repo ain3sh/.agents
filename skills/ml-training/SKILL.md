@@ -1,6 +1,7 @@
 ---
 name: ml-training
-description: LLM fine-tuning and alignment -- LoRA/QLoRA with PEFT, RLHF/DPO/GRPO with TRL, YAML-driven training with Axolotl. Use when fine-tuning language models, doing parameter-efficient training, preference alignment, reinforcement learning from human feedback, or configuring distributed training.
+description: "LLM fine-tuning and alignment -- LoRA/QLoRA with PEFT, RLHF/DPO/GRPO with TRL, YAML-driven training with Axolotl. Use when fine-tuning language models, doing parameter-efficient training, preference alignment, reinforcement learning from human feedback, or configuring distributed training."
+disable-model-invocation: true
 ---
 
 # LLM Fine-Tuning & Alignment

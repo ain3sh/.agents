@@ -1,6 +1,6 @@
 ---
 name: notion-cli
-description: Reference for using ntn (Notion CLI) to manage Notion pages, data sources, workers, and raw Notion API requests from the terminal. Use when the user mentions Notion pages, databases, workers, or syncs.
+description: "Use the ntn CLI to read and manage Notion pages, data sources, workers, and raw API requests when the user mentions Notion."
 ---
 
 # Notion CLI (`ntn`)

@@ -1,6 +1,6 @@
 ---
 name: worktree-setup
-description: "Manage a git worktree's dev environment: mirror a healthy source worktree's dependencies and artifacts, or deliberately detach them for an independent install/repro. Use when worktree tooling cannot find modules/build outputs or when shared state would invalidate a clean environment test."
+description: "Use when working in a git worktree whose modules or build outputs are missing, or to detach shared dependencies for a clean install or repro."
 ---
 
 # Worktree Setup

@@ -1,6 +1,7 @@
 ---
 name: ml-research
-description: Build complex AI systems with declarative programming, optimize prompts automatically, create modular RAG systems and agents with DSPy -- Stanford NLP's framework for systematic LM programming. Use when building multi-stage LM pipelines, optimizing prompts with data, or creating RAG/agent systems.
+description: "Build complex AI systems with declarative programming, optimize prompts automatically, create modular RAG systems and agents with DSPy -- Stanford NLP's framework for systematic LM programming. Use when building multi-stage LM pipelines, optimizing prompts with data, or creating RAG/agent systems."
+disable-model-invocation: true
 ---
 
 

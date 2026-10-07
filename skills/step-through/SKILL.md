@@ -1,6 +1,6 @@
 ---
 name: step-through
-description: Step through a system's execution with explicit state at each transition. Use when debugging races, state machines, async bugs, regressions; stress-testing a fix; scoping features on existing state; or approaching unfamiliar code. Triggers on multi-actor sequencing, background refreshes, recovery paths, queues, "why is this broken", "walk through the flow", "this used to work", "what happens when", or "stress test this plan". Also loaded by /implement during bug-fix flows.
+description: "Use for races, state machines, async bugs, regressions, or stress-testing a plan: walk the execution with explicit state at each transition."
 ---
 
 # Step-Through

@@ -1,6 +1,6 @@
 ---
 name: slack-cli
-description: Reference for using slck (aliased as `slack`) to manage Slack channels, messages, users, and search from the terminal. Use when the user mentions Slack messaging, channel management, or workspace communication.
+description: "Use the slck CLI (alias slack) to read and send Slack messages, manage channels, and search when the user mentions Slack."
 ---
 
 # Slack CLI (`slack`)

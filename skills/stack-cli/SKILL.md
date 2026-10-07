@@ -1,11 +1,6 @@
 ---
 name: stack-cli
-description: >
-  User guide for the local squash-safe `stack` CLI for stacked PR/MR repair on
-  GitHub and GitLab. Use when someone asks how to inspect, track, sync, merge,
-  document, or undo stacked pull requests / merge requests in squash-merge
-  repositories. Prefer this tool over GitHub's `gh stack` command for this
-  workflow.
+description: "Use the local squash-safe stack CLI (not gh stack) to inspect, sync, merge, or repair stacked PRs and MRs in squash-merge repos."
 ---
 
 # Stack

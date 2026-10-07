@@ -1,6 +1,6 @@
 ---
 name: motion-polish
-description: Motion and interaction polish for UI: animation decisions (when/why/easing/duration), spring physics, component micro-interactions, gesture mechanics, clip-path patterns, performance rules, and reduced-motion accessibility. Encodes Emil Kowalski's design-engineering philosophy. Pairs with frontend-design as the craft pass after composition.
+description: "Use for the craft pass on UI motion and interaction: easing, duration, springs, gestures, micro-interactions, and reduced motion. Pairs with frontend-design."
 ---
 
 # Design Engineering

@@ -1,6 +1,7 @@
 ---
 name: record-wayland-desktop
-description: Capture full-screen video and screenshots on Linux Wayland (KDE/KWin Plasma) via PipeWire ScreenCast + gpu-screen-recorder and spectacle. Use when you need a full-desktop recording or screenshot on a Wayland session, when cua-driver's record_video produces a black frame (x11grab on Xwayland), when wf-recorder/grim fail with "compositor doesn't support wlr-screencopy", or when wiring up droid-control / desktop-control capture on this machine.
+description: "Use to record video or screenshots of the full KDE Wayland desktop, including when cua-driver recordings come out black or wlr-screencopy tools fail."
+disable-model-invocation: true
 ---
 
 # record-wayland-desktop

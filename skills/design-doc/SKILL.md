@@ -1,6 +1,7 @@
 ---
 name: design-doc
-description: Author a publication-grade single-file HTML design doc, technical memo, or rendered report/retrospective, plus 1600x900 Slack cards and a hero thumbnail. Factory visual system, adaptive RFC/memo/report structure, markdown-to-HTML builder, fact-checked references, light/dark Playwright verification, and secret-gist publishing.
+description: "Author a publication-grade single-file HTML design doc, technical memo, or rendered report/retrospective, plus 1600x900 Slack cards and a hero thumbnail. Factory visual system, adaptive RFC/memo/report structure, markdown-to-HTML builder, fact-checked references, light/dark Playwright verification, and secret-gist publishing."
+disable-model-invocation: true
 ---
 
 A design doc here is one self-contained HTML file — fonts via Google Fonts, all styles inline, no JS framework — with the precision of an internal engineering artifact and the visual confidence of Factory product surfaces. The aesthetic exists to make reviewers actually read it; the structure exists to make the argument legible.

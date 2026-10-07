@@ -1,7 +1,6 @@
 ---
 name: voice
-description: Write user-visible prose and reviews. Load for external replies and messages (GitHub, Slack, tickets, email), PR bodies, docs, commits, and findings; match the audience without losing substance.
-user-invocable: false
+description: "Load before writing user-visible prose or reviews: replies on GitHub, Slack, tickets, or email; PR bodies; docs; commits; and findings."
 ---
 
 # Voice

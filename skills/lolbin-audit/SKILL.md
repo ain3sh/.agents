@@ -1,6 +1,7 @@
 ---
 name: lolbin-audit
-description: Audit projects, containers, sudoers/IaC, and shell-out call sites for dangerous Living-Off-the-Land binary exposure using GTFOBins data. Use when asked about GTFOBins, LOLBins, post-foothold blast radius, privilege escalation, SUID/capability risks, sudo allowlists, container hardening, or security auto-testing of Unix/Linux projects.
+description: "Audit projects, containers, sudoers/IaC, and shell-out call sites for dangerous Living-Off-the-Land binary exposure using GTFOBins data. Use when asked about GTFOBins, LOLBins, post-foothold blast radius, privilege escalation, SUID/capability risks, sudo allowlists, container hardening, or security auto-testing of Unix/Linux projects."
+disable-model-invocation: true
 ---
 
 # LOLBin Audit

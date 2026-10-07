@@ -1,6 +1,7 @@
 ---
 name: paper2code
-description: Converts an arxiv paper into a minimal, citation-anchored Python implementation. Trigger when user runs /paper2code with an arxiv URL or paper ID, says "implement this paper", or pastes an arxiv link asking for implementation. Flags all ambiguities honestly. Never invents implementation details not stated in the paper.
+description: "Converts an arxiv paper into a minimal, citation-anchored Python implementation. Trigger when user runs /paper2code with an arxiv URL or paper ID, says \"implement this paper\", or pastes an arxiv link asking for implementation. Flags all ambiguities honestly. Never invents implementation details not stated in the paper."
+disable-model-invocation: true
 ---
 
 # paper2code — Orchestration

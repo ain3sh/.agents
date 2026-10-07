@@ -1,6 +1,7 @@
 ---
 name: ml-evaluation
-description: ML model evaluation and experiment tracking -- LLM benchmarking with lm-evaluation-harness (MMLU, GSM8K, HumanEval, 60+ tasks), experiment tracking and hyperparameter sweeps with Weights & Biases. Use when benchmarking models, comparing training runs, tracking experiments, or reporting evaluation results.
+description: "ML model evaluation and experiment tracking -- LLM benchmarking with lm-evaluation-harness (MMLU, GSM8K, HumanEval, 60+ tasks), experiment tracking and hyperparameter sweeps with Weights & Biases. Use when benchmarking models, comparing training runs, tracking experiments, or reporting evaluation results."
+disable-model-invocation: true
 ---
 
 # ML Evaluation & Experiment Tracking

@@ -1,6 +1,7 @@
 ---
 name: vicinae-todo
-description: Manage the user's Vicinae Todo List from the terminal. Use when the user mentions todos, tasks, reminders, or when noting persistent cross-session work items.
+description: "Manage the user's Vicinae Todo List from the terminal. Use when the user mentions todos, tasks, reminders, or when noting persistent cross-session work items."
+disable-model-invocation: true
 ---
 
 # Vicinae Todo List

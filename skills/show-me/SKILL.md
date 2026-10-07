@@ -1,7 +1,7 @@
 ---
 name: show-me
-description: Explain the current topic visually from verified evidence: pseudocode, call trees, component and file trees, sequence and state diagrams, diffs of shape, before/after tables, or one HTML explainer. Use for /show-me, when the user asks to see rather than read, and when a reply about more than two actors, modules, states, or surfaces is turning into prose.
-argument-hint: [target] [as <form>]
+description: "Use for /show-me, when the user asks to see rather than read, or when a reply about 3+ actors or states turns into prose: diagram from verified evidence."
+argument-hint: "[target] [as <form>]"
 user-invocable: true
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: structural-review
-description: Shared atom for structural maintainability judgment on a diff -- hunt code-judo simplifications, spaghetti-condition growth, file-size explosions, and orchestration smells. Background knowledge for review and self-review flows -- not invoked directly.
-user-invocable: false
+description: "Use when judging a diff's structure, in review or self-review: hunt simplifications, condition sprawl, file-size growth, and orchestration smells."
 ---
 
 # Structural Review

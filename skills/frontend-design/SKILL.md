@@ -1,6 +1,6 @@
 ---
 name: frontend-design
-description: Create distinctive, production-grade web interfaces with bold composition (typography, color, layout, atmosphere) that avoid generic AI aesthetics. Use when building components, pages, or applications and the visual direction is up to you. Includes 10 ready-made themes for consistent styling. Hands off to motion-polish for interaction craft.
+description: "Use when building web UI and the visual direction is yours: distinctive typography, color, and layout, with 10 ready themes. Hands off to motion-polish."
 ---
 
 This skill guides creation of distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.

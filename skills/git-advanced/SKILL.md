@@ -1,6 +1,6 @@
 ---
 name: git-advanced
-description: Advanced Git techniques for history editing, commit recovery, and cross-branch operations. Use when rebasing, cherry-picking, bisecting for bugs, recovering lost commits via reflog, splitting or squashing commits, or cleaning up history before a PR.
+description: "Use when rebasing, cherry-picking, bisecting, recovering commits via reflog, splitting or squashing commits, or cleaning up history before a PR."
 ---
 
 # Git Advanced Workflows

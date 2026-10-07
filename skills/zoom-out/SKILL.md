@@ -1,6 +1,6 @@
 ---
 name: zoom-out
-description: Map the modules, callers, and domain vocabulary around unfamiliar code. Use before changing, reviewing, or diagnosing code you haven't mapped yet, or when the user asks for the bigger picture.
+description: "Use before changing, reviewing, or diagnosing unmapped code, or when the user asks for the bigger picture: map modules, callers, and vocabulary."
 ---
 
 I don't know this area of code well. Go up a layer of abstraction. Give me a map of all the relevant modules and callers, using the project's domain glossary vocabulary.

@@ -1,6 +1,7 @@
 ---
 name: create-agent-plugins
-description: Claude Code plugin development -- directory layout, plugin.json manifest, auto-discovery, commands/agents/skills/hooks organization, ${CLAUDE_PLUGIN_ROOT} paths, and component patterns. Use when creating, scaffolding, or debugging Claude Code plugins.
+description: "Claude Code plugin development -- directory layout, plugin.json manifest, auto-discovery, commands/agents/skills/hooks organization, ${CLAUDE_PLUGIN_ROOT} paths, and component patterns. Use when creating, scaffolding, or debugging Claude Code plugins."
+disable-model-invocation: true
 version: 0.1.0
 ---
 

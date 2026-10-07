@@ -1,7 +1,6 @@
 ---
 name: repo-conventions
-description: Shared atom for discovering and applying a repo's own documented conventions (error handling, file organization, style, test placement, feature flags) to the change at hand. Background knowledge for workflow commands -- not invoked directly.
-user-invocable: false
+description: "Background atom for workflow skills: discover and apply a repo's documented conventions (errors, layout, style, tests, flags). Not invoked directly."
 ---
 
 # Repo Conventions

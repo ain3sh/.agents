@@ -1,6 +1,6 @@
 ---
 name: vscode-workspace
-description: "Spin up on-demand headless VSCode workspaces for live LSP diagnostics, symbol info, references, and workspace renames through the vscode MCP tools, then retire them with zero zombie processes or sockets. Use when you want editor-grade verification (vscode:get_diagnostics, get_symbol_lsp_info, get_references, rename_symbol, open_files) and no VSCode window is open for the project."
+description: "Use for editor-grade checks (LSP diagnostics, symbols, references, renames) through the vscode MCP tools when no VS Code window is open; cleans up after."
 ---
 
 # VSCode Workspace

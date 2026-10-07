@@ -1,6 +1,6 @@
 ---
 name: consolidate-test-suites
-description: Decide where test coverage belongs, and cut test suites down to what actually defends the change. Use before adding, moving, or deleting tests after a fix, feature, or refactor, and whenever a diff is test-heavy or hard to review. Journeys first, one owning layer per invariant, a junk taxonomy for deletion, preserved stress/adversarial coverage, and a measured audit mode. Also loaded by /implement during the coverage step.
+description: "Use before adding, moving, or deleting tests, or when a diff is test-heavy: decide which layer owns each invariant and cut tests that defend nothing."
 ---
 
 # Consolidate Test Suites

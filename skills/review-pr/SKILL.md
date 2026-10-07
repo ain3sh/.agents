@@ -1,6 +1,6 @@
 ---
 name: review-pr
-description: Full PR review workflows -- first-pass, deeper (overcoverage), follow-up (re-review). Load when the user invokes /review-pr or explicitly asks for a PR review, deeper wave, or re-review; never ambiently.
+description: "Load only when the user invokes /review-pr or explicitly asks for a PR review, deeper pass, or re-review; never ambiently."
 user-invocable: true
 ---
 

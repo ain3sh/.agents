@@ -1,6 +1,6 @@
 ---
 name: react-patterns
-description: React best practices from official docs -- when NOT to use useEffect, derived state, useMemo, key prop resets, event handlers vs Effects, and data fetching with cleanup. Use when writing/reviewing useEffect, deriving state from props, handling user events, or fixing unnecessary re-renders.
+description: "Use when writing or reviewing React effects, derived state, memoization, key resets, or event handlers, following the official React docs."
 ---
 
 # React Patterns: You Might Not Need an Effect

@@ -1,7 +1,6 @@
 ---
 name: react-doctor
 description: Background knowledge for running react-doctor as part of the quality-ship gate. React-specific diagnostics on a changed-files diff. Not invoked directly.
-user-invocable: false
 ---
 
 # React Doctor

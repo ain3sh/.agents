@@ -1,7 +1,7 @@
 ---
 name: sync-target
-description: Sync a PR branch with its base while preserving review shape. Use when asked to sync, merge, rebase, update from main/dev/target, or resolve conflicts; merge ordinary branches and replay split/rewritten branches before validating and pushing.
-argument-hint: [--no-push] [--full-scope] [<target-branch>]
+description: "Use when asked to sync, merge, rebase, or update a PR branch from its base, or to resolve conflicts, while preserving the review shape."
+argument-hint: "[--no-push] [--full-scope] [<target-branch>]"
 ---
 
 # Sync Target

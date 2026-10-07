@@ -1,6 +1,7 @@
 ---
 name: excalidraw
-description: Create Excalidraw diagrams in two registers: clean technical (default, for architecture/sequence/flow diagrams) or hand-drawn conceptual (opt-in, for brainstorms/sketches). .excalidraw files render to PNG via excalirender or open at excalidraw.com.
+description: "Create Excalidraw diagrams in two registers: clean technical (default, for architecture/sequence/flow diagrams) or hand-drawn conceptual (opt-in, for brainstorms/sketches). .excalidraw files render to PNG via excalirender or open at excalidraw.com."
+disable-model-invocation: true
 ---
 
 # Excalidraw Diagrams

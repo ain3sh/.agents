@@ -1,6 +1,6 @@
 ---
 name: single-canon
-description: Enforce a single-canonical-codepath policy -- keep one canonical implementation, delete compatibility, migration, fallback, adapter, coercion, and dual-shape code, and keep contract grammar minimal (no derivable fields, synonym states, dual shapes, or over-wide unions). Use when defining or altering schemas, contracts, persisted state, routing, configuration, feature flags, enum/value sets, or architecture.
+description: "Use when defining or changing schemas, contracts, persisted state, config, flags, enums, or routing: keep one canonical path, delete fallbacks and shims."
 ---
 
 # Single Canon

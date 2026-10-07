@@ -1,6 +1,6 @@
 ---
 name: harness-optimization
-description: Optimize agent-harness reliability by tracing instructions, model choices, hooks, executor semantics, process ownership, output capture, and operator feedback to the first control-plane failure. Use when agents keep repeating a mistake or skipping a skill despite guidance, hooks teach bad retries, background or cancellation behavior corrupts evidence, or a harness fix risks becoming case-based.
+description: "Use when droids repeat a mistake despite guidance, skip a skill, or get steered wrong by a hook or tool: trace it to the first control-plane failure."
 ---
 
 # Harness Optimization

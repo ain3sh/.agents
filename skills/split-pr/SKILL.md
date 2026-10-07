@@ -1,6 +1,6 @@
 ---
 name: split-pr
-description: Break a large branch into a series of small, reviewable PRs -- as atomic PRs (independent, any merge order) or stacked PRs (linear chain, strict order). Use when a branch has outgrown reviewability, mixes concerns, or a reviewer has asked to split it. Covers diff-level decomposition, branch mechanics, stack restacking, and per-PR quality-ship / pr-description hand-offs.
+description: "Use when a branch has outgrown review, mixes concerns, or a reviewer asked to split it: break it into atomic or stacked PRs."
 ---
 
 # Split PR

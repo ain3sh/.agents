@@ -1,7 +1,7 @@
 ---
 name: retrospective
-description: Self-review your aggregate diff before shipping to catch dead weight, junk code, perf misses, pattern drift, AI slop, and scope creep. Use when the user asks to scrub, stranger-review, or clean up changes prior to opening a PR.
-argument-hint: [<base-ref>]
+description: "Use when the user asks to scrub or stranger-review changes before a PR: self-review the aggregate diff for dead weight, drift, slop, and scope creep."
+argument-hint: "[<base-ref>]"
 ---
 
 Take a beat. Reread what you just shipped as if a stranger wrote it. The bar is **entropy reduction**: leave the diff leaner, sharper, and more consistent than when you started. Every shortcut you leave here is someone else's burden later.

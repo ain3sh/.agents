@@ -1,6 +1,6 @@
 ---
 name: patch-coherence
-description: Audit >=2 candidate fixes for shared root causes, shared touch sites, layer subsumption, and redundancy before per-fix recommendations are committed. Use when a workflow has produced multiple RCAs or fix proposals (e.g., several reviewer threads, multiple bugs in one ticket). Background knowledge for workflow commands -- not invoked directly.
+description: "Use when two or more candidate fixes or RCAs are on the table: check shared root causes, touch sites, and redundancy before recommending any."
 ---
 
 # Patch Coherence

@@ -1,7 +1,7 @@
 ---
 name: update-skill
-description: Reflect on session learnings and update a skill so future agents succeed without prior context. Use when the user asks to update or refine a skill, or when this session surfaced dead ends, correct pathways, or coverage gaps worth capturing.
-argument-hint: <skill-name> [context about what was learned]
+description: "Use when the user asks to update or refine a skill, or when a session surfaced dead ends or correct pathways worth capturing in one."
+argument-hint: "<skill-name> [context about what was learned]"
 ---
 
 # Update Skill

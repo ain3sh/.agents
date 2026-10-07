@@ -1,7 +1,6 @@
 ---
 name: ticket-branch
 description: Shared atom for creating or resolving a Linear ticket and checking out a clean branch. Background knowledge for workflow commands -- not invoked directly.
-user-invocable: false
 ---
 
 # Ticket + Branch

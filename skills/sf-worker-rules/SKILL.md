@@ -1,6 +1,6 @@
 ---
 name: sf-worker-rules
-description: Operating rules for headless Software Factory workstream runs on Ainesh's behalf (intake, triage, investigate, implement, steward, steward sweep, health). Use at the start of every such run, before reading sources or changing anything.
+description: "Load at the start of every headless Software Factory workstream run (intake, triage, investigate, implement, steward, health), before reading sources."
 ---
 
 # Software Factory Worker Rules

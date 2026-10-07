@@ -1,7 +1,7 @@
 ---
 name: open-pr
-description: Full PR workflow -- ticket, branch, verify, lint, test, commit, push, open PR. Use when the user asks to open, ship, or land a PR; handles fresh work, mid-fix state, and changes already verified in the session.
-argument-hint: [TICKET-ID | description of work]
+description: "Use when the user asks to open, ship, or land a PR: ticket, branch, verify, lint, test, commit, push, and open it from any starting state."
+argument-hint: "[TICKET-ID | description of work]"
 ---
 
 Load skills: **linear-cli**, **ticket-branch**, **quality-ship**, **pr-description** (mandatory hand-off at step 4 — see below), **worktree-setup**.

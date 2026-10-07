@@ -1,7 +1,6 @@
 ---
 name: pr-description
 description: Write or refresh a PR title and body. Load immediately before `gh pr create`, before PATCHing a PR title or body, and after pushing to a branch with an open PR.
-user-invocable: false
 ---
 
 # PR Description

@@ -1,6 +1,6 @@
 ---
 name: root-cause-analysis
-description: Root-cause-first debugging by tracing expected behavior to the first unintended side effect before changing contracts, parsing, or types. Use when debugging protocol errors, deserialization failures, null payloads, missing fields, restore or hydration issues, state-ownership bugs, unexpected requests, background mutations, or reviewing code where the visible failure may be downstream noise. Also loaded by /implement during bug-fix flows.
+description: "Use when a bug or misbehavior is reported: trace expected behavior to the first unintended side effect before changing contracts, parsing, or types."
 ---
 
 # Root-Cause Analysis

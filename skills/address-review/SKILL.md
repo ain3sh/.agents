@@ -1,7 +1,6 @@
 ---
 name: address-review
 description: Triage PR feedback, apply approved fixes, and reply to reviewers.
-disable-model-invocation: true
 ---
 
 # Address Review
