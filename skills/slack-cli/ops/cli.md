@@ -27,7 +27,7 @@ slack msg send C0123456789 "reply" --thread TS     # Thread reply (flag is --thr
 slack msg send C0123456789 --file ./doc.pdf        # Upload file
 slack msg send --channel "#general" "text"         # By channel name
 slack msg send C0123 --blocks-file ./blocks.json   # Block Kit payload
-slack msg update C0123 TS "new text"               # Edit
+slack msg update C0123 TS "new text"               # Edit; only `send` reads stdin via `-`, update posts a literal "-"
 slack msg delete C0123 TS                          # Delete
 slack msg react C0123 TS thumbsup                  # React
 slack msg unreact C0123 TS thumbsup                # Remove reaction
