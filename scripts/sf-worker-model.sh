@@ -5,13 +5,12 @@
 # settings that beat the user defaults must be baked into the image. Called from
 # the ain3sh-dev template setup script; takes effect on the next template build.
 #
-# - sessionDefaultSettings pins workers to Fable 5.1.
-# - cloudSessionSync overrides the user-level `false`: the backend activity
-#   coordinator judges a worker alive by its cloud session, and requeues the
-#   activity (while the original keeps running) when that session is missing.
+# sessionDefaultSettings pins workers to Fable 5.1. Cloud session sync comes
+# from the user settings the template writes; the activity coordinator needs it
+# to see a worker's session as alive.
 set -euo pipefail
 for slug in pr-shepherd ownership-incident-fixer re-review; do
   dir="$HOME/.factory/software-factory/workstreams/$slug/.factory"
   mkdir -p "$dir"
-  printf '%s\n' '{"cloudSessionSync":true,"sessionDefaultSettings":{"model":"claude-fable-5.1","reasoningEffort":"high"}}' >"$dir/settings.json"
+  printf '%s\n' '{"sessionDefaultSettings":{"model":"claude-fable-5.1","reasoningEffort":"high"}}' >"$dir/settings.json"
 done
