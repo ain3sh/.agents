@@ -89,7 +89,9 @@ One row per thread. No prose, no rationale -- just the label. The `Locus` column
 
 Permitted actions: `Fix`, `Respond`, `Ack`, `Investigate`, `Resolved`, `Decline`.
 
-**Provenance is not a decline reason.** "Pre-existing", "inherited", or "worth a follow-up" never justifies `Decline` or a deferral note when the issue is real and lies within a locus this PR already touches: the action is `Fix`. `Decline` is only for a suggestion that is wrong or would make things worse, shown with evidence (the design decision or external compatibility boundary it violates). A real issue is never declined as out of scope or deferred: it is `Fix`, or, when fixing it needs a product or design call, an open thread whose exact decision you name for the user at the confirmation gate.
+**Provenance is not a decline reason.** "Pre-existing", "inherited", or "worth a follow-up" never justifies `Decline` or a deferral note when the issue is real and lies within a locus this PR already touches: the action is `Fix`. A real issue is never declined as out of scope or deferred: it is `Fix`, or, when fixing it needs a product or design call, an open thread whose exact decision you name for the user at the confirmation gate.
+
+**A reviewer's proposal clears the same evidence bar as your own change.** `Decline` a suggestion that is wrong, makes things worse, or reverses a settled decision (one the user, team, or repo already made), and cite the evidence: the decision, compatibility boundary, or failure it would cause. What counts as evidence for reopening a settled decision is owned by [voice external replies](../../voice/references/external-replies.md#reviewer-replies) (**Settled decisions**); when the reviewer brings it, keep the thread open and name the decision for the user at the confirmation gate.
 
 ### 4b. Approach (Fix loci and Decline rows)
 

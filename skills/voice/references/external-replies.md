@@ -82,6 +82,12 @@ their own comment. Anchor to a thread or line if ambiguous; skip the recap.
 - **Pushback:** say when the premise, failure mode, code path, cost, or scope is
   wrong, with the specific reason. Politeness must not turn into false
   agreement. Use [review judgment](review-judgment.md) for finding severity.
+- **Settled decisions:** a proposal carries the burden of proof, not the status
+  quo. Reopen a decision the user, team, or repo already made only on new
+  evidence that its premise is false; other tools' defaults, unmeasured
+  intuition, and seniority are not that evidence. State the decision and why it
+  stands; grant a true point only with why it doesn't change the call, and
+  never offer an experiment to re-earn the decision.
 
 ## Examples: natural and complete
 
