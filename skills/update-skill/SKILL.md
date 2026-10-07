@@ -17,6 +17,8 @@ Review the session's work (or `$ARGUMENTS`). Identify:
 - **Missing info**: what the skill should have covered but didn't.
 - **Key insights**: non-obvious learnings that save future agents significant time.
 
+If the update is motivated by droids misbehaving (repeating a mistake, skipping a skill, misreading a hook), load **harness-optimization** first. It finds the layer that made the wrong choice look right, which may not be this skill at all.
+
 ## 2. Read whole, in aggregate
 
 Read **every** file of the skill -- `SKILL.md`, `references/**`, `scripts/**`,

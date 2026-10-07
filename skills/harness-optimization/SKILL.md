@@ -1,6 +1,6 @@
 ---
 name: harness-optimization
-description: Optimize agent-harness reliability by tracing instructions, model choices, hooks, executor semantics, process ownership, output capture, and operator feedback to the first control-plane failure. Use when agents repeat tool misuse despite guidance, hooks teach bad retries, background or cancellation behavior corrupts evidence, or a harness fix risks becoming case-based.
+description: Optimize agent-harness reliability by tracing instructions, model choices, hooks, executor semantics, process ownership, output capture, and operator feedback to the first control-plane failure. Use when agents keep repeating a mistake or skipping a skill despite guidance, hooks teach bad retries, background or cancellation behavior corrupts evidence, or a harness fix risks becoming case-based.
 ---
 
 # Harness Optimization
@@ -30,6 +30,7 @@ locally correct?**
 Load this skill when any of these are true:
 
 - an agent repeats a workflow mistake after being corrected
+- a skill exists for the moment but agents do not load it unprompted
 - a skill says one thing while hooks or tools permit or suggest another
 - backgrounding, polling, filtering, retries, compaction, or cancellation
   changes the apparent result

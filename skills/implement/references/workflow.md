@@ -42,6 +42,7 @@ Fire `TodoWrite` in parallel with the first tool call of each phase.
 
 ## 2. Explore Current Code
 
+- If you haven't mapped this area yet, load **zoom-out** first and build its module and caller map before reading individual files.
 - Use search tools (Grep, Glob, codebase_search) to find all relevant code areas.
 - Read the key files: entry points, data models, services, components, tests.
 - Map the current behavior and data flow in the area of change.

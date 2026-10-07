@@ -180,4 +180,4 @@ After pushing, check if a PR is already open for the current branch:
 gh pr view --json number --jq '.number' 2>/dev/null
 ```
 
-If a PR exists, follow the **pr-description** skill's post-push refresh flow (section 6): run the staleness check against the new diff, then the coherence pass only if updates are needed.
+If a PR exists, follow the **pr-description** skill's post-push refresh flow (`references/refresh.md`): run the staleness check against the new diff, then the coherence pass only if updates are needed.

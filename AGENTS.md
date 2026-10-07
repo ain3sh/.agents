@@ -73,6 +73,9 @@ Skills are not reserved for slash-command flows — load them yourself the momen
 | about to run checks, commit, or push | **quality-ship** |
 | working inside a git worktree | **worktree-setup** |
 | writing user-visible prose: PR bodies, tickets, findings, replies | **voice** |
+| opening a PR, or writing or updating a PR title or body | **pr-description** (plus **voice** for the prose) |
+| entering code you haven't mapped, before changing, reviewing, or diagnosing it | **zoom-out** |
+| a droid (you, a subagent, or a hook) repeats a mistake despite guidance, skips a skill it should load, or gets steered wrong by a hook or tool; any "droids keep …" report from the user | **harness-optimization** |
 
 Load at the moment of match, **before** acting on that moment — not after being stopped and told. Working through a matching moment without its skill loaded is the same defect class as running tools without flipping the owning todo.
 </skills>

@@ -70,7 +70,7 @@ Follow the **quality-ship** skill:
 
 ## 4. Open PR — pr-description hand-off (mandatory)
 
-Re-load `pr-description`, emit its section 0 checklist inline, and tick every box before `gh pr create`. Drafting from memory is not allowed — "I remember the structure" is the exact failure mode this gate blocks.
+Re-load `pr-description`, emit the Pre-flight checklist from its `references/workflow.md` inline, and tick every box before `gh pr create`. Drafting from memory is not allowed — "I remember the structure" is the exact failure mode this gate blocks.
 
 Re-run the branch-name gate immediately before `gh pr create`. Do not open a PR from any branch except the exact expected idiomatic branch.
 

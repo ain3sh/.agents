@@ -48,6 +48,8 @@ RCA alternates two moves. Neither is a fallback for the other; the region's size
    | The error surfaces far from anywhere it could originate (edge deserialization, generic null, unexpected request) | Narrow by asserting the invariant at layer boundaries |
    | You can name the path in one sentence and hold it in one head (~3 hops) | Read |
 
+   If the area is unmapped, load **zoom-out** before picking the move: its module and caller map is what lets you name the call path or choose a split axis.
+
 5. **Narrow** until the region is one unit you can read whole (one commit diff, one function, one writer, one field). Loop, axes, and oracle rules: `references/bisect.md`. Write the boundary (`good: … / bad: …`) after every experiment.
 6. **Read**: trace the causal chain. What exact call path led from the intended action or system event to the observed effect?
 7. Ask whether the request, mutation, or side effect should have happened at all under the expected behavior and invariants.

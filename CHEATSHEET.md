@@ -5,7 +5,7 @@
 - **`twitter-cli`** — bounded Twitter/X reads and user-approved account actions through the local `twitter` CLI; YAML default, JSON available with `--format json`
 - **`dsx`** — session search/analytics plus durable `dsx papercut add|list|review`
 - **`disk-cleanup`** — bounded dry-run/apply cleanup with explicit `/tmp` and home protection, Factory session/dsx exclusions, bulk regenerable reclaim, and data-only Btrfs recovery; one deletion owner and verified stopping criteria
-- **`harness-optimization`** — reliability optimization for repeated agent/tool failures: trace policy → model → hooks → executor → process → evidence, then fix the owning rule or protocol while preserving working defaults
+- **`harness-optimization`** — reliability optimization for repeated agent/tool failures: trace policy → model → hooks → executor → process → evidence, then fix the owning rule or protocol while preserving working defaults; self-loads on repeated droid mistakes or skills that don't fire
 - **`worktree-setup`** — source-selectable dependency mirrors (`repair|verify|setup --from <worktree>`); never install in a shared worktree
 - **`design-doc`** — Factory-themed single-file RFCs and technical memos; document structure, components, full light/dark capture, hero thumbnails, and authorized secret-gist publishing; visual explanations come from **show-me**
 - **`vscode-workspace`** — on-demand headless VSCode instances for the `vscode:*` MCP tools (live LSP diagnostics/symbols/renames); zero-touch: auto-ensure hook spawns/canonicalizes/warms (workspace_path defaults to cwd), refcounted retirement at SessionEnd, idle reaper at SessionStart; manual: `vscode-ws ensure|retire|reap|list`
@@ -26,7 +26,7 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 | `/address-review` | read reviewer feedback → triage → fix → respond to threads | `/address-review 123` |
 | `/post-review` | publish the full approved review: reread the whole ledger, preserve every final finding's substance, severity, and gating stance, and name every blocker in the verdict; only explicit subset selection narrows the default | `/post-review 123` |
 | `/explain-diff` | standalone HTML walkthrough with diagrams + interactive quiz | `/explain-diff 123` |
-| `/zoom-out` | broader module and caller context in the project's vocabulary | `/zoom-out` |
+| `/zoom-out` | broader module and caller context in the project's vocabulary; self-loaded before changing, reviewing, or diagnosing unmapped code (`/implement`, `/review-pr`, root-cause-analysis) | `/zoom-out` |
 | `/demo-pr` | tuistory before/after filming | `/demo-pr 123` |
 | `/implement` | spec-first exploration + planning; waits for approval before coding | `/implement FAC-789` or `/implement "<description>"` |
 | `/retrospective` | stranger-review your own diff for entropy (dead weight / junk / perf / drift / scope) | `/retrospective` |
@@ -47,7 +47,7 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 |---|---|---|
 | **ticket-branch** | Ticket resolve/create, direct parent/child context, branch checkout | `/open-pr`, `/update-skill`, `/split-pr` |
 | **quality-ship** | Quality checks (foreground live + logged evidence), commit, push. Not PR creation. | `/open-pr`, `/update-skill`, `/split-pr`, `/address-review` |
-| **pr-description** | Diff analysis, outcome-first title, first-screen skim gate, PR structure/publication, computed diff composition, live visual evidence (post-open); **Architecture** consumes show-me rather than selecting/rendering diagrams itself | `/open-pr`, `/update-skill`, `/split-pr`, `/review-pr` (read-only body criteria) |
+| **pr-description** | Diff analysis, outcome-first title, first-screen skim gate, PR structure/publication, computed diff composition, live visual evidence (post-open); **Architecture** consumes show-me rather than selecting/rendering diagrams itself | `/open-pr`, `/update-skill`, `/split-pr`, `/review-pr` (read-only body criteria), any PR open or title/body update (global AGENTS trigger) |
 | **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review`, `/demo-pr` |
 | **voice** | Lean router to craft, external replies, review judgment, and anti-slop references. Audience-aware prose across apps; cut ceremony while preserving reasoning, evidence, scope, caveats, and action. Owns load-bearing warmth/humility and the canonical review severity taxonomy. | `/review-pr`, `/post-review`, `/address-review`, pr-description, linear-cli, slack-cli, external messages/replies |
 | **structural-review** | Code-judo simplification hunt + structural tripwires (1k-line crossings, spaghetti growth, boundary leaks, contract muddying, orchestration smells); defers severity to voice | `/review-pr` (parent + heavy Astra architecture gate + heavy Fable whole-PR sweep) |

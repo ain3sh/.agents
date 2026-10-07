@@ -8,6 +8,8 @@ The comprehensive main review. One reviewer (you) owns judgment end to end; work
 
 Follow **pr-context** to fetch metadata, conversation, diff, and linked Linear ticket; derive `REPO` and `HEAD_SHA` from the target. Record `HEAD_SHA` — it anchors the dossier — and **scaffold the ledger pair now** (`dossier.md`: `review.md` + `review.notes.md`), before verification begins. From here on, every candidate finding, kill, fold, tier change, dispatch, and reconciliation gets a notes entry in the same turn it happens. Record `body_seen` (raw-body fingerprint plus last-edit timestamp, per `dossier.md`) in the dossier header — follow-up uses it to detect body-only changes.
 
+When the changed area is new to you, load **zoom-out** before selecting the primary changed boundary for the architecture gate.
+
 ### Description audit (readiness)
 
 Hold the author to the standard we hold ourselves: load **pr-description** — its `SKILL.md` and the references it names for required sections, conditional triggers, visual proof, and refresh staleness — in **read-only audit posture**. It is the sole owner of *what* a body must contain and *when* a section applies (its exemptions bind us too: a section whose trigger does not fire is not missing). This file owns only *when* to check and *how* to tie claims to evidence. Loading it authorizes no drafting, PATCH, capture, or upload; flag-not-fix covers the body.

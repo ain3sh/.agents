@@ -1,6 +1,8 @@
 ---
 name: zoom-out
-description: Tell the agent to zoom out and give broader context or a higher-level perspective. Use when you're unfamiliar with a section of code or need to understand how it fits into the bigger picture.
+description: Map the modules, callers, and domain vocabulary around unfamiliar code. Use before changing, reviewing, or diagnosing code you haven't mapped yet, or when the user asks for the bigger picture.
 ---
 
 I don't know this area of code well. Go up a layer of abstraction. Give me a map of all the relevant modules and callers, using the project's domain glossary vocabulary.
+
+When you load this yourself, build the map before acting on the area, and show it to the user when it shapes a decision.
