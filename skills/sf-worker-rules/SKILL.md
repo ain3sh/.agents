@@ -80,6 +80,16 @@ that otherwise forbid posting outside the workstream.
 4. Prove a bug fix red-first: the test fails before the fix and passes after.
 5. Write the PR body from a cited fact sheet, then claims-check it against the
    diff. Update the body whenever a later fix invalidates a claim.
+6. Mark it as workstream work: **Related Issue** carries the change link the
+   run prompt supplies (`app.factory.ai/software-factory/changes/<id>`) and
+   the line `Opened by Ainesh's <workstream name> workstream.` PR Shepherd
+   recognizes workstream PRs by that link.
+7. Open it ready for review with reviewers requested: the code owners of the
+   touched paths, plus the diff-path reviewers in
+   `~/.agents/skills/slack-cli/ops/review-request.md` when CODEOWNERS covers
+   none of them, never factory-ain3sh. Request with `publish.md`'s Request
+   reviewer row (pr-description), then re-read `reviewRequests`; it must list
+   at least one reviewer before the run moves on.
 
 ## When a run measures a target
 

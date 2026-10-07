@@ -95,7 +95,11 @@ order is **What** (the rule) → Before → After table, one row per surface
 narrower than it is, then meets the rest as surprises.
 Link a design document here when it carries the rationale. Keep anti-goals,
 scope maps, detailed RCA, and file tours in their owning locations.
-A small PR may omit **Why** when the cause is self-evident.
+Omit **Why** only when **What** already states the stakes. A bug or flake fix
+always does: what failed and for whom (the users, or the required check), how
+often (counts, rate, or the runs and PRs it hit, with links), and what it cost
+(blocked merges, reruns, user-visible errors). "No ticket; flake fix" is not a
+motivation.
 
 ## Section catalog
 
