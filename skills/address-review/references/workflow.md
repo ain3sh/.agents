@@ -194,10 +194,20 @@ gh api graphql -f query='
 
 ## 9. Re-request Review
 
+**Never re-request anyone who has approved this PR.** An `APPROVED` review at any point disqualifies that login for good, even if they later commented, requested changes, or had the approval dismissed. No exceptions and no user-confirmation path: the user re-requests approvers manually when a special case calls for it.
+
+Candidates are only the reviewers whose threads this pass addressed. Subtract every approver, then re-request whoever remains. If nobody remains, skip this step.
+
+```bash
+APPROVERS=$(gh api --paginate "repos/$REPO/pulls/<number>/reviews" \
+  --jq '.[] | select(.state == "APPROVED") | .user.login' | sort -u)
+# Drop every login in $APPROVERS from the candidate list before the POST below.
+```
+
 Use REST -- `gh pr edit --add-reviewer` currently fails on the Projects-classic GraphQL deprecation (see `pr-context` skill):
 
 ```bash
 gh api "repos/$REPO/pulls/<number>/requested_reviewers" \
   --method POST \
-  -f "reviewers[]=<reviewer-login>"
+  -f "reviewers[]=<non-approver-login>"
 ```
