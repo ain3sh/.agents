@@ -60,6 +60,12 @@ on *what* to do and these rules win on *how carefully*.
 12. **Diagnose CI from logs.** Read the failing job's log and the runner state
     before editing code or calling a failure flaky. Runner loss is not a test
     timeout; a fixture refresh changes only the intended request fields.
+13. **Never defer a real issue.** "I'll open a ticket", "follow-up PR", "out of
+    scope", "tracked separately", and TODO comments are not answers to a real
+    problem, even one the change did not introduce. Fix it in this run's
+    change, or record the specific decision only Ainesh can make. Disagree
+    only when the problem is not real, with evidence. Ainesh rejects
+    deferral as poor taste.
 
 ## When a run opens a new PR
 
