@@ -30,7 +30,7 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 | `/demo-pr` | tuistory before/after filming | `/demo-pr 123` |
 | `/implement` | spec-first exploration + planning; waits for approval before coding | `/implement FAC-789` or `/implement "<description>"` |
 | `/retrospective` | stranger-review your own diff for entropy (dead weight / junk / perf / drift / scope) | `/retrospective` |
-| `/update-skill` | reflect → update skill → critique ×2 → PR | `/update-skill linear-cli` |
+| `/update-skill` | load harness-optimization (+ RCA/zoom-out/single-canon/patch-coherence as needed) → reflect → update skill → critique ×2 → PR | `/update-skill linear-cli` |
 | `/split-pr` | split long branch into stacked or independent PRs via cherry-pick | `/split-pr feat/big-branch` |
 
 ## Git Workflow Skills

@@ -8,6 +8,17 @@ argument-hint: "<skill-name> [context about what was learned]"
 
 Goal: a future agent with **no prior context** acts correctly at minimum tokens read.
 
+## 0. Load
+
+Load **harness-optimization** first, every time: it finds the layer that made the wrong choice look right, which may not be this skill at all. Then load each skill below whose moment applies, unless it is already active this session:
+
+| Moment | Load |
+|---|---|
+| The update answers a bug or misbehavior whose cause isn't named yet | **root-cause-analysis** |
+| You haven't mapped the skill or the skills it composes with | **zoom-out** |
+| The edit touches something other files rely on: a command, flag, config key, or a rule another skill points to | **single-canon** |
+| Two or more candidate edits or layers compete (this skill, another skill, AGENTS.md, a hook) | **patch-coherence** |
+
 ## 1. Reflect
 
 Review the session's work (or `$ARGUMENTS`). Identify:
@@ -16,8 +27,6 @@ Review the session's work (or `$ARGUMENTS`). Identify:
 - **Dead ends**: what looked promising but failed, and why.
 - **Missing info**: what the skill should have covered but didn't.
 - **Key insights**: non-obvious learnings that save future agents significant time.
-
-If the update is motivated by droids misbehaving (repeating a mistake, skipping a skill, misreading a hook), load **harness-optimization** first. It finds the layer that made the wrong choice look right, which may not be this skill at all.
 
 ## 2. Read whole, in aggregate
 
