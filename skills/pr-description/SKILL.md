@@ -14,6 +14,7 @@ Make the merge case legible from the title and first screen; later sections prov
 |---|---|
 | Analyze and draft | Load `references/workflow.md`; use three-dot diff analysis, outcome-first title selection, `What / Why / How`, and the first-screen skim gate. |
 | Large diff (roughly 1k+ lines or 20+ files) | Run `scripts/diff-composition.py BASE HEAD --core <behavior files> --tooling <prefixes>`; put the composition table and core breakdown under **What** (template in `references/conditional-sections.md`). |
+| One rule changed across three or more surfaces, or three or more behaviors changed at once | Open **What** with the rule's before and after, then the per-surface Before → After table: grammar from `show-me` (Policy before/after table), placement in `references/conditional-sections.md`; later sections point at it instead of restating it. |
 | Add conditional sections | Load `references/conditional-sections.md` only when a catalog trigger fires. |
 | Explain architecture or code shape | Load `show-me` with the verified diff and GitHub destination; place its view under **Architecture** (`references/conditional-sections.md`). Use `references/artifacts.md` when it returns files to upload. |
 | Show a visual change | Open the PR first, then load `references/visual-evidence.md` and capture live proof. |
@@ -51,12 +52,20 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
    only evidence the diff or live verification actually supports.
 7. Never compose the body through shell heredocs or publish with `gh pr edit`;
    use a file tool and `gh api -F body=@file`, stamp the `pr-desc-base`
-   marker last, then verify the live body byte-for-byte.
+   marker last (the full HEAD sha, never the merge base), then verify the
+   live body byte-for-byte.
 8. Never describe a large diff's size in prose or with estimated percentages;
    a reviewer prices the PR from the first screen, so the computed composition
    table with a per-row action goes there, before **Why**.
 9. Never attach durations to review passes or to the review; name the commits,
    files, and the one thing to check per pass.
+10. Never open **What** with the most vivid instance when the diff installs a
+    rule across surfaces; the first sentence states the rule's before and
+    after, and the instance follows as its first consequence.
+11. Never restate the Before → After table in Risk & Impact or in a list of
+    removed safeguards; one owner per fact. The list keeps only what the
+    table cannot carry: member lists, deleted files and exports, dead
+    branches, and a Not-removed line.
 
 ## Failure map
 
@@ -66,6 +75,11 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 | Impact is vague despite strong evidence | Preview the decisive fact in **What**; keep full proof in its conditional section. |
 | Reviewer must scroll to know why to merge | Run the skim gate in `workflow.md` and rewrite the first screen. |
 | Diff is large and the body explains the size in prose, or the composition sits in Reviewer Guide | Run `scripts/diff-composition.py`; move the table and core breakdown under **What** (`conditional-sections.md`, Diff composition). |
+| **What** opens with an example or consequence ("`JSON.parse` now works") instead of the rule | Rewrite the first sentence as the rule's before → after; the example becomes the second paragraph (`workflow.md`, skim gate). |
+| Many surfaces change and the reviewer must assemble the picture from prose | Add the Before → After table directly under **What** (`conditional-sections.md`). |
+| Risk & Impact or a removed-safeguards list restates the Before → After table | Cut it to what the table cannot carry (Rule 11). |
+| Core breakdown is a wall of per-file line counts | Keep a count only where it changes the reviewer's action (`conditional-sections.md`, Diff composition). |
+| A commit table lists test titles | Name the invariants each commit's tests pin, with the file (`workflow.md`, Reviewer Guide). |
 | Body cites SHAs after a rebase or force-push | Sweep with the stale-SHA step in `refresh.md`; rerun the composition script. |
 | Refresh says no-op but the user asked for prose/title improvement | Use the explicit-audit bypass in `refresh.md`. |
 | Repeated refreshes read like commit history | Replace the revision log with only changes since the last human review. |

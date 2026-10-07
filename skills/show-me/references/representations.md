@@ -22,6 +22,7 @@ When no relation earns the section, let the owning workflow omit it.
 | What does the algorithm do? | Typed code or labelled pseudocode | decisions, mutations, return shape |
 | What shape should the code have? | Types and signatures | minimal types, function boundaries, ownership |
 | What structurally changed? | Before/after of real structure | unchanged context plus the delta |
+| What happens to each surface or behavior now? | Policy before/after table | one row per surface; old mechanism and limit, new limit and pointer, owning commit or module; the surprise row marked |
 | Which work depends on which? | Dependency graph | nodes, directed edges, independent branches |
 | Which path produced the failure? | Causal flow | expected path, first wrong edge, downstream symptom |
 | How much changed, under what conditions? | Quantitative comparison | units, scale, baseline, measurement frame, delta |
@@ -237,6 +238,34 @@ divider. Keep unchanged actors in corresponding positions, mute unchanged
 structure, and highlight the changed edge or boundary. The panels must expose
 the delta, not repeat two inventories. Use the caller's existing contrast
 classes rather than inventing another theme.
+
+### Policy before/after table
+
+For a rule that changes on several surfaces at once (limits, markers, routing,
+ownership), when the reader's question is "what happens to each surface now?"
+rather than how one structure changed. Alignment carries the meaning: a reader
+scans one column to see every old limit, the next to see every new one.
+
+```markdown
+| Surface | Before | After | Commit |
+| --- | --- | --- | --- |
+| Execute, direct | 8 KiB head + 8 KiB tail, then a 12,000-character keyword summary | 16 KiB as composed; terminal log, kept when cut | 2 |
+| Read, direct | 60,000-character head-only cut | 64 KiB head and tail; `Read <path> with offset/limit` | 3 |
+| **Other direct tools** | **no bound** | **16 KiB; artifact** | 3 |
+```
+
+- One row per surface or behavior the reader could ask about, including those
+  that only lose a mechanism. Cells are one clause: old mechanism and limit,
+  new limit and where the whole lives.
+- Mark the surprise row (a surface that gains a bound it never had, or loses
+  one it always had); that is the row a reader will test.
+- Order by owner (commit, module) then by reader interest, so the table doubles
+  as a map into the owning workflow's commit or file inventory.
+- The last column names the owner the reader can open: a commit, a module, a
+  flag. Omit it only when every row has the same owner.
+- Every After cell traces to source reread now, not to the design note; the
+  destination's later sections point at the table instead of restating its
+  rows.
 
 ### Dependency graph
 

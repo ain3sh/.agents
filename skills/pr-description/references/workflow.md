@@ -15,6 +15,7 @@ pr-description checklist:
 - [ ] Title: outcome/invariant first, type(scope), imperative, <=72 chars
 - [ ] First screen passes the skim gate (five questions on a large diff)
 - [ ] Large diff? Composition table computed by scripts/diff-composition.py, placed under What
+- [ ] Rule across 3+ surfaces, or 3+ behaviors? First sentence states before → after; Before → After table under What
 - [ ] Five required sections present; conditional catalog walked row by row
 - [ ] Architecture needed? View accepted by show-me for GitHub, or section omitted
 - [ ] Concrete visual change? Live proof attached high in body (visual-evidence.md)
@@ -84,6 +85,14 @@ Use two to four short sentences plus one compact table or list when that scans
 faster. The opening stands alone without the ticket. For a large structural PR,
 the order is **What** (outcome + decisive number) → composition table → core
 breakdown → **Why** → **How** → one-line **Net effect for users**.
+
+When the diff installs one rule across three or more surfaces, or changes three
+or more behaviors at once, the first sentence states the rule's before and
+after; the most vivid instance is its first consequence, never the opener. The
+order is **What** (the rule) → Before → After table, one row per surface
+(`conditional-sections.md`) → composition table (large diff) → core breakdown
+→ **Why** → **How**. A reviewer who reads the instance first prices the PR as
+narrower than it is, then meets the rest as surprises.
 Link a design document here when it carries the rationale. Keep anti-goals,
 scope maps, detailed RCA, and file tours in their owning locations.
 A small PR may omit **Why** when the cause is self-evident.
@@ -97,7 +106,7 @@ Description.
 
 | # | Section | Fires when |
 |---|---|---|
-| 1 | Description | always; inline diff composition (large diff), anti-goals, scope map, design link, or RCA as needed |
+| 1 | Description | always; inline Before → After table (multi-surface), diff composition (large diff), anti-goals, scope map, design link, or RCA as needed |
 | 2 | Visual Evidence | concrete UI/TUI/CLI/rendered-media change |
 | 3 | Repro Recipe | new feature or fixed bug with a manual surface |
 | 4 | Architecture | a structural or code-shape question needs a view from show-me |
@@ -177,6 +186,11 @@ Never attach a duration to a pass or to the review; it reads as a promise the
 author cannot keep. Cite commits by ordinal and subject as well as SHA; a
 rebase invalidates every SHA in the body (`refresh.md`).
 
+When the body carries a commit table, its test column names the two to four
+invariants each commit's tests pin, with the file: a list of test titles sends
+the reviewer into the files to learn what is pinned. Keep red-first evidence as
+labels and failure counts, not prose.
+
 ### Risk & Impact
 
 Name scenarios, not categories. "Low risk — isolated" is valid only when true.
@@ -189,7 +203,9 @@ intent in Migration & Rollout and label it as a plan.
 
 Lead with observed behavior, not validator inventory. Tie evidence to listed
 risks. Use a before/after table for enumerable behavior and include unchanged
-rows that show preserved contracts. Pin behavior claims with `verified @`.
+rows that show preserved contracts; when the Description already carries the
+Before → After table, point at it and add only the `verified @` anchors. Pin
+behavior claims with `verified @`.
 
 Name the sentinel case that turns red on regression and why its layer owns the
 invariant. CI status does not belong here; compress format/lint/type/test status

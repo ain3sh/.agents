@@ -14,6 +14,14 @@ One-liner under Description; pre-empts drive-by "while you're here…" comments.
 **Out of scope**: moving the remaining `auth/` callers to the new session API — a separate migration with its own rollout; none of those callers is broken today.
 ```
 
+### Before → After table — one rule across three or more surfaces, or three or more behaviors changed at once
+
+When a reviewer could ask "and what happens to X now?" for several X, prose answers one X per paragraph and the reviewer assembles the picture; a table answers all of them in a minute. Grammar and fidelity rules: `show-me` `references/representations.md`, Policy before/after table. This file owns placement and ownership:
+
+- Directly under **What**, after the sentence that states the rule's before and after, before the composition table (large diff).
+- Verify every After cell against the diff, not the design note; the row that drifted is the one a reviewer will test.
+- The table owns those facts. Risk & Impact and any removed-safeguards list keep only what it cannot carry (member lists, deleted files and exports, dead branches, a Not-removed line); Verification points at it and adds `verified @` anchors; the commit table's "what changes" column stays one line per commit.
+
 ### Diff composition — large diffs (roughly 1k+ lines or 20+ files)
 
 The reviewer's first question on a large diff is not "why merge?" but "how much of this must I actually read?" Unanswered, it rejects the PR on size alone. Answer it on the first screen, directly under **What**, with a computed table and a per-bucket action, then name the files that carry behavior with their line counts.
@@ -49,7 +57,8 @@ Rules for this block:
 - Every number comes from the script. Hand estimates drift (a 57-file, 3.9k-line "tests" guess was 52 files and 3,771 lines when measured).
 - The `--core` list is the honesty check: any file in "mechanical" that changes behavior (a fail-closed branch, a policy seal) moves to core, even at 235 lines. Conversely, a core file whose diff is a reshape, not an addition, says so with before/after line counts and hunk count.
 - Every row ends in a reviewer action: Skip / Skim / Spot-check / Read / This is the review.
-- The core breakdown groups files by the change they make, with per-file line counts, and ends each group with one sentence of behavior. Four groups is typical; more than six means the PR needs `split-pr`.
+- The core breakdown groups files by the change they make, names each group's files, and ends each group with one sentence of behavior. Four groups is typical; more than six means the PR needs `split-pr`.
+- A per-file line count appears only where it changes what the reviewer does: a new file against a reshaped one (before/after counts and hunk count, as in the template), or the one file that holds most of a group. A count on every file is noise; the composition table already carries the totals.
 - Prose about size ("the diff is mostly mechanical, read honestly…") is not a substitute. A paragraph reads as an excuse; a table with actions reads as a plan. Do not put the table in Reviewer Guide: by then the reviewer has already decided.
 
 ### Scope map — multi-concern diffs that are not large
