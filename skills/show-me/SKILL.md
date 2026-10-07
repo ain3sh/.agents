@@ -1,61 +1,154 @@
 ---
 name: show-me
-description: Select and render one compact visual representation from verified evidence when code shape, control flow, state, ownership, dependencies, or a before/after change is clearer than prose. Use when the user invokes /show-me or asks to see rather than read an explanation.
+description: Explain the current topic visually from verified evidence: pseudocode, call trees, component and file trees, sequence and state diagrams, diffs of shape, before/after tables, or one HTML explainer. Use for /show-me, when the user asks to see rather than read, and when a reply about more than two actors, modules, states, or surfaces is turning into prose.
 argument-hint: [target] [as <form>]
 user-invocable: true
 ---
 
 # Show Me
 
-Make a verified relationship or code shape readable off the page: name the
-reader's question, choose the view, then render and check it for its destination.
+Make a verified relationship or code shape readable off the page. Name the one
+question the reader has, reread the source, draw the smallest view that answers
+it, and keep prose to the sentence the view cannot carry.
 
 ## Act
 
-| Goal | Action |
+Pick the shape from the question. Every example below is illustrative; real
+views carry real symbols and paths (`references/representations.md`).
+
+**What does it do?** Pseudocode: decisions, mutations, return shape; drop
+language ceremony.
+
+```text
+on(save)
+  if content is unchanged
+    return cached result
+  write new content
+  return fresh result
+```
+
+**What calls what?** Call tree: indentation means "called by"; mark changed or
+failing edges; label async, conditional, retry, and fan-out edges.
+
+```text
+handleCreateSession                  routes/session.ts
+  validateRequest
+  SessionStore.insert
+  publish(session.created)
+    AgentWorker.run                  worker.ts   ← new owner
+      loadContext
+      callModel
+      persistResult
+```
+
+**How is the UI composed, where does state live?** Component tree in JSX, with
+only the state owners and boundaries the question needs.
+
+```tsx
+<SessionPage>                        {/* apps/web/routes/session.tsx */}
+  useSessionEvents()
+  <SessionToolbar>
+    <RunSkillButton />               {/* packages/ui */}
+  <SubmitBoundary>                   {/* state: submit result */}
+```
+
+**Where does each responsibility live?** Shallow file tree, one responsibility
+per line; `+ ~ #` annotations carry what changed.
+
+```text
+src/
+├── commands/        parses user actions
+├── sessions/        owns session state
+│   └── store.ts     + readingFocusByArtifactId, publishReadingFocus()
+└── transport/       sends API requests; ~ retries moved here from commands/
+```
+
+**Who acts in what order? How can state change?** Sequence or state diagram
+(numbered text in a terminal, Mermaid on GitHub or in a browser); grammars and
+actor rules in `references/representations.md`.
+
+**What changed?** A `diff` fence over the shape that already exists, when most
+of it is unchanged. Match the diff to the topic: call tree, file tree,
+component tree, or pseudocode.
+
+```diff
+ handleCreateSession
+   validateRequest
++  enforceQuota
+   SessionStore.insert
+   publish(session.created)
+     AgentWorker.run
+       loadContext
++        fetchPriorTurns
+       callModel
+       persistResult
++        emitUsageEvent
+```
+
+**What shape should the code have?** Types and signatures, the whole block when
+most of it is new or the reader needs a copyable target.
+
+```ts
+type JobState =
+  | { status: "queued" }
+  | { status: "running"; owner: WorkerId }
+  | { status: "done"; result: Result }
+
+run(job: QueuedJob): Promise<DoneJob>
+```
+
+**What happens to each surface now?** Policy before/after table: one row per
+surface, old mechanism and limit, new limit and pointer, owning commit; the
+surprise row marked (`references/representations.md`).
+
+**Too dense for text or Mermaid?** One focused HTML file (diagram, explainer,
+mockup) in the product's colors and type with real labels, then open it or
+hand it to the caller (`references/surfaces.md`).
+
+Use one view per question. Several questions earn several views: a tree beside
+the diff that changes it is normal; a code companion (one typed block) fills a
+detail the view cannot hold. Scope decides size: keep every call, file, state,
+and boundary the question needs and nothing it does not.
+
+| Situation | Action |
 |---|---|
-| Answer `/show-me` | Resolve the target from arguments or the current topic and reread its source. Write the one question the reader needs answered, then choose the view with `references/representations.md`. |
-| Compress or compose | Transform evidence already established by the conversation or the owning workflow (trace, concern map, diff analysis, design decisions); do not restart the analysis; obey that workflow's budget and destination. |
-| Honor `as <form>` | Use the requested form when it represents the evidence without distortion; otherwise name the mismatch in one sentence and use the closest lossless form. |
-| Render or embed a visual explanation | Load `references/surfaces.md`: terminal text, GitHub Mermaid/code or images, browser HTML/SVG, and reused Excalidraw renders. |
-| Compose into a PR or design doc | Take the caller's verified facts, reader question, destination, and theme/components. Return the checked view and any necessary code companion; the caller owns section placement, document-wide checks, and authorized publishing. |
-| Answer a simple fact | One sentence, no view. |
+| `/show-me [target] [as <form>]` | Resolve the target from arguments or the current topic, reread its source, write the reader's question, choose the shape above. Honor `as <form>` unless it would distort the evidence; then name the mismatch in one sentence and use the closest lossless form. |
+| Compose into a PR, design doc, or review | Take the caller's verified facts, reader question, destination, and theme; return the checked view and any companion. The caller owns placement, document-wide checks, and publishing. Do not restart its analysis. |
+| Render or embed | `references/surfaces.md`: terminal text, GitHub Mermaid/code/images, browser HTML/SVG, reused Excalidraw renders. |
+| A simple fact | One sentence, no view. |
 
 ## Detect
 
-Use show-me when prose is juggling more than two actors, transitions, modules,
-or dependencies; when order, topology, ownership, state, or a before/after delta
-carries the point; or when the reader needs code shape (types, signatures,
-control structure) before implementing or reviewing. Uncertainty, rationale,
-trade-offs, and evidence quality stay prose.
+Draw when prose is juggling more than two actors, transitions, modules,
+dependencies, or surfaces; when order, topology, ownership, state, or a
+before/after delta carries the point; or when the reader needs code shape
+(types, signatures, control structure) before implementing or reviewing.
+Uncertainty, rationale, trade-offs, and evidence quality stay prose.
 
-## Output
+## Reply shape
 
 ```text
 <label naming the question or relationship>
-<primary view>
-<optional code companion: one typed block for a detail the view cannot hold>
+<view>
+<optional code companion>
 Implication: <one sentence, only when it adds a consequence the view does not state>
 ```
 
-Accept the view only when all three hold:
+## Check before sending
 
-- **Recoverable**: the reader reads the relationship off the view instead of
-  reconstructing it from sentences; every indentation, arrow, row, and diff
-  line encodes a relation they can follow (call nesting, containment,
-  ownership, sequence, decision, transition, dependency). Branches that merely
-  enumerate what a node also does are a bullet list; fitting a budget proves nothing.
-- **Faithful**: every node, edge, type, and line traces to source reread now;
-  unknown edges are marked or omitted; quoted code carries its path; pseudocode,
-  illustrative blocks, and elisions are labelled.
+- **Recoverable**: every indentation, arrow, row, and diff line encodes one
+  relation the reader can follow (call nesting, containment, ownership,
+  sequence, decision, transition, dependency). Branches that enumerate what a
+  node also does are a list, not a tree.
+- **Faithful**: every node, edge, type, and quoted line traces to source reread
+  now; unknown edges are marked `order unverified` or omitted; quoted code
+  carries its path; pseudocode and proposed shapes are labelled.
 - **Renders**: the destination displays the grammar and the view stays legible
-  at its width (`references/surfaces.md`).
+  at its width (`references/surfaces.md`). If rendering is blocked, label the
+  draft unverified.
 
-If the relationship is not recoverable or faithful, narrow it or omit the view.
-If rendering is blocked, label the draft unverified; do not present it as checked.
-One primary view per question; multiple questions can earn complementary views,
-not duplicate illustrations. Inline text budgets are roughly 40 lines direct
-or 20 embedded, unless the caller says otherwise. HTML has no source-line budget.
+Omit a view only when the diff has no relation to draw (several unrelated
+concerns); say so and let the owning workflow omit its section.
 
 ## Rules
 
@@ -63,24 +156,27 @@ or 20 embedded, unless the caller says otherwise. HTML has no source-line budget
    this skill changes their representation.
 2. Never simplify away a transition, dependency, or state the owning workflow's
    invariant depends on.
-3. Never treat rendering as publishing permission. Hand files to the caller;
+3. Never shrink a view to a line budget or drop it over one unverified detail;
+   cut scope the question did not ask for, and mark the unknown.
+4. Never treat rendering as publishing permission. Hand files to the caller;
    its authorized publish step owns uploads and external writes.
 
 ## Failure map
 
 | Symptom | Action |
 |---|---|
-| View is a decorated paragraph, or a list dressed as a tree or diff | Name the relation the reader must hold (calls, containment, order, state, dependency) and draw that with real symbols; if there is none, drop the view. |
+| Reply is a wall of prose about several actors, with a view as an afterthought | Lead with the view; keep the one sentence it cannot carry. |
+| View is a decorated paragraph, or a list dressed as a tree or diff | Name the relation the reader must hold and draw that with real symbols; if there is none, drop the view. |
 | Visual and prose say the same thing | Delete the prose; keep one implication sentence if needed. |
-| Two views overlap | Keep the clearer one. A second view must answer a distinct reader question; a code companion fills a detail the primary view cannot hold. |
+| Two views answer the same question | Keep the clearer one; a companion fills a detail, it does not repeat the view. |
 | Inline output too dense | Reduce scope, not font size; move to a browser HTML view only when the detail is essential. |
 | Mermaid or HTML would land in a plain terminal | Use the terminal grammar in `references/surfaces.md`. |
-| Output is a full walkthrough or RFC | Cut to one view; `/explain-diff` owns walkthroughs, `design-doc` owns RFCs and memos. |
+| Output is a full walkthrough or RFC | Cut to the views; `/explain-diff` owns walkthroughs, `design-doc` owns RFCs and memos. |
 
 ## References
 
 Load on demand; do not reabsorb into this file:
 
-- `references/representations.md`: question-to-view matrix, layout gate, grammars, code fidelity, companion.
+- `references/representations.md`: question-to-view matrix, layout gate, code fidelity, companion, and the grammars that need rules (sequence, state, dependency, causal, quantitative, policy before/after, graphical panels).
 - `references/surfaces.md`: rendering, themes, embedding, source access, checks, and local handover.
 - `references/replay.md`: behavioral replay scenarios and grading.

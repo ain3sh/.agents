@@ -90,51 +90,11 @@ and let the owning workflow omit its section.
 
 ## Inline grammars
 
-Every example below is illustrative; its symbols are placeholders for real
-ones. Text grammars render everywhere. Mermaid variants render on GitHub and
-in a browser (`surfaces.md`).
-
-### Responsibility tree
-
-```text
-feature/
-├── route.ts       request boundary
-├── service.ts     canonical orchestration
-└── repository.ts  persistence only
-```
-
-Keep it shallow; include only paths needed to explain ownership.
-
-### Component tree
-
-Use JSX: it is the composition language the reader already knows, and props
-and state annotations sit where they apply.
-
-```tsx
-<CheckoutPage>
-  <CartSummary items={cart.items} />
-  <PaymentForm />                     {/* owns: payment draft */}
-  <SubmitBoundary>                    {/* reads: cart + payment */}
-    <ErrorNotice />                   {/* state: submit result */}
-  </SubmitBoundary>
-</CheckoutPage>
-```
-
-Include only state and boundaries that affect the question; never the full
-component catalog.
-
-### Call tree
-
-```text
-handleRequest()
-└── resolveTarget()
-    ├── loadItems()
-    └── selectCandidate()  ← changed
-```
-
-Indentation means synchronous ownership. Label async, conditional, retry, or
-fan-out edges explicitly; when the condition itself matters, quote it as a
-code companion.
+The short grammars (pseudocode, call tree, component tree, file tree, diff of
+shape, types) live in `SKILL.md`; this file holds the ones that need rules.
+Every example is illustrative; its symbols are placeholders for real ones. Text
+grammars render everywhere. Mermaid variants render on GitHub and in a browser
+(`surfaces.md`).
 
 ### Sequence
 
@@ -192,52 +152,14 @@ stateDiagram-v2
 The table carries invariants; the diagram carries topology. Do not collapse
 distinct states to shorten either.
 
-### Typed code and pseudocode
+### Before/after panels (graphical)
 
-```ts
-// pseudocode
-for (const item of items) {
-  if (!eligible(item)) continue
-  candidates.push(score(item))
-}
-return maxBy(candidates, candidate => candidate.score)
-```
-
-Show decisions, mutations, and output. Omit language ceremony unless it
-changes behavior.
-
-### Types and signatures
-
-```ts
-type JobState =
-  | { status: "queued" }
-  | { status: "running"; owner: WorkerId }
-  | { status: "done"; result: Result }
-
-run(job: QueuedJob): Promise<DoneJob>
-```
-
-### Before/after of real structure
-
-Use a `diff` fence over a tree, a type, or a source hunk when most structure is
-unchanged and the delta is small:
-
-```diff
- type JobState =
-   | { status: "queued" }
--  | { status: "running" }
-+  | { status: "running"; owner: WorkerId }
-   | { status: "done"; result: Result }
-```
-
-Every changed line is structure a reader can find; see "Layout must encode a
-relation".
-
-For a graphical contrast, use before/after panels separated by a labelled
-divider. Keep unchanged actors in corresponding positions, mute unchanged
-structure, and highlight the changed edge or boundary. The panels must expose
-the delta, not repeat two inventories. Use the caller's existing contrast
-classes rather than inventing another theme.
+A `diff` fence is the text form of "what changed" (`SKILL.md`). For a graphical
+contrast, use before/after panels separated by a labelled divider. Keep
+unchanged actors in corresponding positions, mute unchanged structure, and
+highlight the changed edge or boundary. The panels must expose the delta, not
+repeat two inventories. Use the caller's existing contrast classes rather than
+inventing another theme.
 
 ### Policy before/after table
 
