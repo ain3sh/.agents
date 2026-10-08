@@ -38,17 +38,29 @@ reason, and say the reason in the post.
 Resolve anything not in the table with `slack ch list | rg <pod>` and
 `slack u list | rg -i <name>`; tag by user ID, never by name.
 
-## Shape (mrkdwn, under ~150 words)
+## Shape (mrkdwn, one short paragraph, under ~45 words)
 
-1. `Review request: <PR URL|#N title> (ticket or program)`.
-2. `*What it does*`: 3-5 `•` bullets in reader terms, including any deliberate
-   scope cut so nobody reviews for it.
-3. `*State*`: commits and base, CI, threads, body; areas touched and whether
-   backend is in it.
-4. Last line: the tags, each with its reason, and the explicit ask
-   ("could one of you take the approval?").
+Reviewers scan the channel to find what needs them; a long post hides that.
+The team said so on 2026-10-07 (`#pod-cli` ts `1791410360.287579`): one line
+per PR, title visible, and when several are ready, one message sorted by
+priority. So:
 
-Reference post (CLI + agent core): `#pod-cli` ts `1791365435.282049`.
+```
+Review request: <PR URL|#N title>. <state in one clause: green, N open threads, who approved>; needs <tag> (<reason>)[, <tag> (<reason>)]. Details in thread.
+```
+
+Everything else (what it does, scope cuts, base and head, areas touched)
+is the first reply in the post's own thread, not the post. No headings, no
+bullets, no second paragraph in the root.
+
+When three or more PRs pass the gate in the same pass, post one digest
+instead of one post each: an opening clause (`Three CLI PRs are green and
+need review:`), then one line per PR in priority order (blocking someone
+else first, then oldest first), each `• <PR URL|#N title> — <one clause>
+(<tag>)`. Per-PR detail goes in the digest's thread, one reply per PR.
+
+Reference posts: single `#pod-cli` ts `1791415296.907529`; digest `#pod-cli`
+ts `1791404474.924979`.
 
 ## Delivery
 
