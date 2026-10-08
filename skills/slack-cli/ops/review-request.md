@@ -38,29 +38,28 @@ reason, and say the reason in the post.
 Resolve anything not in the table with `slack ch list | rg <pod>` and
 `slack u list | rg -i <name>`; tag by user ID, never by name.
 
-## Shape (mrkdwn, one short paragraph, under ~45 words)
+## Shape (a numbered list, nothing else)
 
 Reviewers scan the channel to find what needs them; a long post hides that.
 The team said so on 2026-10-07 (`#pod-cli` ts `1791410360.287579`): one line
-per PR, title visible, and when several are ready, one message sorted by
-priority. So:
+per PR, title visible, sorted by priority. The root is a numbered list, one
+PR per line, PR title then the bare URL, in priority order (blocking someone
+else first, then oldest first), and a last line with the tags and the ask:
 
 ```
-Review request: <PR URL|#N title>. <state in one clause: green, N open threads, who approved>; needs <tag> (<reason>)[, <tag> (<reason>)]. Details in thread.
+Review request(s), green and ready:
+1. perf(cli): own the connector catalog per scope and avoid redundant cold catalog requests - https://github.com/Factory-AI/factory-mono/pull/23051
+2. perf(cli): open one startup bootstrap before the run module loads and share it between daemon and exec - https://github.com/Factory-AI/factory-mono/pull/23054
+<@U09F1267NEQ> <@U07UL8E7JES> (agent core in 2) could one of you take these?
 ```
 
-Everything else (what it does, scope cuts, base and head, areas touched)
-is the first reply in the post's own thread, not the post. No headings, no
-bullets, no second paragraph in the root.
+A single ready PR is the same list with one item. Every PR that passes the
+gate in the same pass goes in the same list, never one post each. State
+(approvals so far, threads, head), what it does, and scope cuts are thread
+replies, one per PR, not the root. No headings, no bullets, no prose
+paragraph in the root.
 
-When three or more PRs pass the gate in the same pass, post one digest
-instead of one post each: an opening clause (`Three CLI PRs are green and
-need review:`), then one line per PR in priority order (blocking someone
-else first, then oldest first), each `• <PR URL|#N title> — <one clause>
-(<tag>)`. Per-PR detail goes in the digest's thread, one reply per PR.
-
-Reference posts: single `#pod-cli` ts `1791415296.907529`; digest `#pod-cli`
-ts `1791404474.924979`.
+Reference post: `#pod-cli` ts `1791404474.924979`.
 
 ## Delivery
 
