@@ -8,7 +8,7 @@ Exact invocations and known dead ends for the heavier validators. Policy
 Canonical shape:
 
 ```bash
-~/.agents/scripts/run-check <label> [--cwd <dir>] [--env KEY=VALUE]... [--exclusive] -- <scoped-validator-argv>
+~/.agents/scripts/run-check <label> [--cwd <dir>] [--env KEY=VALUE]... [--env-file <path>]... [--unset-prefix <prefix>]... [--exclusive] -- <scoped-validator-argv>
 ```
 
 `run-check` is the only output/process owner for validators:

@@ -103,12 +103,24 @@ class CheckGuardTest(unittest.TestCase):
                     "run-check must be the entire shell command",
                 )
 
+    def test_allows_env_file_and_unset_prefix(self) -> None:
+        command = (
+            "~/.agents/scripts/run-check record --unset-prefix FACTORY_ "
+            "--env-file ~/factory/dev-env.json --env LLM_RECORD_MODE=true "
+            "--cwd apps/cli -- npm run test:llm-integration:record mid-conversation"
+        )
+
+        self.assertIsNone(self.analyze(command))
+
     def test_rejects_malformed_run_check_arguments(self) -> None:
         cases = (
             "~/.agents/scripts/run-check test pytest",
             "~/.agents/scripts/run-check --cwd /tmp -- pytest",
             "~/.agents/scripts/run-check test --cwd -- pytest",
             "~/.agents/scripts/run-check test --env PATH -- pytest",
+            "~/.agents/scripts/run-check test --env-file -- pytest",
+            "~/.agents/scripts/run-check test --unset-prefix -- pytest",
+            "~/.agents/scripts/run-check test --unset-prefix --exclusive -- pytest",
         )
 
         for command in cases:
@@ -308,6 +320,49 @@ class RunCheckTest(unittest.TestCase):
                 log_path.read_text(),
                 f"{log_line}{cwd}\nstderr-live\nfinished\n[run-check] exit: 7\n",
             )
+
+    def test_loads_env_files_and_drops_prefixed_inherited_env(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_dir = Path(temp_dir) / "logs"
+            dotenv = Path(temp_dir) / "probe.env"
+            dotenv.write_text('A_PROBE=plain\n# comment\nexport B_PROBE="quoted"\n')
+            json_file = Path(temp_dir) / "probe.json"
+            json_file.write_text('{"C_PROBE": "json", "DROP_ME_BASE": "from-file"}')
+            child = (
+                "import os; "
+                "print(os.environ['A_PROBE'], os.environ['B_PROBE'], os.environ['C_PROBE'], "
+                "os.environ.get('DROP_ME_INHERITED', 'unset'), os.environ['DROP_ME_BASE'], "
+                "flush=True)"
+            )
+            completed = subprocess.run(
+                [
+                    str(RUN_CHECK),
+                    "test",
+                    "--unset-prefix",
+                    "DROP_ME_",
+                    "--env-file",
+                    str(dotenv),
+                    "--env-file",
+                    str(json_file),
+                    "--",
+                    sys.executable,
+                    "-c",
+                    child,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                env={
+                    **os.environ,
+                    "DROID_CHECK_LOG_DIR": str(log_dir),
+                    "DROP_ME_INHERITED": "leaked",
+                },
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stdout)
+            # Inherited DROP_ME_* is removed; a file entry with the same prefix is applied after.
+            self.assertIn("plain quoted json unset from-file\n", completed.stdout)
 
     def test_uses_the_nearest_nvmrc_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

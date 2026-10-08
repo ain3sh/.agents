@@ -14,7 +14,7 @@ react-doctor, or anything in a monorepo.
 ## Act: run checks through one primitive
 
 ```bash
-~/.agents/scripts/run-check <label> [--cwd <dir>] [--env KEY=VALUE]... [--exclusive] -- <scoped-validator-argv>
+~/.agents/scripts/run-check <label> [--cwd <dir>] [--env KEY=VALUE]... [--env-file <path>]... [--unset-prefix <prefix>]... [--exclusive] -- <scoped-validator-argv>
 ```
 
 Examples:
@@ -35,6 +35,10 @@ with `.nvmrc`, it also runs the validator through NVM with that selector and
 fails before the validator starts if the pinned runtime cannot be resolved.
 Use `--env PATH="...:$PATH"` for additional tool directories or repositories
 without `.nvmrc`; an `.nvmrc` remains the canonical Node selector when present.
+Secrets never go on the command line: `--env-file <path>` loads a JSON object
+or dotenv file into the child's environment, and `--unset-prefix <prefix>`
+drops inherited variables first (for example `--unset-prefix FACTORY_
+--env-file ~/factory/dev-env.json` for a live-recording run).
 
 Use `--exclusive` for compiler-backed lint, typechecks, builds, and pooled/E2E
 tests. It queues heavy checks across sessions/worktrees on this host while
