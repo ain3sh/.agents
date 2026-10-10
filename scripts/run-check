@@ -20,6 +20,9 @@ READ_SIZE = 64 * 1024
 TERMINATION_GRACE_SECONDS = 1.0
 _ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _SLUG_RE = re.compile(r"[^a-z0-9._-]+")
+_TEST_FILE_RE = re.compile(r"\.(?:test|spec)\.[cm]?[jt]sx?$")
+_FAST_LINTERS = frozenset({"oxlint", "oxfmt"})
+_MAX_LIGHT_TEST_FILES = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,6 +160,23 @@ def _create_log(log_dir: Path, label: str) -> tuple[Path, object]:
     return Path(raw_path), os.fdopen(descriptor, "wb", buffering=0)
 
 
+def _is_light(command: list[str]) -> bool:
+    """A few named vitest files or a Rust linter skip the machine-wide lock.
+
+    Anything unrecognized stays heavy: tsc and type-aware lint hold ~5.5 GB
+    each, package scripts and turbo runs can fan out to whole suites or builds,
+    and benches and E2E runs need a quiet host. The file cap bounds vitest
+    workers (one per file) so concurrent light checks cannot exhaust RAM.
+    """
+    if any(word in token for token in command for word in ("bench", "e2e", "typecheck")):
+        return False
+    names = {Path(token).name for token in command}
+    if names & _FAST_LINTERS:
+        return True
+    test_files = sum(1 for token in command if _TEST_FILE_RE.search(token))
+    return "vitest" in names and 0 < test_files <= _MAX_LIGHT_TEST_FILES
+
+
 def _status(returncode: int) -> int:
     return 128 + -returncode if returncode < 0 else returncode
 
@@ -255,7 +275,9 @@ def _run(options: Options) -> int:
 
     lock = None
     try:
-        if options.exclusive:
+        if options.exclusive and _is_light(options.command):
+            emit("[run-check] exclusive: skipped (targeted tests or fast linter)\n")
+        elif options.exclusive:
             lock_path = Path(f"/tmp/droid-checks-{os.getuid()}.exclusive.lock")
             lock = lock_path.open("a+b")
             emit(f"[run-check] exclusive: waiting for {lock_path}\n")
