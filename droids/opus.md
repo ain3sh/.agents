@@ -1,7 +1,7 @@
 ---
 name: opus
 description: Opus 5.5 for clean code, UI/UX, any writing/prose/copy, NOT data gathering or extensive due diligence.
-model: custom:factory://opus-5-5
+model: custom:factory://opus-5-5-fast
 reasoningEffort: high
 ---
 
