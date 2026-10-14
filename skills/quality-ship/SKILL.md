@@ -73,11 +73,14 @@ Never `npm install` or `pip install` in a worktree.
 
 ## Run all detected checks
 
-Detect tooling from root and affected-workspace configs and package scripts,
-then run each applicable check. Every "Typical command" below is validator
+Find each check's owner before running anything. Read the repo's documented
+validation commands (the command sections of `AGENTS.md`, `CONTRIBUTING*`) and
+the affected workspaces' package scripts, then the configs below. **A
+repo-documented command or package script owns its check; the table's
+command is only the fallback when none exists.** Every command is validator
 argv placed after `run-check ... --`:
 
-| Check | Detection signals | Typical command |
+| Check | Detection signals | Fallback when the repo has no script |
 |-------|-------------------|-----------------|
 | Format | `.oxfmtrc*`, `.prettierrc*`, `biome.json*`, `dprint.json*`, configured package scripts | `oxfmt --write --threads=1 <paths>` / `npx prettier --write <paths>` / `biome format --write <paths>` / `dprint fmt <paths>` |
 | Lint fix | `.oxlintrc*`, `eslint.config*`, `.eslintrc*`, `biome.json*`, configured package scripts | `oxlint --fix --threads=1 <paths>` / `npx eslint --fix <paths>` / `biome lint --apply <paths>` |
@@ -87,17 +90,17 @@ argv placed after `run-check ... --`:
 | Dead code (Python) | `*.py` in diff + `pyproject.toml` / `setup.py` | `vulture <changed-paths>` (or `uvx vulture`) |
 | AI-slop (JS/TS) | any `*.{js,jsx,ts,tsx}` in diff | `slop-scan delta` on changed-files temp dirs (recipe in references) |
 | React diagnostics | `react`/`react-dom`/`next`/`@remix-run/*` in `package.json` | `react-doctor . --scope changed --base <base> --verbose` |
-| Type check | `typecheck` package script, else `tsconfig.json` | the package's `typecheck` script, scoped per repo instructions; `npx tsc --noEmit -p <pkg>` only when no script exists (recipe in references) |
+| Type check | `tsconfig.json` | `npx tsc --noEmit -p <pkg>` |
 | Tests | `jest.config*`, `vitest.config*`, `pytest.ini` | Changed-file subset, serial workers (rules below) |
 
 - Every detected engine is a separate signal: Oxlint does not imply ESLint is
-  redundant, and Oxfmt does not prove Prettier is absent. Read the package
-  scripts and configs to identify the actual owners.
-- Prefer a repository's narrow package script when it preserves cwd-sensitive
-  config, env, or a deliberate multi-engine sequence. Otherwise invoke the
-  tool directly on changed paths.
-- **Avoid repo-wide aggregate scripts** (`npm run fix` / `npm run check`):
-  they can chain every tool across the monorepo. A package-scoped aggregate is
+  redundant, and Oxfmt does not prove Prettier is absent.
+- Owner scripts carry cwd-sensitive config, env, memory limits, and deliberate
+  multi-engine sequences that a direct tool call drops. Scope them with their
+  owner's flags (references → monorepo scoping); call the fallback directly
+  on changed paths only when no script exists.
+- **Never run a repo-wide aggregate unscoped** (`npm run fix` / `npm run check`
+  with no filter): it can chain every tool across the monorepo. A package-scoped aggregate is
   valid when the package script is the canonical owner; record the scope and
   reason in the checklist evidence.
 - Fix any issues found. Re-run until clean. Orchestrators follow **orchestrate**'s delegation boundary and preserve the existing coding owner's write ownership.
@@ -106,8 +109,8 @@ argv placed after `run-check ... --`:
 
 | Symptom | Action |
 |---|---|
-| `[run-check] error: ... requires NVM, but .../nvm-exec does not exist` | Missing tooling is a setup step: install NVM, `nvm install` in the repo, rerun through `run-check`. Never run validators raw or switch to table defaults -- the fallback skips the repo's scoped scripts. Blocked only if the install fails. |
-| Typecheck runs out of memory | You ran raw `tsc`. Run the package's `typecheck` script instead (references → heavy checks). |
+| `[run-check] error: ... requires NVM, but .../nvm-exec does not exist` | Missing tooling is a setup step: install NVM, `nvm install` in the repo, rerun through `run-check`. Never run validators raw or switch to table fallbacks -- they skip the repo's owner scripts. Blocked only if the install fails. |
+| Typecheck runs out of memory | You ran the fallback `tsc` past an owner script. Run the package's `typecheck` script (references → heavy checks). |
 
 ## Fix the cause, don't suppress the validator
 

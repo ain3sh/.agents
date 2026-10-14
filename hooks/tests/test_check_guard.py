@@ -13,6 +13,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from pathlib import Path
+from unittest import mock
 
 from hooks.pre_tool_use.check_guard import _validator_re, _violation
 
@@ -151,6 +152,17 @@ class ExecutableModeTest(unittest.TestCase):
 
 
 class RunCheckTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        # Real checks from other sessions hold the host slot; tests own a private one.
+        lock_dir = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(lock_dir.cleanup)
+        environ = mock.patch.dict(
+            os.environ, {"DROID_CHECK_LOCK_PATH": str(Path(lock_dir.name) / "slot.lock")}
+        )
+        environ.start()
+        cls.addClassCleanup(environ.stop)
+
     def test_exclusive_queue_cancellation_and_failure_release_across_worktrees(
         self,
     ) -> None:
@@ -202,12 +214,9 @@ class RunCheckTest(unittest.TestCase):
                 "sys.stdin.read(1); raise SystemExit(7)",
             )
             line(owner)
-            self.assertIn("exclusive: waiting", line(owner))
             self.assertIn("exclusive: acquired", line(owner))
             self.assertEqual(line(owner), "owner-running\n")
-            with Path(f"/tmp/droid-checks-{os.getuid()}.exclusive.lock").open(
-                "a+b"
-            ) as slot:
+            with Path(os.environ["DROID_CHECK_LOCK_PATH"]).open("a+b") as slot:
                 with self.assertRaises(BlockingIOError):
                     fcntl.flock(slot, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
@@ -476,8 +485,7 @@ class RunCheckTest(unittest.TestCase):
         assert process.stdout is not None
 
         process.stdout.readline()
-        process.stdout.readline()
-        process.stdout.readline()
+        self.assertIn("exclusive: acquired", process.stdout.readline())
         child_pid = int(process.stdout.readline())
         process.terminate()
         try:

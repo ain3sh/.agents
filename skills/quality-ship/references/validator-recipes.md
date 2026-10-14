@@ -24,6 +24,7 @@ Canonical shape:
   validator starts
 - `--exclusive` owns a per-user host-wide heavy-check slot, independent of
   cwd and log directory; queued checks stay attached and cancellable
+  (`DROID_CHECK_LOCK_PATH` relocates the slot for isolated test runs only)
 
 Pass extra executable directories without shell composition:
 
@@ -94,10 +95,9 @@ canonical script once per affected workspace, in separate attached calls:
 ~/.agents/scripts/run-check lint-cli --exclusive -- npm run lint:es -- --filter=@factory/cli
 ```
 
-Typecheck the same way: the package's `typecheck` script is the owner, not
-raw `tsc`. Factory packages run `bun check`, which passes on an 8 GB host
-where `tsc --noEmit -p <pkg>` runs out of memory. The root `typecheck` script
-already hardcodes `--concurrency=1`:
+Typecheck the same way. Factory packages' `typecheck` scripts run `bun check`,
+which passes on an 8 GB host where `tsc --noEmit -p <pkg>` runs out of memory.
+The root `typecheck` script already hardcodes `--concurrency=1`:
 
 ```bash
 ~/.agents/scripts/run-check typecheck-frontend --exclusive -- npm run typecheck -- --filter=@factory/frontend

@@ -20,7 +20,11 @@ MAX_LOG_FILES = 50
 READ_SIZE = 64 * 1024
 TERMINATION_GRACE_SECONDS = 1.0
 LOCK_POLL_SECONDS = 2.0
-EXCLUSIVE_LOCK_PATH = Path(f"/tmp/droid-checks-{os.getuid()}.exclusive.lock")
+EXCLUSIVE_LOCK_PATH = Path(
+    os.environ.get(
+        "DROID_CHECK_LOCK_PATH", f"/tmp/droid-checks-{os.getuid()}.exclusive.lock"
+    )
+)
 _ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _SLUG_RE = re.compile(r"[^a-z0-9._-]+")
 _TEST_FILE_RE = re.compile(r"\.(?:test|spec)\.[cm]?[jt]sx?$")
