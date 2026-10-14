@@ -94,6 +94,15 @@ canonical script once per affected workspace, in separate attached calls:
 ~/.agents/scripts/run-check lint-cli --exclusive -- npm run lint:es -- --filter=@factory/cli
 ```
 
+Typecheck the same way: the package's `typecheck` script is the owner, not
+raw `tsc`. Factory packages run `bun check`, which passes on an 8 GB host
+where `tsc --noEmit -p <pkg>` runs out of memory. The root `typecheck` script
+already hardcodes `--concurrency=1`:
+
+```bash
+~/.agents/scripts/run-check typecheck-frontend --exclusive -- npm run typecheck -- --filter=@factory/frontend
+```
+
 For a script without a baked-in concurrency flag, pass `--concurrency=1`
 to Turbo on the owning side of `--`. Inspect its dry-run task graph: selected
 dependencies may add tasks even with one workspace filter. Preserve required

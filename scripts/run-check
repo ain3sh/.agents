@@ -289,7 +289,10 @@ def _node_command(
     nvm_dir = Path(env.get("NVM_DIR", str(Path.home() / ".nvm"))).expanduser()
     nvm_exec = nvm_dir / "nvm-exec"
     if not nvm_exec.is_file():
-        raise FileNotFoundError(f"{nvmrc} requires NVM, but {nvm_exec} does not exist")
+        raise FileNotFoundError(
+            f"{nvmrc} requires NVM, but {nvm_exec} does not exist; "
+            f"install NVM, run `nvm install` in {nvmrc.parent}, then rerun this check"
+        )
 
     selector = nvmrc.read_text().strip()
     if not selector:
