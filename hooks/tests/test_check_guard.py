@@ -144,6 +144,22 @@ class CheckGuardTest(unittest.TestCase):
         self.assertIsNone(self.analyze('printf "npm run test && pytest"'))
         self.assertIsNone(self.analyze('echo "&&" pytest'))
 
+    def test_ignores_heredoc_bodies(self) -> None:
+        cases = (
+            "git commit -F - <<'EOF'\nbun check replaced tsc\nEOF\ngit push",
+            "cat <<-END > notes\n\tpytest tests/\n\tEND",
+            "cat <<A <<B\nnpm run test\nA\neslint .\nB",
+        )
+        for command in cases:
+            with self.subTest(command=command):
+                self.assertIsNone(self.analyze(command))
+
+    def test_checks_commands_after_heredoc(self) -> None:
+        self.assertEqual(
+            self.analyze("cat <<'EOF' > notes\nhello\nEOF\npytest tests/"),
+            "validator commands must use run-check",
+        )
+
 
 class ExecutableModeTest(unittest.TestCase):
     def test_hook_and_runner_are_executable(self) -> None:

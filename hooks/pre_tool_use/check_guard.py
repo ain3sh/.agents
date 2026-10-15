@@ -69,6 +69,34 @@ def _validator_re(tools: list[str]) -> re.Pattern[str]:
     return re.compile(rf"^\s*{_PREFIX}(?:{tools_alt}{_RUNNERS})")
 
 
+def _heredoc_delimiters(line: str) -> list[tuple[str, bool]]:
+    """(delimiter, strips_tabs) for each heredoc the line opens, in order."""
+    try:
+        tokens = _tokenize(line)
+    except ValueError:
+        return []
+    return [
+        (_normalize_token(word.removeprefix("-")), word.startswith("-"))
+        for operator, word in zip(tokens, tokens[1:])
+        if operator == "<<"
+    ]
+
+
+def _strip_heredocs(command: str) -> str:
+    """Drop heredoc bodies: they are stdin data, never commands to check."""
+    kept: list[str] = []
+    pending: list[tuple[str, bool]] = []
+    for line in command.split("\n"):
+        if pending:
+            delimiter, strips_tabs = pending[0]
+            if (line.lstrip("\t") if strips_tabs else line) == delimiter:
+                pending.pop(0)
+            continue
+        kept.append(line)
+        pending = _heredoc_delimiters(line)
+    return "\n".join(kept)
+
+
 def _tokenize(command: str) -> list[str]:
     lexer = shlex.shlex(
         command,
@@ -202,7 +230,7 @@ def _violation(
     fire_and_forget: bool,
     validator_re: re.Pattern[str],
 ) -> str | None:
-    tokens = _tokenize(command)
+    tokens = _tokenize(_strip_heredocs(command))
     segments = _segments(tokens)
     operators = [token for token in tokens if _is_shell_operator(token)]
 
