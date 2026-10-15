@@ -22,9 +22,10 @@ Canonical shape:
 - `--cwd` and repeatable `--env` options replace shell prelude composition
 - the nearest `.nvmrc` above the check cwd selects Node through NVM before the
   validator starts
-- `--exclusive` owns a per-user host-wide heavy-check slot, independent of
-  cwd and log directory; queued checks stay attached and cancellable
-  (`DROID_CHECK_LOCK_PATH` relocates the slot for isolated test runs only)
+- `--exclusive` owns one of two per-user host-wide heavy-check slots,
+  independent of cwd and log directory; queued checks stay attached and
+  cancellable (`DROID_CHECK_LOCK_PATH` relocates the slots for isolated test
+  runs only)
 
 Pass extra executable directories without shell composition:
 

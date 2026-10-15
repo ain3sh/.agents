@@ -20,10 +20,12 @@ MAX_LOG_FILES = 50
 READ_SIZE = 64 * 1024
 TERMINATION_GRACE_SECONDS = 1.0
 LOCK_POLL_SECONDS = 2.0
-EXCLUSIVE_LOCK_PATH = Path(
-    os.environ.get(
-        "DROID_CHECK_LOCK_PATH", f"/tmp/droid-checks-{os.getuid()}.exclusive.lock"
-    )
+EXCLUSIVE_SLOTS = 2
+_EXCLUSIVE_LOCK_BASE = os.environ.get(
+    "DROID_CHECK_LOCK_PATH", f"/tmp/droid-checks-{os.getuid()}.exclusive.lock"
+)
+EXCLUSIVE_LOCK_PATHS = tuple(
+    Path(f"{_EXCLUSIVE_LOCK_BASE}.{slot}") for slot in range(EXCLUSIVE_SLOTS)
 )
 _ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _SLUG_RE = re.compile(r"[^a-z0-9._-]+")
@@ -168,11 +170,11 @@ def _create_log(log_dir: Path, label: str) -> tuple[Path, object]:
 
 
 def _is_light(command: list[str]) -> bool:
-    """A few named vitest files or a Rust linter skip the machine-wide lock.
+    """A few named vitest files or a Rust linter skip the host's heavy-check slots.
 
-    Anything unrecognized stays heavy: tsc and type-aware lint hold ~5.5 GB
-    each, package scripts and turbo runs can fan out to whole suites or builds,
-    and benches and E2E runs need a quiet host. The file cap bounds vitest
+    Anything unrecognized stays heavy: type-aware lint holds ~5.5 GB, package
+    scripts and turbo runs can fan out to whole suites or builds, and benches
+    and E2E runs need a quiet host. The file cap bounds vitest
     workers (one per file) so concurrent light checks cannot exhaust RAM.
     """
     if any(word in token for token in command for word in ("bench", "e2e", "typecheck")):
@@ -205,27 +207,38 @@ def _describe_holder(holder: dict[str, object] | None) -> str:
     )
 
 
-def _acquire_exclusive(
-    lock: BinaryIO, options: Options, emit: Callable[[str], None]
-) -> None:
-    """Queue for the host lock, naming the check ahead each time it changes.
+def _try_slots(slots: list[BinaryIO]) -> BinaryIO | None:
+    for slot in slots:
+        try:
+            fcntl.flock(slot, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            continue
+        return slot
+    return None
 
-    The holder records itself in the lock file so waiters can show who they
+
+def _acquire_exclusive(options: Options, emit: Callable[[str], None]) -> BinaryIO:
+    """Queue for a host slot, naming the checks ahead each time they change.
+
+    Holders record themselves in their slot file so waiters can show who they
     are behind; a blocking flock would look identical to a hang.
     """
     waited_since = time.monotonic()
-    shown: tuple[object, object] | None = None
-    while True:
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except BlockingIOError:
-            holder = _lock_holder(lock)
-            key = (holder or {}).get("pid"), (holder or {}).get("label")
-            if key != shown:
-                emit(f"[run-check] exclusive: waiting behind {_describe_holder(holder)}\n")
-                shown = key
+    shown: list[tuple[object, object]] | None = None
+    slots = [path.open("a+b") for path in EXCLUSIVE_LOCK_PATHS]
+    try:
+        while (lock := _try_slots(slots)) is None:
+            holders = [_lock_holder(slot) for slot in slots]
+            keys = [((h or {}).get("pid"), (h or {}).get("label")) for h in holders]
+            if keys != shown:
+                ahead = "; ".join(_describe_holder(h) for h in holders)
+                emit(f"[run-check] exclusive: waiting behind {ahead}\n")
+                shown = keys
             time.sleep(LOCK_POLL_SECONDS)
+    finally:
+        for slot in slots:
+            if slot is not lock:
+                slot.close()
     waited = int(time.monotonic() - waited_since)
     lock.truncate(0)
     lock.write(
@@ -240,6 +253,7 @@ def _acquire_exclusive(
     )
     lock.flush()
     emit(f"[run-check] exclusive: acquired after {waited // 60}m{waited % 60:02d}s\n")
+    return lock
 
 
 def _status(returncode: int) -> int:
@@ -341,15 +355,12 @@ def _run(options: Options) -> int:
     for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(signum, forward)
 
-    lock = None
-    holds_lock = False
+    lock: BinaryIO | None = None
     try:
         if options.exclusive and _is_light(options.command):
             emit("[run-check] exclusive: skipped (targeted tests or fast linter)\n")
         elif options.exclusive:
-            lock = EXCLUSIVE_LOCK_PATH.open("a+b")
-            _acquire_exclusive(lock, options, emit)
-            holds_lock = True
+            lock = _acquire_exclusive(options, emit)
         command, node_version = _node_command(
             options.command,
             options.cwd,
@@ -392,8 +403,7 @@ def _run(options: Options) -> int:
                 _terminate_group(child, signal.SIGTERM)
                 child.wait()
         if lock is not None:
-            if holds_lock:
-                lock.truncate(0)
+            lock.truncate(0)
             lock.close()
     emit(f"[run-check] exit: {status}\n")
     log.close()

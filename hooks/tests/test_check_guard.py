@@ -154,7 +154,7 @@ class ExecutableModeTest(unittest.TestCase):
 class RunCheckTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        # Real checks from other sessions hold the host slot; tests own a private one.
+        # Real checks from other sessions hold the host slots; tests own private ones.
         lock_dir = tempfile.TemporaryDirectory()
         cls.addClassCleanup(lock_dir.cleanup)
         environ = mock.patch.dict(
@@ -166,7 +166,7 @@ class RunCheckTest(unittest.TestCase):
     def test_exclusive_queue_cancellation_and_failure_release_across_worktrees(
         self,
     ) -> None:
-        # Removing the host-wide lock permits the second validator to start.
+        # Collapsing the host slots to one keeps the peer validator waiting.
         with tempfile.TemporaryDirectory() as temp_dir, ExitStack() as cleanup:
             root = Path(temp_dir)
             first_cwd, second_cwd = root / "first", root / "second"
@@ -216,9 +216,19 @@ class RunCheckTest(unittest.TestCase):
             line(owner)
             self.assertIn("exclusive: acquired", line(owner))
             self.assertEqual(line(owner), "owner-running\n")
-            with Path(os.environ["DROID_CHECK_LOCK_PATH"]).open("a+b") as slot:
-                with self.assertRaises(BlockingIOError):
-                    fcntl.flock(slot, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            peer = start(
+                "peer",
+                second_cwd,
+                "import sys; print('peer-running', flush=True); sys.stdin.read(1)",
+            )
+            line(peer)
+            self.assertIn("exclusive: acquired", line(peer))
+            self.assertEqual(line(peer), "peer-running\n")
+            for slot_index in range(2):
+                slot_path = f"{os.environ['DROID_CHECK_LOCK_PATH']}.{slot_index}"
+                with Path(slot_path).open("a+b") as slot:
+                    with self.assertRaises(BlockingIOError):
+                        fcntl.flock(slot, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
             queued = start(
                 "cancelled",
@@ -226,7 +236,9 @@ class RunCheckTest(unittest.TestCase):
                 f"from pathlib import Path; Path({str(marker)!r}).touch()",
             )
             queued_log = Path(line(queued).removeprefix("[run-check] log: ").strip())
-            self.assertIn("exclusive: waiting", line(queued))
+            waiting = line(queued)
+            self.assertIn("exclusive: waiting behind owner", waiting)
+            self.assertIn("peer", waiting)
             queued.terminate()
             queued_output = queued.communicate(timeout=5)[0].decode()
             self.assertEqual(queued.returncode, 143)
@@ -268,6 +280,11 @@ class RunCheckTest(unittest.TestCase):
             self.assertEqual(next_check.returncode, 0)
             self.assertIn("exclusive: acquired", next_output)
             self.assertIn("next-ran", next_output)
+            self.assertIsNone(peer.poll())
+            peer.stdin.write(b"x")
+            peer.stdin.flush()
+            peer.communicate(timeout=5)
+            self.assertEqual(peer.returncode, 0)
 
     def test_owns_cwd_env_stream_log_and_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
