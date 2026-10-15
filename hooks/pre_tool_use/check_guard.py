@@ -47,6 +47,7 @@ _PREFIX = (
     r"(?:(?:flock|nice|ionice|timeout)(?:\s+\S+){1,3}\s+)?"
     r"(?:env(?:\s+[A-Za-z_][A-Za-z0-9_]*=\S+)*\s+)?"
     r"(?:(?:npx|pnpm|yarn|bun|bunx|uvx|uv\s+run)\s+)?"
+    r"(?:(?:\S*/)?python[\d.]*\s+-m\s+)?"
 )
 
 _RUNNERS = (

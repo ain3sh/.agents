@@ -78,6 +78,20 @@ class CheckGuardTest(unittest.TestCase):
             "validator commands must use run-check",
         )
 
+    def test_rejects_module_invoked_validator(self) -> None:
+        cases = (
+            "python3 -m pytest tests/ -q",
+            "cd /tmp/project && python -m pytest tests/ | tail -15",
+            "uv run python3.14 -m pytest",
+            ".venv/bin/python -m pytest tests/",
+        )
+        for command in cases:
+            with self.subTest(command=command):
+                self.assertEqual(
+                    self.analyze(command),
+                    "validator commands must use run-check",
+                )
+
     def test_rejects_background_tool_call(self) -> None:
         self.assertEqual(
             self.analyze(
@@ -143,6 +157,7 @@ class CheckGuardTest(unittest.TestCase):
         self.assertIsNone(self.analyze("make checklist"))
         self.assertIsNone(self.analyze('printf "npm run test && pytest"'))
         self.assertIsNone(self.analyze('echo "&&" pytest'))
+        self.assertIsNone(self.analyze("python3 -m http.server 8000"))
 
     def test_ignores_heredoc_bodies(self) -> None:
         cases = (
