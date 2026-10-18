@@ -16,8 +16,8 @@ pr-description checklist:
 - [ ] First screen passes the skim gate (five questions on a large diff)
 - [ ] Large diff? Composition table computed by scripts/diff-composition.py, placed under What
 - [ ] Rule across 3+ surfaces, or 3+ behaviors? First sentence states before → after; Before → After table under What
-- [ ] Five required sections present; conditional catalog walked row by row
-- [ ] Architecture needed? View accepted by show-me for GitHub, or section omitted
+- [ ] Six required sections present; conditional catalog walked row by row
+- [ ] Architecture: one or more show-me views, each answering its own question, accepted for GitHub
 - [ ] Concrete visual change? Live proof attached high in body (visual-evidence.md)
 - [ ] Verification outcome-first; CI compressed to one line
 - [ ] Body length scales with complexity, not effort
@@ -103,7 +103,7 @@ motivation.
 
 ## Section catalog
 
-The five required sections always fire. Conditional sections are a menu, not a
+The six required sections always fire. Conditional sections are a menu, not a
 checklist. Omit headings whose trigger does not fire. The order below is render
 order, not evidence priority: decision-relevant facts are previewed in the
 Description.
@@ -113,7 +113,7 @@ Description.
 | 1 | Description | always; inline Before → After table (multi-surface), diff composition (large diff), anti-goals, scope map, design link, or RCA as needed |
 | 2 | Visual Evidence | concrete UI/TUI/CLI/rendered-media change |
 | 3 | Repro Recipe | new feature or fixed bug with a manual surface |
-| 4 | Architecture | a structural or code-shape question needs a view from show-me |
+| 4 | Architecture | always; one `show-me` view per reader question |
 | 5 | Related Issue | always; add lineage/stack block when applicable |
 | 6 | Reviewer Guide | always |
 | 7 | Risk & Impact | always |
@@ -147,6 +147,11 @@ Conditional templates live in `conditional-sections.md`.
 
 <New flow or invariant in one or two sentences.>
 
+## Architecture
+
+<label naming the reader's question>
+<show-me view; one block per question>
+
 ## Related Issue
 
 Closes TEAM-123
@@ -174,6 +179,35 @@ Closes TEAM-123
 **Not tested:** <real skips with one reason each; N/A only when true>
 **Standard validators:** <one compressed line; include triaged unrelated failures>
 ```
+
+### Architecture
+
+Every body carries one or more `show-me` views here, so the reviewer holds the
+relation the diff changes before reading lines. Name the question the Files tab
+cannot answer, then load `show-me` with that question, the verified diff and
+source, the GitHub destination, and that the view is required. `show-me` picks
+the grammar and runs the acceptance and render checks.
+
+| Change | Reader question for `show-me` |
+|---|---|
+| Bug fix | Which path produced the failure, and which edge does the fix change? |
+| Feature | What calls the new code, or how can its state change? |
+| Refactor | Where does each responsibility live now? |
+| Contract, schema | What shape do consumers see now? |
+| Config, flags, CI, dependency bump | What reads the changed key or version, and what does each reader do with it now? |
+| Docs, skills, policy | Which file owns each rule now, and who reads it? Without a Before → After table under **What**: what does each reader or surface do now? |
+| No behavior change (typo, comment, rename) | Where does the touched text or symbol sit, and what reads it? |
+
+- Independent concerns get one view each, labelled by the question it
+  answers. A one-line change gets a call tree placing it on its path, or
+  pseudocode of the enclosing decision with the changed branch marked, never
+  the hunk itself.
+- Each view answers its own question: never repeat the Before → After table
+  under **What**, the Repro Recipe, the RCA trace, or a hunk the Files tab
+  already shows. **How** names the invariant in a sentence; the view carries
+  the flow.
+- Upload any files `show-me` returns through `references/artifacts.md` in the
+  authorized publish step.
 
 ### Reviewer Guide
 
@@ -217,10 +251,10 @@ to one Standard validators line.
 
 ## Length and writing
 
-Length scales with complexity, not effort. A small PR is roughly 150 words. A
-complex PR earns length through triggered conditional sections. If always-on
-prose exceeds roughly 450 words without conditional sections, trim the file
-tour and diff narration.
+Length scales with complexity, not effort. A small PR is roughly 150 words of
+prose; Architecture views do not count. A complex PR earns length through
+triggered conditional sections. If always-on prose exceeds roughly 450 words
+without conditional sections, trim the file tour and diff narration.
 
 Use plain language before symbols. Keep paragraphs under three sentences.
 Use formatting only to clarify real information. Do not invent decorative

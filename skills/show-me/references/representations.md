@@ -7,10 +7,10 @@ elaborate diagram is not inherently better than four typed lines.
 
 ## Question to view
 
-Scope the view to a concrete relationship or decision. A broad PR outcome may
-depend on several independent mechanisms; draw the one a reviewer must hold
-first, rather than turn the whole change inventory into one ordered flow.
-When no relation earns the section, let the owning workflow omit it.
+Scope each view to one concrete relationship or decision. A broad PR outcome
+may depend on several independent mechanisms; give each its own view rather
+than turn the whole change inventory into one ordered flow. Whether a view may
+be omitted is settled in `SKILL.md` (Check before sending).
 
 | Reader's question | Primary view | Must contain |
 |---|---|---|
@@ -74,8 +74,7 @@ export function runJob(job: QueuedJob, signal: AbortSignal): Promise<DoneJob>
 ```
 
 Indentation now means "called by", and every line is a symbol the reader can
-open. If the diff has no relation to draw (several unrelated concerns), say so
-and let the owning workflow omit its section.
+open.
 
 ## Code fidelity
 

@@ -67,7 +67,7 @@ Build the category ledger, pair, reconcile, and admit third workers exactly per 
 
 ## 6. Verdict and close
 
-Present to the user at the approval gate, sections kept separate (this is the gate presentation — the posted verdict body stays short per first-pass §6):
+Present to the user at the approval gate, sections kept separate (this is the gate presentation — the posted verdict's prose stays short per first-pass §6):
 
 - prior findings: resolved / unresolved / superseded (with mechanism-depth evidence for contested ones);
 - fresh delta findings;

@@ -155,19 +155,6 @@ Honest acknowledgment beats discovery six weeks later. No regression → omit; d
 
 ## Below Description
 
-### Architecture — the relationship a reviewer needs before the diff
-
-When a structural or code-shape question blocks understanding, load `show-me`
-with that question, the verified diff/source, and the GitHub destination.
-Place the resulting view under `## Architecture`, after Repro Recipe if
-present, otherwise after Visual Evidence or Description. The heading does
-not select the renderer: show-me owns that choice and the acceptance checks.
-
-If show-me returns local files, use `references/artifacts.md` to upload them
-during the authorized publish step. If it finds no useful relationship, omit
-the section; the PR's file inventory already belongs in Reviewer Guide or
-Implementation map.
-
 ### Repro Recipe — new feature / fixed bug
 
 **Manual, human-run steps**: `setup -> action -> observed result`, each line something a reviewer *types or clicks* by hand, closing on a result they can eyeball. Bar: someone who's never touched the repo runs it as-is and sees the behavior. Indented (not fenced) block so it nests cleanly.

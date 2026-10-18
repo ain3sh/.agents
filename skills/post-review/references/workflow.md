@@ -1,4 +1,4 @@
-Load skills: **pr-context**, **voice**.
+Load skills: **pr-context**, **voice**, **show-me**.
 
 **voice** is required here: use its severity taxonomy and craft rules for every posted body instead of rephrasing approved findings into generic review-speak.
 
@@ -55,7 +55,9 @@ Otherwise post the prose as a plain comment. Don't downgrade severity because a 
 
 ### Verdict body
 
-The verdict body is the standalone judgment from the **review-pr** skill's first-pass §6 (disposition + root cause, blockers, headline opinion, evidence woven into the claims it backs) -- **not** a recap of the threads you post; GitHub renders those inline. If the upstream handoff omitted one, draft it against that structure -- don't fall back to "Posted N comments on X, Y, Z."
+The verdict body is the standalone judgment from the **review-pr** skill's first-pass §6 (disposition + root cause, the view, blockers, headline opinion, evidence woven into the claims it backs) -- **not** a recap of the threads you post; GitHub renders those inline. If the upstream handoff omitted one, draft it against that structure -- don't fall back to "Posted N comments on X, Y, Z."
+
+It always carries one or more **show-me** views (first-pass §6, "The view"). A drop, retier, or rewording made after the gate only removes or re-marks the view's affected nodes and edges. An upstream verdict with no view is a §2 gap: draw one from the approved ruling and findings and show it in that gap's single `AskUser` before the first write.
 
 It names **every** still-gating finding, numbered, each with its concrete ask, including linked threads for already-posted blockers. There is no count limit. The GitHub event (§5) does not make these asks optional.
 
@@ -69,6 +71,7 @@ Approval at the `/review-pr` gate covered the findings and disposition, not the 
 - **Command narration**: the CLI invocations, tool names, and worker dispatches behind a probe (`gh run view`, vitest flags, `slop-scan delta`, typechecker choice). Report the observed fact -- *"the new tests fail on base for the stated reason"* -- never the transcript that produced it. How you learned something is your business; what's true is the review.
 - **Methodology paragraphs**: "Checks run:", "Also verified:", CI pass counts, sweep inventories. If a probe backs a claim, it's already inline in that claim; standalone it's an essay about your process.
 - **Fast-follow / "worth a ticket" framing**: pre-existing issues stay in the verdict's **Pre-existing defects** list (severity, `file:line`, one line each); cut any "worth a ticket", "fast-follow", or "separate PR" framing around them.
+- **Decorative views**: cut a view that restates a line comment or carries no part of the ruling (first-pass §6, "The view"); if that leaves none, the missing view is a §2 gap.
 
 This applies to line-comment bodies too: findings state the defect and the fix, never the commands run to find it.
 
@@ -85,6 +88,7 @@ After the deslop pass and before any external write, walk the §2 coverage table
 - Every published finding has a row; the verdict names every still-gating finding, including previously posted ones.
 - Separately compare the verdict with the approved review state and first-pass §6: preserve the architecture ruling, acceptance states and waivers, and coverage limits. These are not invented findings merely to fit the table.
 - Grouped comments still carry each claim they merged.
+- The verdict carries at least one view; every node and edge traces to the approved ruling and findings, and the exact Mermaid being posted passed **show-me**'s render check.
 
 Restore what deslop dropped and run the check again. A gap the ledger cannot close is a §2 `AskUser`, not a silent omission.
 
@@ -132,12 +136,17 @@ Add `--argjson start_line <N>` and emit `start_line:$start_line, start_side:"RIG
 
 ### Submit the verdict
 
+Write the verdict to `/tmp/verdict-<number>.md` with a file tool and pass it with `-F body=@…`, as `pr-description/references/publish.md` does; a body typed inline in a quoted argument expands backticks and `$`.
+
 ```bash
-gh api "repos/$REPO/pulls/<number>/reviews" \
+REVIEW_ID=$(gh api "repos/$REPO/pulls/<number>/reviews" \
   --method POST \
   -f event="<COMMENT|APPROVE|REQUEST_CHANGES>" \
-  -f body="<verdict-body>"
+  -F body=@/tmp/verdict-<number>.md \
+  --jq .id)
 ```
+
+Verify with `publish.md`'s round-trip command, reading `repos/$REPO/pulls/<number>/reviews/$REVIEW_ID`; on any difference, fix it with `PUT` on that review and the same `-F body=@…`. `REVIEW_ID` feeds §6.
 
 The event is the verdict approved at the `/review-pr` gate -- don't recompute it here. Default to `COMMENT` when blockers gate or `APPROVE` otherwise; the number of blockers never changes the event. Use `REQUEST_CHANGES` only when the user explicitly requested that verdict type; never infer it from blocking findings. `APPROVE` with non-gating line comments (`opinion`/`nit`/`suggestion`) is legitimate per the skill's first-pass §6.
 

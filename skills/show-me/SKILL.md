@@ -113,9 +113,9 @@ and boundary the question needs and nothing it does not.
 | Situation | Action |
 |---|---|
 | `/show-me [target] [as <form>]` | Resolve the target from arguments or the current topic, reread its source, write the reader's question, choose the shape above. Honor `as <form>` unless it would distort the evidence; then name the mismatch in one sentence and use the closest lossless form. |
-| Compose into a PR, design doc, or review | Take the caller's verified facts, reader question, destination, and theme; return the checked view and any companion. The caller owns placement, document-wide checks, and publishing. Do not restart its analysis. |
+| Compose into a PR, design doc, or review | Take the caller's verified facts, reader question, destination, theme, and whether a view is required; return the checked view and any companion. The caller owns placement, document-wide checks, and publishing. Do not restart its analysis. |
 | Render or embed | `references/surfaces.md`: terminal text, GitHub Mermaid/code/images, Slack images, browser HTML/SVG, reused Excalidraw renders. |
-| A simple fact | One sentence, no view. |
+| A simple fact | One sentence, no view; a caller that requires a view gets the smallest relation the fact sits on (Check before sending). |
 
 ## Detect
 
@@ -147,8 +147,11 @@ Implication: <one sentence, only when it adds a consequence the view does not st
   at its width (`references/surfaces.md`). If rendering is blocked, label the
   draft unverified.
 
-Omit a view only when the diff has no relation to draw (several unrelated
-concerns); say so and let the owning workflow omit its section.
+With several unrelated concerns, draw one view per concern the reader must
+hold. When the caller marks the view required, never return "nothing to
+draw": draw the smallest relation the change sits on (the call path through a
+one-line change, the reader a doc or config change redirects). Otherwise, when
+no relation earns a view, say so and let the owning workflow omit its section.
 
 ## Rules
 
@@ -166,7 +169,7 @@ concerns); say so and let the owning workflow omit its section.
 | Symptom | Action |
 |---|---|
 | Reply is a wall of prose about several actors, with a view as an afterthought | Lead with the view; keep the one sentence it cannot carry. |
-| View is a decorated paragraph, or a list dressed as a tree or diff | Name the relation the reader must hold and draw that with real symbols; if there is none, drop the view. |
+| View is a decorated paragraph, or a list dressed as a tree or diff | Name the relation the reader must hold and draw that with real symbols; if there is none, drop the view unless the caller requires one (Check before sending). |
 | Visual and prose say the same thing | Delete the prose; keep one implication sentence if needed. |
 | Two views answer the same question | Keep the clearer one; a companion fills a detail, it does not repeat the view. |
 | Inline output too dense | Reduce scope, not font size; move to a browser HTML view only when the detail is essential. |

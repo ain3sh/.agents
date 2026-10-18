@@ -15,7 +15,7 @@ Make the merge case legible from the title and first screen; later sections prov
 | Large diff (roughly 1k+ lines or 20+ files) | Run `scripts/diff-composition.py BASE HEAD --core <behavior files> --tooling <prefixes>`; put the composition table and core breakdown under **What** (template in `references/conditional-sections.md`). |
 | One rule changed across three or more surfaces, or three or more behaviors changed at once | Open **What** with the rule's before and after, then the per-surface Before → After table: grammar from `show-me` (Policy before/after table), placement in `references/conditional-sections.md`; later sections point at it instead of restating it. |
 | Add conditional sections | Load `references/conditional-sections.md` only when a catalog trigger fires. |
-| Explain architecture or code shape | Load `show-me` with the verified diff and GitHub destination; place its view under **Architecture** (`references/conditional-sections.md`). Use `references/artifacts.md` when it returns files to upload. |
+| Show the change (every PR) | Load `show-me` with the verified diff and GitHub destination; place one or more views under **Architecture** (`references/workflow.md`, Architecture). Use `references/artifacts.md` when it returns files to upload. |
 | Show a visual change | Open the PR first, then load `references/visual-evidence.md` and capture live proof. |
 | Refresh an existing PR | Load `references/refresh.md`; explicit title/body audits bypass the no-diff throttle. |
 | Publish or PATCH | Load `references/publish.md`; compose with a file tool and use GitHub REST. |
@@ -65,6 +65,9 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
     removed safeguards; one owner per fact. The list keeps only what the
     table cannot carry: member lists, deleted files and exports, dead
     branches, and a Not-removed line.
+12. Never publish a body without at least one `show-me` view under
+    **Architecture**; "nothing to draw" is not an exit (`workflow.md`,
+    Architecture).
 
 ## Failure map
 
@@ -82,7 +85,7 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 | Body cites SHAs after a rebase or force-push | Sweep with the stale-SHA step in `refresh.md`; rerun the composition script. |
 | Refresh says no-op but the user asked for prose/title improvement | Use the explicit-audit bypass in `refresh.md`. |
 | Repeated refreshes read like commit history | Replace the revision log with only changes since the last human review. |
-| Architecture reads like a changelog | Revisit the reader question with `show-me`, or omit the section. |
+| Architecture reads like a changelog, or the diff seems to have nothing to draw | Name the reader's question per concern and draw that relation (`workflow.md`, Architecture). |
 | Recording adds no reviewer signal | Follow `visual-evidence.md`; remove net-zero evidence. |
 | GitHub body differs after PATCH | Follow the byte-compare verification in `publish.md`. |
 
