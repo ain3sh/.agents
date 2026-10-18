@@ -88,7 +88,7 @@ After the deslop pass and before any external write, walk the §2 coverage table
 - Every published finding has a row; the verdict names every still-gating finding, including previously posted ones.
 - Separately compare the verdict with the approved review state and first-pass §6: preserve the architecture ruling, acceptance states and waivers, and coverage limits. These are not invented findings merely to fit the table.
 - Grouped comments still carry each claim they merged.
-- The verdict carries at least one view; every node and edge traces to the approved ruling and findings, and the exact Mermaid being posted passed **show-me**'s render check.
+- Every verdict view's nodes and edges trace to the approved ruling and findings, and the exact Mermaid being posted passed **show-me**'s render check.
 
 Restore what deslop dropped and run the check again. A gap the ledger cannot close is a §2 `AskUser`, not a silent omission.
 
@@ -136,9 +136,10 @@ Add `--argjson start_line <N>` and emit `start_line:$start_line, start_side:"RIG
 
 ### Submit the verdict
 
-Write the verdict to `/tmp/verdict-<number>.md` with a file tool and pass it with `-F body=@…`, as `pr-description/references/publish.md` does; a body typed inline in a quoted argument expands backticks and `$`.
+Write the verdict to `/tmp/verdict-<number>.md` with a file tool and pass it with `-F body=@…`, as `pr-description/references/publish.md` does; a body typed inline in a quoted argument expands backticks and `$`. Post only after the view check passes; a nonzero exit is a §4 failure.
 
 ```bash
+python3 ~/.agents/skills/show-me/scripts/check-view.py /tmp/verdict-<number>.md &&
 REVIEW_ID=$(gh api "repos/$REPO/pulls/<number>/reviews" \
   --method POST \
   -f event="<COMMENT|APPROVE|REQUEST_CHANGES>" \

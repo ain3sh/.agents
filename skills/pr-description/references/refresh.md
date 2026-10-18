@@ -99,14 +99,13 @@ The body proper reads as one authored piece, not a log of patches — with **one
    - **Conditional sections re-evaluated both ways** — add newly-triggered (>3 consumers → Reverse Dependencies; new metric → Telemetry) **and remove** newly-untriggered (risky migration extracted to its own PR → drop Migration & Rollout / RCA). An orphaned section describing absent work is staleness too.
    - Every evidence claim revalidated or narrowed; every generated appendix regenerated (or replaced with a tighter Reviewer Guide if it adds bulk without aiding review).
 3. Apply via REST. Draft the body marker-free with a file tool, never a shell
-   heredoc; then stamp the marker, PATCH body (and title, same call), and
+   heredoc; then finalize, PATCH body (and title, same call), and
    verify the round-trip, all with the commands in `publish.md`.
 4. **No-op re-stamp** (automatic refresh only; Phase 1 found nothing or the
-   throttle hit): strip the old marker, stamp the new one, publish per
-   `publish.md`, prose untouched.
-   ```bash
-   sed '/<!-- pr-desc-base: /d' /tmp/pr-current-body.md > /tmp/pr-body.md
-   ```
+   throttle hit): copy `/tmp/pr-current-body.md` to `/tmp/pr-body.md` and
+   publish per `publish.md`, prose untouched; finalize replaces the marker. A
+   body finalize refuses for a missing Architecture view is View drift, not a
+   no-op.
 
 **Squash-merge note**: the marker is inert if it lands in a squash commit message; strip it in the final pre-merge refresh if your repo mirrors body→commit and you want a clean message.
 

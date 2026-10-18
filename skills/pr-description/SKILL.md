@@ -50,9 +50,9 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 6. Never fabricate magnitude, proof, mitigation, or rollout state. Preview
    only evidence the diff or live verification actually supports.
 7. Never compose the body through shell heredocs or publish with `gh pr edit`;
-   use a file tool and `gh api -F body=@file`, stamp the `pr-desc-base`
-   marker last (the full HEAD sha, never the merge base), then verify the
-   live body byte-for-byte.
+   use a file tool, run `scripts/finalize-body.py` (it stamps the full HEAD
+   sha, never the merge base), publish with `gh api -F body=@file`, then
+   verify the live body byte-for-byte.
 8. Never describe a large diff's size in prose or with estimated percentages;
    a reviewer prices the PR from the first screen, so the computed composition
    table with a per-row action goes there, before **Why**.
@@ -67,7 +67,7 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
     branches, and a Not-removed line.
 12. Never publish a body without at least one `show-me` view under
     **Architecture**; "nothing to draw" is not an exit (`workflow.md`,
-    Architecture).
+    Architecture), and `scripts/finalize-body.py` refuses the body.
 
 ## Failure map
 
@@ -102,7 +102,9 @@ Load on demand; do not reabsorb into this file:
   handoff.
 - `references/refresh.md` — marker-based staleness, decision-hierarchy audit,
   revision log, and explicit-audit bypass.
-- `references/publish.md` — GitHub REST operations, marker stamp, and
-  round-trip verification.
+- `references/publish.md` — GitHub REST operations, finalize, and round-trip
+  verification.
+- `scripts/finalize-body.py` — refuses a body without an Architecture view,
+  then stamps the `pr-desc-base` marker.
 - `scripts/diff-composition.py` — buckets a three-dot diff by review weight
   (generated / mechanical / tests / core / tooling / docs) from `git numstat`.

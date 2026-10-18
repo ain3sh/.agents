@@ -21,7 +21,7 @@ PR_NUM=$(gh pr view --json number --jq '.number')
 
 | Goal | Command |
 |---|---|
-| Stamp the marker (final line, every publish) | `printf '\n<!-- pr-desc-base: %s -->\n' "$(git rev-parse HEAD)" >> /tmp/pr-body.md` |
+| Finalize (every publish, before `gh pr create` or PATCH) | `python3 ~/.agents/skills/pr-description/scripts/finalize-body.py /tmp/pr-body.md`: exits 1 without writing when `## Architecture` holds no view; otherwise replaces any old marker with the full HEAD sha as the final line |
 | Update body | `gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -F body=@/tmp/pr-body.md` |
 | Update title | `gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f title='<type(scope): description>'` |
 | Title and body in one call | `gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f title='…' -F body=@/tmp/pr-body.md` |
@@ -45,7 +45,8 @@ lost content: fix the write, never the comparison.
    scanner. Change the write mechanism.
 3. Never commit screenshots, recordings, or diagrams. Upload through
    `gh-attach` per `artifacts.md`.
-4. Never publish without the `pr-desc-base` marker as the final line; the
-   refresh workflow (`refresh.md`) cannot resolve its base without it. Stamp it
-   after the last generated block (for example the `stack:links` block).
+4. Never publish a body `finalize-body.py` has not just passed. It is the only
+   marker stamp, and refresh (`refresh.md`) cannot resolve its base without
+   the marker. Rerun it after any edit, including a regenerated `stack:links`
+   block.
 5. After publishing, run the round-trip verification above.

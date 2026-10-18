@@ -21,7 +21,7 @@ pr-description checklist:
 - [ ] Concrete visual change? Live proof attached high in body (visual-evidence.md)
 - [ ] Verification outcome-first; CI compressed to one line
 - [ ] Body length scales with complexity, not effort
-- [ ] Body composed with a file tool and applied through REST (publish.md)
+- [ ] Body composed with a file tool, passed `scripts/finalize-body.py`, applied through REST (publish.md)
 - [ ] Refresh only: base resolved and marker re-stamped (refresh.md)
 ```
 
@@ -208,6 +208,8 @@ the grammar and runs the acceptance and render checks.
   the flow.
 - Upload any files `show-me` returns through `references/artifacts.md` in the
   authorized publish step.
+- Bodies this skill writes require the section; an author's body in a
+  `review-pr` description audit does not, so its absence there is no finding.
 
 ### Reviewer Guide
 

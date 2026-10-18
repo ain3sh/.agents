@@ -184,3 +184,5 @@ Load on demand; do not reabsorb into this file:
 - `references/representations.md`: question-to-view matrix, layout gate, code fidelity, companion, and the grammars that need rules (sequence, state, dependency, causal, quantitative, policy before/after, graphical panels).
 - `references/surfaces.md`: rendering per destination (terminal, GitHub, Slack, browser), PNG capture, themes, embedding, source access, checks, and local handover.
 - `references/replay.md`: behavioral replay scenarios and grading.
+- `scripts/check-view.py FILE [--section NAME]`: exit 0 when a view (fence,
+  table, image) is present; callers that require a view gate publication on it.
