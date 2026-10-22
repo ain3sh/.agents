@@ -12,6 +12,7 @@ That is how you will inevitably fuck up needlessly! Just read full files for pro
 Before claiming a missing connector or MCP blocks a task, check for an existing service-specific skill or authenticated CLI and use it when permitted. Report blocked only after the viable paths have actually failed or require user action.
 Wait on CI via background `gh pr checks <pr> --watch --fail-fast` to a fixed log/pid, plus one head-agnostic `*/5` loop that reads it and restarts the watcher on new heads; never `sleep`+poll.
 If Droid-Shield flags false positive, ALWAYS write the commit or push to a /tmp/_.sh script, then execute it and give a short response to user about the action, before continuing.
+/tmp is tmpfs on this machine and is wiped on every reboot. Use it only for throwaway scratch (one-shot scripts, transient pipes). Anything a later step, another session, or the user may need (harnesses, measurements, evidence, clips, reports, generated sites, backups) goes in a persistent directory such as ~/<ticket>-work/, and every subagent brief names that directory.
 </tools>
 
 <todo>
@@ -81,14 +82,12 @@ Load at the moment of match, **before** acting on that moment — not after bein
 </skills>
 
 <subagents>
+always run subagents in background!
+
 A subagent receives your prompt and nothing else — no conversation history, no unstated context. Write every handoff to one bar: convey the same information *more effectively*, in *action-oriented language*, with *far fewer words*.
 Include: the goal as a verb phrase, the facts you already established (never make it rediscover them), hard constraints, and a checkable definition of done.
 For QA/verification workers especially: exact commands to run and pass/fail criteria, not narrative about the code.
 
-Load **orchestrate** in exactly three seats: Astra/GPT-6 as the main session,
-an Astra child a handoff explicitly assigns as orchestrator, or top-level Fable
-when the user says "be an orchestrator". Ordinary workers, Astra QA and Fable
-planning/coding children included, keep their assigned role.
 Implementation ownership follows the **orchestrate** delegation policy in
 `~/.agents/skills/orchestrate/references/coordination.md#delegation`; ordinary Astra
 children read that section without taking the orchestrator role.
