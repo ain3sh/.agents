@@ -69,7 +69,7 @@ If you cannot name a real file + symbol for the root cause after walking the flo
 
 ## 3.5 Cross-Thread Coherence (before triage)
 
-If steps 1-3 produced **>=2 threads whose resolution requires editing code** (any bug-report, plus any nit / style / clarification thread that resolves into an edit), load the **patch-coherence** skill, run its audit, and emit the fix-locus map before step 4. Skip otherwise.
+If steps 1-3 produced **>=2 threads whose resolution requires editing code** (any bug-report, plus any nit / style / clarification thread that resolves into an edit), or one such thread at a symbol this PR has already fixed twice (a **recurrence**, defined in **patch-coherence**), load the **patch-coherence** skill, run its audit, and emit the fix-locus map before step 4. Skip otherwise.
 
 ## 4. Triage
 

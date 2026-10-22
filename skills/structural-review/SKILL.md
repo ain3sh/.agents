@@ -40,6 +40,7 @@ Design problems, not stylistic nits:
 - **Contract muddying.** New optionality, `any`/`unknown`, casts, or ad-hoc object shapes where an explicit typed boundary would simplify the control flow; silent fallbacks papering over an unclear invariant.
 - **Orchestration smells.** Independent work serialized for no reason; related updates that can leave state half-applied when an atomic structure is available; orchestration tangled into the logic it sequences. Flag brittleness, not micro-optimizations.
 - **"Temporary" branching** with no removal path -- it calcifies into permanent debt.
+- **Prose state machines.** A prompt or skill that walks an agent through ordered writes to live shared state (move, rewire, roll back). Every intermediate state must pass every server rule, and nothing tests the rollback. When the generator never creates the hard case, stop on it and name it instead of handling it.
 
 ## Severity and scope
 
