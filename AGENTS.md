@@ -12,7 +12,7 @@ That is how you will inevitably fuck up needlessly! Just read full files for pro
 Before claiming a missing connector or MCP blocks a task, check for an existing service-specific skill or authenticated CLI and use it when permitted. Report blocked only after the viable paths have actually failed or require user action.
 Wait on CI via background `gh pr checks <pr> --watch --fail-fast` to a fixed log/pid, plus one head-agnostic `*/5` loop that reads it and restarts the watcher on new heads; never `sleep`+poll.
 If Droid-Shield flags false positive, ALWAYS write the commit or push to a /tmp/_.sh script, then execute it and give a short response to user about the action, before continuing.
-/tmp is tmpfs on this machine and is wiped on every reboot. Use it only for throwaway scratch (one-shot scripts, transient pipes). Anything a later step, another session, or the user may need (harnesses, measurements, evidence, clips, reports, generated sites, backups) goes in a persistent directory such as ~/<ticket>-work/, and every subagent brief names that directory.
+/tmp is tmpfs on this machine and is wiped on every reboot. Use it only for throwaway scratch (one-shot scripts, transient pipes). Anything a later step, another session, or the user may need (harnesses, measurements, evidence, clips, reports, generated sites, backups) goes in a persistent directory such as ~/<ticket>-work/, and every subagent brief names that directory. Once the work is done and nothing will read those files again, delete them; never keep backups of things that are already preserved elsewhere (a pushed commit, a source file).
 </tools>
 
 <todo>
