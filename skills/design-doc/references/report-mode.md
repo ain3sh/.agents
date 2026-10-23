@@ -42,18 +42,29 @@ any `#hash` inside a `<details>`).
 `hero.html` holds what follows the title: `.lede`, `.linkline`, `.metrics`. It
 is raw HTML, so write `<code>` rather than markdown backticks.
 
+`--title="<claim>"` makes the h1 a claim without editing the source: the
+source `# Title` becomes the h1's `.subtitle` and stays the `<title>` (search,
+Slack unfurls). Use it whenever the source title is a filing label
+("…: retrospective").
+
 ## What the builder maps
 
-- `# Title` → hero `h1` and `<title>`; text before the first `##` → the hero
-  `.preamble`.
+- `# Title` → hero `h1` and `<title>` (with `--title`, the h1's `.subtitle`);
+  text before the first `##` → the hero `.preamble` (with `--front`, atop the
+  full report).
 - `## 3. Heading` → section with `.slabel` `03 / Heading` and an `h2` (with
-  `--front`: a log chapter numbered `03`). Unnumbered `##` → `h2` alone.
-  Nav labels are the heading up to its first `:`, `,`, `;`, `(`, or `—`.
+  `--front`: a log chapter numbered `03`). Unnumbered `##` → `h2` alone and
+  an unnumbered chapter: numbers are the source's own, never positions, so
+  prose citing "§7" matches the page. Nav labels are the heading up to its
+  first `:`, `,`, `; `, `(`, or `—`.
+- With `--front`, a `nav.toc` right under the "Full report" summary lists
+  every chapter by its source `§` and links to it.
 - `###` / `####` → `h3` / `h4` with slug ids.
 - `![alt](img)` followed by an `*italic caption*` line → `figure.diagram`.
   Images embed as base64 unless `--linked-images`.
 - Tables → `.table-wrap table`; `|---:|` columns get `.num`; a cell starting
-  with `↓ ↑ = ·` gets its effect-glyph span.
+  with `↓ ↑ = ·` gets its effect-glyph span; 4+ columns or any cell over 60
+  characters adds `table.stack` (cards on phones).
 - Lists → `ul.bullets` / `ol.steps`; blockquotes → `.callout`; fenced code →
   `pre.code`.
 - `--footer=f.html` replaces the default provenance line (source file name and

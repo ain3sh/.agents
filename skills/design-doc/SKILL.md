@@ -15,7 +15,7 @@ Shape: sticky top bar with scroll-spy nav → hero (eyebrow, title, typed lede, 
 | Goal | Command |
 |---|---|
 | Start an RFC / memo / sync-prep doc | `cp $R/template.html <dir>/<slug>.html`, then fill top-down ([structure](references/structure.md)) |
-| Render an existing markdown report | `node $R/build-md.js <src.md> <out.html> --eyebrow="T-1 · Retro · 2026-01-01" --hero=hero.html [--front=front.html]` ([report mode](references/report-mode.md)) |
+| Render an existing markdown report | `node $R/build-md.js <src.md> <out.html> --eyebrow="T-1 · Retro · 2026-01-01" [--title="<claim>"] --hero=hero.html [--front=front.html]` ([report mode](references/report-mode.md)) |
 | Full visual sweep (every segment) | `node $R/screenshot.js <abs.html> [out-dir]` → `scroll-NN.png` |
 | One capture per component | `node $R/screenshot.js <abs.html> [out-dir] --sample` → `sample-NN-<component>.png` |
 | Print / pagination check | add `--print` → `doc.pdf` |

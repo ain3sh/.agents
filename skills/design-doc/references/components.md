@@ -8,11 +8,14 @@ use the existing custom properties and never invent intermediate greys.
 
 - **Dark only.** Black canvas, white headlines and values, warm Tungsten greys
   for body (`--body`), metadata (`--meta`), and surfaces (`--surface`,
-  `--surface2`). Print switches to paper colours automatically.
+  `--surface2`). Print switches to paper colours automatically, wraps wide
+  tables to the page instead of clipping them, and keeps blocks (figures,
+  `.bars`, `.metrics`, cards, table rows) whole and headings with their content.
 - **One accent, `#FF5A00`**, for the live dot, section labels, the primary bar
   or table row, finding numbers, and the active nav dot. The accent gradient
   (`--grad`) fills only the primary data bar or meter; comparison bars are
-  hollow or grey.
+  hollow or grey. Ordinals (`ol.numbered`, `ol.steps`) only order things, so
+  they stay `--meta`.
 - **Flat surfaces.** Depth comes from surface contrast, 1px borders, spacing,
   and type. No shadows, glass, or glows; the only blur is the sticky top bar's
   backdrop.
@@ -35,8 +38,11 @@ inventing a theme because the artifact is standalone.
 | `.slabel` | Geist Mono 12px uppercase, accent: `01 / Context` |
 | `h2` | Geist 400, 40px, tracking −0.03em |
 | `h3` | Geist 400, 21px; inside a finding 22px |
-| `.mval` | Geist 400, 52px, white, tabular numbers |
-| Mono labels | 10.5–12px uppercase, tracking 0.05em; `font-feature-settings: "zero"` on code |
+| `.mval` | Geist 400, 52px, white, tabular numbers, never wraps; `clamp(30px, 9vw, 40px)` at ≤900px |
+| Mono labels | 11–12px uppercase, tracking 0.05em; `font-feature-settings: "zero"` on code |
+
+11px is the floor for any text a reader must read, phones included (inline
+`code` never shrinks below it); only SVG chart text and decoration go smaller.
 
 Hierarchy comes from scale, never from orange or bold weight. Headings,
 captions, and decision titles use `text-wrap: balance`; paragraphs use
@@ -61,11 +67,17 @@ layer is optional for the reader who already has enough:
    - `p`: one sentence with the verbatim number and its frame.
    - optional `.rows`: up to three `.r` rows of `.k` label and `.v` value; for
      deltas use `<span class="was">` and `<span class="to">`, which renders
-     `before → after` so the change is the visual event. For non-metrics, the
-     rows can be an option set (warn / block / redact).
+     `before → after` so the change is the visual event. When `.v` holds
+     several values, lead with a `.r.rh` header row naming them, and give the
+     header and every value row `.v.tri` with one `<span>` per column so the
+     columns line up (`<span class="v tri"><span>cross</span><span>qa</span><span>omrs</span></span>`). For
+     non-metrics, the rows can be an option set (warn / block / redact).
    - `.flink`: the evidence name and arrow.
 4. **The story**: the sections, dated where time matters (`.timeline`,
-   `.entries`).
+   `.entries`). A timeline turn with repeated structure (habit, cause, fix,
+   measured) renders as `.rows > .r > .k/.v` inside `.tb`, the same rows as a
+   finding, not as a paragraph; `.tw` takes `<b>E30 · E31</b>09-24 → 26`, the
+   block id above the date. Only the `li.now` arrow is orange.
 5. **The full log** (`details.log` with `.chap` chapters): everything else,
    collapsed. `build-md.js --front` puts a whole source report here verbatim.
 
@@ -83,8 +95,13 @@ Rules for the findings layer:
 ## Quantitative proof
 
 - **Tables**: wrap in `.table-wrap`; right-align numeric columns with `.num`;
+  mark row-key cells (ids like `PR-B`, `E38`) `td.key` so they never wrap;
   mark the shipped or recommended row `tr.pri` (accent edge, raised surface);
   counts as `<span class="den">(n/N)</span>`; verdicts as `.pill.ok|miss|run|idle`.
+  Add `table.stack` to any table with long prose cells or four or more columns:
+  on phones each row becomes a card titled by its first cell, with every other
+  cell labelled by its column head (`build-md.js` adds it to tables with 4+
+  columns or a cell over 60 characters).
 - **Bar chart** (`figure.chart` with inline SVG): grey bars, the primary bar
   filled with a per-chart `linearGradient` (unique `id` per chart), white value
   label only on the primary. The template comment gives the y-scale formula.
@@ -107,21 +124,21 @@ keeps everything visible. A new revealed block needs only the `rv` class.
 
 | Selector | Purpose | When |
 |---|---|---|
-| `header.top` + `nav a` | Sticky bar: logo, one link per section, scroll-spy dot | Always; ~8 links max |
+| `header.top` + `nav a` | Sticky bar: logo, one link per section, scroll-spy dot; a scrolling strip on phones | Always; ~8 links max |
 | `header.hero` | Grid + halftone rotor backdrop | Once |
 | `.eyebrow` (`.live`, `.sep`) | Mono kicker: `kind // area // date` | Hero, and `.lhead` in blocks |
 | `h1` (+ `.subtitle`) | Title (+ literal subject) | Once |
 | `.lede[data-typed]` | The claim in ≤25 plain words | Once, under the title |
 | `.linkline` | Mono row of ticket/PR links | Once, optional |
 | `.chat .chat-b[data-prompt]` | Copies a "read this page in Droid" prompt | Conjure-hosted pages only |
-| `.metrics > .metric` | Four proof numbers | Hero, when four numbers carry the thesis |
+| `.metrics > .metric` (`.three`) | Four (or three) proof numbers | Hero, when four numbers carry the thesis; `.three` for a three-number band |
 | `.headline` (`.lhead`, `.hnote`) | Bottom line; also the proposal's mental model | First block of `main`; once in Proposal |
 | `.entries` (`li.now`) | Key column + title + body rows | Updates, motivating tickets, open items |
 | `.findings > a.finding` (`.limit`) | Claim cards linked to evidence | Evidence, memo fronts |
 | `.two-col > .panel` (`.limit`) | Side-by-side lists | Goals / non-goals, pros / cons |
-| `.timeline > li` (`.now`) | Dated arc | Rollout, retros |
+| `.timeline > li` (`.now`, `.tw b`, `.rows > .r`) | Dated arc; block id over date; structured turns | Rollout, retros |
 | `.stages > .stage` (`.on`) + `.pill` | Phases with status | Rollout |
-| `.table-wrap table` (`tr.pri`, `.num`, `.den`) | Tables, disposition tables | Any comparison of N options |
+| `.table-wrap table` (`tr.pri`, `.num`, `.den`, `td.key`, `table.stack`) | Tables, disposition tables | Any comparison of N options |
 | `.g-down` `.g-flat` `.g-up` `.g-na` | Effect glyphs `↓ = ↑ ·` (only `↓` is orange) | Changes-and-impact tables; `build-md.js` adds them |
 | `figure.chart` | In-theme SVG bar chart | Quantitative comparison |
 | `.bars` (`.bar-row.pri`) | Horizontal comparison rows | Arms × measures |
@@ -130,9 +147,10 @@ keeps everything visible. A new revealed block needs only the `rv` class.
 | `figure.demo` | Video poster card | Optional, after the headline |
 | `article.decision` | D-card: Decision / Rationale / Alternatives rejected / Consequence | Every key decision; bullets are no substitute |
 | `pre.code` (`.k` `.s` `.t` `.fn` `.comment` `.hl`) + `.code-caption` | Code with one highlighted line | Source and labelling rules belong to show-me |
+| `blockquote.quote` (`p` + `cite`) | A person's words, verbatim, with name and time | Human texture: a steer or reaction that turned the story; anywhere, often inside a `.timeline` turn |
 | `.callout` (`.limit`) | Note or warning | Sparingly; each one devalues the rest |
 | `ol.numbered` (`.q`, `.a`) | Numbered questions | Open questions, by leverage |
 | `ol.steps`, `ul.bullets` | Plain lists | Body prose |
-| `details.log` + `.chap` | Collapsed full record | End of `main` |
+| `details.log` + `nav.toc` + `.chap` | Collapsed full record, its chapter index, its chapters (an empty `.chn` hides) | End of `main` |
 | `header.hero .preamble` | Small provenance prose under the hero | Report mode: source text before its first section |
 | `footer.doc` (`.frotor`) | Provenance | Once |
