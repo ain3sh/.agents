@@ -1,0 +1,92 @@
+.ml {
+  --ml-plate-top: #1D1A18;
+  --ml-floor: #151311;
+  --ml-wall: #0C0B0A;
+  --ml-glass-top: #26211F;
+  --ml-glass-joined: #2E2926;
+  --ml-blade-top: #1D1A18;
+  --ml-blade-out: #26211F;
+  border-radius: 10px;
+  cursor: ew-resize;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.ml:focus-visible {
+  outline: 1px solid var(--anatomy-muted);
+  outline-offset: 6px;
+}
+
+.iso[data-theme="light"] .ml {
+  --ml-plate-top: #FCFAFA;
+  --ml-floor: #F4F1EF;
+  --ml-wall: #E9E4E1;
+  --ml-glass-top: #FDFCFB;
+  --ml-glass-joined: #FFFFFF;
+  --ml-blade-top: #FCFAFA;
+  --ml-blade-out: #FFFFFF;
+}
+
+.ml .iso-svg {
+  overflow: visible;
+}
+
+.ml-plate > .iso-top {
+  fill: var(--ml-plate-top);
+}
+
+.ml-floor {
+  fill: var(--ml-floor);
+  stroke: none;
+}
+
+.ml-wall {
+  fill: var(--ml-wall);
+  stroke: none;
+}
+
+.ml-bottle > .iso-top,
+.ml-glass > .iso-top {
+  fill: var(--ml-glass-top);
+}
+
+.ml-glass[data-joined] > .iso-top {
+  fill: var(--ml-glass-joined);
+}
+
+.ml-blade > .iso-top {
+  fill: var(--ml-blade-top);
+}
+
+.ml-blade[data-out] > .iso-top {
+  fill: var(--ml-blade-out);
+}
+
+.ml-blade[data-out] > .iso-edge {
+  stroke: var(--anatomy-hi);
+}
+
+.ml-fan-halo {
+  filter: blur(4px);
+  opacity: 0.8;
+  transform: translateY(1.5px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ml * {
+    transition: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .ml {
+    overflow: hidden;
+  }
+
+  .iso-plate .ml .iso-svg {
+    width: 130%;
+    margin: -10% -15% -8%;
+  }
+}

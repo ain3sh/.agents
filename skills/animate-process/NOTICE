@@ -1,0 +1,18 @@
+animate-process is a curated copy of Anatomy by Ryan
+(https://github.com/wheresryan22/anatomy, commit 1482e84, MIT; see LICENSE).
+
+Changes in this copy:
+
+- Re-themed to Factory: `ISO_CSS` / `kit/iso.css` tokens use the Tungsten
+  warm-grey ramp and `#FF5A00` as `lit` in both themes; Geist and Geist Mono
+  load in `pageHtml`. Example CSS greys were mapped to the nearest Tungsten step.
+- Dropped the 3D beta (`kit/turn*.mjs`, `references/3d.md`, `GLSL_TURN` and
+  `glslPose` in `kit/gl.mjs`, the turning-dial example, turn-check/bench
+  scripts), the experimental canvas painter (`turn-fixed`, `canvas-painter`,
+  `gl-shared`), gallery publishing (`publish`, `session`, `fingerprint`,
+  `references/publish.md`), the kit's own test suite, CI and repo docs, and
+  every built page and PDF (examples rebuild them).
+- `drive.mjs` still accepts the upstream `turn` and `orbit` actions; they do
+  nothing useful without the 3D runtime.
+- New `SKILL.md` and `references/workflow.md` (from the upstream SKILL.md);
+  references edited only to remove 3D/publish material and restate the theme.
