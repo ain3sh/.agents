@@ -549,10 +549,13 @@ function swatchSvg(mark) {
 }
 export function plateHtml({ fig, title, hint, readout = "", keys = [], caption, body }) {
     const corner = (name, text, extra = "") => `<span class="iso-plate-corner" data-corner="${name}"${extra}>${escape(text)}</span>`;
+    // The drawing's aspect lets the stylesheet cap its height in wide cards (.iso-plate>.iso-stage).
+    const box = /class="iso-svg[^"]*"[^>]*viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(body);
+    const aspect = box ? ` style="--iso-aspect:${Math.round((box[1] / box[2]) * 1e4) / 1e4}"` : "";
     const legend = keys.length || caption
         ? `<figcaption class="iso-legend">${keys.length ? `<span class="iso-keys">${keys.map((key) => `<span class="iso-key">${swatchSvg(key.mark)}${escape(key.label)}</span>`).join("")}</span>` : ""}${caption ? `<span class="iso-caption">${escape(caption)}</span>` : ""}</figcaption>`
         : "";
-    return `<figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true">${corner("fig", fig)}${title ? corner("title", title) : ""}${hint ? corner("hint", hint) : ""}${corner("readout", readout, " data-readout")}</div>${body}</div>${legend}</figure>`;
+    return `<figure class="iso-figure"><div class="iso-plate"${aspect}><div class="iso-plate-corners" aria-hidden="true">${corner("fig", fig)}${title ? corner("title", title) : ""}${hint ? corner("hint", hint) : ""}${corner("readout", readout, " data-readout")}</div>${body}</div>${legend}</figure>`;
 }
 export function pageHtml({ title, theme = "dark", body, script = "", width = 650 }) {
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(title)}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"><style>${ISO_CSS}${PAGE_CSS.replace("__WIDTH__", String(width))}</style></head><body class="iso" data-theme="${theme}"><main class="iso-page">${body}</main>${script ? `<script type="module">${script.replace(/<\/(script)/gi, "<\\/$1")}</script>` : ""}</body></html>`;
@@ -564,20 +567,7 @@ body[data-theme="light"]{color-scheme:light}
 body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px/1.6 "Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
 .iso-page{width:min(__WIDTH__px,100% - 32px);margin:64px auto 96px}
 `;
-export const ISO_CSS = `
-.iso{
-  --anatomy-page:#000000;--anatomy-card:#100E0D;--anatomy-text:#998F89;--anatomy-strong:#FFFFFF;--anatomy-muted:#80756F;
-  --anatomy-paper:#100E0D;--anatomy-face:#1D1A18;--anatomy-top:#1D1A18;
-  --anatomy-shade-0:#0C0B0A;--anatomy-shade-1:#0D0C0B;--anatomy-shade-2:#100E0D;--anatomy-shade-3:#151311;
-  --anatomy-lit-top:#26211F;--anatomy-lit-shade:#1D1A18;
-  --anatomy-hi:#D2CCC7;--anatomy-mid:#6B615C;--anatomy-lo:#403A37;--anatomy-faint:#2E2926;--anatomy-lit:#FF5A00;
-  --anatomy-halo:#000000;--anatomy-halo-opacity:.9;--anatomy-dot:#E9E4E1;
-  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
-  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
-  --anatomy-mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
-}
-.iso[data-theme="light"]{
+const LIGHT_TOKENS = `
   --anatomy-page:#F4F1EF;--anatomy-card:#FCFAFA;--anatomy-text:#564E4A;--anatomy-strong:#26211F;--anatomy-muted:#80756F;
   --anatomy-paper:#FCFAFA;--anatomy-face:#FFFFFF;--anatomy-top:#FFFFFF;
   --anatomy-shade-0:#E9E4E1;--anatomy-shade-1:#EEEAE8;--anatomy-shade-2:#F4F1EF;--anatomy-shade-3:#F7F5F3;
@@ -586,7 +576,21 @@ export const ISO_CSS = `
   --anatomy-halo:#80756F;--anatomy-halo-opacity:.32;--anatomy-dot:#38322F;
   --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
   --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+`;
+export const ISO_CSS = `
+.iso{
+  --anatomy-page:#000000;--anatomy-card:#100E0D;--anatomy-text:#998F89;--anatomy-strong:#FFFFFF;--anatomy-muted:#80756F;
+  --anatomy-paper:#100E0D;--anatomy-face:#1D1A18;--anatomy-top:#1D1A18;
+  --anatomy-shade-0:#0C0B0A;--anatomy-shade-1:#0D0C0B;--anatomy-shade-2:#100E0D;--anatomy-shade-3:#151311;
+  --anatomy-lit-top:#26211F;--anatomy-lit-shade:#1D1A18;
+  --anatomy-hi:#D2CCC7;--anatomy-mid:#857A74;--anatomy-lo:#574F4B;--anatomy-faint:#3A3431;--anatomy-lit:#FF5A00;
+  --anatomy-halo:#000000;--anatomy-halo-opacity:.9;--anatomy-dot:#E9E4E1;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
 }
+.iso[data-theme="light"]{${LIGHT_TOKENS}}
 .iso-svg{display:block;width:100%;height:auto;overflow:visible}
 .iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
 .iso-fill{fill:var(--anatomy-paper);stroke:none}
@@ -655,6 +659,7 @@ export const ISO_CSS = `
 .iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
 .iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
 .iso-plate .iso-svg{margin:0 auto}
+.iso-plate>.iso-stage{max-width:calc(var(--iso-max-height,min(460px,56vh)) * var(--iso-aspect,100));margin-inline:auto}
 .iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
 .iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
 .iso-key{display:inline-flex;align-items:center;gap:7px}
@@ -669,6 +674,8 @@ export const ISO_CSS = `
 .iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
 .iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
 .iso-swatch-crease{stroke:var(--anatomy-lo)!important}
-@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (max-width:560px){.iso-plate{padding:48px 0 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
 @media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+/* Paper is light: a dark figure prints with the light tokens, and the controls hint has nothing to act on. */
+@media print{.iso,.iso[data-theme]{${LIGHT_TOKENS}}.iso-plate-corner[data-corner="hint"]{display:none}}
 `;

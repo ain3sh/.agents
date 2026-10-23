@@ -118,11 +118,11 @@ Rotations about z can't be done with a screen transform: rebuild the rotating pa
 ## 8. Card and page
 | Function | Notes |
 |---|---|
-| `plateHtml({ fig, title, hint, readout, keys: [{ mark, label }], caption, body })` | The card. `mark` is one of `raised`, `flat`, `lit`, `edge`, `dim`, `dotted`, `dashed`, `red`, `green`, `blue`. The readout element carries `data-readout`, so live code writes to it. |
+| `plateHtml({ fig, title, hint, readout, keys: [{ mark, label }], caption, body })` | The card. `mark` is one of `raised`, `flat`, `lit`, `edge`, `dim`, `dotted`, `dashed`, `red`, `green`, `blue`. The readout element carries `data-readout`, so live code writes to it. When `body` holds a `figureSvg` drawing, the plate records its aspect and caps an `.iso-stage` child at `--iso-max-height` tall (default `min(460px, 56vh)`), so a wide card does not grow a drawing taller than the screen; set the property on an ancestor to change it. On phones the plate has no side padding, so the drawing spans the card. |
 | `pageHtml({ title, theme = "dark", body, script, width = 650 })` | A standalone document with `ISO_CSS` inlined. |
 | `kitScript()` | From `scripts/inline-kit.mjs`. Prepend it to `script` so the page can call kit functions such as `lineOnTop` and `translateAlong` while animating. |
 | `glScript()` | From `scripts/inline-kit.mjs`. The source of `kit/gl.mjs` (`GLSL_ISO`, `glCamera`, `glLayer`, `smooth`, `burst`, `settle`), to inline after `kitScript()` on a page with a shader: `script: kitScript() + glScript() + live`. It doesn't depend on the kit, so a page whose live code calls no kit function can inline it alone (the Raptor uses `glScript() + LIVE`). Everything is one module script, so live code must not redeclare `smooth`, `burst` or `settle`: a second `const smooth` is a SyntaxError that kills the page. |
-| `ISO_CSS` | All the styles. `kit/iso.css` is the same text. |
+| `ISO_CSS` | All the styles. `kit/iso.css` is the same text. Dark is the default theme and `data-theme="light"` switches to light; in print media every figure uses the light tokens, whatever its `data-theme`, and the plate's controls hint is hidden. Page CSS that recolours parts per theme (`.iso:not([data-theme="light"]) …`) needs its own `@media print` override. |
 
 ## 9. React components
 From `kit/react/draw.tsx`, which is server-safe:
