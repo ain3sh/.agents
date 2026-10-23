@@ -1,1867 +1,667 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- TODO: title in form "<Doc Name> · Design Doc · <TICKET>" -->
-  <title>TODO Title · Design Doc · TODO-TICKET</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@400;500&display=swap"
-    rel="stylesheet"
-  />
-  <style>
-    /* =================================================================
-       FACTORY DESIGN DOC TEMPLATE
-       Dark-first · Geist + Geist Mono · orange as the sole accent
-       ================================================================= */
-
-    :root {
-      --bg: #000000;
-      --bg-elevated: #161413;
-      --bg-sunk: #0c0b0a;
-      --ink: #ffffff;
-      --ink-soft: #e8e5e3;
-      --graphite: #b9b0ab;
-      --fog: #9b8e87;
-      --fog-soft: #5e5652;
-      --line: #342f2d;
-      --line-strong: #4d4541;
-      --line-faint: #211e1c;
-      --code-bg: #1d1a18;
-      --code-fg: #ffffff;
-
-      --accent: #ee6018;
-      --accent-ink: #000000;
-      --accent-soft: #2a160c;
-      --accent-line: #ee6018;
-
-      --ochre: #9b8e87;
-      --ochre-soft: #1b1918;
-
-      --slate: #9b8e87;
-      --slate-soft: #1b1918;
-
-      --shadow-sm: none;
-      --shadow-md: none;
-      --shadow-lg: none;
-
-      --serif: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI",
-        sans-serif;
-      --mono: "Geist Mono", "SFMono-Regular", "Menlo",
-        "Consolas", monospace;
-    }
-
-    @media (prefers-color-scheme: light) {
-      :root {
-        --bg: #f2f0f0;
-        --bg-elevated: #ffffff;
-        --bg-sunk: #e8e5e3;
-        --ink: #020202;
-        --ink-soft: #242220;
-        --graphite: #5f5956;
-        --fog: #808080;
-        --fog-soft: #b8b3b0;
-        --line: #b8b3b0;
-        --line-strong: #8f8986;
-        --line-faint: #d8d4d2;
-        --code-bg: #e5e1df;
-        --code-fg: #020202;
-
-        --accent: #ee6018;
-        --accent-ink: #000000;
-        --accent-soft: #f7dfd2;
-        --accent-line: #ee6018;
-
-        --ochre: #808080;
-        --ochre-soft: #e8e5e3;
-        --slate: #808080;
-        --slate-soft: #e8e5e3;
-      }
-    }
-
-    *, *::before, *::after { box-sizing: border-box; }
-    html { -webkit-text-size-adjust: 100%; }
-    html, body { margin: 0; padding: 0; }
-
-    body {
-      font-family: var(--serif);
-      font-size: 18px;
-      line-height: 1.62;
-      letter-spacing: -0.01em;
-      font-weight: 400;
-      color: var(--ink);
-      background: var(--bg);
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      font-feature-settings: "kern", "liga";
-    }
-
-    body::before {
-      display: none;
-    }
-
-    ::selection {
-      background: color-mix(in oklab, var(--accent) 22%, transparent);
-      color: var(--ink);
-    }
-
-    /* ---- Layout ---------------------------------------------------- */
-
-    .page {
-      display: grid;
-      grid-template-columns: minmax(0, 800px);
-      justify-content: center;
-      gap: 0;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 64px 56px 120px;
-    }
-
-    @media (max-width: 960px) {
-      .page {
-        grid-template-columns: minmax(0, 1fr);
-        gap: 40px;
-        padding: 40px 24px 80px;
-      }
-    }
-
-    /* ---- Auto-hide table of contents ------------------------------ */
-
-    nav.toc {
-      position: fixed;
-      top: 40px;
-      left: 0;
-      width: 68px; /* must fit the widest numeral (VIII) when collapsed */
-      max-height: calc(100vh - 80px);
-      overflow: hidden;
-      align-self: start;
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 16, "wght" 400;
-      font-size: 14.5px;
-      line-height: 1.55;
-      padding: 24px 14px 24px 24px;
-      background: transparent;
-      border-radius: 0 6px 6px 0;
-      z-index: 5;
-      transition:
-        width 280ms cubic-bezier(0.2, 0.7, 0.2, 1),
-        background 220ms ease,
-        box-shadow 220ms ease,
-        padding 220ms ease;
-    }
-
-    nav.toc:hover, nav.toc:focus-within {
-      width: 248px;
-      background: var(--bg-elevated);
-      box-shadow: none;
-      border: 1px solid var(--line);
-      border-left: 0;
-      padding: 24px 22px 24px 28px;
-    }
-
-    @media (max-width: 960px) {
-      nav.toc {
-        position: static;
-        width: auto;
-        max-height: none;
-        overflow: visible;
-        border-bottom: 1px solid var(--line);
-        padding: 0 0 24px;
-        background: transparent;
-        border-radius: 0;
-        box-shadow: none;
-      }
-      nav.toc:hover, nav.toc:focus-within {
-        width: auto;
-        background: transparent;
-        box-shadow: none;
-        padding: 0 0 24px;
-      }
-    }
-
-    nav.toc .toc-label {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      font-weight: 500;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--fog);
-      margin: 0 0 14px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--line);
-      opacity: 0;
-      transition: opacity 200ms ease 60ms;
-      white-space: nowrap;
-    }
-
-    nav.toc:hover .toc-label, nav.toc:focus-within .toc-label { opacity: 1; }
-
-    @media (max-width: 960px) {
-      nav.toc .toc-label { opacity: 1; }
-    }
-
-    nav.toc ol {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      counter-reset: toc;
-    }
-
-    nav.toc li {
-      margin: 5px 0;
-      counter-increment: toc;
-      position: relative;
-    }
-
-    nav.toc a {
-      color: transparent;
-      text-decoration: none;
-      display: block;
-      padding: 3px 0;
-      font-style: normal;
-      font-weight: 400;
-      letter-spacing: -0.003em;
-      border-bottom: none;
-      white-space: nowrap;
-      overflow: hidden;
-      transition: color 200ms ease, transform 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
-    }
-
-    nav.toc:hover a, nav.toc:focus-within a { color: var(--graphite); }
-
-    @media (max-width: 960px) {
-      nav.toc a { color: var(--graphite); }
-    }
-
-    nav.toc a::before {
-      content: counter(toc, upper-roman);
-      font-family: var(--mono);
-      font-style: normal;
-      font-size: 10.5px;
-      font-weight: 500;
-      color: var(--fog);
-      margin-right: 16px;
-      display: inline-block;
-      min-width: 24px;
-      letter-spacing: 0;
-      transition: color 160ms ease;
-    }
-
-    nav.toc a:hover, nav.toc a:focus-visible {
-      color: var(--accent);
-      transform: translateX(3px);
-      outline: none;
-    }
-    nav.toc a:hover::before, nav.toc a:focus-visible::before { color: var(--accent); }
-
-    /* ---- Header --------------------------------------------------- */
-
-    header.doc {
-      margin-bottom: 96px;
-      position: relative;
-    }
-
-    header.doc > * {
-      opacity: 0;
-      animation: rise-in 0.75s cubic-bezier(0.22, 0.7, 0.2, 1) both;
-    }
-    header.doc > *:nth-child(1) { animation-delay: 0.04s; }
-    header.doc > *:nth-child(2) { animation-delay: 0.16s; }
-    header.doc > *:nth-child(3) { animation-delay: 0.28s; }
-    header.doc > *:nth-child(4) { animation-delay: 0.4s; }
-    header.doc > *:nth-child(n + 5) { animation-delay: 0.48s; }
-
-    .eyebrow {
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin: 0 0 36px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .eyebrow::before {
-      content: "";
-      width: 22px;
-      height: 1px;
-      background: var(--accent);
-      opacity: 0.55;
-    }
-
-    .eyebrow::after {
-      content: "";
-      flex: 1;
-      height: 1px;
-      background: var(--line);
-      opacity: 0.75;
-    }
-
-    .eyebrow .dot { display: none; }
-
-    h1.title {
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 144, "wght" 500, "SOFT" 30;
-      font-size: clamp(44px, 7.2vw, 78px);
-      line-height: 0.96;
-      letter-spacing: -0.028em;
-      font-weight: 500;
-      margin: 0 0 22px;
-      color: var(--ink);
-      text-wrap: balance;
-    }
-
-    /* Optional literal-subject subtitle for conceptual titles —
-       "Where judgment sits" alone fails search/recall; the subtitle
-       carries the indexable subject ("Converging Factory's PR review flows"). */
-    h1.title .subtitle {
-      display: block;
-      font-variation-settings: "opsz" 60, "wght" 420, "SOFT" 40;
-      font-size: 0.36em;
-      line-height: 1.25;
-      letter-spacing: -0.012em;
-      color: var(--graphite);
-      margin-top: 18px;
-    }
-
-    h1.title code {
-      font-family: var(--mono);
-      font-size: 0.62em;
-      font-weight: 500;
-      background: transparent;
-      border: none;
-      padding: 0 0 0 2px;
-      color: var(--accent);
-      letter-spacing: -0.01em;
-      vertical-align: 0.1em;
-    }
-
-    .tagline {
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 32, "wght" 380, "SOFT" 60;
-      font-size: clamp(18px, 2vw, 22px);
-      line-height: 1.45;
-      font-style: normal;             /* italic at body sizes hurts reading */
-      color: var(--graphite);
-      margin: 0 0 56px;
-      max-width: 32em;
-      text-wrap: balance;
-    }
-    .tagline em {
-      font-style: normal;
-      font-variation-settings: normal;
-    }
-    .tagline code {
-      font-style: normal;
-      font-family: var(--mono);
-      background: transparent;
-      border: none;
-      color: var(--ink-soft);
-      padding: 0 2px;
-      font-size: 0.82em;
-    }
-
-    /* ---- Provenance link line -------------------------------------
-       One quiet mono line under the tagline: label + link pairs,
-       no borders — the eyebrow rule above carries the horizontal.
-       Keep only fields that earn their slot (tracker link, PRs);
-       status/author/date provenance belongs in footer.doc. */
-
-    .linkline {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 10px 36px;
-      margin: 0;
-      font-family: var(--mono);
-      font-size: 12.5px;
-      line-height: 1.6;
-      color: var(--ink-soft);
-    }
-    .linkline .group {
-      display: inline-flex;
-      align-items: baseline;
-      gap: 12px;
-      min-width: 0;
-    }
-    .linkline .k {
-      font-size: 10px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--fog);
-      font-weight: 500;
-    }
-    .linkline a {
-      color: var(--accent);
-      text-decoration: none;
-      border-bottom: 1px solid color-mix(in oklab, var(--accent) 38%, transparent);
-      transition: border-color 180ms ease, color 180ms ease;
-    }
-    .linkline a:hover {
-      border-bottom-color: var(--accent);
-      color: color-mix(in oklab, var(--accent) 80%, var(--ink));
-    }
-
-    /* ---- Optional quantitative proof band ------------------------- */
-
-    .statband {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1px;
-      margin: 44px 0 0;
-      overflow: hidden;
-      background: var(--line);
-      border: 1px solid var(--line);
-      border-radius: 4px;
-    }
-    .statband .stat {
-      min-width: 0;
-      padding: 24px 18px 22px;
-      text-align: center;
-      background: var(--bg-elevated);
-    }
-    .statband .figure {
-      font-family: var(--serif);
-      font-size: 44px;
-      font-weight: 300;
-      line-height: 1;
-      letter-spacing: -0.045em;
-      color: var(--accent);
-      font-variant-numeric: tabular-nums;
-    }
-    .statband .unit {
-      font-size: 0.48em;
-      font-weight: 400;
-      letter-spacing: 0;
-    }
-    .statband .cap {
-      margin-top: 10px;
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 400;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--fog);
-    }
-    .statband .sub {
-      margin-top: 6px;
-      font-size: 13px;
-      line-height: 1.4;
-      color: var(--graphite);
-    }
-    @media (max-width: 700px) {
-      .statband { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    /* ---- Chips ---------------------------------------------------- */
-
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 3px 11px;
-      border-radius: 999px;
-      font-family: var(--mono);
-      font-size: 10.5px;
-      font-weight: 500;
-      letter-spacing: 0.06em;
-      background: var(--ochre-soft);
-      color: var(--ochre);
-      border: 1px solid color-mix(in oklab, var(--ochre) 28%, transparent);
-      text-transform: uppercase;
-      line-height: 1.4;
-    }
-    .chip.accent { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
-    .chip.slate  { background: var(--slate-soft); color: var(--slate); border-color: color-mix(in oklab, var(--slate) 20%, transparent); }
-    .chip .dot {
-      width: 5px; height: 5px; border-radius: 50%;
-      background: currentColor; display: inline-block; opacity: 0.85;
-    }
-
-    /* ---- Section headers ------------------------------------------ */
-
-    section.block {
-      margin-top: 88px;
-      scroll-margin-top: 40px;
-      position: relative;
-    }
-    section.block + section.block::before {
-      content: "⁂";
-      position: absolute;
-      top: -52px; left: 50%;
-      transform: translateX(-50%);
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 36, "wght" 400;
-      font-size: 18px;
-      color: var(--fog-soft);
-      letter-spacing: 0.25em;
-      user-select: none;
-    }
-    section.block > h2 {
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin: 0 0 6px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding-bottom: 4px;
-    }
-    section.block > h2 .num {
-      font-family: var(--mono);
-      color: var(--accent);
-      font-weight: 600;
-      font-size: 11px;
-      letter-spacing: 0.05em;
-      padding: 3px 9px;
-      background: var(--accent-soft);
-      border-radius: 3px;
-    }
-    section.block > h2::after {
-      content: ""; flex: 1; height: 1px;
-      background: var(--line); opacity: 0.7;
-    }
-    section.block > h3 {
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 72, "wght" 500, "SOFT" 40;
-      font-size: clamp(30px, 3.3vw, 40px);
-      font-weight: 500;
-      letter-spacing: -0.024em;
-      line-height: 1.05;
-      margin: 16px 0 32px;
-      color: var(--ink);
-      max-width: 22ch;
-      text-wrap: balance;
-    }
-    section.block h4 {
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 28, "wght" 600, "SOFT" 40;
-      font-size: 20px;
-      font-weight: 600;
-      margin: 40px 0 10px;
-      color: var(--ink);
-      letter-spacing: -0.01em;
-      line-height: 1.28;
-    }
-    section.block p { margin: 0 0 16px; }
-    section.block > p:first-of-type, section.block > p.lede {
-      color: var(--ink-soft);
-      font-size: 17.5px;
-    }
-
-    /* ---- Drop cap & body typography ------------------------------- */
-
-    .lede { font-variation-settings: "opsz" 17, "wght" 400; }
-    .dropcap {
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 144, "wght" 500, "SOFT" 80;
-      font-size: 5.4em;
-      line-height: 0.82;
-      float: left;
-      padding: 0.09em 0.14em 0 0;
-      margin: 0.04em 0 -0.05em 0;
-      color: var(--accent);
-      font-weight: 500;
-      font-feature-settings: "dlig", "swsh";
-      shape-outside: margin-box;
-    }
-
-    code {
-      font-family: var(--mono);
-      font-size: 0.84em;
-      background: var(--code-bg);
-      color: var(--code-fg);
-      padding: 1px 6px;
-      border-radius: 4px;
-      border: 1px solid color-mix(in oklab, var(--code-bg) 60%, var(--line));
-      font-feature-settings: "cv02", "cv03", "zero";
-    }
-    a {
-      color: var(--accent);
-      text-decoration: none;
-      border-bottom: 1px solid color-mix(in oklab, var(--accent) 36%, transparent);
-      transition: border-color 180ms ease;
-    }
-    a:hover { border-bottom-color: var(--accent); }
-    em {
-      font-style: normal;
-      color: var(--ink-soft);
-      font-variation-settings: normal;
-    }
-    strong {
-      font-weight: 600;
-      color: var(--ink);
-      font-variation-settings: "opsz" 17, "wght" 600;
-    }
-    hr { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
-
-    /* ---- Lists ---------------------------------------------------- */
-
-    ul.bullets { list-style: none; padding-left: 0; margin: 10px 0 18px; }
-    ul.bullets li {
-      position: relative;
-      padding-left: 26px;
-      margin: 10px 0;
-      color: var(--ink-soft);
-    }
-    ul.bullets li::before {
-      content: "▸";
-      position: absolute;
-      left: 6px; top: 0.05em;
-      color: var(--accent);
-      font-size: 0.9em;
-      line-height: 1.7;
-    }
-    ol.numbered { counter-reset: num; list-style: none; padding-left: 0; margin: 16px 0; }
-    ol.numbered > li {
-      counter-increment: num;
-      position: relative;
-      padding-left: 58px;
-      margin: 14px 0;
-      color: var(--ink-soft);
-    }
-    ol.numbered > li::before {
-      content: counter(num, upper-roman) ".";
-      position: absolute;
-      left: 0; top: 2px;
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 22, "wght" 500;
-      font-size: 16px;
-      font-weight: 500;
-      color: var(--accent);
-      letter-spacing: 0.01em;
-      min-width: 42px;
-    }
-
-    /* ---- Goals / non-goals panels --------------------------------- */
-
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 26px 0; }
-    @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
-
-    .panel {
-      background: var(--bg-elevated);
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      padding: 22px 26px 24px;
-      position: relative;
-      box-shadow: none;
-    }
-    .panel::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: var(--accent);
-    }
-    .panel.rose::before { background: var(--ochre); }
-    .panel h5 {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      font-weight: 500;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin: 0 0 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .panel h5::after {
-      content: ""; flex: 1; height: 1px;
-      background: currentColor; opacity: 0.25;
-    }
-    .panel.rose h5 { color: var(--ochre); }
-    .panel ul { margin: 0; padding-left: 0; list-style: none; }
-    .panel ul li {
-      position: relative;
-      padding-left: 22px;
-      margin: 10px 0;
-      color: var(--ink-soft);
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 15, "wght" 400;
-      font-size: 15.5px;
-      line-height: 1.55;
-    }
-    .panel ul li::before {
-      content: "";
-      position: absolute;
-      left: 6px; top: 11px;
-      width: 8px; height: 1.5px;
-      background: var(--accent); opacity: 0.8;
-    }
-    .panel.rose ul li::before { background: var(--ochre); }
-
-    /* ---- Callout panels: claim + scannable rows + caveat -----------
-       For product/exec callouts where a paragraph would be skipped.
-       Structure: .claim (the memorable line) → .rows (3 scannable facts)
-       → .note (the honest caveat, deliberately de-emphasized).
-       Use .rows .was/.to for before→after deltas; plain .v otherwise.  */
-
-    .panel .claim {
-      font-family: var(--serif);
-      font-size: 20px;
-      font-weight: 400;
-      line-height: 1.24;
-      letter-spacing: -0.025em;
-      color: var(--ink);
-      margin: 0 0 18px;
-      text-wrap: balance;
-    }
-    .panel .claim code {
-      font-size: 0.78em;
-      background: transparent;
-      border: none;
-      padding: 0;
-      color: var(--accent);
-    }
-    .panel .rows { display: grid; gap: 9px; margin: 0 0 16px; }
-    .panel .rows .r {
-      display: grid;
-      grid-template-columns: 86px 1fr;
-      gap: 12px;
-      align-items: baseline;
-    }
-    .panel .rows .k {
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--fog);
-    }
-    .panel .rows .v {
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 1.35;
-      color: var(--ink-soft);
-      font-variant-numeric: tabular-nums;
-    }
-    .panel .rows .v .was { color: var(--fog); }
-    .panel .rows .v .to { color: var(--accent); font-weight: 500; }
-    .panel .rows .v .to::before {
-      content: "→";
-      color: var(--accent);
-      padding: 0 6px;
-      font-weight: 400;
-    }
-    .panel .note {
-      font-family: var(--serif);
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--graphite);
-      margin: 0;
-    }
-    /* Caveat panels must not read as another win. */
-    .panel.rose .rows .v .to,
-    .panel.rose .rows .v .to::before { color: var(--ink-soft); }
-    @media (max-width: 640px) {
-      .panel .rows .r { grid-template-columns: 1fr; gap: 2px; }
-    }
-
-    /* ---- Code blocks ---------------------------------------------- */
-
-    pre.code {
-      background: var(--code-bg);
-      color: var(--code-fg);
-      border: 1px solid color-mix(in oklab, var(--code-bg) 60%, var(--line));
-      border-radius: 4px;
-      padding: 20px 24px;
-      overflow-x: auto;
-      font-family: var(--mono);
-      font-size: 12.5px;
-      line-height: 1.7;
-      margin: 20px 0 6px;
-      tab-size: 2;
-      box-shadow: none;
-      position: relative;
-    }
-    pre.code::before {
-      content: "";
-      position: absolute;
-      top: 0; bottom: 0; left: 0;
-      width: 2px;
-      background: var(--accent); opacity: 0.7;
-    }
-    pre.code .comment { color: color-mix(in oklab, var(--code-fg) 48%, transparent); font-style: normal; }
-    pre.code .k  { color: color-mix(in oklab, var(--code-fg) 76%, var(--accent)); font-weight: 500; }
-    pre.code .s  { color: color-mix(in oklab, var(--code-fg) 58%, var(--accent)); }
-    pre.code .t  { color: color-mix(in oklab, var(--code-fg) 64%, var(--slate)); }
-    pre.code .fn { color: color-mix(in oklab, var(--code-fg) 54%, var(--accent)); font-weight: 500; }
-    pre.code .hl {
-      background: color-mix(in oklab, var(--ochre-soft) 85%, transparent);
-      margin: 0 -6px; padding: 0 6px; border-radius: 2px;
-    }
-    .code-caption {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.05em;
-      color: var(--fog);
-      margin: 0 0 32px;
-      padding-left: 14px;
-      border-left: 2px solid var(--line);
-    }
-
-    /* ---- Decision cards ------------------------------------------- */
-
-    .decision {
-      display: grid;
-      grid-template-columns: 88px 1fr;
-      gap: 32px;
-      padding: 40px 0 36px;
-      border-top: 1px solid var(--line);
-      transition: background-color 300ms ease;
-      position: relative;
-    }
-    .decision:first-of-type { border-top: 1.5px solid var(--line-strong); }
-    .decision:hover { background: color-mix(in oklab, var(--ochre-soft) 16%, transparent); }
-    .decision .num {
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 144, "wght" 500, "SOFT" 70;
-      font-size: 64px;
-      line-height: 0.88;
-      letter-spacing: -0.045em;
-      color: var(--accent);
-      font-weight: 500;
-      font-feature-settings: "dlig", "tnum";
-      margin-top: -6px;
-      position: relative;
-      padding-top: 14px;
-    }
-    .decision .num::before {
-      content: "D";
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.18em;
-      color: var(--fog);
-      display: block;
-      margin-bottom: 4px;
-      font-weight: 500;
-      font-variation-settings: initial;
-      position: absolute;
-      top: 0; left: 0;
-      line-height: 1;
-    }
-    @media (max-width: 640px) {
-      .decision { grid-template-columns: 1fr; gap: 18px; padding: 32px 0 28px; }
-      .decision .num { font-size: 44px; }
-    }
-    .decision .title {
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 36, "wght" 500, "SOFT" 40;
-      font-size: 25px;
-      font-weight: 500;
-      line-height: 1.18;
-      letter-spacing: -0.02em;
-      margin: -4px 0 10px;
-      color: var(--ink);
-      text-wrap: balance;
-    }
-    .decision .status-row {
-      display: flex; flex-wrap: wrap; gap: 8px;
-      margin: 6px 0 22px;
-    }
-    .decision dl {
-      margin: 8px 0 0;
-      display: grid;
-      grid-template-columns: 116px 1fr;
-      gap: 18px 24px;
-    }
-    @media (max-width: 640px) {
-      .decision dl { grid-template-columns: 1fr; gap: 4px 0; }
-    }
-    .decision dt {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--accent);
-      font-weight: 500;
-      padding-top: 6px;
-      margin: 0;
-    }
-    @media (max-width: 640px) {
-      .decision dt { padding-top: 0; margin-top: 14px; }
-    }
-    .decision dd {
-      grid-column: 2;            /* CRITICAL — without this, dd falls under dt */
-      margin: 0;
-      color: var(--ink-soft);
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 16, "wght" 400;
-      font-size: 16px;
-      line-height: 1.62;
-    }
-    @media (max-width: 640px) { .decision dd { grid-column: 1; } }
-    .decision dd.sub { color: var(--graphite); font-size: 15px; }
-    .decision dd.sub strong { color: var(--ink); }
-    .decision dd + dd { margin-top: 2px; }
-
-    /* ---- Pull quote ----------------------------------------------- */
-
-    .pullquote {
-      margin: 48px 0 40px;
-      padding: 24px 0 24px 36px;
-      border-left: 2px solid var(--accent);
-      position: relative;
-    }
-    .pullquote::before {
-      content: "\201C";
-      position: absolute;
-      left: -18px; top: -42px;
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 144, "wght" 500, "SOFT" 80;
-      font-size: 112px;
-      line-height: 1;
-      color: var(--accent-soft);
-      pointer-events: none;
-      user-select: none;
-      z-index: 0;
-    }
-    .pullquote p {
-      position: relative;
-      z-index: 1;
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 48, "wght" 400, "SOFT" 50;
-      font-size: clamp(22px, 2.6vw, 28px);
-      line-height: 1.3;
-      letter-spacing: -0.018em;
-      color: var(--ink);
-      font-style: normal;
-      text-wrap: balance;
-      margin: 0 0 14px;
-    }
-    .pullquote p code {
-      font-style: normal;
-      font-size: 0.72em;
-      background: transparent;
-      color: var(--accent);
-      border: none;
-      padding: 0;
-      font-variation-settings: initial;
-    }
-    .pullquote .attrib {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      font-weight: 500;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--accent);
-      font-style: normal;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .pullquote .attrib::before {
-      content: "";
-      width: 22px; height: 1px;
-      background: var(--accent); opacity: 0.5;
-    }
-
-    /* ---- Callouts ------------------------------------------------- */
-
-    .callout {
-      background: var(--bg-elevated);
-      border: 1px solid var(--line);
-      border-left: 3px solid var(--accent);
-      border-radius: 0 4px 4px 0;
-      padding: 18px 22px;
-      margin: 24px 0;
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 16, "wght" 400;
-      font-size: 16px;
-      color: var(--ink-soft);
-      line-height: 1.6;
-    }
-    .callout.rose { border-left-color: var(--ochre); }
-    .callout .title {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--accent);
-      font-weight: 500;
-      display: block;
-      margin-bottom: 6px;
-    }
-    .callout.rose .title { color: var(--ochre); }
-
-    /* ---- Figures / diagrams --------------------------------------- */
-
-    figure.diagram {
-      margin: 30px 0 12px;
-      padding: 28px 24px 22px;
-      background: var(--bg-elevated);
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      box-shadow: none;
-      position: relative;
-    }
-    figure.diagram::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--accent);
-      opacity: 1;
-    }
-    figure.diagram svg {
-      width: 100%; height: auto; display: block;
-      color: var(--ink);
-    }
-    figure.diagram figcaption {
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 18, "wght" 400;
-      font-size: 13.5px;
-      font-style: normal;
-      color: var(--graphite);
-      margin-top: 18px;
-      text-align: center;
-      line-height: 1.5;
-      letter-spacing: -0.003em;
-      text-wrap: balance;
-      padding: 0 8%;
-    }
-    figure.diagram figcaption code { font-style: normal; font-size: 0.88em; }
-
-    /* ---- Demo video poster card ----------------------------------- */
-
-    figure.demo {
-      margin: 8px 0 56px;
-      padding: 0;
-      position: relative;
-      background: var(--bg-elevated);
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      box-shadow: none;
-      overflow: hidden;
-    }
-    figure.demo::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--accent);
-      opacity: 1;
-      z-index: 1;
-    }
-    figure.demo .demo-eyebrow {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      font-weight: 500;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--fog);
-      padding: 14px 20px 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    figure.demo .demo-eyebrow .dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--accent); display: inline-block;
-    }
-    figure.demo a.demo-link {
-      display: block;
-      position: relative;
-      margin-top: 12px;
-      aspect-ratio: 16 / 9;
-      background: var(--bg-sunk);
-      border-top: 1px solid var(--line);
-      border-bottom: 1px solid var(--line);
-      text-decoration: none;
-      overflow: hidden;
-      transition: background 220ms ease, transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
-    }
-    figure.demo a.demo-link::after {
-      display: none;
-    }
-    figure.demo .play {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: 64px; height: 64px;
-      border-radius: 4px;
-      background: var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: none;
-      transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 220ms ease;
-      z-index: 1;
-    }
-    figure.demo a.demo-link:hover .play, figure.demo a.demo-link:focus-visible .play {
-      transform: translate(-50%, -50%) scale(1.06);
-      box-shadow: none;
-    }
-    figure.demo .play svg {
-      width: 28px; height: 28px;
-      fill: var(--accent-ink);
-      margin-left: 4px;
-    }
-    figure.demo .demo-meta {
-      position: absolute;
-      bottom: 14px; left: 18px; right: 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--fog);
-      z-index: 1;
-    }
-    figure.demo .demo-meta .duration { color: var(--ink-soft); }
-    figure.demo figcaption {
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 16, "wght" 400;
-      font-size: 13.5px;
-      font-style: normal;
-      color: var(--graphite);
-      padding: 14px 20px 18px;
-      line-height: 1.5;
-      letter-spacing: -0.003em;
-      text-wrap: balance;
-    }
-    figure.demo figcaption code { font-style: normal; font-size: 0.88em; }
-
-    /* ---- SVG theming for inline diagrams -------------------------- */
-
-    svg text {
-      font-family: var(--mono);
-      fill: var(--ink);
-      font-feature-settings: "cv02", "cv03", "zero";
-    }
-    svg text.cap   { fill: var(--fog); font-size: 10.5px; letter-spacing: 0.05em; }
-    svg text.label { fill: var(--graphite); font-size: 11px; }
-    svg text.title { font-weight: 500; font-size: 12.5px; fill: var(--ink); }
-    svg .bg-fill { fill: var(--bg-elevated); }
-    svg .stroke  { stroke: var(--line-strong); }
-    svg .accent-stroke { stroke: var(--accent); }
-    svg .accent-fill   { fill: var(--accent); }
-    svg .accent-soft-fill { fill: var(--accent-soft); }
-    svg .muted-fill { fill: var(--line-strong); }   /* gray bars/blocks for the incumbent side of a contrast */
-    svg .dash { stroke-dasharray: 4 4; }            /* divider between two-panel contrast diagrams */
-
-    /* ---- Tables --------------------------------------------------- */
-
-    table.kv {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 22px 0;
-      font-family: var(--serif);
-      font-variation-settings: "opsz" 14, "wght" 400;
-      font-size: 14.5px;
-    }
-    table.kv th, table.kv td {
-      text-align: left;
-      padding: 12px 16px 12px 0;
-      border-bottom: 1px solid var(--line);
-      vertical-align: top;
-      line-height: 1.5;
-    }
-    table.kv th {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--accent);
-      font-weight: 500;
-      padding-top: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1.5px solid var(--line-strong);
-    }
-    table.kv tr:last-child td { border-bottom: none; }
-    table.kv code { font-size: 12.5px; }
-    table.kv tr:hover td {
-      background: color-mix(in oklab, var(--accent-soft) 18%, transparent);
-    }
-    .table-wrap { overflow-x: auto; margin: 22px 0; }
-    .table-wrap > table.kv { margin: 0; }
-
-    /* Effect glyphs for changes-and-impact tables: ↓ improved, = no effect,
-       ↑ regressed, · not the target. Only the win carries the accent. */
-    .g { font-family: var(--mono); font-weight: 500; display: inline-block; min-width: 1.1em; }
-    .g-down { color: var(--accent); }
-    .g-up { color: var(--ink); background: var(--line-strong); border-radius: 3px; padding: 0 3px; }
-    .g-flat, .g-na { color: var(--fog); }
-
-    figure.diagram img { width: 100%; height: auto; display: block; }
-
-    /* Report mode: provenance prose rendered under the hero. */
-    header.doc .preamble {
-      font-size: 14.5px;
-      color: var(--graphite);
-      border-top: 1px solid var(--line);
-      margin-top: 28px;
-      padding-top: 18px;
-    }
-
-    /* ---- Section animation ---------------------------------------- */
-
-    main > section {
-      opacity: 0;
-      animation: rise-in 0.8s cubic-bezier(0.22, 0.7, 0.2, 1) both;
-    }
-    main > section:nth-of-type(1) { animation-delay: 0.52s; }
-    main > section:nth-of-type(2) { animation-delay: 0.62s; }
-    main > section:nth-of-type(n + 3) { animation-delay: 0.72s; }
-
-    @keyframes rise-in {
-      from { opacity: 0; transform: translateY(14px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ---- Footer ---------------------------------------------------- */
-
-    footer.doc {
-      margin-top: 96px;
-      padding-top: 22px;
-      color: var(--fog);
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 18px;
-      justify-content: space-between;
-      opacity: 0.8;
-    }
-    footer.doc code {
-      background: transparent; border: none;
-      color: var(--graphite);
-      font-size: 11px; letter-spacing: 0; padding: 0;
-    }
-    footer.doc a { color: var(--graphite); text-decoration: none; border: none; }
-    footer.doc a:hover { color: var(--accent); }
-
-    /* ---- Factory visual system ------------------------------------ */
-
-    nav.toc {
-      font-family: var(--mono);
-      font-style: normal;
-      border-radius: 0 4px 4px 0;
-    }
-    nav.toc:hover, nav.toc:focus-within {
-      background: var(--bg-elevated);
-      box-shadow: none;
-      border: 1px solid var(--line);
-      border-left: 0;
-    }
-    nav.toc a {
-      font-family: var(--mono);
-      font-style: normal;
-      font-size: 12px;
-      letter-spacing: -0.01em;
-    }
-
-    header.doc {
-      margin-bottom: 104px;
-      padding-top: 18px;
-      border-top: 1px solid var(--line);
-    }
-    .eyebrow {
-      font-size: 12px;
-      font-weight: 400;
-      letter-spacing: 0.08em;
-      margin-bottom: 44px;
-    }
-    .eyebrow::before {
-      width: 8px;
-      height: 8px;
-      background: var(--accent);
-      opacity: 1;
-    }
-    .eyebrow::after { opacity: 1; }
-
-    h1.title {
-      font-family: var(--serif);
-      font-variation-settings: normal;
-      font-size: clamp(52px, 7vw, 82px);
-      font-weight: 300;
-      line-height: 0.98;
-      letter-spacing: -0.045em;
-      max-width: 14ch;
-      margin-bottom: 28px;
-    }
-    .tagline {
-      font-family: var(--serif);
-      font-variation-settings: normal;
-      font-size: clamp(19px, 2vw, 23px);
-      font-weight: 400;
-      line-height: 1.5;
-      letter-spacing: -0.018em;
-      max-width: 66ch;
-      color: var(--graphite);
-    }
-    .linkline .k {
-      font-weight: 400;
-      letter-spacing: 0.08em;
-    }
-    .chip { font-weight: 400; }
-
-    section.block + section.block::before {
-      content: "//";
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.16em;
-      color: var(--fog);
-    }
-    section.block > h2 {
-      font-size: 12px;
-      font-weight: 400;
-      letter-spacing: 0.08em;
-    }
-    section.block > h2 .num {
-      font-size: 11px;
-      font-weight: 400;
-      color: var(--accent);
-      background: transparent;
-      border: 1px solid var(--accent);
-      border-radius: 4px;
-      padding: 3px 8px;
-    }
-    section.block > h3,
-    section.block h4,
-    .panel h5,
-    .decision h4,
-    .pullquote p {
-      font-family: var(--serif);
-      font-variation-settings: normal;
-    }
-    section.block > h3 {
-      font-size: clamp(32px, 3.5vw, 44px);
-      font-weight: 300;
-      letter-spacing: -0.035em;
-      line-height: 1.08;
-      max-width: 24ch;
-    }
-    section.block h4 { font-weight: 400; }
-    section.block > p:first-of-type,
-    section.block > p.lede {
-      font-size: 18px;
-    }
-
-    .dropcap {
-      font-family: var(--mono);
-      font-variation-settings: normal;
-      font-feature-settings: "zero";
-      font-size: 4.6em;
-      font-weight: 400;
-      line-height: 0.86;
-      padding-right: 0.16em;
-    }
-    em, figcaption, .pullquote p, pre.code .comment {
-      font-style: normal;
-      font-variation-settings: normal;
-    }
-    strong { font-weight: 500; font-variation-settings: normal; }
-
-    .panel, .decision, figure.diagram, figure.demo, pre.code {
-      border-radius: 4px;
-      box-shadow: none;
-    }
-    .panel::before { height: 2px; }
-    .panel.rose::before { background: var(--line-strong); }
-    .panel.rose h5 { color: var(--fog); }
-
-    .pullquote {
-      border-left: 2px solid var(--accent);
-      padding: 22px 0 22px 28px;
-    }
-    .pullquote::before { display: none; }
-    .pullquote p {
-      font-size: clamp(24px, 2.8vw, 30px);
-      font-weight: 300;
-      line-height: 1.3;
-      letter-spacing: -0.025em;
-    }
-
-    figure.diagram::before,
-    figure.demo::before {
-      background: var(--accent);
-      opacity: 1;
-    }
-    figure.diagram figcaption,
-    figure.demo figcaption {
-      font-family: var(--serif);
-      font-weight: 400;
-      font-style: normal;
-      color: var(--fog);
-    }
-    figure.demo a.demo-link {
-      background: var(--bg-sunk);
-    }
-    figure.demo a.demo-link::after { display: none; }
-    figure.demo .play {
-      width: 64px;
-      height: 64px;
-      border-radius: 4px;
-      box-shadow: none;
-    }
-    figure.demo a.demo-link:hover .play,
-    figure.demo a.demo-link:focus-visible .play {
-      box-shadow: none;
-    }
-
-    .callout {
-      border-radius: 0 4px 4px 0;
-      background: var(--bg-elevated);
-      font-family: var(--serif);
-      font-variation-settings: normal;
-    }
-    .callout.rose { border-left-color: var(--line-strong); }
-    .callout.rose .title { color: var(--fog); }
-
-    table.kv {
-      font-family: var(--serif);
-      font-variation-settings: normal;
-      font-size: 15px;
-    }
-    table.kv th {
-      font-weight: 400;
-      letter-spacing: 0.08em;
-    }
-    table.kv tr:hover td { background: var(--bg-elevated); }
-
-    svg text {
-      font-family: var(--mono);
-      font-feature-settings: "zero";
-    }
-
-    /* ---- Reduced motion + print ----------------------------------- */
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation: none !important; transition: none !important; }
-      header.doc > *, main > section { opacity: 1; }
-    }
-
-    @media print {
-      @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
-      :root {
-        --bg: #ffffff; --bg-elevated: #ffffff; --bg-sunk: #ffffff;
-        --ink: #020202; --ink-soft: #242220; --graphite: #5f5956; --fog: #808080;
-        --line: #b8b3b0; --line-strong: #8f8986;
-        --accent: #ee6018; --accent-soft: #f7dfd2; --ochre: #808080;
-        --code-bg: #e5e1df;
-      }
-      body::before { display: none; }
-      .page { grid-template-columns: minmax(0, 1fr); padding: 0; max-width: none; gap: 0; }
-      nav.toc { display: none; }
-      body { font-size: 10.5pt; line-height: 1.5; }
-      h1.title { font-size: 28pt; }
-      section.block > h3 { font-size: 18pt; }
-      .decision, figure.diagram, .panel, .pullquote, pre.code {
-        break-inside: avoid; box-shadow: none;
-      }
-      section.block { margin-top: 28pt; }
-      pre.code { font-size: 8.5pt; }
-      footer.doc { break-inside: avoid; }
-    }
-
-    a:focus-visible, button:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 3px;
-      border-radius: 2px;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- TODO: "<Doc name> · <Design doc | Memo | Report> · <TICKET>" -->
+<title>TODO Title · Design doc · TODO-TICKET</title>
+<meta name="description" content="TODO the lede, verbatim" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..600&family=Geist+Mono:wght@400..500&display=swap" rel="stylesheet" />
+<style>
+/* Factory design doc. Dark only (print inverts to paper). Tokens follow
+   packages/core-ui/DESIGN.md: black canvas, warm grays, one accent. */
+:root {
+  color-scheme: dark;
+  --bg: #000000; --surface: #151311; --surface2: #100E0D; --surface3: #1D1A18;
+  --border: #38322F; --border2: #26211F;
+  --text: #FFFFFF; --soft: #D2CCC7; --soft2: #B5ADA7; --body: #998F89; --meta: #80756F;
+  --accent: #FF5A00; --accent-dim: rgba(255, 90, 0, 0.14);
+  --ok: #4F8F41; --warn: #EE9611; --err: #D72D17;
+  /* The gradient fills only the primary data mark (the winning bar). */
+  --grad: linear-gradient(to right, #FF9E40, #FF7C20, #FF5A00);
+  --sans: "Geist", system-ui, sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --rotor: url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgNjEzIDY1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMzk2LjQwIDE4MC41NkMzOTUuNjAgMTgwLjM2IDM5NC44NSAxNzkuOTkgMzk0LjIxIDE3OS40OEMzOTMuNTYgMTc4Ljk2IDM5My4wNCAxNzguMzIgMzkyLjY3IDE3Ny41OEMzOTIuMjkgMTc2Ljg0IDM5Mi4wOSAxNzYuMDQgMzkyLjA2IDE3NS4yMUMzOTIuMDMgMTc0LjM5IDM5Mi4xNyAxNzMuNTcgMzkyLjQ5IDE3Mi44MEM0MDMuNDIgMTQ2LjIwIDQwOC4yNSAxMjQuOTIgNDAwLjQ2IDExNi4wMUMzNzkuODUgOTIuMzcgMjk3LjE3IDEzOS4zOCAyNzAuODEgMTU1LjMwQzI3MC4xMSAxNTUuNzIgMjY5LjMyIDE1NS45OSAyNjguNTAgMTU2LjA4QzI2Ny42OCAxNTYuMTcgMjY2Ljg1IDE1Ni4wOSAyNjYuMDcgMTU1LjgzQzI2NS4yOSAxNTUuNTcgMjY0LjU3IDE1NS4xNSAyNjMuOTcgMTU0LjU5QzI2My4zNiAxNTQuMDMgMjYyLjg5IDE1My4zNCAyNjIuNTcgMTUyLjU4QzI1MS40OSAxMjYuMDQgMjM5Ljg1IDEwNy41NyAyMjguMDQgMTA2Ljc3QzE5Ni43NSAxMDQuNjMgMTcxLjUyIDE5Ni4zMyAxNjQuMTQgMjI2LjIyQzE2My45NCAyMjcuMDIgMTYzLjU3IDIyNy43NyAxNjMuMDYgMjI4LjQxQzE2Mi41NSAyMjkuMDYgMTYxLjkwIDIyOS41OSAxNjEuMTYgMjI5Ljk2QzE2MC40MyAyMzAuMzMgMTU5LjYyIDIzMC41NCAxNTguODAgMjMwLjU3QzE1Ny45NyAyMzAuNjAgMTU3LjE1IDIzMC40NSAxNTYuMzkgMjMwLjEzQzEyOS43OSAyMTkuMjAgMTA4LjQ5IDIxNC4zOCA5OS41OSAyMjIuMTZDNzUuOTUgMjQyLjc4IDEyMi45NiAzMjUuNDUgMTM4Ljg4IDM1MS44MUMxMzkuMzAgMzUyLjUxIDEzOS41NyAzNTMuMzAgMTM5LjY2IDM1NC4xMkMxMzkuNzUgMzU0Ljk0IDEzOS42NyAzNTUuNzcgMTM5LjQxIDM1Ni41NUMxMzkuMTUgMzU3LjM0IDEzOC43MyAzNTguMDUgMTM4LjE3IDM1OC42NkMxMzcuNjEgMzU5LjI2IDEzNi45MiAzNTkuNzQgMTM2LjE2IDM2MC4wNUMxMDkuNjIgMzcxLjEzIDkxLjE2IDM4Mi43OCA5MC4zNSAzOTQuNThDODguMjIgNDI1Ljg4IDE3OS45MSA0NTEuMTAgMjA5LjgxIDQ1OC40OUMyMTAuNjEgNDU4LjY5IDIxMS4zNSA0NTkuMDUgMjEyLjAwIDQ1OS41N0MyMTIuNjQgNDYwLjA4IDIxMy4xNiA0NjAuNzMgMjEzLjUzIDQ2MS40N0MyMTMuOTAgNDYyLjIwIDIxNC4xMSA0NjMuMDEgMjE0LjE0IDQ2My44M0MyMTQuMTcgNDY0LjY1IDIxNC4wMyA0NjUuNDcgMjEzLjcxIDQ2Ni4yM0MyMDIuNzggNDkyLjgzIDE5Ny45NiA1MTQuMTMgMjA1Ljc0IDUyMy4wM0MyMjYuMzUgNTQ2LjY3IDMwOS4wNCA0OTkuNjcgMzM1LjQgNDgzLjc1QzMzNi4xMCA0ODMuMzIgMzM2Ljg5IDQ4My4wNSAzMzcuNzEgNDgyLjk2QzMzOC41MyA0ODIuODcgMzM5LjM2IDQ4Mi45NSAzNDAuMTQgNDgzLjIxQzM0MC45MiA0ODMuNDcgMzQxLjY0IDQ4My44OSAzNDIuMjQgNDg0LjQ2QzM0Mi44NSA0ODUuMDIgMzQzLjMyIDQ4NS43MCAzNDMuNjQgNDg2LjQ2QzM1NC43MiA1MTMuMDAgMzY2LjM2IDUzMS40NyAzNzguMTcgNTMyLjI4QzQwOS40NyA1MzQuNDEgNDM0LjY5IDQ0Mi43MSA0NDIuMDYgNDEyLjgyQzQ0Mi4yNiA0MTIuMDIgNDQyLjYzIDQxMS4yNyA0NDMuMTUgNDEwLjYyQzQ0My42NiA0MDkuOTggNDQ0LjMxIDQwOS40NiA0NDUuMDUgNDA5LjA4QzQ0NS43OCA0MDguNzEgNDQ2LjU5IDQwOC41MSA0NDcuNDEgNDA4LjQ4QzQ0OC4yNCA0MDguNDUgNDQ5LjA2IDQwOC42MCA0NDkuODIgNDA4LjkxQzQ3Ni40MiA0MTkuODUgNDk3LjcxIDQyNC42NiA1MDYuNjIgNDE2Ljg4QzUzMC4yNiAzOTYuMjcgNDgzLjI1IDMxMy41OSA0NjcuMzIgMjg3LjIzQzQ2Ni45MCAyODYuNTIgNDY2LjY0IDI4NS43MyA0NjYuNTUgMjg0LjkxQzQ2Ni40NSAyODQuMSA0NjYuNTQgMjgzLjI3IDQ2Ni44MCAyODIuNDlDNDY3LjA2IDI4MS43MCA0NjcuNDggMjgwLjk5IDQ2OC4wNCAyODAuMzhDNDY4LjYwIDI3OS43OCA0NjkuMjggMjc5LjMwIDQ3MC4wNCAyNzguOTlDNDk2LjU5IDI2Ny45MSA1MTUuMDUgMjU2LjI2IDUxNS44NSAyNDQuNDVDNTE3Ljk5IDIxMy4xNiA0MjYuMjkgMTg3Ljk0IDM5Ni40MCAxODAuNTZaTTM2MC41MCAxNTAuNTZDMzY2LjUxIDE2MS4zNCAzMzUuNTIgMjMzLjE5IDMxMi40NiAyODMuNDRDMzEyLjA4IDI4NC4yOCAzMTEuNDQgMjg0Ljk4IDMxMC42NSAyODUuNDVDMzA5Ljg1IDI4NS45MiAzMDguOTMgMjg2LjEzIDMwOC4wMSAyODYuMDZDMzA3LjA5IDI4NS45OSAzMDYuMjEgMjg1LjY0IDMwNS40OSAyODUuMDZDMzA0Ljc3IDI4NC40NyAzMDQuMjUgMjgzLjY4IDMwNC4wMCAyODIuOEMyOTQuNjkgMjUwLjEyIDI4NC4wNSAyMTEuNzMgMjcyLjY2IDE3OS4xNUMyNzIuMjEgMTc3Ljg3IDI3Mi4yMyAxNzYuNDcgMjcyLjcyIDE3NS4yMUMyNzMuMjEgMTczLjk0IDI3NC4xMyAxNzIuODkgMjc1LjMyIDE3Mi4yNUMzMDMuNzYgMTU2LjcxIDM1Mi40MiAxMzYuMDkgMzYwLjUwIDE1MC41NlpNMjI0LjIyIDE1OS40NUMyMzYuMDkgMTYyLjgyIDI2NC45OCAyMzUuNTQgMjg0LjIwIDI4Ny4zOEMyODQuNTIgMjg4LjI0IDI4NC41NyAyODkuMTkgMjg0LjM0IDI5MC4wOEMyODQuMTEgMjkwLjk3IDI4My42MSAyOTEuNzggMjgyLjkxIDI5Mi4zOEMyODIuMjEgMjkyLjk4IDI4MS4zNCAyOTMuMzUgMjgwLjQyIDI5My40NUMyNzkuNTAgMjkzLjU0IDI3OC41OCAyOTMuMzUgMjc3Ljc3IDI5Mi45MUMyNDguMDYgMjc2LjQyIDIxMy40MSAyNTYuNzcgMTgyLjMxIDI0MS43OEMxODEuMSAyNDEuMTkgMTgwLjEzIDI0MC4xOSAxNzkuNTggMjM4Ljk1QzE3OS4wMyAyMzcuNzEgMTc4Ljk0IDIzNi4zMiAxNzkuMzIgMjM1LjAyQzE4OC40OCAyMDMuOTYgMjA4LjI3IDE1NC45NCAyMjQuMjIgMTU5LjQ1Wk0xMzQuMTUgMjYyLjExQzE0NC45MiAyNTYuMDkgMjE2Ljc3IDI4Ny4wOSAyNjcuMDIgMzEwLjE0QzI2Ny44NiAzMTAuNTMgMjY4LjU2IDMxMS4xNiAyNjkuMDMgMzExLjk2QzI2OS41MCAzMTIuNzUgMjY5LjcxIDMxMy42OCAyNjkuNjQgMzE0LjYwQzI2OS41NyAzMTUuNTIgMjY5LjIyIDMxNi40MCAyNjguNjQgMzE3LjExQzI2OC4wNSAzMTcuODMgMjY3LjI2IDMxOC4zNSAyNjYuMzcgMzE4LjYxQzIzMy43MSAzMjcuOTIgMTk1LjMxIDMzOC41NiAxNjIuNzIgMzQ5Ljk1QzE2MS40NSAzNTAuMzkgMTYwLjA1IDM1MC4zNyAxNTguNzkgMzQ5Ljg4QzE1Ny41MyAzNDkuMzkgMTU2LjQ4IDM0OC40NyAxNTUuODMgMzQ3LjI4QzE0MC4zMyAzMTguODUgMTE5LjY3IDI3MC4xOSAxMzQuMTUgMjYyLjExWk0xNDMuMDQgMzk4LjM4QzE0Ni40MCAzODYuNTEgMjE5LjEzIDM1Ny42MyAyNzAuOTYgMzM4LjQwQzI3MS44MyAzMzguMDggMjcyLjc3IDMzOC4wMyAyNzMuNjcgMzM4LjI2QzI3NC41NiAzMzguNSAyNzUuMzYgMzM4Ljk5IDI3NS45NyAzMzkuNjlDMjc2LjU3IDM0MC40IDI3Ni45NCAzNDEuMjYgMjc3LjA0IDM0Mi4xOEMyNzcuMTMgMzQzLjEwIDI3Ni45NCAzNDQuMDMgMjc2LjQ5IDM0NC44NEMyNjAgMzc0LjU1IDI0MC4zNSA0MDkuMTkgMjI1LjM2IDQ0MC4yOEMyMjQuNzcgNDQxLjUwIDIyMy43NyA0NDIuNDggMjIyLjUzIDQ0My4wM0MyMjEuMjkgNDQzLjU4IDIxOS45MCA0NDMuNjcgMjE4LjYwIDQ0My4yOEMxODcuNTQgNDM0LjE4IDEzOC41MSA0MTQuMzMgMTQzLjA0IDM5OC4zOFpNMjQ1LjY5IDQ4OC40NkMyMzkuNjcgNDc3LjY5IDI3MC42NyA0MDUuODMgMjkzLjczIDM1NS41OUMyOTQuMTEgMzU0Ljc1IDI5NC43NSAzNTQuMDUgMjk1LjU0IDM1My41OEMyOTYuMzQgMzUzLjExIDI5Ny4yNiAzNTIuODkgMjk4LjE4IDM1Mi45NkMyOTkuMTEgMzUzLjAzIDI5OS45OSAzNTMuMzggMzAwLjcwIDM1My45N0MzMDEuNDIgMzU0LjU1IDMwMS45NCAzNTUuMzQgMzAyLjE5IDM1Ni4yM0MzMTEuNTAgMzg4LjkgMzIyLjE1IDQyNy4yOSAzMzMuNTMgNDU5Ljg4QzMzMy45OCA0NjEuMTYgMzMzLjk1IDQ2Mi41NiAzMzMuNDYgNDYzLjgyQzMzMi45NyA0NjUuMDggMzMyLjA1IDQ2Ni4xMyAzMzAuODYgNDY2Ljc3QzMwMi40MyA0ODIuMjggMjUzLjc3IDUwMi45NCAyNDUuNzIgNDg4LjQ2SDI0NS42OVpNMzgxLjk3IDQ3OS41N0MzNzAuMDkgNDc2LjIwIDM0MS4yMSA0MDMuNDggMzIxLjk4IDM1MS42NEMzMjEuNjYgMzUwLjc3IDMyMS42MSAzNDkuODMgMzIxLjg0IDM0OC45M0MzMjIuMDcgMzQ4LjA0IDMyMi41NyAzNDcuMjMgMzIzLjI3IDM0Ni42M0MzMjMuOTcgMzQ2LjAzIDMyNC44NSAzNDUuNjUgMzI1Ljc3IDM0NS41NkMzMjYuNjkgMzQ1LjQ3IDMyNy42MSAzNDUuNjYgMzI4LjQyIDM0Ni4xMUMzNTguMTIgMzYyLjYwIDM5Mi43OCAzODIuMjYgNDIzLjg3IDM5Ny4yNUM0MjUuMDkgMzk3LjgzIDQyNi4wNiAzOTguODQgNDI2LjYxIDQwMC4wOEM0MjcuMTYgNDAxLjMyIDQyNy4yNCA0MDIuNzEgNDI2Ljg2IDQwNC4wMUM0MTcuNzEgNDM1LjEyIDM5Ny45MiA0ODQuMDkgMzgxLjk3IDQ3OS41N1pNNDcyLjA0IDM3Ni45MUM0NjEuMjYgMzgyLjk0IDM4OS40MiAzNTEuOTMgMzM5LjE3IDMyOC44OEMzMzguMzMgMzI4LjQ5IDMzNy42MiAzMjcuODYgMzM3LjE1IDMyNy4wNkMzMzYuNjkgMzI2LjI2IDMzNi40NyAzMjUuMzQgMzM2LjU0IDMyNC40MkMzMzYuNjEgMzIzLjUwIDMzNi45NiAzMjIuNjIgMzM3LjU1IDMyMS45MEMzMzguMTMgMzIxLjE5IDMzOC45MiAzMjAuNjcgMzM5LjgxIDMyMC40MUMzNzIuNDggMzExLjEwIDQxMC44NyAzMDAuNDYgNDQzLjQ2IDI4OS4wN0M0NDQuNzQgMjg4LjYzIDQ0Ni4xNCAyODguNjUgNDQ3LjQwIDI4OS4xNEM0NDguNjYgMjg5LjYzIDQ0OS43MSAyOTAuNTUgNDUwLjM2IDI5MS43NEM0NjUuODUgMzIwLjE3IDQ4Ni41MSAzNjguODQgNDcyLjA0IDM3Ni45MVpNNDYzLjE1IDI0MC42M0M0NTkuNzggMjUyLjUyIDM4Ny4wNiAyODEuNDAgMzM1LjIzIDMwMC42M0MzMzQuMzYgMzAwLjk1IDMzMy40MiAzMDEuMDAgMzMyLjUyIDMwMC43N0MzMzEuNjIgMzAwLjUzIDMzMC44MiAzMDAuMDMgMzMwLjIyIDI5OS4zM0MzMjkuNjEgMjk4LjYzIDMyOS4yNCAyOTcuNzYgMzI5LjE1IDI5Ni44NEMzMjkuMDYgMjk1LjkyIDMyOS4yNSAyOTQuOTkgMzI5LjcwIDI5NC4xOEMzNDYuMTkgMjY0LjQ4IDM2NS44MyAyMjkuODIgMzgwLjgyIDE5OC43M0MzODEuNDEgMTk3LjUyIDM4Mi40MiAxOTYuNTUgMzgzLjY2IDE5Ni4wMEMzODQuODkgMTk1LjQ1IDM4Ni4yOSAxOTUuMzYgMzg3LjU4IDE5NS43NUM0MTguNjUgMjA0Ljg5IDQ2Ny42NyAyMjQuNjggNDYzLjE1IDI0MC42M1oiIGZpbGw9IndoaXRlIi8+PC9zdmc+");
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); scroll-behavior: smooth; scroll-padding-top: 76px; }
+body { margin: 0; color: var(--body); font: 400 16.5px/1.62 var(--sans); letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; font-feature-settings: "ss09"; }
+a { color: var(--soft); text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 3px; transition: color .2s, text-decoration-color .2s; }
+a:hover { color: var(--text); text-decoration-color: var(--accent); }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+strong { color: var(--text); font-weight: 500; }
+em { font-style: normal; color: var(--soft); }
+code { font-family: var(--mono); font-size: 0.84em; color: var(--soft); background: var(--surface3); border: 1px solid var(--border2); border-radius: 4px; padding: 1px 5px; font-feature-settings: "zero"; letter-spacing: 0; }
+::selection { background: rgba(255, 90, 0, 0.35); color: #fff; }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 0 40px; }
+.mono { font-family: var(--mono); font-size: 0.86em; letter-spacing: 0; }
+.dim { color: var(--meta); }
+.den { color: var(--meta); font-weight: 400; }
+
+/* ---------- motion: progressive enhancement, off under reduced motion */
+@keyframes fade-up { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+@keyframes flicker { 0% { opacity: 0; } 10% { opacity: 1; } 20% { opacity: .2; } 30% { opacity: .9; } 40% { opacity: .1; } 50% { opacity: 1; } 60% { opacity: .3; } 70%, 100% { opacity: 1; } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+body:not(.nojs) .rv { opacity: 0; }
+body:not(.nojs) .rv.in { animation: fade-up 1.1s var(--ease) forwards; }
+.findings .rv:nth-child(2).in { animation-delay: .08s; }
+.findings .rv:nth-child(3).in { animation-delay: .16s; }
+.findings .rv:nth-child(4).in { animation-delay: .24s; }
+.fill { transform-origin: left; }
+body:not(.nojs) .rv .fill { transform: scaleX(0); }
+body:not(.nojs) .rv.in .fill { animation: grow 1.2s var(--ease) .35s forwards; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  body:not(.nojs) .rv, body:not(.nojs) .rv.in { opacity: 1; animation: none; }
+  body:not(.nojs) .rv .fill, body:not(.nojs) .rv.in .fill { transform: none; animation: none; }
+  .hero-art, .live, .cursor, .frotor { animation: none !important; }
+}
+
+/* ---------- top bar: logo + section nav with scroll-spy */
+header.top { position: sticky; top: 0; z-index: 20; background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--border2); }
+.toprow { display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 60px; }
+.toprow > a { display: block; color: var(--text); text-decoration: none; }
+.logo { height: 18px; width: auto; display: block; }
+nav { display: flex; gap: 4px; font: 400 11.5px var(--mono); text-transform: uppercase; letter-spacing: 0.04em; overflow-x: auto; scrollbar-width: none; }
+nav a { color: var(--meta); text-decoration: none; padding: 6px 10px; border-radius: 4px; position: relative; white-space: nowrap; }
+nav a:hover { color: var(--text); background: var(--surface); }
+nav a.on { color: var(--text); }
+nav a.on::after { content: ""; position: absolute; left: 50%; bottom: -1px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); transform: translateX(-50%); }
+
+/* ---------- hero */
+header.hero { position: relative; overflow: hidden; padding: 96px 0 72px; border-bottom: 1px solid var(--border2); }
+header.hero::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(var(--border2) 1px, transparent 1px), linear-gradient(90deg, var(--border2) 1px, transparent 1px); background-size: 64px 64px; opacity: .35; mask-image: radial-gradient(ellipse at 70% 30%, #000 0%, transparent 70%); -webkit-mask-image: radial-gradient(ellipse at 70% 30%, #000 0%, transparent 70%); pointer-events: none; }
+/* Halftone rotor: a dot screen masked by the Factory rotor mark. */
+.hero-art { position: absolute; right: -180px; top: -120px; width: 760px; height: 760px; pointer-events: none; opacity: .3;
+  background: radial-gradient(circle, var(--soft2) 1.15px, transparent 1.5px) 0 0 / 7px 7px;
+  mask-image: var(--rotor), radial-gradient(circle, #000 35%, transparent 72%); mask-size: 78% auto, 100% 100%; mask-position: center; mask-repeat: no-repeat; mask-composite: intersect;
+  -webkit-mask-image: var(--rotor), radial-gradient(circle, #000 35%, transparent 72%); -webkit-mask-size: 78% auto, 100% 100%; -webkit-mask-position: center; -webkit-mask-repeat: no-repeat; -webkit-mask-composite: source-in;
+  animation: spin 140s linear infinite; }
+header.hero .wrap { position: relative; }
+.eyebrow, .lhead, .slabel { font: 400 12px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); display: flex; align-items: center; flex-wrap: wrap; margin: 0; }
+.sep { color: var(--border); margin: 0 12px; }
+.live { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 12px; flex: none; animation: flicker .9s ease-out .6s both; }
+h1 { color: var(--text); font-weight: 400; font-size: 72px; line-height: 1.0; letter-spacing: -0.035em; margin: 28px 0 24px; max-width: 900px; text-wrap: balance; }
+h1 .subtitle { display: block; font-size: 0.34em; line-height: 1.3; letter-spacing: -0.015em; color: var(--soft2); margin-top: 18px; }
+h1 code { font-size: 0.6em; color: inherit; background: none; border: 0; padding: 0; vertical-align: 0.08em; }
+.lede { font: 400 15px/1.6 var(--mono); color: var(--soft2); max-width: 680px; letter-spacing: -0.01em; margin: 0 0 40px; text-wrap: pretty; }
+.cursor { display: inline-block; width: 8px; height: 1.05em; background: var(--accent); vertical-align: -0.15em; margin-left: 3px; animation: blink 1s step-end infinite; }
+.linkline { display: flex; flex-wrap: wrap; gap: 8px 32px; font: 400 12.5px/1.6 var(--mono); margin: 0 0 40px; }
+.linkline .k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--meta); margin-right: 10px; }
+.linkline a { color: var(--soft); }
+.chat { margin: -16px 0 40px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.chat-b { display: inline-flex; align-items: center; gap: 10px; font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 9px 14px; cursor: pointer; transition: border-color .2s; }
+.chat-b:hover { border-color: var(--text); }
+.chat-b svg { color: var(--soft2); flex: none; }
+.chat-b .ic-ok { display: none; color: var(--accent); }
+.chat-b.ok .ic-copy { display: none; }
+.chat-b.ok .ic-ok { display: block; }
+.chat-tip { font: 400 11px var(--mono); color: var(--meta); opacity: 0; transition: opacity 1s ease; }
+.chat-tip.on { opacity: 1; transition: opacity .15s ease; }
+
+/* ---------- metrics: four numbers that carry the thesis. Values stay white. */
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border2); border: 1px solid var(--border2); border-radius: 4px; overflow: hidden; }
+.metric { padding: 24px 24px 22px; background: rgba(13, 12, 11, 0.86); backdrop-filter: blur(4px); transition: background .25s; min-width: 0; }
+.metric:hover { background: var(--surface); }
+.mlabel { font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); min-height: 2.4em; }
+.mval { color: var(--text); font-size: 52px; line-height: 1; letter-spacing: -0.04em; margin: 14px 0 10px; font-variant-numeric: tabular-nums; }
+.mval .unit, .mval .den { font-size: 22px; letter-spacing: -0.02em; margin-left: 2px; }
+.msub { font-size: 13px; line-height: 1.45; color: var(--body); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.meter { height: 4px; background: var(--border2); margin-top: 14px; border-radius: 2px; overflow: hidden; }
+.meter .fill { height: 100%; width: var(--w); background: var(--grad); border-radius: 2px; }
+header.hero .preamble { font-size: 14.5px; color: var(--body); border-top: 1px solid var(--border2); margin-top: 40px; padding-top: 20px; max-width: 860px; }
+
+/* ---------- sections */
+main section.block { padding: 96px 0 8px; }
+.slabel { color: var(--accent); margin-bottom: 14px; }
+.tag { margin-left: 12px; padding: 2px 8px; border: 1px dashed var(--border); border-radius: 999px; color: var(--meta); font-size: 10.5px; }
+h2 { color: var(--text); font-weight: 400; font-size: 40px; line-height: 1.1; letter-spacing: -0.03em; margin: 0 0 36px; text-wrap: balance; max-width: 820px; }
+h3 { color: var(--text); font-weight: 400; font-size: 21px; line-height: 1.25; letter-spacing: -0.02em; margin: 48px 0 12px; text-wrap: balance; scroll-margin-top: 90px; }
+h4 { color: var(--soft); font-weight: 500; font-size: 15px; margin: 32px 0 10px; }
+p { margin: 0 0 16px; max-width: 760px; text-wrap: pretty; }
+p.lead { font-size: 18px; color: var(--soft); }
+.note { font-size: 13px; color: var(--meta); max-width: 860px; }
+h3:target { animation: flash 2.4s ease-out; }
+@keyframes flash { 0% { color: var(--accent); } 100% { color: var(--text); } }
+ul.bullets { list-style: none; padding: 0; margin: 0 0 18px; max-width: 800px; }
+ul.bullets li { position: relative; padding-left: 18px; margin-bottom: 10px; }
+ul.bullets li::before { content: ""; position: absolute; left: 2px; top: 0.66em; width: 0.3em; height: 0.3em; border-radius: 50%; background: var(--meta); }
+hr { border: 0; border-top: 1px solid var(--border2); margin: 40px 0; }
+
+/* ---------- headline: the bottom line, dated */
+.headline { margin-top: 56px; padding: 26px 30px 24px; background: var(--surface); border: 1px solid var(--border2); border-left: 2px solid var(--accent); border-radius: 4px; }
+.headline .lhead { color: var(--soft2); margin-bottom: 12px; }
+.headline p { font-size: 18px; line-height: 1.6; color: var(--soft); margin: 0; max-width: 900px; }
+.headline p + p { margin-top: 14px; }
+.headline .hnote { font-size: 14.5px; color: var(--soft2); padding-top: 12px; border-top: 1px solid var(--border2); }
+section.block .headline { margin: 0 0 24px; }
+
+/* ---------- entries: key column + title + body (updates, tickets, open items) */
+.entries { margin-top: 20px; padding: 22px 30px 8px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; }
+.entries .lhead { color: var(--soft2); margin-bottom: 6px; }
+.entries ol { list-style: none; margin: 0; padding: 0; }
+.entries li { display: grid; grid-template-columns: 170px 1fr; gap: 24px; padding: 16px 0; border-top: 1px solid var(--border2); }
+.entries li:first-child { border-top: 0; }
+.entries .ek { font: 400 11.5px var(--mono); text-transform: uppercase; letter-spacing: 0.04em; color: var(--meta); padding-top: 3px; }
+.entries li.now .ek { color: var(--accent); }
+.entries .et { color: var(--text); font-size: 16.5px; margin-bottom: 4px; }
+.entries p { font-size: 14.5px; margin: 0; max-width: 820px; }
+section.block .entries { margin-top: 0; }
+
+/* ---------- findings: claim cards that link to their evidence */
+.findings { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.finding { position: relative; display: flex; flex-direction: column; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; padding: 28px 28px 22px; color: inherit; text-decoration: none; transition: border-color .3s, background .3s, transform .3s var(--ease); }
+a.finding:hover { border-color: var(--border); background: var(--surface); transform: translateY(-2px); color: inherit; }
+.finding::before, .finding::after { content: ""; position: absolute; width: 10px; height: 10px; border-color: var(--meta); border-style: solid; transition: border-color .3s; }
+.finding::before { top: -1px; left: -1px; border-width: 1.5px 0 0 1.5px; }
+.finding::after { bottom: -1px; right: -1px; border-width: 0 1.5px 1.5px 0; }
+a.finding:hover::before, a.finding:hover::after { border-color: var(--accent); }
+.fnum { font: 400 12px var(--mono); color: var(--accent); margin-bottom: 14px; }
+.finding h3 { color: var(--text); font-size: 22px; line-height: 1.25; font-weight: 400; letter-spacing: -0.02em; margin: 0 0 12px; }
+.finding p { font-size: 15.5px; line-height: 1.55; margin: 0 0 20px; flex: 1; }
+.finding .rows { display: grid; gap: 8px; margin: 0 0 20px; padding-top: 14px; border-top: 1px solid var(--border2); }
+.finding .r { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: baseline; }
+.finding .r .k { font: 400 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); }
+.finding .r .v { font: 400 13px var(--mono); color: var(--soft); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.finding .r .was { color: var(--meta); }
+.finding .r .to { color: var(--text); }
+.finding .r .to::before { content: "→"; color: var(--accent); padding: 0 6px; }
+.flink { font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); display: flex; align-items: center; gap: 8px; transition: color .2s; }
+.flink .arr { transition: transform .25s var(--ease); }
+a.finding:hover .flink { color: var(--text); }
+a.finding:hover .flink .arr { transform: translateX(4px); color: var(--accent); }
+/* The honest limit: neutral number, no accent anywhere, so it never reads as another win. */
+.finding.limit .fnum, .finding.limit .r .to::before { color: var(--meta); }
+.findings.three { grid-template-columns: repeat(3, 1fr); }
+
+/* ---------- panels: goals / non-goals, pros / cons */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0 0 24px; }
+.panel { background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; padding: 22px 26px 18px; }
+.panel h4 { font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin: 0 0 12px; }
+.panel.limit h4 { color: var(--meta); }
+.panel ul { list-style: none; margin: 0; padding: 0; }
+.panel li { position: relative; padding-left: 18px; margin: 0 0 10px; font-size: 15px; line-height: 1.55; }
+.panel li::before { content: ""; position: absolute; left: 2px; top: 0.68em; width: 0.3em; height: 0.3em; border-radius: 50%; background: var(--accent); }
+.panel.limit li::before { background: var(--meta); }
+
+/* ---------- timeline: the arc, dated */
+.timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+.timeline::before { content: ""; position: absolute; left: 167px; top: 10px; bottom: 10px; width: 1px; background: linear-gradient(to bottom, var(--border), var(--border) 85%, var(--accent)); }
+.timeline > li { display: grid; grid-template-columns: 140px 1fr; gap: 56px; padding: 0 0 52px; position: relative; }
+.timeline > li::before { content: ""; position: absolute; left: 163px; top: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--meta); }
+.timeline > li.now::before { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 5px var(--accent-dim); }
+.timeline .tw { font: 400 12px var(--mono); color: var(--meta); padding-top: 2px; text-align: right; text-transform: uppercase; letter-spacing: 0.04em; }
+.timeline > li.now .tw { color: var(--accent); }
+.timeline .tt { color: var(--text); font-size: 24px; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+.timeline .tb { min-width: 0; }
+
+/* ---------- stages + status pills */
+.stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border2); border: 1px solid var(--border2); border-radius: 4px; overflow: hidden; margin-bottom: 28px; }
+.stage { padding: 22px 24px; background: var(--surface2); }
+.stage.on { background: var(--surface); box-shadow: inset 0 2px 0 var(--accent); }
+.sn { font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); }
+.st { color: var(--text); font-size: 20px; margin: 4px 0 8px; }
+.sd { font-size: 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.pill { display: inline-flex; align-items: center; gap: 6px; font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.04em; color: var(--soft); white-space: nowrap; padding: 2px 8px 2px 6px; border: 1px solid var(--border2); border-radius: 999px; background: var(--surface2); }
+.pill i { width: 6px; height: 6px; border-radius: 50%; background: var(--meta); display: inline-block; }
+.pill.ok i { background: var(--ok); }
+.pill.miss i { background: var(--err); }
+.pill.run i { background: var(--warn); animation: flicker 2.4s ease-in-out infinite; }
+.pill.idle { color: var(--meta); }
+
+/* ---------- tables */
+.table-wrap { overflow-x: auto; margin: 0 0 14px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; padding: 6px 20px 2px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font: 400 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); padding: 12px 16px 10px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 12px 16px 12px 0; border-bottom: 1px solid var(--border2); vertical-align: top; color: var(--body); }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr { transition: background .15s; }
+tbody tr:hover td { background: rgba(29, 26, 24, 0.6); }
+td strong { color: var(--text); font-weight: 500; }
+th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.num { color: var(--soft); }
+tr.pri td { background: var(--surface); color: var(--soft); }
+tr.pri td:first-child { box-shadow: inset 2px 0 0 var(--accent); padding-left: 10px; }
+td code { font-size: 12.5px; }
+/* Effect glyphs for changes-and-impact tables: ↓ improved, = no effect,
+   ↑ regressed, · not the target. Only the win carries the accent. */
+.g { font-family: var(--mono); font-weight: 500; display: inline-block; min-width: 1.1em; }
+.g-down { color: var(--accent); }
+.g-up { color: var(--text); background: var(--border); border-radius: 3px; padding: 0 3px; }
+.g-flat, .g-na { color: var(--meta); }
+
+/* ---------- charts: in-theme SVG, never a foreign raster */
+figure.chart { border: 1px solid var(--border2); background: var(--surface2); border-radius: 4px; padding: 20px 22px 8px; margin: 0 0 14px; }
+.chead { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); }
+.legend { display: inline-flex; align-items: center; gap: 8px; }
+.lg { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #6B615C; }
+.lg.pri { background: var(--grad); }
+.lg.ref { background: #463F3C; }
+figure.chart svg { width: 100%; height: auto; display: block; margin-top: 8px; }
+figure.chart .grid { stroke: var(--border2); stroke-width: 1; }
+figure.chart .grid.base { stroke: var(--border); }
+figure.chart .axis, figure.chart .xsub { fill: var(--meta); font: 400 11px var(--mono); }
+figure.chart .xlab { fill: var(--soft); font: 400 12px var(--mono); }
+figure.chart .bar { fill: #6B615C; }
+figure.chart .bar.ref { fill: #463F3C; }
+figure.chart .bar.run { fill: none; stroke: var(--meta); stroke-width: 1; stroke-dasharray: 3 4; }
+figure.chart .val { fill: var(--soft); font: 500 14px var(--sans); }
+figure.chart .val.pri { fill: var(--text); }
+figure.chart .line { fill: none; stroke: #6B615C; stroke-width: 1.5; }
+figure.chart .line.pri { stroke: var(--accent); stroke-width: 2; }
+figure.chart .dot { fill: var(--bg); stroke: #6B615C; stroke-width: 1.5; }
+figure.chart .dot.pri { stroke: var(--accent); fill: var(--accent); }
+figure.chart figcaption, figure.diagram figcaption { font-size: 13px; line-height: 1.5; color: var(--meta); margin: 10px 0 8px; text-wrap: balance; }
+
+/* Horizontal comparison bars: controls are hollow, the primary row is filled. */
+.bars { background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; padding: 18px 22px 12px; margin: 0 0 14px; }
+.bars-h, .bar-row { display: grid; grid-template-columns: minmax(180px, 1.2fr) repeat(var(--cols, 1), 1fr); column-gap: 24px; align-items: center; }
+.bars-h { font: 400 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); padding-bottom: 6px; }
+.bar-row { padding: 9px 0; border-top: 1px solid var(--border2); }
+.bars-h + .bar-row, .bar-group + .bar-row { border-top: 0; }
+.bar-group { font: 400 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); padding: 12px 0 4px; }
+.bar-label { color: var(--body); font-size: 14px; line-height: 1.35; }
+.bar-label span { display: block; font-size: 12px; color: var(--meta); }
+.bar-row.pri .bar-label { color: var(--text); }
+.track { display: flex; align-items: center; gap: 10px; height: 22px; }
+.track .fill { height: 18px; width: calc(var(--w) * 0.75); flex: none; border: 1.5px solid var(--soft); border-radius: 2px; }
+.bar-row.pri .track .fill { background: var(--grad); border: 1px solid rgba(0, 0, 0, 0.2); }
+.track b { font: 500 14px var(--sans); color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---------- diagrams (show-me views) and demo video */
+figure.diagram { margin: 0 0 14px; padding: 24px 24px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; }
+figure.diagram > svg, figure.diagram > img { width: 100%; height: auto; display: block; color: var(--text); }
+svg text { font-family: var(--mono); fill: var(--soft); font-feature-settings: "zero"; }
+svg text.cap { fill: var(--meta); font-size: 10.5px; letter-spacing: 0.05em; }
+svg text.label { fill: var(--body); font-size: 11px; }
+svg text.title { fill: var(--text); font-size: 12.5px; font-weight: 500; }
+svg .bg-fill { fill: var(--surface); }
+svg .stroke { stroke: var(--border); }
+svg .accent-stroke { stroke: var(--accent); }
+svg .accent-fill { fill: var(--accent); }
+svg .accent-soft-fill { fill: var(--accent-dim); }
+svg .muted-fill { fill: var(--border); }
+svg .dash { stroke-dasharray: 4 4; }
+figure.demo { margin: 0 0 24px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; overflow: hidden; }
+figure.demo a { display: grid; place-items: center; aspect-ratio: 16 / 9; background: var(--surface3); text-decoration: none; position: relative; }
+figure.demo .play { width: 64px; height: 64px; border-radius: 4px; background: var(--accent); display: grid; place-items: center; transition: transform .25s var(--ease); }
+figure.demo a:hover .play { transform: scale(1.06); }
+figure.demo .play svg { width: 26px; height: 26px; fill: #000; margin-left: 4px; }
+figure.demo .meta { position: absolute; left: 18px; right: 18px; bottom: 14px; display: flex; justify-content: space-between; font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); }
+figure.demo figcaption { font-size: 13.5px; color: var(--meta); padding: 14px 20px 16px; }
+
+/* ---------- decision cards: Decision / Rationale / Alternatives / Consequence */
+.decision { display: grid; grid-template-columns: 64px 1fr; gap: 8px; padding: 32px 0 30px; border-top: 1px solid var(--border2); }
+.decision:last-of-type { border-bottom: 1px solid var(--border2); }
+.dnum { font: 400 12px var(--mono); color: var(--accent); padding-top: 7px; }
+.decision .title { color: var(--text); font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; margin: 0 0 10px; text-wrap: balance; }
+.decision .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.decision dl { display: grid; grid-template-columns: 150px 1fr; gap: 14px 24px; margin: 0; }
+.decision dt { font: 400 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); padding-top: 4px; }
+.decision dd { grid-column: 2; margin: 0; font-size: 15.5px; color: var(--soft2); max-width: 760px; } /* without grid-column, dd falls under dt */
+.decision dd.sub { font-size: 14.5px; color: var(--body); }
+.decision dd + dd { margin-top: -6px; }
+
+/* ---------- code */
+pre.code { background: var(--surface); border: 1px solid var(--border2); border-radius: 4px; padding: 16px 18px; font: 400 12.5px/1.65 var(--mono); color: var(--soft); white-space: pre; overflow: auto; max-height: 520px; margin: 0 0 6px; tab-size: 2; letter-spacing: 0; font-feature-settings: "zero"; }
+pre.code .comment { color: var(--meta); }
+pre.code .k { color: var(--text); font-weight: 500; }
+pre.code .s { color: var(--soft2); }
+pre.code .t { color: var(--body); }
+pre.code .fn { color: var(--text); }
+pre.code .hl { background: var(--accent-dim); margin: 0 -18px; padding: 0 18px; display: inline-block; width: calc(100% + 36px); box-shadow: inset 2px 0 0 var(--accent); }
+.code-caption { font: 400 11px var(--mono); color: var(--meta); margin: 0 0 24px; }
+
+/* ---------- callouts and numbered lists */
+.callout { background: var(--surface); border: 1px solid var(--border2); border-left: 2px solid var(--accent); border-radius: 4px; padding: 16px 20px; margin: 0 0 20px; font-size: 15px; color: var(--soft2); max-width: 860px; }
+.callout .title { display: block; font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 6px; }
+.callout.limit { border-left-color: var(--meta); }
+.callout.limit .title { color: var(--meta); }
+ol.numbered { list-style: none; padding: 0; margin: 0 0 18px; counter-reset: q; }
+ol.numbered > li { counter-increment: q; display: grid; grid-template-columns: 56px 1fr; padding: 20px 0; border-top: 1px solid var(--border2); }
+ol.numbered > li::before { content: counter(q, decimal-leading-zero); font: 400 12px var(--mono); color: var(--accent); padding-top: 4px; }
+ol.numbered .q { color: var(--text); font-size: 18px; letter-spacing: -0.01em; }
+ol.numbered .a { grid-column: 2; font-size: 14.5px; margin-top: 6px; max-width: 760px; }
+ol.steps { list-style: none; padding: 0; margin: 0 0 18px; counter-reset: s; max-width: 800px; }
+ol.steps > li { counter-increment: s; position: relative; padding-left: 34px; margin-bottom: 10px; }
+ol.steps > li::before { content: counter(s, decimal-leading-zero); position: absolute; left: 0; top: 0.2em; font: 400 12px var(--mono); color: var(--accent); }
+pre.code code { background: none; border: 0; padding: 0; font-size: inherit; color: inherit; }
+
+/* ---------- full log: everything else, collapsed */
+details { border-top: 1px solid var(--border2); }
+summary { cursor: pointer; list-style: none; padding: 18px 0; color: var(--soft); display: flex; align-items: center; gap: 12px; transition: color .2s; }
+summary::-webkit-details-marker { display: none; }
+summary::before { content: ""; width: 7px; height: 7px; border-right: 1.5px solid var(--meta); border-bottom: 1.5px solid var(--meta); transform: rotate(-45deg); transition: transform .2s var(--ease), border-color .2s; margin-right: 4px; flex: none; }
+details[open] > summary::before { transform: rotate(45deg); border-color: var(--accent); }
+summary:hover { color: var(--text); }
+details.log { border: 1px solid var(--border2); border-radius: 4px; background: var(--surface2); padding: 0 24px; }
+details.log > summary { font: 400 12px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; }
+.chap { display: grid; grid-template-columns: 64px 1fr; padding: 48px 0 8px; border-top: 1px solid var(--border2); }
+.chn { font: 400 13px var(--mono); color: var(--accent); padding-top: 9px; }
+.chb { min-width: 0; }
+.chap h2 { font-size: 28px; margin-bottom: 22px; }
+
+/* ---------- footer: provenance only */
+footer.doc { margin: 96px 0 56px; font: 400 12px/1.6 var(--mono); color: var(--meta); border-top: 1px solid var(--border2); padding-top: 24px; display: flex; gap: 14px; align-items: flex-start; }
+footer.doc a { color: var(--soft2); }
+footer.doc code { background: none; border: 0; padding: 0; color: var(--soft2); font-size: 1em; }
+.frotor { width: 16px; height: 16px; flex: none; margin-top: 1px; opacity: .6; background: var(--soft); mask: var(--rotor) center / contain no-repeat; -webkit-mask: var(--rotor) center / contain no-repeat; animation: spin 40s linear infinite; }
+
+@media (max-width: 900px) {
+  .wrap { padding: 0 22px; }
+  nav { display: none; }
+  h1 { font-size: 44px; }
+  h2 { font-size: 30px; }
+  header.hero { padding: 64px 0 48px; }
+  .hero-art { right: -320px; top: -160px; }
+  .metrics { grid-template-columns: 1fr 1fr; }
+  .findings, .findings.three, .two-col, .stages { grid-template-columns: 1fr; }
+  .entries li { grid-template-columns: 1fr; gap: 4px; }
+  .timeline::before { left: 4px; }
+  .timeline > li { grid-template-columns: 1fr; gap: 6px; padding-left: 28px; }
+  .timeline > li::before { left: 0; }
+  .timeline .tw { text-align: left; }
+  .bars-h, .bar-row { grid-template-columns: repeat(var(--cols, 1), 1fr); }
+  .bar-label { grid-column: 1 / -1; margin-bottom: 6px; }
+  .bars-h span:first-child { display: none; }
+  .decision, .chap { grid-template-columns: 1fr; }
+  .decision dl { grid-template-columns: 1fr; gap: 4px; }
+  .decision dd { grid-column: 1; margin-bottom: 10px; }
+}
+
+@media print {
+  @page { size: A4; margin: 16mm 14mm 18mm; }
+  /* color-scheme: light, or Chrome paints the PDF page margins dark. */
+  :root { color-scheme: light; --bg: #fff; --surface: #fff; --surface2: #fff; --surface3: #f2f0f0; --border: #b8b3b0; --border2: #d8d4d2;
+    --text: #020202; --soft: #242220; --soft2: #3a3634; --body: #3a3634; --meta: #6b6460; }
+  html, body { background: #fff; }
+  body { font-size: 10.5pt; line-height: 1.5; }
+  header.top, .hero-art, header.hero::before, .chat, .frotor { display: none; }
+  body:not(.nojs) .rv { opacity: 1; animation: none; }
+  body:not(.nojs) .rv .fill { transform: none; animation: none; }
+  .metric { background: #fff; backdrop-filter: none; }
+  header.hero { padding: 0 0 18pt; }
+  h1 { font-size: 30pt; }
+  h2 { font-size: 18pt; }
+  main section.block { padding-top: 24pt; }
+  .finding, .decision, .panel, figure, .headline, pre.code, .stage, .bar-row { break-inside: avoid; }
+  pre.code { white-space: pre-wrap; max-height: none; }
+}
+</style>
 </head>
-<body>
-  <div class="page">
+<body class="nojs">
 
-    <!-- =========================================================== -->
-    <!--  TABLE OF CONTENTS — autohides to a 68px rail; expands on hover -->
-    <!-- =========================================================== -->
-    <nav class="toc" aria-label="Table of contents">
-      <p class="toc-label">Contents</p>
-      <ol>
-        <li><a href="#summary">Summary</a></li>
-        <li><a href="#context">Context</a></li>
-        <li><a href="#goals">Goals &amp; non-goals</a></li>
-        <li><a href="#proposal">Proposal</a></li>
-        <li><a href="#decisions">Key decisions</a></li>
-        <li><a href="#tradeoffs">Tradeoffs</a></li>
-        <li><a href="#rollout">Rollout &amp; verification</a></li>
-        <li><a href="#questions">Open questions</a></li>
-      </ol>
+<header class="top">
+  <div class="wrap toprow">
+    <a href="#top"><svg class="logo" role="img" aria-label="Factory" viewBox="0 0 1459 218" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M323.52 187.06V30.93L437.51 30.93V58.81L353.65 58.81V95.39L428.59 95.39V122.38L353.65 122.38V187.06H323.52Z" fill="currentColor"/><path d="M457.13 187.06L503.91 52.84C506.14 46.44 510.31 40.89 515.84 36.96C521.37 33.04 527.98 30.93 534.76 30.93C541.59 30.93 548.24 33.06 553.79 37.04C559.33 41.01 563.50 46.62 565.70 53.08L611.25 187.06H580.25L569.32 154.49H499.73L488.35 187.06H457.13ZM508.64 127.28H560.39L541.68 71.00C539.45 64.28 529.95 64.25 527.68 70.96L508.64 127.28Z" fill="currentColor"/><path d="M634.67 108.99C634.67 65.05 670.14 29.14 714.08 29.14C746.42 29.14 772.74 48.77 785.23 76.64L756.68 84.90C748.65 69.06 733.93 57.69 714.08 57.69C685.53 57.69 664.56 80.44 664.56 108.99C664.56 137.54 685.55 160.06 714.08 160.06C733.93 160.06 748.20 149.80 756.01 133.75L785.00 141.55C772.74 169.22 746.64 188.61 714.08 188.61C670.14 188.61 634.67 152.94 634.67 108.99Z" fill="currentColor"/><path d="M864.64 187.06V58.81L815.56 58.81V30.93L941.81 30.93V58.81L894.52 58.81V187.06H864.64Z" fill="currentColor"/><path d="M972.38 107.94C973.06 64.13 1008.45 29.10 1052.26 29.36C1095.97 29.62 1131.18 65.21 1131.4 109.21C1131.62 153.22 1095.72 188.86 1051.78 188.86C1007.41 188.84 971.69 152.47 972.38 107.94ZM1101.29 109.21C1101.29 80.66 1080.31 57.22 1051.78 57.22C1023.45 57.22 1002.26 80.64 1002.26 109.21C1002.26 137.54 1023.24 160.72 1051.78 160.72C1080.31 160.72 1101.29 137.76 1101.29 109.21Z" fill="currentColor"/><path d="M1172.22 187.06V30.93L1242.48 30.93C1273.27 30.93 1296.46 55.46 1296.46 83.79C1296.44 93.93 1293.3 103.81 1287.47 112.11C1281.65 120.40 1273.42 126.71 1263.9 130.18L1298.69 187.06H1264.57L1232.22 133.97H1202.35V187.06H1172.22ZM1202.34 107.89L1242.04 107.89C1256.32 107.89 1267.47 97.39 1267.47 82.91C1267.47 68.86 1256.97 57.92 1242.48 57.92L1202.35 57.92L1202.34 107.89Z" fill="currentColor"/><path d="M1374.53 138.21L1320.33 30.93L1352.23 30.93L1389.25 104.31L1426.28 30.93L1458.17 30.93L1404.64 137.32V187.06H1374.53V138.21Z" fill="currentColor"/><path d="M156.79 37.81C156.38 37.71 156 37.52 155.66 37.26C155.33 36.99 155.06 36.66 154.87 36.29C154.68 35.91 154.58 35.49 154.56 35.07C154.55 34.65 154.62 34.23 154.79 33.84C160.38 20.21 162.86 9.31 158.87 4.75C148.31 -7.35 105.96 16.72 92.46 24.87C92.1 25.09 91.69 25.23 91.27 25.27C90.85 25.32 90.43 25.28 90.03 25.14C89.63 25.01 89.26 24.79 88.95 24.51C88.64 24.22 88.40 23.87 88.24 23.48C82.56 9.88 76.59 0.42 70.55 0.01C54.52 -1.07 41.59 45.89 37.81 61.20C37.71 61.61 37.52 62.00 37.26 62.33C37.00 62.66 36.67 62.93 36.29 63.12C35.91 63.31 35.50 63.41 35.08 63.43C34.65 63.44 34.23 63.37 33.84 63.21C20.22 57.61 9.31 55.14 4.75 59.12C-7.35 69.68 16.72 112.03 24.87 125.53C25.09 125.89 25.23 126.30 25.28 126.72C25.32 127.14 25.28 127.56 25.15 127.96C25.01 128.37 24.80 128.73 24.51 129.04C24.22 129.35 23.87 129.59 23.48 129.75C9.89 135.43 0.43 141.40 0.01 147.44C-1.07 163.47 45.89 176.40 61.21 180.18C61.62 180.28 62.00 180.47 62.33 180.73C62.66 181.00 62.93 181.33 63.12 181.70C63.30 182.08 63.41 182.49 63.43 182.92C63.44 183.34 63.37 183.76 63.21 184.15C57.61 197.77 55.14 208.68 59.12 213.24C69.68 225.35 112.04 201.27 125.54 193.12C125.90 192.90 126.30 192.76 126.72 192.71C127.14 192.67 127.57 192.71 127.97 192.84C128.37 192.98 128.74 193.19 129.05 193.48C129.36 193.77 129.60 194.12 129.76 194.51C135.44 208.10 141.40 217.56 147.45 217.98C163.48 219.07 176.40 172.10 180.18 156.78C180.28 156.37 180.47 155.99 180.73 155.66C181.00 155.33 181.33 155.06 181.71 154.87C182.08 154.68 182.50 154.58 182.92 154.56C183.34 154.55 183.76 154.62 184.15 154.79C197.78 160.38 208.68 162.85 213.25 158.87C225.35 148.31 201.27 105.95 193.12 92.45C192.90 92.09 192.77 91.69 192.72 91.27C192.67 90.85 192.72 90.42 192.85 90.02C192.98 89.62 193.20 89.26 193.48 88.95C193.77 88.64 194.12 88.39 194.51 88.23C208.11 82.56 217.57 76.59 217.98 70.54C219.07 54.51 172.10 41.59 156.79 37.81ZM138.40 22.44C141.48 27.97 125.60 64.77 113.79 90.51C113.59 90.94 113.27 91.30 112.86 91.54C112.45 91.78 111.98 91.89 111.51 91.86C111.04 91.82 110.59 91.64 110.22 91.34C109.85 91.04 109.59 90.64 109.46 90.18C104.69 73.45 99.23 53.78 93.40 37.09C93.17 36.43 93.18 35.72 93.43 35.07C93.68 34.42 94.16 33.88 94.77 33.55C109.33 25.60 134.26 15.03 138.40 22.44ZM68.59 27.00C74.67 28.73 89.47 65.98 99.32 92.53C99.48 92.97 99.50 93.46 99.39 93.91C99.27 94.37 99.01 94.78 98.65 95.09C98.29 95.40 97.85 95.59 97.38 95.64C96.91 95.69 96.43 95.59 96.02 95.36C80.80 86.91 63.05 76.85 47.12 69.17C46.50 68.87 46.00 68.36 45.72 67.72C45.44 67.09 45.40 66.37 45.59 65.71C50.28 49.80 60.42 24.69 68.59 27.00ZM22.45 79.58C27.97 76.50 64.77 92.38 90.51 104.19C90.94 104.39 91.30 104.71 91.54 105.12C91.78 105.53 91.89 106.00 91.86 106.47C91.82 106.94 91.64 107.39 91.34 107.76C91.04 108.13 90.64 108.4 90.18 108.53C73.45 113.3 53.78 118.75 37.09 124.58C36.43 124.81 35.72 124.8 35.07 124.55C34.43 124.3 33.89 123.82 33.56 123.22C25.62 108.65 15.03 83.72 22.45 79.58ZM27.00 149.39C28.73 143.31 65.98 128.51 92.53 118.67C92.98 118.50 93.46 118.48 93.92 118.6C94.38 118.71 94.79 118.97 95.10 119.33C95.40 119.69 95.60 120.13 95.64 120.60C95.69 121.07 95.59 121.55 95.37 121.96C86.91 137.18 76.85 154.93 69.17 170.85C68.87 171.48 68.36 171.98 67.72 172.26C67.09 172.54 66.37 172.59 65.71 172.39C49.80 167.73 24.69 157.56 27.00 149.39ZM79.59 195.53C76.50 190.01 92.39 153.21 104.19 127.47C104.39 127.04 104.72 126.68 105.12 126.44C105.53 126.20 106.00 126.09 106.48 126.13C106.95 126.16 107.40 126.34 107.77 126.64C108.13 126.94 108.40 127.34 108.53 127.80C113.30 144.53 118.75 164.20 124.58 180.89C124.81 181.55 124.80 182.26 124.55 182.91C124.30 183.56 123.83 184.09 123.22 184.42C108.65 192.36 83.72 202.95 79.60 195.53H79.59ZM149.4 190.98C143.31 189.25 128.51 152.00 118.67 125.45C118.50 125.00 118.48 124.52 118.59 124.06C118.71 123.60 118.97 123.19 119.33 122.88C119.69 122.57 120.13 122.38 120.61 122.33C121.08 122.29 121.55 122.38 121.97 122.61C137.18 131.06 154.93 141.13 170.86 148.81C171.48 149.11 171.98 149.62 172.26 150.26C172.54 150.89 172.59 151.61 172.39 152.27C167.71 168.21 157.57 193.29 149.4 190.98ZM195.54 138.39C190.01 141.48 153.21 125.6 127.47 113.79C127.04 113.59 126.68 113.26 126.44 112.86C126.20 112.45 126.09 111.98 126.13 111.50C126.16 111.03 126.34 110.58 126.64 110.21C126.94 109.85 127.34 109.58 127.80 109.45C144.54 104.68 164.20 99.23 180.89 93.40C181.55 93.17 182.26 93.18 182.91 93.43C183.56 93.68 184.10 94.16 184.43 94.77C192.36 109.33 202.95 134.26 195.54 138.39ZM190.98 68.58C189.25 74.67 152.00 89.47 125.45 99.32C125.01 99.48 124.52 99.51 124.07 99.39C123.61 99.27 123.19 99.01 122.89 98.65C122.58 98.29 122.39 97.85 122.34 97.38C122.29 96.90 122.39 96.43 122.62 96.01C131.07 80.80 141.13 63.05 148.81 47.12C149.11 46.50 149.62 46.00 150.26 45.72C150.89 45.44 151.61 45.39 152.27 45.59C168.18 50.27 193.29 60.41 190.98 68.58Z" fill="currentColor"/></svg></a>
+    <!-- One link per section; the script highlights the one in view. -->
+    <nav aria-label="Sections">
+      <a href="#headline">Headline</a><a href="#context">Context</a><a href="#goals">Goals</a><a href="#proposal">Proposal</a><a href="#decisions">Decisions</a><a href="#evidence">Evidence</a><a href="#rollout">Rollout</a><a href="#questions">Questions</a>
     </nav>
-
-    <main>
-
-      <!-- ============================================================ -->
-      <!--  HEADER                                                     -->
-      <!-- ============================================================ -->
-      <header class="doc">
-        <p class="eyebrow"><span class="dot"></span> Design doc · TODO-AREA · TODO-TICKET</p>
-        <!-- If the title is conceptual rather than literal, add:
-             <span class="subtitle">TODO literal, indexable subject</span> -->
-        <h1 class="title">TODO Title with optional <code>code</code></h1>
-        <p class="tagline">
-          TODO ≤25-word thesis. State the structural claim the doc is
-          making, plain and confident. Avoid italics here.
-        </p>
-        <p class="linkline">
-          <span class="group">
-            <span class="k">Linear</span>
-            <a href="#">TODO-TICKET</a>
-          </span>
-          <span class="group">
-            <span class="k">Pull request</span>
-            <a href="#">#TODO</a>
-          </span>
-        </p>
-
-        <!-- Optional in memo / internal-sell mode. Delete in RFC mode.
-        <div class="statband">
-          <div class="stat">
-            <div class="figure">TODO<span class="unit">×</span></div>
-            <div class="cap">proof-point label</div>
-            <div class="sub">one-line comparison or denominator</div>
-          </div>
-          <div class="stat">
-            <div class="figure">TODO<span class="unit"> pts</span></div>
-            <div class="cap">proof-point label</div>
-            <div class="sub">one-line comparison or denominator</div>
-          </div>
-          <div class="stat">
-            <div class="figure">TODO<span class="unit">%</span></div>
-            <div class="cap">proof-point label</div>
-            <div class="sub">one-line comparison or denominator</div>
-          </div>
-          <div class="stat">
-            <div class="figure">TODO<span class="unit">s</span></div>
-            <div class="cap">proof-point label</div>
-            <div class="sub">one-line comparison or denominator</div>
-          </div>
-        </div>
-        -->
-
-        <!-- Optional callout panels. Answer "so what?" for the stats above.
-             Four children auto-flow into 2x2. Last panel = .rose for the
-             honest caveat, so it doesn't read as a fourth win.
-             Delete in RFC mode.
-        <div class="two-col">
-          <div class="panel">
-            <h5>claim label</h5>
-            <p class="claim">The one line a reader will repeat.</p>
-            <div class="rows">
-              <div class="r"><span class="k">Metric</span>
-                <span class="v"><span class="was">before</span><span class="to">after</span></span></div>
-              <div class="r"><span class="k">Metric</span>
-                <span class="v"><span class="was">before</span><span class="to">after</span></span></div>
-              <div class="r"><span class="k">Metric</span>
-                <span class="v">plain value, no delta</span></div>
-            </div>
-            <p class="note">The caveat or the reason, in one sentence.</p>
-          </div>
-          <div class="panel rose">
-            <h5>what this is not</h5>
-            <p class="claim">Feasible today. Not yet a product.</p>
-            <div class="rows">
-              <div class="r"><span class="k">Option</span><span class="v">tradeoff</span></div>
-              <div class="r"><span class="k">Option</span><span class="v">tradeoff</span></div>
-              <div class="r"><span class="k">Option</span><span class="v">tradeoff</span></div>
-            </div>
-            <p class="note">Why the choice is still open.</p>
-          </div>
-        </div>
-        -->
-      </header>
-
-      <!-- ============================================================ -->
-      <!--  OPTIONAL: DEMO VIDEO POSTER CARD                           -->
-      <!--  GitHub user-attachment URLs need the user logged in to GH  -->
-      <!--  for playback; the card opens GitHub in a new tab.          -->
-      <!--  Delete this block if no demo.                              -->
-      <!-- ============================================================ -->
-      <figure class="demo" aria-label="Demo recording">
-        <p class="demo-eyebrow"><span class="dot"></span> Demo · walkthrough</p>
-        <a class="demo-link"
-           href="TODO-VIDEO-URL"
-           target="_blank" rel="noopener"
-           aria-label="Play demo video">
-          <span class="play" aria-hidden="true">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 5l13 7-13 7V5z"/></svg>
-          </span>
-          <span class="demo-meta">
-            <span>Click to play</span>
-            <span class="duration">github.com</span>
-          </span>
-        </a>
-        <figcaption>TODO one-sentence summary of what the demo shows.</figcaption>
-      </figure>
-
-      <!-- ============================================================ -->
-      <!--  §1 SUMMARY — lede with dropcap, then 1 supporting paragraph -->
-      <!-- ============================================================ -->
-      <section class="block" id="summary">
-        <h2><span class="num">§1</span> Summary</h2>
-        <h3>TODO 5–10 word thesis headline</h3>
-        <p class="lede">
-          <span class="dropcap">T</span>ODO opening paragraph. State the
-          problem in one sentence, then the proposed change in one
-          sentence. Use <strong>strong</strong> on the load-bearing claim.
-          Reference key components in <code>code</code> only — file paths
-          go in §4 or §5.
-        </p>
-        <p>
-          TODO one supporting paragraph: deletions, persistence model,
-          ownership change, or scope. Forward-reference detail to later
-          sections instead of stating it twice.
-        </p>
-      </section>
-
-      <!-- ============================================================ -->
-      <!--  §2 CONTEXT — what breaks today and why now                  -->
-      <!-- ============================================================ -->
-      <section class="block" id="context">
-        <h2><span class="num">§2</span> Context</h2>
-        <h3>What breaks today</h3>
-        <p>
-          TODO frame the problem. Cite the ticket / bug / regression once
-          and don't relitigate. End with the structural cause, not a list
-          of symptoms.
-        </p>
-        <h4>Why now</h4>
-        <p>
-          TODO the trigger: a customer report, a regression, a new
-          requirement. Be specific (date, source) so the urgency is
-          legible.
-        </p>
-      </section>
-
-      <!-- ============================================================ -->
-      <!--  §3 GOALS & NON-GOALS — two-col panels                       -->
-      <!-- ============================================================ -->
-      <section class="block" id="goals">
-        <h2><span class="num">§3</span> Goals &amp; non-goals</h2>
-        <h3>What we are — and are not — trying to fix</h3>
-        <div class="two-col">
-          <div class="panel">
-            <h5>Goals</h5>
-            <ul>
-              <li>TODO goal 1 — single sentence, observable.</li>
-              <li>TODO goal 2.</li>
-              <li>TODO goal 3.</li>
-            </ul>
-          </div>
-          <div class="panel rose">
-            <h5>Non-goals</h5>
-            <ul>
-              <li>TODO explicitly out of scope; reference where it would belong.</li>
-              <li>TODO non-goal 2.</li>
-              <li>TODO non-goal 3.</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <!-- ============================================================ -->
-      <!--  §4 PROPOSAL — pullquote thesis + diagram + prose            -->
-      <!-- ============================================================ -->
-      <section class="block" id="proposal">
-        <h2><span class="num">§4</span> Proposal</h2>
-        <h3>TODO 6–10 word architectural headline</h3>
-
-        <aside class="pullquote" aria-label="Mental model">
-          <p>
-            TODO ≤25 words. The thesis of the change in one sentence.
-            Reference one or two key components in <code>code</code>.
-          </p>
-          <p class="attrib">The mental model</p>
-        </aside>
-
-        <p>
-          TODO 1–2 paragraphs framing the proposal at the conceptual level.
-          The decision cards in §5 carry the detail; this section sets the
-          stage.
-        </p>
-
-        <figure class="diagram">
-          <!-- TODO inline SVG. Use viewBox so it scales.
-               Apply classes .bg-fill / .stroke / .accent-stroke / .accent-fill
-               / .accent-soft-fill on shapes; .cap / .label / .title on <text>. -->
-          <svg viewBox="0 0 780 200" role="img" aria-label="TODO diagram label">
-            <rect x="40" y="40" width="200" height="64" rx="8" class="bg-fill stroke" stroke-width="1"/>
-            <text x="140" y="68" text-anchor="middle" class="title">TODO Node A</text>
-            <text x="140" y="87" text-anchor="middle" class="cap">caption</text>
-            <line x1="240" y1="72" x2="540" y2="72" class="accent-stroke" stroke-width="1.5" marker-end="url(#arrow)"/>
-            <rect x="540" y="40" width="200" height="64" rx="8" class="accent-soft-fill stroke" stroke-width="1"/>
-            <text x="640" y="68" text-anchor="middle" class="title">TODO Node B</text>
-            <defs>
-              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-                <path d="M0,1 L9,5 L0,9 z" class="accent-fill"/>
-              </marker>
-            </defs>
-          </svg>
-          <figcaption>TODO one-sentence figure caption explaining what the diagram shows.</figcaption>
-        </figure>
-      </section>
-
-      <!-- ============================================================ -->
-      <!--  §5 KEY DECISIONS — D-cards. Usually 60–70% of the doc.      -->
-      <!--  Each card MUST have: Decision, Rationale, Alternatives, Consequence. -->
-      <!-- ============================================================ -->
-      <section class="block" id="decisions">
-        <h2><span class="num">§5</span> Key decisions</h2>
-        <h3>The choices worth defending in review</h3>
-        <!-- No framing paragraph: the heading does that work. Each card
-             stands alone — a reviewer can argue D3 without reading D1. -->
-
-        <!-- ============ D1 ============ -->
-        <article class="decision" id="d1">
-          <div class="num">1</div>
-          <div>
-            <p class="title">TODO Decision title — declarative, 6–14 words</p>
-            <div class="status-row">
-              <span class="chip accent"><span class="dot"></span> tag-1</span>
-              <span class="chip slate"><span class="dot"></span> tag-2</span>
-            </div>
-            <dl>
-              <dt>Decision</dt>
-              <dd>TODO state the choice. Active voice, one sentence.</dd>
-
-              <dt>Rationale</dt>
-              <dd>TODO why this choice and not the others. Cite the structural reason, not the symptom.</dd>
-
-              <dt>Alternatives rejected</dt>
-              <dd class="sub">
-                <strong>TODO Alternative A.</strong> Why we rejected it.
-              </dd>
-              <dd class="sub">
-                <strong>TODO Alternative B.</strong> Why we rejected it.
-              </dd>
-
-              <dt>Consequence</dt>
-              <dd>TODO what this commits us to (or rules out). Be honest about the trade.</dd>
-            </dl>
-          </div>
-        </article>
-
-        <!-- ============ D2 ============ -->
-        <article class="decision" id="d2">
-          <div class="num">2</div>
-          <div>
-            <p class="title">TODO Decision title</p>
-            <div class="status-row">
-              <span class="chip accent"><span class="dot"></span> tag</span>
-            </div>
-            <dl>
-              <dt>Decision</dt><dd>TODO</dd>
-              <dt>Rationale</dt><dd>TODO</dd>
-              <dt>Alternatives rejected</dt>
-              <dd class="sub"><strong>TODO Alternative.</strong> Why rejected.</dd>
-              <dt>Consequence</dt><dd>TODO</dd>
-            </dl>
-          </div>
-        </article>
-
-        <!-- TODO add D3…DN as needed. 3–8 cards is typical. -->
-      </section>
-
-      <!-- ============================================================ -->
-      <!--  §6 TRADEOFFS — table.kv or short prose                      -->
-      <!-- ============================================================ -->
-      <section class="block" id="tradeoffs">
-        <h2><span class="num">§6</span> Tradeoffs</h2>
-        <h3>What we give up to get what we want</h3>
-        <p>TODO frame the tradeoff axis.</p>
-        <table class="kv">
-          <thead>
-            <tr><th>Limit / behavior</th><th>Value</th><th>Why</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>TODO_CONSTANT</code></td>
-              <td><code>TODO value</code></td>
-              <td>TODO rationale; cite source file.</td>
-            </tr>
-            <tr>
-              <td><code>TODO_OTHER</code></td>
-              <td><code>TODO value</code></td>
-              <td>TODO rationale.</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="callout">
-          <span class="title">Note</span>
-          TODO any caveat reviewers need to know — e.g. "values are
-          subject to change once we have telemetry from the first week."
-        </div>
-      </section>
-
-      <!-- ============================================================ -->
-      <!--  §7 ROLLOUT & VERIFICATION                                   -->
-      <!-- ============================================================ -->
-      <section class="block" id="rollout">
-        <h2><span class="num">§7</span> Rollout &amp; verification</h2>
-        <h3>How we ship this safely</h3>
-        <h4>Feature-flag posture</h4>
-        <p>TODO flag name, default state, who can flip it. If unflagged, say so explicitly.</p>
-        <h4>Telemetry</h4>
-        <p>TODO what we'll watch — metric names, dashboards, alerting thresholds.</p>
-        <h4>Rollback</h4>
-        <p>TODO the exact revert plan. "Revert PR #N" is fine; "we'll figure it out" is not.</p>
-
-        <pre class="code"><span class="comment">// example: highlight the line that matters with .hl</span>
-<span class="k">function</span> <span class="fn">processAndRun</span>(prompt: <span class="t">string</span>) {
-  <span class="hl">scheduledTasks.tick(workingState);</span>
-  <span class="comment">// ...</span>
-}</pre>
-        <p class="code-caption">apps/cli/src/example.ts — TODO short caption explaining the snippet.</p>
-      </section>
-
-      <!-- ============================================================ -->
-      <!--  §8 OPEN QUESTIONS — Roman-numeral list ordered by leverage  -->
-      <!-- ============================================================ -->
-      <section class="block" id="questions">
-        <h2><span class="num">§8</span> Open questions</h2>
-        <h3>Decisions worth pressure-testing in the sync</h3>
-        <!-- No intro paragraph — open on question i. Order by how much
-             each answer would move the design, highest leverage first. -->
-        <ol class="numbered">
-          <li>
-            <strong>TODO highest-leverage question?</strong>
-            <br />
-            TODO context and current lean.
-          </li>
-          <li>
-            <strong>TODO next question?</strong>
-            <br />
-            TODO context.
-          </li>
-          <li>
-            <strong>TODO question 3?</strong>
-            <br />
-            TODO context.
-          </li>
-        </ol>
-      </section>
-
-      <!-- ============================================================ -->
-      <!--  FOOTER — provenance only; no colophon (typographic credits  -->
-      <!--  read as template flourish and get cut in review)            -->
-      <!-- ============================================================ -->
-      <footer class="doc">
-        <div>
-          <a href="#">PR #TODO</a> &nbsp;·&nbsp;
-          <a href="#">TODO-TICKET</a> &nbsp;·&nbsp;
-          HEAD <code>TODO-sha</code>
-        </div>
-        <div>
-          <code>TODO/path/to/this/file.html</code>
-        </div>
-      </footer>
-
-    </main>
   </div>
+</header>
+
+<header class="hero" id="top">
+  <div class="hero-art" aria-hidden="true"></div>
+  <div class="wrap">
+    <p class="eyebrow"><span class="live"></span>Design doc<span class="sep">//</span>TODO-AREA<span class="sep">//</span>Updated TODO date</p>
+    <!-- Conceptual title? Add <span class="subtitle">literal, searchable subject</span> inside the h1. -->
+    <h1>TODO the question or claim, in plain words</h1>
+    <!-- data-typed types the lede in on load; delete the attribute for a static lede. -->
+    <p class="lede" data-typed>TODO ≤25 words: the problem and the fix, as a stranger would say them.</p>
+    <p class="linkline">
+      <span><span class="k">Linear</span><a href="#">TODO-TICKET</a></span>
+      <span><span class="k">PR</span><a href="#">#TODO</a></span>
+    </p>
+    <!-- Optional, conjure-hosted docs only: copies a prompt that lets a reader
+         load this page into Droid. Delete the block otherwise.
+    <div class="chat">
+      <button type="button" class="chat-b" data-prompt="Read this Conjure page: https://TODO-SLUG.conjure.factory.ai/ Then I'll ask you questions about it.
+
+Fetch it with my conjure CLI token (never print the token):
+
+TOKEN=$(jq -r .token ~/.config/conjure/config.json) &amp;&amp; curl -sS -H &quot;Authorization: Bearer $TOKEN&quot; -o /tmp/conjure-page.html https://TODO-SLUG.conjure.factory.ai/
+
+Then strip the HTML to text and read all of it, including the collapsed sections." aria-label="Copy a prompt to chat with this page in Droid">
+        <span>Chat with this page in Droid</span>
+        <svg class="ic-copy" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <svg class="ic-ok" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+      </button>
+      <span class="chat-tip" role="status"></span>
+    </div>
+    -->
+    <!-- Optional: four numbers that carry the thesis. Values stay white;
+         .meter .fill --w shows a share of a whole. Delete if four numbers don't earn it. -->
+    <div class="metrics">
+      <div class="metric"><div class="mlabel">TODO label</div><div class="mval">TODO<span class="unit">%</span></div><div class="msub">TODO comparison or denominator</div><div class="meter"><div class="fill" style="--w: 47%"></div></div></div>
+      <div class="metric"><div class="mlabel">TODO label</div><div class="mval">TODO<span class="den">/25</span></div><div class="msub">TODO comparison</div></div>
+      <div class="metric"><div class="mlabel">TODO label</div><div class="mval">$TODO</div><div class="msub">TODO vs TODO <span class="pill ok"><i></i>Met</span></div></div>
+      <div class="metric"><div class="mlabel">TODO label</div><div class="mval">TODO<span class="unit">min</span></div><div class="msub">TODO comparison</div></div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- Headline: the bottom line a stranger reads first. Bold sentence = the
+       answer; the rest = the evidence and the cost. hnote = the caveat. -->
+  <section class="headline rv" id="headline">
+    <div class="lhead"><span class="live"></span>Decision needed<span class="sep">//</span>TODO review by date</div>
+    <p><strong>TODO one-sentence answer in plain words.</strong> TODO the evidence behind it, with verbatim numbers, and what it costs.</p>
+    <p class="hnote">TODO the caveat a careful reader would raise first.</p>
+  </section>
+
+  <!-- Optional: dated updates on a living doc. Newest first; li.now marks the latest. -->
+  <section class="entries rv" id="updates">
+    <div class="lhead">Latest updates</div>
+    <ol>
+      <li class="now"><div class="ek">TODO date</div><div><div class="et">TODO what changed, as a sentence.</div><p>TODO why it matters and what comes next.</p></div></li>
+    </ol>
+  </section>
+
+  <section class="block" id="context">
+    <div class="slabel">01 / Context</div>
+    <h2>TODO what breaks today</h2>
+    <p class="lead">TODO primer: define the system and the terms the rest of the doc leans on, before any deep dive.</p>
+    <p>TODO the mechanism of failure. End on the structural cause, not a list of symptoms.</p>
+    <!-- Every motivating ticket spelled out: the reader never opens the tracker. -->
+    <div class="entries">
+      <ol>
+        <li><div class="ek">TODO-123</div><div><div class="et">TODO symptom in user-visible words</div><p>TODO 2–3 sentences: what the user saw and the mechanism behind it.</p></div></li>
+      </ol>
+    </div>
+    <h3>Why now</h3>
+    <p>TODO the trigger, with date and source.</p>
+  </section>
+
+  <section class="block" id="goals">
+    <div class="slabel">02 / Goals</div>
+    <h2>TODO what this fixes and what it leaves alone</h2>
+    <div class="two-col">
+      <div class="panel rv"><h4>Goals</h4><ul><li>TODO observable goal.</li><li>TODO goal.</li></ul></div>
+      <div class="panel limit rv"><h4>Non-goals</h4><ul><li>TODO out of scope, and where it belongs.</li><li>TODO non-goal.</li></ul></div>
+    </div>
+  </section>
+
+  <section class="block" id="proposal">
+    <div class="slabel">03 / Proposal</div>
+    <h2>TODO the architecture in one line</h2>
+    <div class="headline rv"><div class="lhead">The mental model</div><p>TODO ≤25 words stating the thesis, naming one or two components in <code>code</code>.</p></div>
+    <p>TODO the proposal at the conceptual level. Decisions carry the detail.</p>
+    <!-- A show-me view goes here when the proposal has 3+ actors, states, or modules. -->
+    <figure class="diagram rv">
+      <svg viewBox="0 0 780 160" role="img" aria-label="TODO diagram label">
+        <rect x="40" y="40" width="200" height="64" rx="4" class="bg-fill stroke" stroke-width="1"/>
+        <text x="140" y="68" text-anchor="middle" class="title">TODO Node A</text>
+        <text x="140" y="87" text-anchor="middle" class="cap">caption</text>
+        <line x1="240" y1="72" x2="532" y2="72" class="accent-stroke" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <rect x="540" y="40" width="200" height="64" rx="4" class="accent-soft-fill accent-stroke" stroke-width="1"/>
+        <text x="640" y="76" text-anchor="middle" class="title">TODO Node B</text>
+        <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" class="accent-fill"/></marker></defs>
+      </svg>
+      <figcaption>TODO the finding the diagram shows, in one sentence.</figcaption>
+    </figure>
+    <!-- When the proposal displaces a system: one row per function it performs. -->
+    <h3>What happens to each function of TODO-old-system</h3>
+    <div class="table-wrap rv">
+      <table>
+        <thead><tr><th>Function</th><th>Fate</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>TODO function</td><td><strong>Kept at full rigor.</strong> TODO how.</td><td>D1</td></tr>
+          <tr><td>TODO function</td><td><strong>Retired.</strong> TODO why nothing replaces it.</td><td>D2</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block" id="decisions">
+    <div class="slabel">04 / Decisions</div>
+    <h2>TODO the choices worth defending</h2>
+    <!-- No intro paragraph. Each card stands alone; all four dt slots are required. -->
+    <article class="decision rv" id="d1">
+      <div class="dnum">D1</div>
+      <div>
+        <p class="title">TODO declarative decision title, 6–14 words</p>
+        <div class="pills"><span class="pill"><i></i>TODO tag</span></div>
+        <dl>
+          <dt>Decision</dt><dd>TODO the choice, active voice, one sentence.</dd>
+          <dt>Rationale</dt><dd>TODO the structural reason this beats the others.</dd>
+          <dt>Alternatives rejected</dt><dd class="sub"><strong>TODO Alternative A.</strong> Why it lost.</dd><dd class="sub"><strong>TODO Alternative B.</strong> Why it lost.</dd>
+          <dt>Consequence</dt><dd>TODO what this commits to or rules out.</dd>
+        </dl>
+      </div>
+    </article>
+  </section>
+
+  <section class="block" id="evidence">
+    <div class="slabel">05 / Evidence</div>
+    <h2>TODO what the measurements show</h2>
+    <!-- Findings: a claim, its number, one click to the evidence. One .limit card carries the honest limit. -->
+    <div class="findings">
+      <a class="finding rv" href="#t-results"><div class="fnum">01</div><h3>TODO claim a reader would repeat.</h3><p>TODO the number behind it, verbatim, with its frame.</p>
+        <div class="rows"><div class="r"><span class="k">TODO metric</span><span class="v"><span class="was">TODO before</span><span class="to">TODO after</span></span></div></div>
+        <div class="flink">TODO evidence name<span class="arr">&rarr;</span></div></a>
+      <a class="finding limit rv" href="#t-results"><div class="fnum">02</div><h3>TODO the honest limit.</h3><p>TODO what the numbers do not show yet.</p><div class="flink">TODO evidence name<span class="arr">&rarr;</span></div></a>
+    </div>
+    <h3 id="t-results">TODO results table title</h3>
+    <div class="table-wrap rv">
+      <table>
+        <thead><tr><th>Arm</th><th class="num">Pass</th><th class="num">$/run</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr class="pri"><td>TODO shipped arm</td><td class="num"><strong>TODO%</strong> <span class="den">(n/N)</span></td><td class="num">$TODO</td><td><span class="pill ok"><i></i>Met</span></td></tr>
+          <tr><td>TODO control</td><td class="num">TODO% <span class="den">(n/N)</span></td><td class="num">$TODO</td><td><span class="pill miss"><i></i>Missed</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">TODO the measurement frame: n, runs per task, what counts as noise.</p>
+    <!-- Bar chart. Plot area y = 28 (top) .. 246 (base); y(v) = 246 - v * (218 / max).
+         Give each chart's gradient a unique id. -->
+    <figure class="chart rv">
+      <div class="chead"><span>TODO chart title, with units</span><span class="legend"><i class="lg pri"></i>TODO primary <i class="lg"></i>TODO others</span></div>
+      <svg viewBox="0 0 760 300" role="img" aria-label="TODO chart title">
+        <defs><linearGradient id="grad-c1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FF9E40"/><stop offset=".5" stop-color="#FF7C20"/><stop offset="1" stop-color="#FF5A00"/></linearGradient></defs>
+        <line x1="44" x2="744" y1="246" y2="246" class="grid base"/><text x="34" y="250" class="axis" text-anchor="end">0</text>
+        <line x1="44" x2="744" y1="137" y2="137" class="grid"/><text x="34" y="141" class="axis" text-anchor="end">TODO</text>
+        <line x1="44" x2="744" y1="28" y2="28" class="grid"/><text x="34" y="32" class="axis" text-anchor="end">TODO</text>
+        <rect x="140" y="120" width="60" height="126" class="bar"/><text x="170" y="111" class="val" text-anchor="middle">TODO</text><text x="170" y="268" class="xlab" text-anchor="middle">TODO arm</text>
+        <rect x="350" y="60" width="60" height="186" fill="url(#grad-c1)"/><text x="380" y="51" class="val pri" text-anchor="middle">TODO</text><text x="380" y="268" class="xlab" text-anchor="middle">TODO best</text>
+        <rect x="560" y="150" width="60" height="96" class="bar"/><text x="590" y="141" class="val" text-anchor="middle">TODO</text><text x="590" y="268" class="xlab" text-anchor="middle">TODO arm</text>
+      </svg>
+    </figure>
+    <!-- Horizontal comparison: one column per measure (--cols), controls hollow, .pri filled. -->
+    <div class="bars rv" style="--cols: 2">
+      <div class="bars-h"><span></span><span>TODO measure</span><span>TODO measure</span></div>
+      <div class="bar-row"><div class="bar-label">TODO control<span>TODO note</span></div><div class="track"><div class="fill" style="--w: 41%"></div><b>TODO</b></div><div class="track"><div class="fill" style="--w: 100%"></div><b>TODO</b></div></div>
+      <div class="bar-row pri"><div class="bar-label">TODO shipped arm</div><div class="track"><div class="fill" style="--w: 47%"></div><b>TODO</b></div><div class="track"><div class="fill" style="--w: 44%"></div><b>TODO</b></div></div>
+    </div>
+  </section>
+
+  <section class="block" id="rollout">
+    <div class="slabel">06 / Rollout</div>
+    <h2>TODO how this ships safely</h2>
+    <div class="stages rv">
+      <div class="stage"><div class="sn">Stage 1</div><div class="st">TODO</div><div class="sd">TODO <span class="pill ok"><i></i>Done</span></div></div>
+      <div class="stage on"><div class="sn">Stage 2</div><div class="st">TODO</div><div class="sd">TODO <span class="pill run"><i></i>In progress</span></div></div>
+      <div class="stage"><div class="sn">Stage 3</div><div class="st">TODO</div><div class="sd">TODO <span class="pill idle"><i></i>Not started</span></div></div>
+    </div>
+    <ol class="timeline">
+      <li class="rv"><div class="tw">TODO date</div><div class="tb"><div class="tt">TODO flag on for internal</div><p>TODO flag name, default, who can flip it; the metric watched and its threshold.</p></div></li>
+      <li class="rv now"><div class="tw">Now</div><div class="tb"><div class="tt">TODO current step</div><p>TODO rollback: the exact revert.</p></div></li>
+    </ol>
+    <pre class="code"><span class="comment">// TODO path/to/file.ts:42 — highlight the line that matters with .hl</span>
+<span class="k">function</span> <span class="fn">TODO</span>(input: <span class="t">string</span>) {
+<span class="hl">  TODO.load(input);</span>
+}</pre>
+    <p class="code-caption">TODO path/to/file.ts:42 · what the snippet shows</p>
+  </section>
+
+  <section class="block" id="questions">
+    <div class="slabel">07 / Open questions</div>
+    <h2>TODO what the review should settle</h2>
+    <!-- Highest leverage first: order by how much each answer would move the design. -->
+    <ol class="numbered">
+      <li class="rv"><div class="q">TODO highest-leverage question?</div><div class="a">TODO context and current lean.</div></li>
+      <li class="rv"><div class="q">TODO next question?</div><div class="a">TODO context.</div></li>
+    </ol>
+    <!-- Optional: everything a reviewer may want but should not have to scroll past. -->
+    <details class="log">
+      <summary>TODO show every round, table, and raw note</summary>
+      <section class="chap" id="log-1"><div class="chn">01</div><div class="chb"><h2>TODO chapter</h2><p>TODO verbatim detail.</p></div></section>
+    </details>
+  </section>
+
+  <footer class="doc"><span class="frotor" aria-hidden="true"></span><div>TODO sources (PR · ticket · HEAD sha · source file). Built TODO date.</div></footer>
+</main>
+
+<script>
+(function () {
+  document.body.classList.remove("nojs");
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var els = document.querySelectorAll(".rv");
+  if (reduce || !("IntersectionObserver" in window)) { els.forEach(function (e) { e.classList.add("in"); }); }
+  else {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }); }, { rootMargin: "0px 0px -8% 0px" });
+    els.forEach(function (e) { io.observe(e); });
+  }
+  var t = document.querySelector(".lede[data-typed]");
+  if (t && !reduce) {
+    var full = t.textContent.trim(), i = 0, span = document.createTextNode(""), cur = document.createElement("i");
+    cur.className = "cursor"; t.style.minHeight = t.offsetHeight + "px"; t.textContent = ""; t.append(span, cur);
+    setTimeout(function step() { i += 1; span.data = full.slice(0, i); if (i < full.length) setTimeout(step, 18); }, 500);
+  }
+  document.querySelectorAll("[data-prompt]").forEach(function (b) {
+    var tip = b.parentNode.querySelector(".chat-tip");
+    b.addEventListener("click", function () {
+      function done(ok) {
+        clearTimeout(b._t); b.classList.toggle("ok", ok); tip.textContent = ok ? "Prompt copied. Paste it into Droid." : "Copy failed"; tip.classList.add("on");
+        b._t = setTimeout(function () { tip.classList.remove("on"); b.classList.remove("ok"); }, 3000);
+      }
+      navigator.clipboard.writeText(b.getAttribute("data-prompt")).then(function () { done(true); }, function () { done(false); });
+    });
+  });
+  // Findings link into the collapsed log: open every <details> around the target first.
+  function reveal() {
+    var t = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (!t) return;
+    for (var d = t.closest("details"); d; d = d.parentElement.closest("details")) d.open = true;
+    t.scrollIntoView();
+  }
+  window.addEventListener("hashchange", reveal); reveal();
+  var links = Array.prototype.slice.call(document.querySelectorAll("nav a"));
+  var secs = links.map(function (a) { return document.querySelector(a.getAttribute("href")); });
+  function spy() {
+    var y = window.scrollY + 120, cur = -1;
+    secs.forEach(function (s, k) { if (s && s.getBoundingClientRect().top + window.scrollY <= y) cur = k; });
+    links.forEach(function (a, k) { a.classList.toggle("on", k === cur); });
+  }
+  window.addEventListener("scroll", spy, { passive: true }); spy();
+  window.addEventListener("beforeprint", function () { document.querySelectorAll("details").forEach(function (d) { d.open = true; }); });
+})();
+</script>
 </body>
 </html>

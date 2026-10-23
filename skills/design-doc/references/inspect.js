@@ -11,8 +11,8 @@
 // see the cause in the CSS by reading. Common catches:
 //   - dl > dd falling under dt because grid-column wasn't pinned
 //   - decision card .num overlapping due to wrong padding-top
-//   - dark-mode color falling back to inherited because variable wasn't
-//     redefined in the @media (prefers-color-scheme: dark) block
+//   - a scroll-reveal element stuck at opacity 0 (the probe runs with
+//     reduced motion, so a non-1 opacity here is a real bug)
 
 const { loadModule, fileUrl, CAPTURE_CSS } = require('./lib');
 
@@ -29,7 +29,7 @@ const { chromium } = loadModule('playwright');
   const ctx = await browser.newContext({
     viewport: { width: 1360, height: 1400 },
     deviceScaleFactor: 2,
-    colorScheme: 'light',
+    reducedMotion: 'reduce',
   });
   const page = await ctx.newPage();
   await page.goto(fileUrl(arg), { waitUntil: 'networkidle' });

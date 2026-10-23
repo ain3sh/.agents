@@ -3,18 +3,19 @@
 // Usage:
 //   node thumbnail.js <abs-path-to-html> [out.png] [ratio] [--hero=<selector>]
 //
-// Produces a wide, dark-mode 2x crop of the document hero (eyebrow -> title
-// -> tagline -> stat band) for posting next to the doc link. Default ratio
-// 1.6:1 so chat clients don't letterbox it.
+// Produces a wide 2x crop of the document hero (eyebrow -> title -> lede ->
+// metrics) for posting next to the doc link. Default ratio 1.6:1 so chat
+// clients don't letterbox it.
 //
-// Contract: the hero is --hero if given, else `header.doc`, else the first
-// <header> that contains an <h1>, else the parent of the first <h1>. The crop
-// ends at the first of .statband / .meta / .linkline / .tagline inside the
-// hero, or the hero itself.
+// Contract: the hero is --hero if given, else the first <header> that
+// contains an <h1>, else the parent of the first <h1>. The crop ends at the
+// first of .metrics / .linkline / .lede inside the hero, or the hero itself.
 //
 // The crop rules exist because naive captures look wrong:
-//   - a fixed or sticky contents nav renders as a stray column, so every
-//     <nav> is made invisible (layout kept)
+//   - a sticky top bar or contents nav renders as a stray strip or column, so
+//     every <nav> and every fixed/sticky element is made invisible (layout kept)
+//   - typed or scroll-revealed text would be caught half-drawn, so the page
+//     renders with reduced motion
 //   - whatever follows the anchor (panels, preamble, demo card) bleeds a
 //     sliver of accent colour into the bottom edge, so it is hidden
 //   - the header is often narrower than the stat band, so the crop centres
@@ -24,7 +25,7 @@ const { loadModule, fileUrl, parseArgs } = require('./lib');
 
 const { chromium } = loadModule('playwright');
 
-const VIEWPORT_W = 1800;
+const VIEWPORT_W = 1440;
 const VIEWPORT_H = 1700;
 const PAD = 56;
 
@@ -39,30 +40,32 @@ const PAD = 56;
 
   const browser = await chromium.launch();
   const ctx = await browser.newContext({
-    colorScheme: 'dark',
+    reducedMotion: 'reduce',
     viewport: { width: VIEWPORT_W, height: VIEWPORT_H },
     deviceScaleFactor: 2,
   });
   const page = await ctx.newPage();
   await page.goto(fileUrl(src), { waitUntil: 'networkidle' });
-  await page.waitForTimeout(2500);
+  await page.evaluate(() => document.fonts.ready);
   // visibility, not display: removing a grid-column nav reflows the hero into its column.
-  await page.addStyleTag({ content: 'nav{visibility:hidden!important}' });
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll('body *')) {
+      if (el.tagName === 'NAV' || ['fixed', 'sticky'].includes(getComputedStyle(el).position)) el.style.visibility = 'hidden';
+    }
+  });
 
   const box = await page.evaluate(({ pad, ratio, vw, heroSelector }) => {
     const firstH1 = document.querySelector('h1');
     const hero =
       (heroSelector && document.querySelector(heroSelector)) ||
-      document.querySelector('header.doc') ||
       [...document.querySelectorAll('header')].find((h) => h.querySelector('h1')) ||
       (firstH1 && firstH1.parentElement);
     if (!hero) return null;
 
     const anchor =
-      hero.querySelector('.statband') ||
-      hero.querySelector('.meta') ||
+      hero.querySelector('.metrics') ||
       hero.querySelector('.linkline') ||
-      hero.querySelector('.tagline') ||
+      hero.querySelector('.lede') ||
       hero;
 
     // Hide everything after the anchor, walking up to the hero, so no

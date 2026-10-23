@@ -1,11 +1,12 @@
 // Shared helpers for the design-doc scripts.
 //
 // A bare require('playwright') resolves relative to THIS FILE, not the CWD,
-// so running from a project that has playwright installed does not work on
-// its own. loadModule walks $PLAYWRIGHT_NODE_MODULES / $NODE_PATH, then every
-// node_modules above the invocation directory, then /tmp and global roots.
+// and Node never searches the npm global root. loadModule walks
+// $PLAYWRIGHT_NODE_MODULES / $NODE_PATH, every node_modules above the
+// invocation directory, then `npm root -g` (the global install the skill expects).
 
 const path = require('path');
+const { execSync } = require('child_process');
 
 function loadModule(name) {
   const candidates = [name];
@@ -18,19 +19,15 @@ function loadModule(name) {
     candidates.push(path.join(dir, 'node_modules', name));
     if (dir === path.dirname(dir)) break;
   }
-  candidates.push(
-    path.join('/tmp/node_modules', name),
-    path.join('/usr/lib/node_modules', name),
-    path.join('/usr/local/lib/node_modules', name),
-  );
   for (const c of candidates) {
     try { return require(c); } catch (_) { /* try next */ }
   }
+  try {
+    return require(path.join(execSync('npm root -g', { encoding: 'utf8' }).trim(), name));
+  } catch (_) { /* fall through to the install hint */ }
   console.error(
-    `${name} not found. Run from (or under) a project that has it installed,\n` +
-    'or set PLAYWRIGHT_NODE_MODULES=/abs/path/to/node_modules,\n' +
-    `or: cd /tmp && npm i ${name}` +
-    (name === 'playwright' ? ' && npx playwright install chromium' : ''),
+    `${name} not found locally or in \`npm root -g\`. Install it globally once:\n` +
+    `  npm i -g ${name}` + (name === 'playwright' ? ' && playwright install chromium' : ''),
   );
   process.exit(1);
 }

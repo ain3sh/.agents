@@ -1,23 +1,33 @@
 # Publishing
 
-Publish only when the user requests sharing or updating the document. For an
-authorized gist publication, use **secret gist + gistpreview** by default.
-Secret gists are unlisted, not access-controlled; use only when the material
-and intended audience permit link-based sharing.
+Publish only when the user asks to share or update the document. Two targets,
+in escalation order:
 
-## Size budget first
+| Target | Audience | Access | Use for |
+|---|---|---|---|
+| Secret gist + gistpreview | A few reviewers holding the link | Unlisted, not access-controlled: anyone with the URL can read it | Quick drafts and early review |
+| Conjure site | Factory | `internal`: Okta SSO, any Factory login | The shareable, durable version |
 
-**Keep the file under ~1 MB.** The gist *contents* API can truncate large
-files: `GET gists/<id>` sets `"truncated": true`, and gistpreview renders
-through that API, so the tail may disappear despite a successful write.
+Never move a draft to conjure without the user's go-ahead: every Factory
+employee can open it, and the doc may name internal tickets, people, or
+unmerged architecture. Never make a gist public; conjure replaces that path.
 
-Embedded raster figures are the usual cause. Four matplotlib PNGs put one
-report at 1.34 MB and the API returned `truncated: true`. Pick the encoding by
-image type:
+## Secret gist draft
+
+### Size budget first
+
+**Keep the file under ~1 MB.** The gist contents API truncates large files:
+`GET gists/<id>` sets `"truncated": true`, and gistpreview renders through that
+API, so the tail disappears despite a successful write. Typical pages are
+80–300 KB. Conjure has no such limit, but a lean page loads faster there too.
+
+Embedded rasters are the usual cause. Four matplotlib PNGs put one report at
+1.34 MB and the API returned `truncated: true`. Prefer in-theme SVG charts
+([components](components.md#quantitative-proof)); when a raster must stay:
 
 | Image | Encoding | Why |
 |---|---|---|
-| Flat-colour charts, diagrams | Palette PNG, or SVG when the source can emit it | Few colours compress well; JPEG adds noise and made the same charts *larger* (1.63 MB) |
+| Flat-colour charts, diagrams | Palette PNG, or SVG when the source can emit it | Few colours compress well; JPEG added noise and made the same charts *larger* (1.63 MB) |
 | Photos, screenshots with gradients | JPEG | Continuous tone |
 
 Palette-PNG recipe (took the 1.34 MB report to 292 KB):
@@ -26,72 +36,95 @@ Palette-PNG recipe (took the 1.34 MB report to 292 KB):
 magick in.png -resize '1400x>' -colors 128 out.png
 ```
 
-`build-md.js` warns when its output crosses 1 MB. For vector embedding, follow
+`build-md.js` warns past 1 MB. For vector embedding, follow
 [show-me's asset embedding](../../show-me/references/surfaces.md#reusing-and-embedding-assets).
 
-## Create and share
+### Create
 
 ```bash
-gh gist create <path>/<slug>-design.html --desc "<title>"   # add --public only if the user asks
+gh gist create <path>/<slug>.html --desc "<title>"
 # → https://gist.github.com/<user>/<gist-id>
 ```
 
-Share: `https://gistpreview.github.io/?<gist-id>/<slug>-design.html` (filename
-suffix required for multi-file gists, harmless otherwise).
-
-After create or update, verify
+Share `https://gistpreview.github.io/?<gist-id>/<slug>.html` (the filename
+suffix is required for multi-file gists, harmless otherwise). Then verify
 `gh api gists/<id> --jq '.files["<name>"].truncated'` is `false` and the
 preview reaches the footer.
 
-## Update
-
-Single-file gist, preferred (no JSON assembly needed):
+### Update
 
 ```bash
 gh gist edit <gist-id> -f <filename-in-gist> <local-path>
 ```
 
-`-f` names the file **inside** the gist; the positional arg is the local
-source. Get the gist's filename with `gh gist view <gist-id> --files`. Match it
-exactly: a mismatch silently adds a second file instead of updating, and
-gistpreview then needs the `/<filename>` suffix to find the right one. Without
-`-f`, `gh` opens an interactive editor, which fails in a non-TTY agent session.
+`-f` names the file **inside** the gist; the positional argument is the local
+source. Get the name with `gh gist view <gist-id> --files` and match it exactly:
+a mismatch silently adds a second file, and gistpreview then needs the
+`/<filename>` suffix to find the right one. Without `-f`, `gh` opens an
+interactive editor, which fails in a non-TTY session.
 
-**Revising an already-published doc**: keep the same gist id and filename so
-the gistpreview link already shared in PRs/Slack stays valid. `gh gist edit -f`
-handles the common case. Drop to the API only to change the **description** or
-to touch several files at once:
+Revising a published draft: keep the same gist id and filename so links already
+shared stay valid. Drop to the API only to change the description or touch
+several files at once:
 
 ```bash
-# pull the live copy to revise against
-gh api gists/<gist-id> --jq '.files["<slug>-design.html"].content' > current.html
-# push: content is too large for -f flags; build {"description": ..., "files": {"<name>": {"content": ...}}}
-# with a short python script, then
-gh api gists/<gist-id> -X PATCH --input /tmp/gist-patch.json
+gh api gists/<gist-id> --jq '.files["<slug>.html"].content' > current.html   # live copy to revise against
+# build {"description": ..., "files": {"<name>": {"content": ...}}} with a short script (content is too large for -f flags), then
+gh api gists/<gist-id> -X PATCH --input <patch.json>
 ```
 
-## Dead ends (verified failures)
+### Gist dead ends (verified)
 
 | Endpoint | Status |
 |---|---|
 | `gistcdn.githack.com/...`, `raw.githack.com/...` | **403 for secret gists**; public only |
-| `htmlpreview.github.io/?<raw-url>` | Works for public gists, slow first-load, occasionally CSP-blocks Google Fonts |
-| Direct gist raw URL | Served as `text/plain`; browser shows source, not rendered HTML |
+| `htmlpreview.github.io/?<raw-url>` | Public gists only; slow first load; occasionally CSP-blocks Google Fonts |
+| Direct gist raw URL | Served as `text/plain`: the browser shows source |
 | GitHub Pages on a private repo | Requires GitHub Enterprise |
 
-If the doc must be public-link-shareable AND render reliably: make the gist
-public and use `gistcdn.githack.com`. **Confirm with the user first**: public
-gists list under their GH profile, and the doc may reference internal tickets,
-employees, or unmerged architecture.
+## Conjure
 
-⚠️ **Do not try to make the link auto-unfurl into a preview card.**
-`gistpreview.github.io` serves a 2.7 KB JavaScript shell with
-`<title>Gist HTML Preview</title>` and zero `og:` tags, then fetches the
-document client-side; crawlers don't run JS, so they never see the doc. A
-secret gist compounds it: `gist.github.com/<id>` returns **404** to an
-anonymous crawler. Public gists carry `og:` tags, but `og:image` is GitHub's
-generic gist logo. Adding `og:` tags to the HTML changes nothing, because
-nothing crawler-visible serves them. A real card would require hosting both
-the doc and the image at anonymously fetchable URLs, which defeats the point of
-an internal memo and yields a ~360px card smaller than an attached image. Post a hero
-thumbnail or cards next to the link instead ([share images](share-images.md)).
+`conjure` (in `~/.local/bin`) deploys a folder of static files; the server and
+token live in `~/.config/conjure/config.json` (never print the token). Always
+pass `--json` and branch on exit codes: 0 ok, 1 error, 2 usage, 3 auth, 4 not
+found.
+
+```bash
+mkdir -p <work-dir>/site && cp <slug>.html <work-dir>/site/index.html   # the page must be index.html; assets beside it
+conjure deploy <work-dir>/site --site <slug> --json                      # first deploy creates the site; you own it
+conjure open <slug> --json                                               # → https://<slug>.conjure.factory.ai/
+```
+
+- **Slugs** are DNS labels (lowercase a-z, 0-9, hyphens, ≤63 chars), global
+  across Factory, and never reusable after `conjure delete`. Name them after
+  the subject, e.g. `ac-949-ptc-retro`; check `conjure list --json` for
+  collisions first. Only the owner can deploy again.
+- **Updates**: re-run the same `deploy`; every deploy is an immutable version,
+  the URL stays the same. `conjure versions <slug> --json` lists them;
+  `conjure rollback <slug> [version] --json` reactivates one.
+- **Ignore files**: a `.conjureignore` in the folder (gitignore syntax) keeps
+  scratch out; `.git`, `.factory`, and dotfiles like `.DS_Store` are always
+  excluded. Deploy a dedicated folder, never a worktree.
+- **"Chat with this page in Droid"**: uncomment the template's `.chat` block
+  and replace `TODO-SLUG` in its `data-prompt` before deploying. Readers paste
+  the copied prompt into Droid, which fetches the page with their own conjure
+  token.
+- **Verify** with an authenticated fetch (anonymous requests get a 302 to
+  Okta), without echoing the token:
+
+  ```bash
+  curl -sS -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $(jq -r .token ~/.config/conjure/config.json)" https://<slug>.conjure.factory.ai/
+  ```
+
+  Then confirm the served copy matches the local file, e.g. fetch it to a file
+  and `cmp` it against `index.html`.
+
+## No link previews
+
+⚠️ **Do not try to make the link unfurl into a preview card.** gistpreview
+serves a 2.7 KB JavaScript shell (`<title>Gist HTML Preview</title>`, no `og:`
+tags) and fetches the document client-side; crawlers don't run JS. A secret
+gist's own page returns 404 to anonymous crawlers. A conjure site answers
+crawlers with a 302 to Okta. Adding `og:` tags to the HTML changes nothing,
+because no crawler-visible response serves them. Post a hero thumbnail or cards
+next to the link instead ([share images](share-images.md)).

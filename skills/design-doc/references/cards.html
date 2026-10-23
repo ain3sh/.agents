@@ -4,76 +4,96 @@
 <meta charset="utf-8" />
 <title>Slack cards</title>
 <!--
-  Three 1600x900 card archetypes. Copy this file next to the doc, keep the
-  archetypes you need, replace every [bracketed] value with a number or id
-  copied from the source (never recomputed), then:
+  Three 1600x900 card archetypes on the design-doc template's tokens. Copy
+  this file next to the doc, keep the archetypes you need, replace every
+  [bracketed] value with a number or id copied from the source (never
+  recomputed), then:
     node ~/.agents/skills/design-doc/references/render-cards.js cards.html <out-dir>
   Each <section class="card" id="card-..."> becomes <out-dir>/card-....png.
-  Worked example: ac-949 .agents/ledgers/live/results/retro-site/cards.html
+  Values stay white; the accent marks labels, the live dot, and the one
+  primary bar (.col.pri), never a whole card.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg: #000; --ink: #fff; --ink-soft: #e8e5e3; --graphite: #b9b0ab; --fog: #9b8e87;
-    --line: #342f2d; --line-strong: #4d4541; --accent: #ee6018;
-    --sans: "Geist", sans-serif; --mono: "Geist Mono", monospace;
+    --bg: #000; --surface: #151311; --surface2: #100E0D; --border: #38322F; --border2: #26211F;
+    --text: #fff; --soft: #D2CCC7; --soft2: #B5ADA7; --body: #998F89; --meta: #80756F;
+    --accent: #FF5A00; --grad: linear-gradient(to right, #FF9E40, #FF7C20, #FF5A00);
+    --sans: "Geist", system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
+    --rotor: url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgNjEzIDY1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMzk2LjQwIDE4MC41NkMzOTUuNjAgMTgwLjM2IDM5NC44NSAxNzkuOTkgMzk0LjIxIDE3OS40OEMzOTMuNTYgMTc4Ljk2IDM5My4wNCAxNzguMzIgMzkyLjY3IDE3Ny41OEMzOTIuMjkgMTc2Ljg0IDM5Mi4wOSAxNzYuMDQgMzkyLjA2IDE3NS4yMUMzOTIuMDMgMTc0LjM5IDM5Mi4xNyAxNzMuNTcgMzkyLjQ5IDE3Mi44MEM0MDMuNDIgMTQ2LjIwIDQwOC4yNSAxMjQuOTIgNDAwLjQ2IDExNi4wMUMzNzkuODUgOTIuMzcgMjk3LjE3IDEzOS4zOCAyNzAuODEgMTU1LjMwQzI3MC4xMSAxNTUuNzIgMjY5LjMyIDE1NS45OSAyNjguNTAgMTU2LjA4QzI2Ny42OCAxNTYuMTcgMjY2Ljg1IDE1Ni4wOSAyNjYuMDcgMTU1LjgzQzI2NS4yOSAxNTUuNTcgMjY0LjU3IDE1NS4xNSAyNjMuOTcgMTU0LjU5QzI2My4zNiAxNTQuMDMgMjYyLjg5IDE1My4zNCAyNjIuNTcgMTUyLjU4QzI1MS40OSAxMjYuMDQgMjM5Ljg1IDEwNy41NyAyMjguMDQgMTA2Ljc3QzE5Ni43NSAxMDQuNjMgMTcxLjUyIDE5Ni4zMyAxNjQuMTQgMjI2LjIyQzE2My45NCAyMjcuMDIgMTYzLjU3IDIyNy43NyAxNjMuMDYgMjI4LjQxQzE2Mi41NSAyMjkuMDYgMTYxLjkwIDIyOS41OSAxNjEuMTYgMjI5Ljk2QzE2MC40MyAyMzAuMzMgMTU5LjYyIDIzMC41NCAxNTguODAgMjMwLjU3QzE1Ny45NyAyMzAuNjAgMTU3LjE1IDIzMC40NSAxNTYuMzkgMjMwLjEzQzEyOS43OSAyMTkuMjAgMTA4LjQ5IDIxNC4zOCA5OS41OSAyMjIuMTZDNzUuOTUgMjQyLjc4IDEyMi45NiAzMjUuNDUgMTM4Ljg4IDM1MS44MUMxMzkuMzAgMzUyLjUxIDEzOS41NyAzNTMuMzAgMTM5LjY2IDM1NC4xMkMxMzkuNzUgMzU0Ljk0IDEzOS42NyAzNTUuNzcgMTM5LjQxIDM1Ni41NUMxMzkuMTUgMzU3LjM0IDEzOC43MyAzNTguMDUgMTM4LjE3IDM1OC42NkMxMzcuNjEgMzU5LjI2IDEzNi45MiAzNTkuNzQgMTM2LjE2IDM2MC4wNUMxMDkuNjIgMzcxLjEzIDkxLjE2IDM4Mi43OCA5MC4zNSAzOTQuNThDODguMjIgNDI1Ljg4IDE3OS45MSA0NTEuMTAgMjA5LjgxIDQ1OC40OUMyMTAuNjEgNDU4LjY5IDIxMS4zNSA0NTkuMDUgMjEyLjAwIDQ1OS41N0MyMTIuNjQgNDYwLjA4IDIxMy4xNiA0NjAuNzMgMjEzLjUzIDQ2MS40N0MyMTMuOTAgNDYyLjIwIDIxNC4xMSA0NjMuMDEgMjE0LjE0IDQ2My44M0MyMTQuMTcgNDY0LjY1IDIxNC4wMyA0NjUuNDcgMjEzLjcxIDQ2Ni4yM0MyMDIuNzggNDkyLjgzIDE5Ny45NiA1MTQuMTMgMjA1Ljc0IDUyMy4wM0MyMjYuMzUgNTQ2LjY3IDMwOS4wNCA0OTkuNjcgMzM1LjQgNDgzLjc1QzMzNi4xMCA0ODMuMzIgMzM2Ljg5IDQ4My4wNSAzMzcuNzEgNDgyLjk2QzMzOC41MyA0ODIuODcgMzM5LjM2IDQ4Mi45NSAzNDAuMTQgNDgzLjIxQzM0MC45MiA0ODMuNDcgMzQxLjY0IDQ4My44OSAzNDIuMjQgNDg0LjQ2QzM0Mi44NSA0ODUuMDIgMzQzLjMyIDQ4NS43MCAzNDMuNjQgNDg2LjQ2QzM1NC43MiA1MTMuMDAgMzY2LjM2IDUzMS40NyAzNzguMTcgNTMyLjI4QzQwOS40NyA1MzQuNDEgNDM0LjY5IDQ0Mi43MSA0NDIuMDYgNDEyLjgyQzQ0Mi4yNiA0MTIuMDIgNDQyLjYzIDQxMS4yNyA0NDMuMTUgNDEwLjYyQzQ0My42NiA0MDkuOTggNDQ0LjMxIDQwOS40NiA0NDUuMDUgNDA5LjA4QzQ0NS43OCA0MDguNzEgNDQ2LjU5IDQwOC41MSA0NDcuNDEgNDA4LjQ4QzQ0OC4yNCA0MDguNDUgNDQ5LjA2IDQwOC42MCA0NDkuODIgNDA4LjkxQzQ3Ni40MiA0MTkuODUgNDk3LjcxIDQyNC42NiA1MDYuNjIgNDE2Ljg4QzUzMC4yNiAzOTYuMjcgNDgzLjI1IDMxMy41OSA0NjcuMzIgMjg3LjIzQzQ2Ni45MCAyODYuNTIgNDY2LjY0IDI4NS43MyA0NjYuNTUgMjg0LjkxQzQ2Ni40NSAyODQuMSA0NjYuNTQgMjgzLjI3IDQ2Ni44MCAyODIuNDlDNDY3LjA2IDI4MS43MCA0NjcuNDggMjgwLjk5IDQ2OC4wNCAyODAuMzhDNDY4LjYwIDI3OS43OCA0NjkuMjggMjc5LjMwIDQ3MC4wNCAyNzguOTlDNDk2LjU5IDI2Ny45MSA1MTUuMDUgMjU2LjI2IDUxNS44NSAyNDQuNDVDNTE3Ljk5IDIxMy4xNiA0MjYuMjkgMTg3Ljk0IDM5Ni40MCAxODAuNTZaTTM2MC41MCAxNTAuNTZDMzY2LjUxIDE2MS4zNCAzMzUuNTIgMjMzLjE5IDMxMi40NiAyODMuNDRDMzEyLjA4IDI4NC4yOCAzMTEuNDQgMjg0Ljk4IDMxMC42NSAyODUuNDVDMzA5Ljg1IDI4NS45MiAzMDguOTMgMjg2LjEzIDMwOC4wMSAyODYuMDZDMzA3LjA5IDI4NS45OSAzMDYuMjEgMjg1LjY0IDMwNS40OSAyODUuMDZDMzA0Ljc3IDI4NC40NyAzMDQuMjUgMjgzLjY4IDMwNC4wMCAyODIuOEMyOTQuNjkgMjUwLjEyIDI4NC4wNSAyMTEuNzMgMjcyLjY2IDE3OS4xNUMyNzIuMjEgMTc3Ljg3IDI3Mi4yMyAxNzYuNDcgMjcyLjcyIDE3NS4yMUMyNzMuMjEgMTczLjk0IDI3NC4xMyAxNzIuODkgMjc1LjMyIDE3Mi4yNUMzMDMuNzYgMTU2LjcxIDM1Mi40MiAxMzYuMDkgMzYwLjUwIDE1MC41NlpNMjI0LjIyIDE1OS40NUMyMzYuMDkgMTYyLjgyIDI2NC45OCAyMzUuNTQgMjg0LjIwIDI4Ny4zOEMyODQuNTIgMjg4LjI0IDI4NC41NyAyODkuMTkgMjg0LjM0IDI5MC4wOEMyODQuMTEgMjkwLjk3IDI4My42MSAyOTEuNzggMjgyLjkxIDI5Mi4zOEMyODIuMjEgMjkyLjk4IDI4MS4zNCAyOTMuMzUgMjgwLjQyIDI5My40NUMyNzkuNTAgMjkzLjU0IDI3OC41OCAyOTMuMzUgMjc3Ljc3IDI5Mi45MUMyNDguMDYgMjc2LjQyIDIxMy40MSAyNTYuNzcgMTgyLjMxIDI0MS43OEMxODEuMSAyNDEuMTkgMTgwLjEzIDI0MC4xOSAxNzkuNTggMjM4Ljk1QzE3OS4wMyAyMzcuNzEgMTc4Ljk0IDIzNi4zMiAxNzkuMzIgMjM1LjAyQzE4OC40OCAyMDMuOTYgMjA4LjI3IDE1NC45NCAyMjQuMjIgMTU5LjQ1Wk0xMzQuMTUgMjYyLjExQzE0NC45MiAyNTYuMDkgMjE2Ljc3IDI4Ny4wOSAyNjcuMDIgMzEwLjE0QzI2Ny44NiAzMTAuNTMgMjY4LjU2IDMxMS4xNiAyNjkuMDMgMzExLjk2QzI2OS41MCAzMTIuNzUgMjY5LjcxIDMxMy42OCAyNjkuNjQgMzE0LjYwQzI2OS41NyAzMTUuNTIgMjY5LjIyIDMxNi40MCAyNjguNjQgMzE3LjExQzI2OC4wNSAzMTcuODMgMjY3LjI2IDMxOC4zNSAyNjYuMzcgMzE4LjYxQzIzMy43MSAzMjcuOTIgMTk1LjMxIDMzOC41NiAxNjIuNzIgMzQ5Ljk1QzE2MS40NSAzNTAuMzkgMTYwLjA1IDM1MC4zNyAxNTguNzkgMzQ5Ljg4QzE1Ny41MyAzNDkuMzkgMTU2LjQ4IDM0OC40NyAxNTUuODMgMzQ3LjI4QzE0MC4zMyAzMTguODUgMTE5LjY3IDI3MC4xOSAxMzQuMTUgMjYyLjExWk0xNDMuMDQgMzk4LjM4QzE0Ni40MCAzODYuNTEgMjE5LjEzIDM1Ny42MyAyNzAuOTYgMzM4LjQwQzI3MS44MyAzMzguMDggMjcyLjc3IDMzOC4wMyAyNzMuNjcgMzM4LjI2QzI3NC41NiAzMzguNSAyNzUuMzYgMzM4Ljk5IDI3NS45NyAzMzkuNjlDMjc2LjU3IDM0MC40IDI3Ni45NCAzNDEuMjYgMjc3LjA0IDM0Mi4xOEMyNzcuMTMgMzQzLjEwIDI3Ni45NCAzNDQuMDMgMjc2LjQ5IDM0NC44NEMyNjAgMzc0LjU1IDI0MC4zNSA0MDkuMTkgMjI1LjM2IDQ0MC4yOEMyMjQuNzcgNDQxLjUwIDIyMy43NyA0NDIuNDggMjIyLjUzIDQ0My4wM0MyMjEuMjkgNDQzLjU4IDIxOS45MCA0NDMuNjcgMjE4LjYwIDQ0My4yOEMxODcuNTQgNDM0LjE4IDEzOC41MSA0MTQuMzMgMTQzLjA0IDM5OC4zOFpNMjQ1LjY5IDQ4OC40NkMyMzkuNjcgNDc3LjY5IDI3MC42NyA0MDUuODMgMjkzLjczIDM1NS41OUMyOTQuMTEgMzU0Ljc1IDI5NC43NSAzNTQuMDUgMjk1LjU0IDM1My41OEMyOTYuMzQgMzUzLjExIDI5Ny4yNiAzNTIuODkgMjk4LjE4IDM1Mi45NkMyOTkuMTEgMzUzLjAzIDI5OS45OSAzNTMuMzggMzAwLjcwIDM1My45N0MzMDEuNDIgMzU0LjU1IDMwMS45NCAzNTUuMzQgMzAyLjE5IDM1Ni4yM0MzMTEuNTAgMzg4LjkgMzIyLjE1IDQyNy4yOSAzMzMuNTMgNDU5Ljg4QzMzMy45OCA0NjEuMTYgMzMzLjk1IDQ2Mi41NiAzMzMuNDYgNDYzLjgyQzMzMi45NyA0NjUuMDggMzMyLjA1IDQ2Ni4xMyAzMzAuODYgNDY2Ljc3QzMwMi40MyA0ODIuMjggMjUzLjc3IDUwMi45NCAyNDUuNzIgNDg4LjQ2SDI0NS42OVpNMzgxLjk3IDQ3OS41N0MzNzAuMDkgNDc2LjIwIDM0MS4yMSA0MDMuNDggMzIxLjk4IDM1MS42NEMzMjEuNjYgMzUwLjc3IDMyMS42MSAzNDkuODMgMzIxLjg0IDM0OC45M0MzMjIuMDcgMzQ4LjA0IDMyMi41NyAzNDcuMjMgMzIzLjI3IDM0Ni42M0MzMjMuOTcgMzQ2LjAzIDMyNC44NSAzNDUuNjUgMzI1Ljc3IDM0NS41NkMzMjYuNjkgMzQ1LjQ3IDMyNy42MSAzNDUuNjYgMzI4LjQyIDM0Ni4xMUMzNTguMTIgMzYyLjYwIDM5Mi43OCAzODIuMjYgNDIzLjg3IDM5Ny4yNUM0MjUuMDkgMzk3LjgzIDQyNi4wNiAzOTguODQgNDI2LjYxIDQwMC4wOEM0MjcuMTYgNDAxLjMyIDQyNy4yNCA0MDIuNzEgNDI2Ljg2IDQwNC4wMUM0MTcuNzEgNDM1LjEyIDM5Ny45MiA0ODQuMDkgMzgxLjk3IDQ3OS41N1pNNDcyLjA0IDM3Ni45MUM0NjEuMjYgMzgyLjk0IDM4OS40MiAzNTEuOTMgMzM5LjE3IDMyOC44OEMzMzguMzMgMzI4LjQ5IDMzNy42MiAzMjcuODYgMzM3LjE1IDMyNy4wNkMzMzYuNjkgMzI2LjI2IDMzNi40NyAzMjUuMzQgMzM2LjU0IDMyNC40MkMzMzYuNjEgMzIzLjUwIDMzNi45NiAzMjIuNjIgMzM3LjU1IDMyMS45MEMzMzguMTMgMzIxLjE5IDMzOC45MiAzMjAuNjcgMzM5LjgxIDMyMC40MUMzNzIuNDggMzExLjEwIDQxMC44NyAzMDAuNDYgNDQzLjQ2IDI4OS4wN0M0NDQuNzQgMjg4LjYzIDQ0Ni4xNCAyODguNjUgNDQ3LjQwIDI4OS4xNEM0NDguNjYgMjg5LjYzIDQ0OS43MSAyOTAuNTUgNDUwLjM2IDI5MS43NEM0NjUuODUgMzIwLjE3IDQ4Ni41MSAzNjguODQgNDcyLjA0IDM3Ni45MVpNNDYzLjE1IDI0MC42M0M0NTkuNzggMjUyLjUyIDM4Ny4wNiAyODEuNDAgMzM1LjIzIDMwMC42M0MzMzQuMzYgMzAwLjk1IDMzMy40MiAzMDEuMDAgMzMyLjUyIDMwMC43N0MzMzEuNjIgMzAwLjUzIDMzMC44MiAzMDAuMDMgMzMwLjIyIDI5OS4zM0MzMjkuNjEgMjk4LjYzIDMyOS4yNCAyOTcuNzYgMzI5LjE1IDI5Ni44NEMzMjkuMDYgMjk1LjkyIDMyOS4yNSAyOTQuOTkgMzI5LjcwIDI5NC4xOEMzNDYuMTkgMjY0LjQ4IDM2NS44MyAyMjkuODIgMzgwLjgyIDE5OC43M0MzODEuNDEgMTk3LjUyIDM4Mi40MiAxOTYuNTUgMzgzLjY2IDE5Ni4wMEMzODQuODkgMTk1LjQ1IDM4Ni4yOSAxOTUuMzYgMzg3LjU4IDE5NS43NUM0MTguNjUgMjA0Ljg5IDQ2Ny42NyAyMjQuNjggNDYzLjE1IDI0MC42M1oiIGZpbGw9IndoaXRlIi8+PC9zdmc+");
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: #0c0b0a; font-family: var(--sans); color: var(--ink-soft); -webkit-font-smoothing: antialiased; }
+  body { margin: 0; background: #0c0b0a; font-family: var(--sans); color: var(--body); -webkit-font-smoothing: antialiased; font-feature-settings: "ss09"; }
   code, .m { font-family: var(--mono); font-size: 0.9em; }
-  .card { width: 1600px; height: 900px; background: var(--bg); padding: 64px 80px 56px; display: flex; flex-direction: column; margin: 0 0 40px; overflow: hidden; }
-  .eyebrow { font-family: var(--mono); font-size: 18px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 16px; margin: 0 0 18px; }
-  .eyebrow::after { content: ""; width: 56px; height: 1px; background: var(--line-strong); }
-  h1 { font-weight: 300; font-size: 60px; line-height: 1.02; letter-spacing: -0.045em; color: var(--ink); margin: 0 0 40px; }
-  .foot { margin-top: auto; padding-top: 22px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 18px; color: var(--graphite); display: flex; justify-content: space-between; gap: 24px; }
-  .foot b { color: var(--ink); font-weight: 500; }
-  .foot .src { color: var(--fog); }
+  .card { position: relative; width: 1600px; height: 900px; background: var(--bg); padding: 64px 80px 52px; display: flex; flex-direction: column; margin: 0 0 40px; overflow: hidden; isolation: isolate; }
+  /* Grid wash + halftone rotor, as in the doc hero. */
+  .card::before { content: ""; position: absolute; inset: 0; z-index: -1; background-image: linear-gradient(var(--border2) 1px, transparent 1px), linear-gradient(90deg, var(--border2) 1px, transparent 1px); background-size: 64px 64px; opacity: .35; -webkit-mask-image: radial-gradient(ellipse at 85% 10%, #000 0%, transparent 60%); }
+  /* inset: 0 with an offset mask, not an oversized box: a box past the card
+     edge counts as overflow and trips render-cards.js's clipping warning. */
+  .card::after { content: ""; position: absolute; z-index: -1; inset: 0; opacity: .26;
+    background: radial-gradient(circle, var(--soft2) 1.2px, transparent 1.6px) 0 0 / 8px 8px;
+    -webkit-mask-image: var(--rotor), radial-gradient(circle at calc(100% - 80px) 80px, #000 120px, transparent 400px); -webkit-mask-size: 560px auto, 100% 100%; -webkit-mask-position: calc(100% + 200px) -190px, 0 0; -webkit-mask-repeat: no-repeat; -webkit-mask-composite: source-in; }
+  .eyebrow { font-family: var(--mono); font-size: 17px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--meta); display: flex; align-items: center; margin: 0 0 22px; }
+  .eyebrow::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); margin-right: 16px; }
+  .eyebrow .sep { color: var(--border); margin: 0 14px; }
+  h1 { font-weight: 400; font-size: 60px; line-height: 1.04; letter-spacing: -0.035em; color: var(--text); margin: 0 0 40px; max-width: 1200px; }
+  .foot { margin-top: auto; padding-top: 22px; border-top: 1px solid var(--border2); font-family: var(--mono); font-size: 17px; color: var(--soft2); display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+  .foot b { color: var(--text); font-weight: 500; }
+  .foot .src { color: var(--meta); display: flex; align-items: center; gap: 14px; }
+  .foot .src::after { content: ""; width: 20px; height: 20px; flex: none; background: var(--soft2); -webkit-mask: var(--rotor) center / contain no-repeat; }
 
   /* Archetype 1: headline numbers, one column per goal */
-  .cols { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line); border-radius: 6px; flex: 1; }
-  .col { padding: 34px 34px 30px; border-left: 1px solid var(--line); display: flex; flex-direction: column; }
-  .col:first-child { border-left: 0; }
-  .col .k { font-family: var(--mono); font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fog); margin-bottom: 10px; }
-  .col .q { font-size: 25px; line-height: 1.25; color: var(--ink); letter-spacing: -0.02em; margin-bottom: 26px; min-height: 62px; }
-  .col .v { font-family: var(--mono); font-size: 104px; line-height: 1; letter-spacing: -0.05em; color: var(--accent); margin-bottom: 12px; }
-  .col .s { font-size: 22px; color: var(--ink); margin-bottom: 22px; }
-  .rows { font-family: var(--mono); font-size: 16.5px; line-height: 1.85; white-space: nowrap; color: var(--graphite); margin-top: auto; border-top: 1px solid var(--line); padding-top: 16px; }
+  .cols { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1px; background: var(--border2); border: 1px solid var(--border2); border-radius: 4px; overflow: hidden; flex: 1; }
+  .col { padding: 32px 34px 28px; background: var(--surface2); display: flex; flex-direction: column; }
+  .col .k { font-family: var(--mono); font-size: 15px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+  .col .q { font-size: 25px; line-height: 1.25; color: var(--soft); letter-spacing: -0.02em; margin-bottom: 24px; min-height: 62px; }
+  .col .v { font-size: 108px; line-height: 1; letter-spacing: -0.045em; color: var(--text); margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+  .col .s { font-size: 21px; color: var(--soft2); }
+  .col .meter { height: 5px; background: var(--border2); border-radius: 3px; margin-top: 18px; overflow: hidden; }
+  .col .meter i { display: block; height: 100%; width: var(--w); background: var(--meta); border-radius: 3px; }
+  .col.pri .meter i { background: var(--grad); }
+  .rows { font-family: var(--mono); font-size: 16.5px; line-height: 1.9; white-space: nowrap; color: var(--body); margin-top: auto; border-top: 1px solid var(--border2); padding-top: 16px; }
   .rows div { display: flex; justify-content: space-between; gap: 16px; }
-  .rows span:last-child { color: var(--ink); }
+  .rows span:last-child { color: var(--text); }
 
   /* Archetype 2: what ships, one row per change */
+  .ships { background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; padding: 6px 28px; }
   table { border-collapse: collapse; width: 100%; }
-  td { padding: 12px 0; border-top: 1px solid var(--line); vertical-align: baseline; font-size: 23px; line-height: 1.3; }
+  td { padding: 15px 0; border-top: 1px solid var(--border2); vertical-align: baseline; font-size: 23px; line-height: 1.3; }
   tr:first-child td { border-top: 0; }
-  td.id { font-family: var(--mono); font-size: 20px; color: var(--accent); width: 250px; white-space: nowrap; }
-  td.what { color: var(--ink); width: 470px; padding-right: 28px; }
-  td.eff { color: var(--graphite); }
-  td.pr { font-family: var(--mono); font-size: 16px; color: var(--fog); text-align: right; width: 110px; white-space: nowrap; }
-  .note { margin-top: 18px; font-family: var(--mono); font-size: 19px; color: var(--ink); padding: 14px 18px; border: 1px dashed var(--line-strong); border-radius: 4px; }
-  .note span { color: var(--graphite); }
+  td.id { font-family: var(--mono); font-size: 19px; color: var(--accent); width: 240px; white-space: nowrap; }
+  td.what { color: var(--text); width: 480px; padding-right: 28px; }
+  td.eff { color: var(--soft2); }
+  td.pr { font-family: var(--mono); font-size: 16px; color: var(--meta); text-align: right; width: 110px; white-space: nowrap; }
+  .note { margin-top: 18px; font-family: var(--mono); font-size: 18px; color: var(--soft); padding: 14px 20px; border: 1px dashed var(--border); border-radius: 4px; }
+  .note span { color: var(--meta); }
 
   /* Archetype 3: negatives kept, a 3x2 grid; values stay neutral, never orange */
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 18px; flex: 1; }
-  .cell { border: 1px solid var(--line); border-radius: 6px; padding: 26px 28px; display: flex; flex-direction: column; }
-  .cell .t { font-size: 25px; line-height: 1.2; letter-spacing: -0.02em; color: var(--ink); margin-bottom: 16px; }
-  .cell .v { font-family: var(--mono); font-size: 44px; letter-spacing: -0.04em; color: var(--ink); line-height: 1; margin-bottom: 14px; }
-  .cell .d { font-size: 18.5px; line-height: 1.4; color: var(--graphite); margin-top: auto; }
-  .cell .b { font-family: var(--mono); font-size: 15px; color: var(--fog); margin-top: 12px; }
+  .cell { position: relative; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; padding: 26px 28px; display: flex; flex-direction: column; }
+  .cell::before, .cell::after { content: ""; position: absolute; width: 12px; height: 12px; border: solid var(--meta); }
+  .cell::before { top: -1px; left: -1px; border-width: 1.5px 0 0 1.5px; }
+  .cell::after { bottom: -1px; right: -1px; border-width: 0 1.5px 1.5px 0; }
+  .cell .t { font-size: 24px; line-height: 1.2; letter-spacing: -0.02em; color: var(--text); margin-bottom: 16px; }
+  .cell .v { font-size: 46px; letter-spacing: -0.04em; color: var(--soft); line-height: 1; margin-bottom: 14px; font-variant-numeric: tabular-nums; }
+  .cell .d { font-size: 18px; line-height: 1.4; color: var(--body); margin-top: auto; }
+  .cell .b { font-family: var(--mono); font-size: 14.5px; color: var(--meta); margin-top: 12px; }
 </style>
 </head>
 <body>
 
 <section class="card" id="card-headline">
-  <p class="eyebrow">[TICKET] · [project] · [final block]</p>
+  <p class="eyebrow">[TICKET]<span class="sep">//</span>[project]<span class="sep">//</span>[final block]</p>
   <h1>[One-line verdict, ≤ 8 words.]</h1>
   <div class="cols">
-    <div class="col">
+    <div class="col pri">
       <div class="k">Goal 1</div>
       <div class="q">[Goal as the reader would say it]</div>
       <div class="v">[−00.0%]</div>
       <div class="s">[what the number is pooled over]</div>
+      <div class="meter"><i style="--w: 47%"></i></div>
       <div class="rows">
         <div><span>[breakdown]</span><span>[value]</span></div>
         <div><span>[breakdown]</span><span>[value]</span></div>
@@ -85,6 +105,7 @@
       <div class="q">[Goal]</div>
       <div class="v">[n of n]</div>
       <div class="s">[denominator]</div>
+      <div class="meter"><i style="--w: 92%"></i></div>
       <div class="rows">
         <div><span>[breakdown]</span><span>[value]</span></div>
         <div><span>[breakdown]</span><span>[value]</span></div>
@@ -96,18 +117,20 @@
 </section>
 
 <section class="card" id="card-ships">
-  <p class="eyebrow">[TICKET] · [project] · what ships</p>
+  <p class="eyebrow">[TICKET]<span class="sep">//</span>[project]<span class="sep">//</span>what ships</p>
   <h1>[n changes ship. One-line why.]</h1>
-  <table>
-    <tr><td class="id">[M1]</td><td class="what">[What it does]</td><td class="eff">[Measured effect, copied]</td><td class="pr">[PR-A]</td></tr>
-    <tr><td class="id">[M2 / M3]</td><td class="what">[What it does]</td><td class="eff">[Measured effect]</td><td class="pr">[PR-B]</td></tr>
-  </table>
+  <div class="ships">
+    <table>
+      <tr><td class="id">[M1]</td><td class="what">[What it does]</td><td class="eff">[Measured effect, copied]</td><td class="pr">[PR-A]</td></tr>
+      <tr><td class="id">[M2 / M3]</td><td class="what">[What it does]</td><td class="eff">[Measured effect]</td><td class="pr">[PR-B]</td></tr>
+    </table>
+  </div>
   <div class="note">[The measured-but-not-selected option, and its status] <span>· [its numbers]</span></div>
   <div class="foot"><span>[shipping state]</span><span class="src">[branch]</span></div>
 </section>
 
 <section class="card" id="card-negatives">
-  <p class="eyebrow">[TICKET] · [project] · negative results, kept</p>
+  <p class="eyebrow">[TICKET]<span class="sep">//</span>[project]<span class="sep">//</span>negative results, kept</p>
   <h1>What did not work, and stays recorded.</h1>
   <div class="grid">
     <div class="cell"><div class="t">[Arm tried]</div><div class="v">[+00%]</div><div class="d">[Why it failed, one sentence from the source.]</div><div class="b">[block ids]</div></div>
