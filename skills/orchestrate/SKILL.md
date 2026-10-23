@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: "Load only as the Astra main session, an Astra child assigned as orchestrator, or top-level Fable told \"be an orchestrator\": coordinate glm, ds4flash, sol, fable, astra, and opus."
+description: "Load only as the Astra main session, an Astra child assigned as orchestrator, or top-level Fable told \"be an orchestrator\": coordinate glm, ds-flash, sol, fable, astra, and opus."
 ---
 
 # Orchestrate

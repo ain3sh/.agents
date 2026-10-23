@@ -1,7 +1,7 @@
 ---
 name: sol
-description: GPT-6.1 Sol Ultra Fast for implementation, research, and adversarial review.
-model: gpt-6.1-sol-ultrafast
+description: GPT-6.1 Sol for implementation, research, and adversarial review.
+model: gpt-6.1-sol
 reasoningEffort: high
 ---
 

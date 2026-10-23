@@ -65,8 +65,8 @@ droids land in the same directory and are gitignored. Staffing policy is the
 | Droid | Model | Prefer for |
 |---|---|---|
 | `glm` | `glm-5.3-flash` | bounded implementation, evidence gathering, writing |
-| `ds4flash` | `deepseek-v4.1-flash` | fast, cheap bounded implementation and evidence gathering |
-| `sol` | `gpt-6.1-sol-ultrafast` | persistent implementation, research, adversarial review |
+| `ds-flash` | `deepseek-v4.1-flash` | fast, cheap bounded implementation and evidence gathering |
+| `sol` | `gpt-6.1-sol` | persistent implementation, research, adversarial review |
 | `fable` | `claude-fable-5.1` | approach design, coupled or taste-sensitive code, UI, structural review |
 | `astra` | `gpt-6-astra` | diagnosis, QA, computer use; small local fixes within assigned scope |
 | `opus` | `claude-opus-5-5-fast` | clean code, UI/UX, writing; not data gathering |
