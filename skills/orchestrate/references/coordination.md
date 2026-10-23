@@ -70,6 +70,7 @@ Preferences, not routing. Match the shape of the work:
 | Droid | Prefer for | Handoff note |
 |---|---|---|
 | glm | bounded implementation, evidence gathering, writing | its scout interpretations are input to verify, not evidence |
+| ds4flash | fast, cheap bounded implementation and evidence gathering | same as glm: verify its interpretations before relying on them |
 | sol | persistent implementation, research, adversarial review | ask for practical consequence, not pedantry |
 | fable | substantive approach design, coupled or taste-sensitive code, UI, structural review | must inspect the decisive code itself |
 | astra | diagnosis, QA, verification, computer use | direct fixes follow the delegation boundary and assigned scope |

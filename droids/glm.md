@@ -1,7 +1,7 @@
 ---
 name: glm
 description: GLM 5.3 Flash for implementation, evidence gathering, and writing.
-model: custom:factory://glm-5-3-flash
+model: glm-5.3-flash
 reasoningEffort: high
 ---
 

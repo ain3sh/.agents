@@ -13,8 +13,8 @@ skills, slash commands, lifecycle hooks, prompts, and configs.
   workflow skills pull in. Slash workflows live here too; there is no
   `commands/` directory. Human-only skills set `disable-model-invocation: true`;
   `user-invocable` defaults to `true`.
-- `droids/<name>.md` — model-pinned droid definitions (`glm`, `sol`, `fable`,
-  `astra`): exact custom model id, `reasoningEffort: high`, no
+- `droids/<name>.md` — model-pinned droid definitions (`glm`, `ds4flash`,
+  `sol`, `fable`, `astra`, `opus`): Factory model id, `reasoningEffort: high`, no
   `tools`/`mcpServers` key (the definition restricts nothing; runtime policy
   may still withhold tools such as Task). This is the canonical
   home; `~/.factory/droids` is a symlink to it, so there is no copy step.

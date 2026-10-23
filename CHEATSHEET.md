@@ -56,7 +56,7 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 
 Definitions live in `~/.agents/droids/<name>.md` (canonical); `~/.factory/droids`
 is a symlink to that directory, so the runtime discovers them with no copy step.
-All four pin an exact custom model id at `reasoningEffort: high` and omit
+Each pins a Factory model id at `reasoningEffort: high` and omits
 `tools`/`mcpServers`: the definitions restrict nothing, though runtime policy
 may still withhold tools (children currently lack Task). Factory-generated mission
 droids land in the same directory and are gitignored. Staffing policy is the
@@ -64,10 +64,12 @@ droids land in the same directory and are gitignored. Staffing policy is the
 
 | Droid | Model | Prefer for |
 |---|---|---|
-| `glm` | `custom:factory://glm-5-3-flash` | bounded implementation, evidence gathering, writing |
-| `sol` | `custom:openai://gpt-6-sol-fast` | persistent implementation, research, adversarial review |
-| `fable` | `custom:factory://fable-5-1` | approach design, coupled or taste-sensitive code, UI, structural review |
-| `astra` | `custom:factory-dev://gpt-6` | diagnosis, QA, computer use; small local fixes within assigned scope |
+| `glm` | `glm-5.3-flash` | bounded implementation, evidence gathering, writing |
+| `ds4flash` | `deepseek-v4.1-flash` | fast, cheap bounded implementation and evidence gathering |
+| `sol` | `gpt-6.1-sol-ultrafast` | persistent implementation, research, adversarial review |
+| `fable` | `claude-fable-5.1` | approach design, coupled or taste-sensitive code, UI, structural review |
+| `astra` | `gpt-6-astra` | diagnosis, QA, computer use; small local fixes within assigned scope |
+| `opus` | `claude-opus-5-5-fast` | clean code, UI/UX, writing; not data gathering |
 
 ## Installed Tooling
 

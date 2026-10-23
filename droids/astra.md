@@ -1,7 +1,7 @@
 ---
 name: astra
 description: GPT-6 for investigation, computer use, rigorous verification, and small local fixes.
-model: custom:factory-dev://gpt-6
+model: gpt-6-astra
 reasoningEffort: high
 ---
 
