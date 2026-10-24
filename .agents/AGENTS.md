@@ -34,11 +34,9 @@ skills, slash commands, lifecycle hooks, prompts, and configs.
 - `CHEATSHEET.md` — quick reference for commands, atoms, and installed tooling.
 
 Local-only (gitignored): `.agents/`, `logs/`, `*.env`, `__pycache__/`,
-`.ruff_cache/`. `hooks/session_end/store_artifacts.py` writes session tails and
-todo snapshots to `.agents/{MM_DD_YYYY}/`. The droid TUI auto-loads skills
-straight from this `~/.agents/` entrypoint (the same way it does for
-`~/.factory/`), so there's no install/sync step and `~/.factory/skills` stays
-empty.
+`.ruff_cache/`. The droid TUI auto-loads skills straight from this `~/.agents/`
+entrypoint (the same way it does for `~/.factory/`), so there's no install/sync
+step and `~/.factory/skills` stays empty.
 
 ## Verify before committing
 

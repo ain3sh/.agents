@@ -43,7 +43,6 @@ hooks/
 │   ├── reap_vscode_workspaces.py
 │   └── debug.sh
 ├── session_end/
-│   ├── store_artifacts.py
 │   └── retire_vscode_workspaces.py
 └── user_prompt_submit/
     └── conflict_guard.py
@@ -142,7 +141,6 @@ if __name__ == "__main__":
 - **`debug.sh`**: emits detailed diagnostics for env discovery and tool availability.
 
 ### SessionEnd
-- **`store_artifacts.py`**: stores session tail and latest todos under `.agents/{MM_DD_YYYY}/`.
 - **`retire_vscode_workspaces.py`**: releases the ending session's claim on vscode workspaces (refcounted) and reaps dead instances/stale sockets. Fails open.
 
 ### UserPromptSubmit
@@ -189,11 +187,6 @@ message = "[policy] {tool_name} is allowlisted"
 cache_dir = "/tmp/conflicts"
 token_threshold = 20000
 skip_prefix = ""
-
-[hooks.session_end.store_artifacts]
-tail = 1
-tail_when = ["prompt_input_exit", "other"]
-todo_when = ["prompt_input_exit", "clear", "other"]
 ```
 
 

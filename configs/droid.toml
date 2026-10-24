@@ -199,11 +199,6 @@ skip_prefix = "" # ignored if missing/null or empty string
 # ---
 [hooks.session_end]
 
-[hooks.session_end.store_artifacts]
-tail = 1
-tail_when = ["prompt_input_exit", "other"]
-todo_when = ["prompt_input_exit", "clear", "other"]
-
 [hooks.session_end.vscode_workspaces]
 # Retire headless VSCode workspaces spawned via the vscode-workspace skill.
 # mode = "session": release the ending session's claim and retire workspaces
