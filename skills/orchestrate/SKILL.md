@@ -59,6 +59,8 @@ understandable or ready to merge.
    Settle prerequisites and approvals before dispatching consumers.
 3. Never replace missing Task access with shell-spawned agents. Return a
    dispatch request to the parent.
+4. Never accept a child's report unread. Read the decisive diff and run the
+   [readability gate](references/readability.md) first.
 
 ## Failure map
 
