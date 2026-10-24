@@ -12,7 +12,7 @@ Emit this checklist and tick it as you work:
 pr-description checklist:
 - [ ] Diff analyzed three-dot; what/type/scope/why extracted
 - [ ] Strongest evidence and material merge cost identified
-- [ ] Title: outcome/invariant first, type(scope), imperative, <=72 chars
+- [ ] Title: plain-language outcome a teammate would say, type(scope), imperative, within any repo-enforced limit
 - [ ] First screen passes the skim gate (five questions on a large diff)
 - [ ] Large diff? Composition table computed by scripts/diff-composition.py, placed under What
 - [ ] Rule across 3+ surfaces, or 3+ behaviors? First sentence states before → after; Before → After table under What
@@ -38,7 +38,10 @@ base.
 
 ## Title
 
-Format: `type(scope): imperative description`, at most 72 characters.
+Format: `type(scope): imperative description`. Write the description the way
+you would tell a teammate what the PR does: plain words, a complete phrase,
+and what it replaces when it replaces something. A reader of the PR list should
+know what changed without opening the PR.
 
 Choose the highest stable abstraction the diff and evidence prove:
 
@@ -48,10 +51,19 @@ Choose the highest stable abstraction the diff and evidence prove:
 4. implementation mechanism
 
 Use the mechanism when it is the durable value of the PR. Include a magnitude
-only when it is verified, representative, materially distinguishes the change,
-and still fits the length limit. Use declared repository scopes; comma-separate
-multiple scopes or broaden. On squash-merge repositories, treat the title as
-the permanent commit subject.
+only when it is verified, representative, and materially distinguishes the
+change.
+
+Length follows clarity. Honor a limit only when the repository enforces one (CI
+title check, commitlint); never compress the description into a noun stack or
+shorthand to fit an assumed cap. Scopes are routing metadata: name the declared
+scopes that own the behavior, not every touched package, and never shorten the
+description to make room for them. On squash-merge repositories, the title is
+the permanent commit subject, so it must read well in `git log`.
+
+| Compressed | Plain |
+|---|---|
+| `feat(cli, daemon-core, common): cap daemon sessions with one limit` | `feat(cli, daemon-core): replace subagent limits with one per-daemon session limit` |
 
 ## First-screen skim gate
 

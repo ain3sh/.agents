@@ -69,7 +69,7 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD  # (b) FULL — what the bran
 
 Check the description against both:
 
-- **Title drift** — no longer matches the full diff, breaks `type(scope):`, exceeds 72 chars, or names an implementation mechanism despite a higher-level proven outcome, behavior, or invariant. Re-run the title ladder in `workflow.md`. On squash repos it becomes the permanent commit subject.
+- **Title drift** — no longer matches the full diff, breaks `type(scope):`, exceeds a repo-enforced length limit, reads as compressed shorthand, or names an implementation mechanism despite a higher-level proven outcome, behavior, or invariant. Re-run the title ladder in `workflow.md`. On squash repos it becomes the permanent commit subject.
 - **Decision-hierarchy drift** — the title and first screen no longer answer the four skim-gate questions in `workflow.md`; decisive evidence or material cost appears only in a later conditional section.
 - **Missing scope** — new files/modules (look in the incremental diff first) unmentioned.
 - **Changed intent** — "fix X" but the diff now also refactors Y. If the *approach itself* was replaced (the mechanism the Description narrates is gone), that's a pivot → Phase 2 rewrite, not a patch.

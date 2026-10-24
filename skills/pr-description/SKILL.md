@@ -74,6 +74,7 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 | Symptom | Action |
 |---|---|
 | Title is valid but says only how | Apply the abstraction ladder in `workflow.md`; choose the highest proven delta. |
+| Title reads like compressed shorthand to fit a length or a scope list | Rewrite it as the sentence you would say to a teammate; drop plumbing-only scopes, never words (`workflow.md`, Title). |
 | Impact is vague despite strong evidence | Preview the decisive fact in **What**; keep full proof in its conditional section. |
 | Reviewer must scroll to know why to merge | Run the skim gate in `workflow.md` and rewrite the first screen. |
 | Diff is large and the body explains the size in prose, or the composition sits in Reviewer Guide | Run `scripts/diff-composition.py`; move the table and core breakdown under **What** (`conditional-sections.md`, Diff composition). |
