@@ -1,7 +1,7 @@
 ---
 name: ds-flash
 description: DeepSeek V4.1 Flash for fast, cheap bounded implementation and evidence gathering.
-model: deepseek-v4.1-flash
+model: deepseek-v4.1-flash-1017
 reasoningEffort: high
 ---
 
