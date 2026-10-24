@@ -52,7 +52,7 @@ human-only (`disable-model-invocation: true`).
 | **pr-context** | Fetch PR metadata + diff + conversation + linked ticket | `/review-pr`, `/address-review` |
 | **voice** | Lean router to craft, external replies, review judgment, and anti-slop references. Audience-aware prose across apps; cut ceremony while preserving reasoning, evidence, scope, caveats, and action. Owns load-bearing warmth/humility and the canonical review severity taxonomy. | `/review-pr`, `/post-review`, `/address-review`, pr-description, linear-cli, slack-cli, external messages/replies |
 | **structural-review** | Code-judo simplification hunt + structural tripwires (1k-line crossings, spaghetti growth, boundary leaks, contract muddying, orchestration smells); defers severity to voice | `/review-pr` (parent + heavy Astra architecture gate + heavy Fable whole-PR sweep) |
-| **orchestrate** | Coordination reference: delegate substantive implementation, handle small complete fixes directly, preserve read-only scope and one writer per change; stable prerequisites/QA, resume vs fresh, restaff-or-block. Readability gate: inspect the diff, clarify with its author or reject avoidable complexity; obfuscated code is not mergeable. Three seats: Astra main, explicitly assigned Astra child, or top-level Fable told "be an orchestrator". | orchestrator seats (background) |
+| **orchestrate** | Delegate by default and fan out wide: per-model strengths (opus/astra/fable/ds-flash), prompting rules, mine-then-write and design-build-attack workflows. Readability gate: inspect the diff, clarify with its author or reject avoidable complexity; obfuscated code is not mergeable. | every session once it has an objective |
 
 ## Droids (model-pinned)
 
@@ -62,7 +62,7 @@ Each pins a Factory model id at `reasoningEffort: high` and omits
 `tools`/`mcpServers`: the definitions restrict nothing, though runtime policy
 may still withhold tools (children currently lack Task). Factory-generated mission
 droids land in the same directory and are gitignored. Staffing policy is the
-**orchestrate** atom; ordinary workers never load it.
+**orchestrate** atom (`SKILL.md`, Models).
 
 | Droid | Model | Prefer for |
 |---|---|---|

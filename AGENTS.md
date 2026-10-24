@@ -14,6 +14,10 @@
 <context>
 - Use ledgers in ur cwd/.agents/ledgers/_.md and _.md.notes to preserve durable/shared context
 - Don't blindly trust your memory on things you can verify from ground truth. 99+% of things can be verified, tested, and live-run against ground truth, I have built you that way.
+- For campaigns that will outlive a compaction or extend a third party's work (a teammate's PR, doc, or findings), start by locating the primary artifact: the actual PR, doc, or message, not a summary of it.
+  - That lookup is a barrier: no miner, probe, or experiment launches until the artifact is in the anchor.
+  - Persist the anchor as a ledger (`.agents/ledgers/`) holding the user's verbatim steers with UTC timestamps (from the conversation; after a compaction, from `dsx`, since the summary paraphrases them), the goal in one line, the drift signals, and the sealed decisions.
+  - Re-read it after every compaction and before each stage: a compaction summary preserves your framing, not the user's, and a wrong frame survives it intact.
 </context>
 
 <skills>

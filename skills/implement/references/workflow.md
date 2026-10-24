@@ -1,6 +1,6 @@
 ## Skill loading (phased)
 
-Load skills at the moment their work begins — not everything up front. Deferring a load to the phase that consumes it is correct; skipping the load is not. Beyond this list, load any other skill the moment the work matches its trigger (dispatch table in AGENTS.md).
+Load skills at the moment their work begins — not everything up front. Deferring a load to the phase that consumes it is correct; skipping the load is not. Beyond this list, load any other skill the moment the work matches its description, which is its trigger.
 
 **All work:**
 - **At start**: **worktree-setup**, **ast-grep**, **step-through**, **repo-conventions**.
