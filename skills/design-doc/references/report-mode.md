@@ -6,11 +6,12 @@ source's structure is the structure; there are no decision cards or goals.
 
 ## Fidelity is the rule
 
-Prose, numbers, ids, verdicts, and claims pass through **verbatim**. Only
-layout changes. Anything written fresh (eyebrow, lede, metrics, headline,
-findings, cards) carries only values copied from the source, with their block
-or id. If the source is wrong, flag it to the author; never fix it in the
-render.
+Every number, date, id, verdict, and quote matches the source character for
+character. Prose may be rewritten and laid out with components (the curated
+front always; report chapters through `--log-dir`), but a rewrite carries only
+values copied from the source, with their block or id, and drops nothing the
+source claims. If the source is wrong, flag it to the author; never fix it in
+the render. Without a rewrite, a section renders verbatim.
 
 ## Two builds
 
@@ -23,12 +24,13 @@ node ~/.agents/skills/design-doc/references/build-md.js <source.md> <out.html> \
 
 **Curated front** (preferred for anything shared beyond the authors): you write
 the headline, findings, and story as a fragment; the whole source then renders
-verbatim inside a collapsed "Full report" log, so nothing is dropped and nothing
-is in the skimmer's way.
+as the "Full report" section, one collapsed chapter per source section, so
+nothing is dropped and nothing is in the skimmer's way.
 
 ```bash
 node ~/.agents/skills/design-doc/references/build-md.js <source.md> <out.html> \
-  --eyebrow="..." --hero=hero.html --front=front.html
+  --eyebrow="..." --hero=hero.html --front=front.html \
+  --log-dir=frags/log --source-url=https://gist.github.com/<id>
 ```
 
 `front.html` is a sequence of `<section id="..." data-nav="Label">` blocks
@@ -36,8 +38,55 @@ using template components: a `.headline`, a `.findings` grid whose cards link
 to `#<slug-of-source-heading>` anchors inside the log (the builder ids every
 source section and `###` heading), and optionally a `.timeline` of the arc.
 Each `data-nav` becomes a top-bar link; "Full report" is appended. A link
-into the log opens it and scrolls to the target (the template script handles
-any `#hash` inside a `<details>`).
+into the report opens the chapter around its target and scrolls to it (the
+template script opens every `<details>` around any `#hash`, on load, on
+hashchange, and on click).
+
+The full report, top to bottom:
+
+1. `.slabel` "Source", `h2` "The full report", and `.report-bar`: one line
+   counting the sections and how they render ("The source report, verbatim:
+   14 sections"; with every section rewritten, "Every section of the source
+   report, rewritten and checked against it: 14 sections"; mixed builds name
+   both) and an Expand all / Collapse all `.report-toggle`.
+2. `.tiles`, the chapter index: one `a.tile` per section in source order.
+   `.tile-n` is the marker: `.tile-s` holds the source `§N` (empty for an
+   unnumbered section, drawn as a neutral dot when nothing follows it) and
+   `.tile-h` the source heading when the chapter has a claim title. `.tile-t`
+   is the title; `.tile-m` a meta line counted at build time, such as "6 min ·
+   4 tables · 2 figures", where figures include `<!-- viz-NN -->` and
+   `<!-- chart-log:… -->` placeholders filled after the build. One grid, no
+   group labels, once every section is rewritten. While unnumbered sections
+   still render verbatim, they group first under "Front matter, curated
+   above", then numbered ones under "Chapters". Three columns, two below
+   1100px; on phones, one-line rows of number and title (an unnumbered row
+   keeps its source heading above the title; meta is dropped). Hidden in print.
+3. `.report-about`: the source's text before its first `##` (provenance),
+   verbatim, as a small note under the index, ending in a "Source of record"
+   link when `--source-url` is given.
+4. `.chapters` of `details.chap`, each collapsed, its `summary` a section
+   header (`.chn` marker line, `.cht` title, `.chm` meta, chevron) and its
+   `.chb` body at the page's widths: prose at the reading measure, tables and
+   figures across the full column. Print opens every chapter.
+
+### Rewritten chapters (`--log-dir`)
+
+`--log-dir=<dir>` reads `<dir>/<section-id>.html` for each source section;
+the id is the slug the builder gives the `##` heading (`3-the-arc-block-by-block`,
+`tl-dr`). When the file exists it replaces that section's body outright: the
+markdown is not rendered beside it, so ids stay unique. A first line of
+`<!-- title: <claim> -->` becomes the chapter's `.cht` and tile title, and the
+source heading moves to the marker line (`§3 · The arc, block by block`). The
+build prints `log-dir: N/M sections rewritten` and names the sections still
+rendered from markdown.
+
+A chapter body is raw HTML using template components. Inside `.chb`, a
+`.timeline` runs a tighter rhythm than on the page so a long arc stays
+scannable. For a source's own caveat, use `<p class="note src">`: the template
+labels it "Source note", so do not repeat that text. A `<span class="dim mono">`
+after a table key cell's text drops to a small secondary line (an id or block
+under a name). Anchors the front links to (`#<slug>`) must exist in the
+rewrite; the verify sweep checks every `#` link resolves.
 
 `hero.html` holds what follows the title: `.lede`, `.linkline`, `.metrics`. It
 is raw HTML, so write `<code>` rather than markdown backticks.
@@ -50,15 +99,13 @@ Slack unfurls). Use it whenever the source title is a filing label
 ## What the builder maps
 
 - `# Title` → hero `h1` and `<title>` (with `--title`, the h1's `.subtitle`);
-  text before the first `##` → the hero `.preamble` (with `--front`, atop the
-  full report).
+  text before the first `##` → the hero `.preamble` (with `--front`, the
+  report's `.report-about` note).
 - `## 3. Heading` → section with `.slabel` `03 / Heading` and an `h2` (with
-  `--front`: a log chapter numbered `03`). Unnumbered `##` → `h2` alone and
+  `--front`: a chapter marked `§3`). Unnumbered `##` → `h2` alone and
   an unnumbered chapter: numbers are the source's own, never positions, so
   prose citing "§7" matches the page. Nav labels are the heading up to its
   first `:`, `,`, `; `, `(`, or `—`.
-- With `--front`, a `nav.toc` right under the "Full report" summary lists
-  every chapter by its source `§` and links to it.
 - `###` / `####` → `h3` / `h4` with slug ids.
 - `![alt](img)` followed by an `*italic caption*` line → `figure.diagram`.
   Images embed as base64 unless `--linked-images`.
@@ -100,8 +147,8 @@ timeline.
 
 `screenshot.js --sample` (one stylesheet, so one instance per component is
 representative), plus a full sweep and `--print` before sharing; see
-[verify](verify.md). The full sweep opens the log, so the verbatim source is
-checked too.
+[verify](verify.md). The full sweep opens the log, so every chapter is checked
+too.
 
 ## Worked example
 

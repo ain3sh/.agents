@@ -87,8 +87,8 @@ and never leave TODO markers.
     telemetry, the exact rollback), code with the changed line highlighted.
 12. **Open questions**: `ol.numbered`, ordered by how much each answer would
     change the design, highest first.
-13. **Optional `details.log`**: rounds, raw tables, and notes a reviewer may
-    want but should not scroll past.
+13. **Optional `.chapters > details.chap`**: rounds, raw tables, and notes a
+    reviewer may want but should not scroll past, one collapsed chapter each.
 14. **`footer.doc`**: provenance only (PR · ticket · HEAD sha · source file ·
     build date). No colophon, reviewer roster, or typographic credits; they read
     as flourish and get cut in review.

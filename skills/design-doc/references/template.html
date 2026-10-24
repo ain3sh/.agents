@@ -59,7 +59,7 @@ body:not(.nojs) .rv.in .fill { animation: grow 1.2s var(--ease) .35s forwards; }
   html { scroll-behavior: auto; }
   body:not(.nojs) .rv, body:not(.nojs) .rv.in { opacity: 1; animation: none; }
   body:not(.nojs) .rv .fill, body:not(.nojs) .rv.in .fill { transform: none; animation: none; }
-  .hero-art, .live, .cursor, .frotor { animation: none !important; }
+  .hero-art, .live, .cursor, .frotor, h3:target { animation: none !important; }
 }
 
 /* ---------- top bar: logo + section nav with scroll-spy */
@@ -96,8 +96,8 @@ h1 code { font-size: 0.6em; color: inherit; background: none; border: 0; padding
 .linkline .k { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--meta); margin-right: 10px; }
 .linkline a { color: var(--soft); }
 .chat { margin: -16px 0 40px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.chat-b { display: inline-flex; align-items: center; gap: 10px; font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 9px 14px; cursor: pointer; transition: border-color .2s; }
-.chat-b:hover { border-color: var(--text); }
+.chat-b, .report-toggle { display: inline-flex; align-items: center; gap: 10px; font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 9px 14px; cursor: pointer; transition: border-color .2s; }
+.chat-b:hover, .report-toggle:hover { border-color: var(--text); }
 .chat-b svg { color: var(--soft2); flex: none; }
 .chat-b .ic-ok { display: none; color: var(--accent); }
 .chat-b.ok .ic-copy { display: none; }
@@ -107,9 +107,11 @@ h1 code { font-size: 0.6em; color: inherit; background: none; border: 0; padding
 
 /* ---------- metrics: four numbers that carry the thesis. Values stay white. */
 .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border2); border: 1px solid var(--border2); border-radius: 4px; overflow: hidden; }
+/* In body flow the band needs room before the next block; the hero sets its own spacing. */
+main .metrics { margin-bottom: 16px; }
 .metric { padding: 24px 24px 22px; background: rgba(13, 12, 11, 0.86); backdrop-filter: blur(4px); transition: background .25s; min-width: 0; }
 .metric:hover { background: var(--surface); }
-.metrics.three { grid-template-columns: repeat(3, 1fr); }
+.metrics.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .mlabel { font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); min-height: 2.4em; }
 .mval { color: var(--text); font-size: 52px; line-height: 1; letter-spacing: -0.04em; margin: 14px 0 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mval .unit, .mval .den { font-size: 22px; letter-spacing: -0.02em; margin-left: 2px; }
@@ -130,6 +132,9 @@ h4 { color: var(--soft); font-weight: 500; font-size: 15px; margin: 32px 0 10px;
 p { margin: 0 0 16px; max-width: 760px; text-wrap: pretty; }
 p.lead { font-size: 18px; color: var(--soft); }
 .note { font-size: 13px; color: var(--meta); max-width: 860px; }
+/* A note about the source itself (a discrepancy, a reading left as written): <p class="note src">. */
+.note.src { padding-left: 12px; border-left: 1px solid var(--border); color: var(--body); }
+.note.src::before { content: "Source note"; display: block; margin-bottom: 2px; font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--soft2); }
 h3:target { animation: flash 2.4s ease-out; }
 @keyframes flash { 0% { color: var(--accent); } 100% { color: var(--text); } }
 ul.bullets { list-style: none; padding: 0; margin: 0 0 18px; max-width: 800px; }
@@ -155,6 +160,7 @@ section.block .headline { margin: 0 0 24px; }
 .entries li.now .ek { color: var(--accent); }
 .entries .et { color: var(--text); font-size: 16.5px; margin-bottom: 4px; }
 .entries p { font-size: 14.5px; margin: 0; max-width: 820px; }
+.entries p + p { margin-top: 8px; }
 section.block .entries { margin-top: 0; }
 section.block .entries + .entries { margin-top: 16px; }
 section.block .entries { margin-bottom: 16px; }
@@ -206,6 +212,8 @@ a.finding:hover .flink .arr { transform: translateX(4px); color: var(--accent); 
 /* ---------- timeline: the arc, dated */
 .timeline { list-style: none; margin: 0; padding: 0; position: relative; }
 .timeline::before { content: ""; position: absolute; left: 167px; top: 10px; bottom: 10px; width: 1px; background: linear-gradient(to bottom, var(--border), var(--border) 85%, var(--accent)); }
+/* The rail's orange tail points at the live entry; a timeline with no li.now has nothing live to point at. */
+.timeline:not(:has(> li.now))::before { background: var(--border); }
 .timeline > li { display: grid; grid-template-columns: 140px 1fr; gap: 56px; padding: 0 0 52px; position: relative; }
 .timeline > li::before { content: ""; position: absolute; left: 163px; top: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--meta); }
 .timeline > li.now::before { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 5px var(--accent-dim); }
@@ -214,11 +222,17 @@ a.finding:hover .flink .arr { transform: translateX(4px); color: var(--accent); 
 .timeline > li.now .tw, .timeline > li.now .tw b { color: var(--accent); }
 .timeline .tt { color: var(--text); font-size: 24px; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
 .timeline .tb { min-width: 0; }
+.timeline .tb > :last-child { margin-bottom: 0; }
 /* Structured turn (habit / cause / measured): .finding-style rows; the arrow is orange only on the live row. */
 .timeline .rows { display: grid; gap: 8px; margin: 0 0 12px; }
 .timeline .r .v { font-size: 15px; line-height: 1.5; color: var(--soft2); font-variant-numeric: tabular-nums; }
 .timeline .r .to::before { color: var(--meta); }
 .timeline > li.now .r .to::before { color: var(--accent); }
+/* A report chapter can hold dozens of entries; the page-level rhythm would make it a 10k px scroll. */
+.chb .timeline > li { padding-bottom: 36px; }
+.chb .timeline .tt { font-size: 19px; margin-bottom: 8px; }
+.chb .timeline .rows { gap: 4px; margin-bottom: 8px; }
+.chb .timeline .r .v { font-size: 14.5px; line-height: 1.45; }
 
 /* ---------- stages + status pills */
 .stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border2); border: 1px solid var(--border2); border-radius: 4px; overflow: hidden; margin-bottom: 28px; }
@@ -252,6 +266,10 @@ tr.pri td:first-child { box-shadow: inset 2px 0 0 var(--accent); padding-left: 1
 td code { font-size: 12.5px; }
 /* Row keys like "PR-B" or "E38" must not break at the hyphen. */
 td.key { white-space: nowrap; color: var(--text); }
+/* Dates and short commands that must not break at a hyphen ("2026-09-27", "nl -ba"); keeps the text searchable, unlike word joiners. */
+.nw { white-space: nowrap; }
+/* A dim secondary line under a cell's label (a findings file under a block id): <br><span class="dim mono">…</span>. */
+td .dim.mono { display: inline-block; margin-top: 3px; font-size: 11.5px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
 /* Effect glyphs for changes-and-impact tables: ↓ improved, = no effect,
    ↑ regressed, · not the target. Only the win carries the accent. */
 .g { font-family: var(--mono); font-weight: 500; display: inline-block; min-width: 1.1em; }
@@ -363,27 +381,42 @@ ol.steps > li { counter-increment: s; position: relative; padding-left: 34px; ma
 ol.steps > li::before { content: counter(s, decimal-leading-zero); position: absolute; left: 0; top: 0.2em; font: 400 12px var(--mono); color: var(--meta); }
 pre.code code { background: none; border: 0; padding: 0; font-size: inherit; color: inherit; }
 
-/* ---------- full log: everything else, collapsed */
-details { border-top: 1px solid var(--border2); }
-summary { cursor: pointer; list-style: none; padding: 18px 0; color: var(--soft); display: flex; align-items: center; gap: 12px; transition: color .2s; }
+/* ---------- full report: a tile index, then one collapsed chapter per section.
+   Chapter bodies run at the page's own widths: prose at the reading measure,
+   tables and figures across the full column. */
+summary { cursor: pointer; list-style: none; }
 summary::-webkit-details-marker { display: none; }
-summary::before { content: ""; width: 7px; height: 7px; border-right: 1.5px solid var(--meta); border-bottom: 1.5px solid var(--meta); transform: rotate(-45deg); transition: transform .2s var(--ease), border-color .2s; margin-right: 4px; flex: none; }
-details[open] > summary::before { transform: rotate(45deg); border-color: var(--accent); }
-summary:hover { color: var(--text); }
-details.log { border: 1px solid var(--border2); border-radius: 4px; background: var(--surface2); padding: 0 24px; }
-details.log > summary { font: 400 12px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; }
-/* Chapter index under the summary, numbered by the source's own § numbers. */
-.toc { columns: 2; column-gap: 32px; padding: 20px 0 24px; border-top: 1px solid var(--border2); font: 400 12.5px/1.5 var(--mono); letter-spacing: 0; }
-.toc a { display: grid; grid-template-columns: 3.4em 1fr; padding: 4px 0; break-inside: avoid; color: var(--soft2); text-decoration: none; }
-.toc a:hover { color: var(--text); }
-.toc span { color: var(--meta); }
-/* Indented to the chapter body column (.chap's 64px number column). */
-.log-pre { font-size: 14.5px; color: var(--body); padding: 24px 0 8px 64px; border-top: 1px solid var(--border2); }
-.chap { display: grid; grid-template-columns: 64px 1fr; padding: 48px 0 8px; border-top: 1px solid var(--border2); }
-.chn { font: 400 13px var(--mono); color: var(--meta); padding-top: 9px; }
-.chn:empty { visibility: hidden; }
-.chb { min-width: 0; }
-.chap h2 { font-size: 28px; margin-bottom: 22px; }
+.report-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; margin: -12px 0 40px; }
+.report-bar p { margin: 0; color: var(--soft2); }
+.nojs .report-toggle { display: none; }
+.tiles-label { font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--soft2); margin: 0 0 12px; }
+.tiles-label span { color: var(--meta); margin-left: 8px; }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 36px; }
+.tile { display: flex; flex-direction: column; gap: 8px; min-height: 118px; padding: 18px 20px 16px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; color: var(--soft); text-decoration: none; transition: border-color .25s, background .25s, color .25s; }
+.tile:hover { border-color: var(--border); background: var(--surface); color: var(--text); }
+.tile-n { font: 400 12px var(--mono); color: var(--meta); transition: color .25s; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* An unnumbered section keeps its marker slot, so every tile and chapter row aligns. */
+.chn:empty::before, .tile-s:empty:last-child::before { content: "·"; }
+.tile:hover .tile-n { color: var(--accent); }
+.tile-t { flex: 1; font-size: 17px; line-height: 1.3; letter-spacing: -0.015em; text-wrap: balance; }
+.tile-m, .chm { font: 400 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--meta); }
+.report-about { max-width: 760px; margin: 0 0 56px; color: var(--meta); }
+.report-about .lhead { margin-bottom: 10px; }
+.report-about p, .report-about li { font-size: 14px; line-height: 1.55; }
+.report-about ul.bullets li { margin-bottom: 6px; }
+.report-src { margin: 12px 0 0; font: 400 12px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; }
+.chapters { border-bottom: 1px solid var(--border2); }
+.chap { border-top: 1px solid var(--border2); }
+.chap > summary { display: grid; grid-template-columns: 1fr auto; column-gap: 24px; padding: 28px 0 26px; }
+.chn, .cht, .chm { grid-column: 1; }
+.chn { font: 400 12px var(--mono); color: var(--meta); margin-bottom: 8px; }
+.cht { color: var(--soft); font-size: 30px; line-height: 1.15; letter-spacing: -0.025em; text-wrap: balance; transition: color .2s; }
+.chm { margin-top: 12px; }
+.chap > summary::after { content: ""; grid-column: 2; grid-row: 1 / 4; align-self: center; width: 9px; height: 9px; margin: 0 6px 6px 0; border-right: 1.5px solid var(--meta); border-bottom: 1.5px solid var(--meta); transform: rotate(45deg); transition: transform .25s var(--ease), border-color .2s; }
+.chap[open] > summary::after { transform: rotate(-135deg); margin-bottom: 0; }
+.chap > summary:hover .cht, .chap[open] > summary .cht { color: var(--text); }
+.chap > summary:hover::after { border-color: var(--text); }
+.chb { min-width: 0; padding: 4px 0 64px; }
 
 /* ---------- footer: provenance only */
 footer.doc { margin: 96px 0 56px; font: 400 12px/1.6 var(--mono); color: var(--meta); border-top: 1px solid var(--border2); padding-top: 24px; display: flex; gap: 14px; align-items: flex-start; }
@@ -405,11 +438,9 @@ footer.doc code { background: none; border: 0; padding: 0; color: var(--soft2); 
   .metrics { grid-template-columns: 1fr 1fr; }
   .metric { padding: 20px 16px 18px; }
   .mval { font-size: clamp(30px, 9vw, 40px); }
-  .toc { columns: 1; }
-  .chn:empty { display: none; }
-  .log-pre { padding-left: 0; }
+  .cht { font-size: 24px; }
+  .chap > summary { padding: 22px 0 20px; }
   .timeline .r { grid-template-columns: 1fr; gap: 2px; }
-  details.log { padding: 0 12px; }
   .findings, .findings.three, .two-col, .stages { grid-template-columns: 1fr; }
   .entries li { grid-template-columns: 1fr; gap: 4px; }
   .timeline::before { left: 4px; }
@@ -419,17 +450,33 @@ footer.doc code { background: none; border: 0; padding: 0; color: var(--soft2); 
   .bars-h, .bar-row { grid-template-columns: repeat(var(--cols, 1), 1fr); }
   .bar-label { grid-column: 1 / -1; margin-bottom: 6px; }
   .bars-h span:first-child { display: none; }
-  .decision, .chap { grid-template-columns: 1fr; }
+  .decision { grid-template-columns: 1fr; }
   .decision dl { grid-template-columns: 1fr; gap: 4px; }
   .decision dd { grid-column: 1; margin-bottom: 10px; }
 }
+@media (max-width: 1100px) {
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 640px) {
+  /* One-line rows: section number beside the title; the source heading and meta are in the chapter itself. */
+  .tiles { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .tile { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: baseline; gap: 2px 0; min-height: 0; padding: 10px 14px; }
+  .tile-n { display: contents; }
+  .tile-h, .tile-m { display: none; }
+  .tile-s:empty::before { content: "·"; }
+  /* An unnumbered section has no number to carry it, so its source heading stays, above the title. */
+  .tile-s:empty + .tile-h { display: block; grid-column: 2; overflow: hidden; text-overflow: ellipsis; }
+  .tile-t { grid-column: 2; font-size: 14px; }
   /* Stacked label parts; a "//" at a line end reads as a dangling fragment. */
   .lhead { flex-direction: column; align-items: flex-start; row-gap: 1px; }
   /* Not display:none: a removed .sep would merge its neighbouring text into one flex item. */
   .lhead .sep { font-size: 0; margin: 0; }
   .lhead .live { position: absolute; margin-left: -16px; margin-top: 4px; }
-  .metrics.three { grid-template-columns: 1fr; }
+  /* Three numbers stay one band; stacked they cost ~450px for three values. */
+  .metrics.three .metric { padding: 16px 12px 14px; }
+  .metrics.three .mval { font-size: clamp(20px, 6vw, 30px); margin: 10px 0 8px; }
+  .metrics.three .msub { font-size: 11px; }
+  .metrics.three .mval .unit, .metrics.three .mval .den { font-size: 14px; }
   .finding { padding: 22px 20px 18px; }
   .finding .r { grid-template-columns: 92px 1fr; }
 }
@@ -451,6 +498,16 @@ footer.doc code { background: none; border: 0; padding: 0; color: var(--soft2); 
   table.stack tr.pri { box-shadow: inset 2px 0 0 var(--accent); padding-left: 12px; }
   table.stack tr.pri td { background: none; }
   table.stack tr.pri td:first-child { box-shadow: none; padding-left: 0; }
+  /* A status cell (one that opens with a .pill, marked by the script) reads as the card's tag, right under its title, any short note on the same line. */
+  table.stack tr { display: flex; flex-direction: column; }
+  table.stack td:first-child { order: -2; }
+  table.stack td.pill-cell { order: -1; padding: 0 0 6px; }
+  table.stack td.pill-cell::before { content: none; }
+  table.stack td.pill-cell br { display: none; }
+  table.stack td.pill-cell .dim { margin-left: 8px; }
+  /* A cell that opens with its own bold name needs no column label: it runs full width. */
+  table.stack td.named-cell { padding-left: 0; }
+  table.stack td.named-cell::before { content: none; }
 }
 @media print {
   @page { size: A4; margin: 16mm 14mm 18mm; }
@@ -474,10 +531,18 @@ footer.doc code { background: none; border: 0; padding: 0; color: var(--soft2); 
   td { padding: 6pt 8pt 6pt 0; }
   td code { font-size: 0.92em; padding: 0 3px; white-space: normal; overflow-wrap: anywhere; }
   figure, .bars, .metrics, .finding, .decision, .panel, .headline, pre.code, .stage, .timeline > li,
-  .entries li, ol.numbered > li, .callout, .quote, tr { break-inside: avoid; }
-  h2, h3, h4, .slabel, .lhead, .chead, .bars-h, thead, .tt, ol.numbered .q, .chn { break-after: avoid; }
-  /* Block flow, not grid: Chrome ignores break-after between grid rows, which strands a chapter number above a page break. */
-  .chap { display: block; }
+  .entries li, ol.numbered > li, .callout, .quote, .note, tr, footer.doc { break-inside: avoid; }
+  footer.doc { margin: 18pt 0 0; padding-top: 10pt; }
+  h2, h3, h4, .slabel, .lhead, .chead, .bars-h, thead, .tt, ol.numbered .q { break-after: avoid; }
+  /* Every chapter prints open (beforeprint), so the index and its controls have nothing to do on paper.
+     Block flow, not grid: Chrome ignores break-after between grid rows. */
+  .report-bar, .tiles-label, .tiles { display: none; }
+  .chap > summary { display: block; padding: 18pt 0 6pt; break-inside: avoid; break-after: avoid; }
+  .chap > summary::after { display: none; }
+  .cht { display: block; font-size: 18pt; color: var(--text); }
+  .chm { display: block; margin-top: 4pt; }
+  .chn:empty { display: none; }
+  .chb { padding-bottom: 12pt; }
   p { orphans: 3; widows: 3; }
   pre.code { white-space: pre-wrap; max-height: none; }
 }
@@ -697,11 +762,13 @@ Then strip the HTML to text and read all of it, including the collapsed sections
       <li class="rv"><div class="q">TODO highest-leverage question?</div><div class="a">TODO context and current lean.</div></li>
       <li class="rv"><div class="q">TODO next question?</div><div class="a">TODO context.</div></li>
     </ol>
-    <!-- Optional: everything a reviewer may want but should not have to scroll past. -->
-    <details class="log">
-      <summary>TODO show every round, table, and raw note</summary>
-      <section class="chap" id="log-1"><div class="chn">01</div><div class="chb"><h2>TODO chapter</h2><p>TODO verbatim detail.</p></div></section>
-    </details>
+    <!-- Optional: everything a reviewer may want but should not have to scroll past, one collapsed chapter each. -->
+    <div class="chapters">
+      <details class="chap" id="log-1">
+        <summary><span class="chn">Log</span><span class="cht">TODO every round, table, and raw note</span><span class="chm">TODO 4 min · 2 tables</span></summary>
+        <div class="chb"><p>TODO verbatim detail.</p></div>
+      </details>
+    </div>
   </section>
 
   <footer class="doc"><span class="frotor" aria-hidden="true"></span><div>TODO sources (PR · ticket · HEAD sha · source file). Built TODO date.</div></footer>
@@ -733,18 +800,36 @@ Then strip the HTML to text and read all of it, including the collapsed sections
       navigator.clipboard.writeText(b.getAttribute("data-prompt")).then(function () { done(true); }, function () { done(false); });
     });
   });
-  // Findings link into the collapsed log: open every <details> around the target first.
-  function reveal() {
-    var t = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
-    if (!t) return;
-    for (var d = t.closest("details"); d; d = d.parentElement.closest("details")) d.open = true;
-    t.scrollIntoView();
-  }
+  // Links into collapsed chapters open every <details> around the target first.
+  function target(hash) { return hash.length > 1 && document.getElementById(decodeURIComponent(hash.slice(1))); }
+  function openTo(t) { for (var d = t.closest("details"); d; d = d.parentElement.closest("details")) d.open = true; }
+  function reveal() { var t = target(location.hash); if (t) { openTo(t); t.scrollIntoView(); } }
   window.addEventListener("hashchange", reveal); reveal();
+  // On click too: re-clicking the current hash fires no hashchange. Click runs before the
+  // browser's own jump, so the jump lands on the opened target.
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    var t = a && target(a.getAttribute("href"));
+    if (t) openTo(t);
+  });
+  var toggle = document.querySelector(".report-toggle");
+  if (toggle) {
+    var chaps = Array.prototype.slice.call(document.querySelectorAll("details.chap"));
+    var allOpen = function () { return chaps.every(function (d) { return d.open; }); };
+    var label = function () { toggle.textContent = allOpen() ? "Collapse all" : "Expand all"; };
+    toggle.addEventListener("click", function () { var open = !allOpen(); chaps.forEach(function (d) { d.open = open; }); label(); });
+    chaps.forEach(function (d) { d.addEventListener("toggle", label); });
+    label();
+  }
   document.querySelectorAll("table.stack").forEach(function (t) {
     var heads = Array.prototype.map.call(t.querySelectorAll("thead th"), function (h) { return h.textContent; });
     t.querySelectorAll("tbody tr").forEach(function (r) {
-      Array.prototype.forEach.call(r.children, function (c, k) { if (heads[k]) c.setAttribute("data-label", heads[k]); });
+      Array.prototype.forEach.call(r.children, function (c, k) {
+        if (heads[k]) c.setAttribute("data-label", heads[k]);
+        var lead = c.firstElementChild;
+        if (lead && lead.classList.contains("pill") && c.textContent.trim().indexOf(lead.textContent.trim()) === 0) c.classList.add("pill-cell");
+        else if (k > 0 && lead && lead.tagName === "STRONG" && c.textContent.trim().indexOf(lead.textContent.trim()) === 0) c.classList.add("named-cell");
+      });
     });
   });
   var bar = document.querySelector("header.top nav");

@@ -78,8 +78,10 @@ layer is optional for the reader who already has enough:
    measured) renders as `.rows > .r > .k/.v` inside `.tb`, the same rows as a
    finding, not as a paragraph; `.tw` takes `<b>E30 · E31</b>09-24 → 26`, the
    block id above the date. Only the `li.now` arrow is orange.
-5. **The full log** (`details.log` with `.chap` chapters): everything else,
-   collapsed. `build-md.js --front` puts a whole source report here verbatim.
+5. **The full record** (`.chapters > details.chap`): everything else, one
+   collapsed chapter each. `build-md.js --front` puts a whole source report
+   here verbatim, behind a `.tiles` chapter index
+   ([report mode](report-mode.md#two-builds)).
 
 Rules for the findings layer:
 
@@ -131,14 +133,14 @@ keeps everything visible. A new revealed block needs only the `rv` class.
 | `.lede[data-typed]` | The claim in ≤25 plain words | Once, under the title |
 | `.linkline` | Mono row of ticket/PR links | Once, optional |
 | `.chat .chat-b[data-prompt]` | Copies a "read this page in Droid" prompt | Conjure-hosted pages only |
-| `.metrics > .metric` (`.three`) | Four (or three) proof numbers | Hero, when four numbers carry the thesis; `.three` for a three-number band |
+| `.metrics > .metric` (`.three`) | Four (or three) proof numbers; `.three` stays one three-column band on phones, numbers scaled down | Hero, when four numbers carry the thesis; `.three` for a three-number band |
 | `.headline` (`.lhead`, `.hnote`) | Bottom line; also the proposal's mental model | First block of `main`; once in Proposal |
 | `.entries` (`li.now`) | Key column + title + body rows | Updates, motivating tickets, open items |
 | `.findings > a.finding` (`.limit`) | Claim cards linked to evidence | Evidence, memo fronts |
 | `.two-col > .panel` (`.limit`) | Side-by-side lists | Goals / non-goals, pros / cons |
 | `.timeline > li` (`.now`, `.tw b`, `.rows > .r`) | Dated arc; block id over date; structured turns | Rollout, retros |
 | `.stages > .stage` (`.on`) + `.pill` | Phases with status | Rollout |
-| `.table-wrap table` (`tr.pri`, `.num`, `.den`, `td.key`, `table.stack`) | Tables, disposition tables | Any comparison of N options |
+| `.table-wrap table` (`tr.pri`, `.num`, `.den`, `td.key`, `table.stack`; `td .dim.mono` secondary line) | Tables, disposition tables; a `.dim.mono` span in a key cell drops to a small line under it; in a `table.stack` card, a cell that opens with a `.pill` sits under the card title as its tag, any short note on the same line (the script marks it `td.pill-cell`), and a cell that opens with its own `<strong>` name drops its column label and runs full width (`td.named-cell`) | Any comparison of N options |
 | `.g-down` `.g-flat` `.g-up` `.g-na` | Effect glyphs `↓ = ↑ ·` (only `↓` is orange) | Changes-and-impact tables; `build-md.js` adds them |
 | `figure.chart` | In-theme SVG bar chart | Quantitative comparison |
 | `.bars` (`.bar-row.pri`) | Horizontal comparison rows | Arms × measures |
@@ -149,8 +151,12 @@ keeps everything visible. A new revealed block needs only the `rv` class.
 | `pre.code` (`.k` `.s` `.t` `.fn` `.comment` `.hl`) + `.code-caption` | Code with one highlighted line | Source and labelling rules belong to show-me |
 | `blockquote.quote` (`p` + `cite`) | A person's words, verbatim, with name and time | Human texture: a steer or reaction that turned the story; anywhere, often inside a `.timeline` turn |
 | `.callout` (`.limit`) | Note or warning | Sparingly; each one devalues the rest |
+| `.note` (`.src`) | Small aside; `.src` adds a left rule and a "Source note" label | `.src`: the source's own caveat in a report chapter; never write the label text |
 | `ol.numbered` (`.q`, `.a`) | Numbered questions | Open questions, by leverage |
 | `ol.steps`, `ul.bullets` | Plain lists | Body prose |
-| `details.log` + `nav.toc` + `.chap` | Collapsed full record, its chapter index, its chapters (an empty `.chn` hides) | End of `main` |
+| `.nw` | Keeps a short run on one line (`white-space: nowrap`) | A value and its unit, an id, or a range that must not break, such as `−30.7%` or `E34–E38`; never a whole phrase |
+| `.report-bar` (`.report-toggle`) + `.tiles > a.tile` (`.tile-n` > `.tile-s` + `.tile-h`, `.tile-t`, `.tile-m`) | Full report header with Expand all, and its chapter index | Report mode, built by `build-md.js --front` |
+| `.chapters > details.chap` (`summary`: `.chn`, `.cht`, `.chm`; `.chb` body) | Collapsed chapters at page width; an empty `.chn` draws a neutral dot; with a claim title, `.chn` also carries the source heading | End of `main`; the full record (rewritten bodies via `--log-dir`) |
+| `.report-about` (`.report-src`) | Small provenance note under the index, ending in a "Source of record" link | Report mode: source text before its first section; the link with `--source-url` |
 | `header.hero .preamble` | Small provenance prose under the hero | Report mode: source text before its first section |
 | `footer.doc` (`.frotor`) | Provenance | Once |

@@ -9,14 +9,17 @@
 //     [--front=<fragment.html>]   curated layer (headline, findings, story) as <section data-nav="Label">;
 //                                 the source then renders verbatim inside a collapsed "Full report"
 //     [--footer=<fragment.html>]  provenance; default names the source file
+//     [--log-dir=<dir>]           <dir>/<section-id>.html, when present, is that section's rewritten body;
+//                                 an optional first line <!-- title: <claim> --> becomes its title
+//     [--source-url=<url>]        links the source of record from the report's "About this report" note
 //     [--linked-images]           keep images as relative links instead of base64
 //
 // Mapping (prose passes through marked unchanged; only layout is added):
 //   # Title                 -> header.hero h1 (+ <title>); with --title, the h1's .subtitle
-//   text before first ##    -> header.hero .preamble (with --front: .log-pre, atop the full report)
+//   text before first ##    -> header.hero .preamble (with --front: the report's "About this report" note)
 //   ## 3. Heading           -> section.block, .slabel "03 / Heading", h2   (or .chap "03" with --front)
 //   ## Heading (unnumbered) -> section.block, h2                            (or an unnumbered .chap)
-//   --front also puts nav.toc, one link per section, atop the full report
+//   --front: the full report is a tile index (.tiles) plus one collapsed details.chap per section
 //   ### / ####              -> h3 / h4 with ids
 //   ![alt](img) + next-line *caption*  -> figure.diagram with figcaption
 //   tables                  -> .table-wrap table; |---:| columns get .num; a cell
@@ -35,7 +38,7 @@ const { marked } = loadModule('marked');
 const { positional, options } = parseArgs(process.argv.slice(2));
 const [srcArg, outArg] = positional;
 if (!srcArg || !outArg) {
-  console.error('Usage: node build-md.js <source.md> <out.html> [--eyebrow=..] [--title=..] [--hero=f.html] [--front=f.html] [--footer=f.html] [--linked-images]');
+  console.error('Usage: node build-md.js <source.md> <out.html> [--eyebrow=..] [--title=..] [--hero=f.html] [--front=f.html] [--footer=f.html] [--log-dir=dir] [--source-url=url] [--linked-images]');
   process.exit(1);
 }
 if (options.title === true || options.title === '') {
@@ -112,38 +115,131 @@ if (!titleMatch) {
 }
 const preamble = head.replace(/^# .+$/m, '').trim();
 
+// A rewritten chapter (--log-dir) replaces the section's body outright; the markdown body is
+// never emitted beside it, so ids stay unique. Sections without one keep the markdown.
+const TITLE_LINE = /^<!--\s*title:\s*([\s\S]*?)\s*-->\s*\n?/;
+const readRewrite = (id) => {
+  const file = options['log-dir'] && path.join(path.resolve(options['log-dir']), `${id}.html`);
+  if (!file || !fs.existsSync(file)) return null;
+  const html = fs.readFileSync(file, 'utf8');
+  const title = html.match(TITLE_LINE);
+  return { title: title ? title[1] : '', body: html.replace(TITLE_LINE, '').trim() };
+};
+
 const sections = chunks.map((chunk) => {
   const nl = chunk.indexOf('\n');
   const heading = chunk.slice(0, nl).trim();
   const numbered = heading.match(/^(\d+)\.\s+(.*)$/);
   const text = numbered ? numbered[2] : heading;
+  const id = slug(heading);
+  const rewrite = readRewrite(id);
   return {
-    id: slug(heading),
+    id,
     num: numbered ? pad2(numbered[1]) : '',
     text,
-    display: marked.parseInline(text),
-    body: layout(marked.parse(withFigures(chunk.slice(nl + 1)))),
+    rewritten: Boolean(rewrite),
+    // A rewrite's claim title leads; the source heading stays as the secondary line.
+    display: rewrite && rewrite.title ? rewrite.title : marked.parseInline(text),
+    sourceHeading: rewrite && rewrite.title ? text : '',
+    body: rewrite ? rewrite.body : layout(marked.parse(withFigures(chunk.slice(nl + 1)))),
   };
 });
+if (options['log-dir']) {
+  const missing = sections.filter((s) => !s.rewritten).map((s) => s.id);
+  console.log(`log-dir: ${sections.length - missing.length}/${sections.length} sections rewritten${missing.length ? `; markdown for ${missing.join(', ')}` : ''}`);
+}
 
 const front = readFragment(options.front);
 const frontNav = [...front.matchAll(/<section[^>]*\bid="([^"]+)"[^>]*\bdata-nav="([^"]+)"|<section[^>]*\bdata-nav="([^"]+)"[^>]*\bid="([^"]+)"/g)]
   .map((m) => ({ id: m[1] || m[4], label: m[2] || m[3] }));
 
-const bodyHtml = front
-  ? `${front}
-<section class="block" id="log" data-nav="Full report">
+// ---------- full report (--front): a tile index, then one collapsed chapter per source section
+const WORDS_PER_MINUTE = 230;
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const countOf = (html, re) => (html.match(re) || []).length;
+
+// "6 min · 4 tables · 2 figures", counted from the body; zero counts are left out. Figure
+// placeholders (<!-- viz-NN -->, <!-- chart-log:… -->) are filled after the build, so they count too.
+const FIGURE_PLACEHOLDER = /<!--\s*(?:viz-\d+|chart-log:)/g;
+const chapterMeta = (body) => {
+  const words = body.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+  const tables = countOf(body, /<table[\s>]/g);
+  const figures = countOf(body, /<figure[\s>]/g) + countOf(body, FIGURE_PLACEHOLDER);
+  return [
+    `${Math.max(1, Math.round(words / WORDS_PER_MINUTE))} min`,
+    tables && plural(tables, 'table'),
+    figures && plural(figures, 'figure'),
+  ].filter(Boolean).join(' · ');
+};
+// Unnumbered sections get an empty slot (the template draws a neutral dot), never a positional
+// number, so "§7" in the prose matches the page.
+const chapterMark = (s) => (s.num ? `§${Number(s.num)}` : '');
+const stripMarks = (s) => s.replace(/[`*_]/g, '');
+// The marker line: "§3", or with a claim title, "§3 · The arc, block by block" (the source heading).
+const markerLine = (s) => [chapterMark(s), escapeHtml(stripMarks(s.sourceHeading))].filter(Boolean).join(' · ');
+// A tile's marker splits so phones can keep the number and drop the source heading.
+const tileMarker = (s) => {
+  const mark = chapterMark(s);
+  const heading = s.sourceHeading ? `<span class="tile-h">${mark ? ' · ' : ''}${escapeHtml(stripMarks(s.sourceHeading))}</span>` : '';
+  return `<span class="tile-s">${mark}</span>${heading}`;
+};
+const tileTitle = (s) => (s.sourceHeading ? s.display.replace(/<[^>]+>/g, '') : escapeHtml(stripMarks(s.text)));
+
+const tileHtml = (s) =>
+  `<a class="tile" href="#${s.id}"><span class="tile-n">${tileMarker(s)}</span><span class="tile-t">${tileTitle(s)}</span><span class="tile-m">${s.meta}</span></a>`;
+
+const tileGroup = (group, label = '', note = '') => {
+  if (group.length === 0) return '';
+  const heading = label ? `<div class="tiles-label">${label}${note ? ` <span>${note}</span>` : ''}</div>\n  ` : '';
+  return `  ${heading}<nav class="tiles" aria-label="${label || 'Report sections'}">${group.map(tileHtml).join('')}</nav>\n`;
+};
+
+const chapterHtml = (s) => `  <details class="chap" id="${s.id}">
+    <summary><span class="chn">${markerLine(s)}</span><span class="cht">${s.display}</span><span class="chm">${s.meta}</span></summary>
+    <div class="chb">
+${s.body}
+    </div>
+  </details>`;
+
+const reportLine = () => {
+  const rewritten = sections.filter((s) => s.rewritten).length;
+  const count = plural(sections.length, 'section');
+  if (rewritten === sections.length) return `Every section of the source report, rewritten and checked against it: ${count}`;
+  if (rewritten === 0) return `The source report, verbatim: ${count}`;
+  return `The source report: ${count}, ${rewritten} rewritten and checked against it, the rest verbatim`;
+};
+
+const aboutHtml = () => {
+  const link = options['source-url']
+    ? `<p class="report-src"><a href="${escapeHtml(options['source-url'])}">Source of record</a></p>`
+    : '';
+  if (!preamble && !link) return '';
+  return `  <aside class="report-about"><div class="lhead">About this report</div>${preamble ? layout(marked.parse(preamble)) : ''}${link}</aside>\n`;
+};
+
+const reportHtml = () => {
+  for (const s of sections) s.meta = chapterMeta(s.body);
+  const unnumbered = sections.filter((s) => !s.num);
+  const numbered = sections.filter((s) => s.num);
+  // "Curated above" holds only while unnumbered sections render verbatim under a front that
+  // distils them; once every section is rewritten, one grid in source order tells no one to skip.
+  const grouped = unnumbered.length > 0 && numbered.length > 0 && sections.some((s) => !s.rewritten);
+  return `<section class="block report" id="log" data-nav="Full report">
   <div class="slabel">Source</div>
   <h2>The full report</h2>
-  <details class="log">
-    <summary>Show all ${sections.length} sections, verbatim</summary>
-    <nav class="toc" aria-label="Report sections">${sections.map((s) => `<a href="#${s.id}"><span>${s.num ? `§${Number(s.num)}` : ''}</span>${escapeHtml(s.text.replace(/[`*_]/g, ''))}</a>`).join('')}</nav>
-${preamble ? `    <div class="log-pre">${layout(marked.parse(preamble))}</div>
-` : ''}${sections.map((s) => `    <section class="chap" id="${s.id}"><div class="chn">${s.num}</div><div class="chb"><h2>${s.display}</h2>
-${s.body}
-    </div></section>`).join('\n')}
-  </details>
-</section>`
+  <div class="report-bar">
+    <p>${reportLine()}</p>
+    <button type="button" class="report-toggle">Expand all</button>
+  </div>
+${grouped ? tileGroup(unnumbered, 'Front matter', 'curated above') + tileGroup(numbered, 'Chapters') : tileGroup(sections)}${aboutHtml()}  <div class="chapters">
+${sections.map(chapterHtml).join('\n')}
+  </div>
+</section>`;
+};
+
+const bodyHtml = front
+  ? `${front}
+${reportHtml()}`
   : sections.map((s) => `<section class="block" id="${s.id}">
   ${s.num ? `<div class="slabel">${s.num} / ${escapeHtml(navLabel(s.text))}</div>\n  ` : ''}<h2>${s.display}</h2>
 ${s.body}
