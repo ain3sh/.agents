@@ -89,20 +89,20 @@ Read only the title and first screen. A reviewer must be able to answer:
    actually read, and which files carry the behavior?
 
 Question 5 decides whether review starts at all. Answer it with the computed
-composition table from `conditional-sections.md` directly under **What**,
-before **Why**. A reviewer who meets the size before the table has already
-priced the PR as unreviewable.
+composition and core tables from `conditional-sections.md` directly under
+**What**, before **Why**. A reviewer who meets the size before the tables has
+already priced the PR as unreviewable.
 
 Use two to four short sentences plus one compact table or list when that scans
 faster. The opening stands alone without the ticket. For a large structural PR,
 the order is **What** (outcome + decisive number) → composition table → core
-breakdown → **Why** → **How** → one-line **Net effect for users**.
+table → **Why** → **How** → one-line **Net effect for users**.
 
 When the diff installs one rule across three or more surfaces, or changes three
 or more behaviors at once, the first sentence states the rule's before and
 after; the most vivid instance is its first consequence, never the opener. The
 order is **What** (the rule) → Before → After table, one row per surface
-(`conditional-sections.md`) → composition table (large diff) → core breakdown
+(`conditional-sections.md`) → composition table (large diff) → core table
 → **Why** → **How**. A reviewer who reads the instance first prices the PR as
 narrower than it is, then meets the rest as surprises.
 Link a design document here when it carries the rationale. Keep anti-goals,
@@ -170,7 +170,7 @@ Closes TEAM-123
 
 ## Reviewer Guide
 
-**Diff shape:** <attention split in one line; on a large diff, point at the composition table in Description rather than restating it>
+**Diff shape:** <attention split in one line; on a large diff, point at the composition and core tables in Description rather than restating them>
 **Three passes:** <large diff only; each pass names the commits or files and the one thing to check; never estimate durations>
 **Review depth:** Skim | Standard | Deep — <one-line reason>
 **Read order:**
@@ -226,14 +226,15 @@ the grammar and runs the acceptance and render checks.
 ### Reviewer Guide
 
 Keep it scannable. Use one file or tight pair per numbered line and causal,
-not alphabetical, order. Add deliberate behavior changes that could look like
-merge noise. Drop an empty pushback prompt.
+not alphabetical, order. When the core table already names each file and what
+to check, list entry points only. Add deliberate behavior changes that could
+look like merge noise. Drop an empty pushback prompt.
 
-Percentages appear only in the composition table, computed by the script and
-paired with line and file counts; a bare "80% is generated" in prose is a
-hand-wave, not a number. On a large diff the three passes give the reviewer a
-plan: the hot path first (by commit), the contracts second, the repeated
-pattern last with two owners read in full and the rest spot-checked.
+Size numbers appear only in the composition and core tables, computed by the
+script; a bare "80% is generated" in prose is a hand-wave, not a number. On a
+large diff the three passes give the reviewer a plan: the hot path first (by
+commit), the contracts second, the repeated pattern last with two owners read
+in full and the rest spot-checked.
 Never attach a duration to a pass or to the review; it reads as a promise the
 author cannot keep. Cite commits by ordinal and subject as well as SHA; a
 rebase invalidates every SHA in the body (`refresh.md`).

@@ -11,8 +11,10 @@ Buckets, in order of precedence:
   tooling    paths under --tooling prefixes (harness, scripts; not shipped)
   mechanical everything else: the repeated pattern, moves, adoptions
 
-Prints share / lines / files per bucket, then every core and mechanical file with
-its line count so the largest ones can be described honestly in the body.
+Prints additions, deletions, and whole-file adds/deletes per bucket, core first,
+then every core and mechanical file with its own +/- and whether the diff adds or
+deletes it whole.
+Added lines are what a reviewer reads; deleted lines are checked for over-reach.
 """
 import argparse
 import re
@@ -24,6 +26,7 @@ GENERATED = re.compile(
 )
 TESTS = re.compile(r"\.(test|spec)\.[cm]?[jt]sx?$|__tests__|__fixtures__|/fixtures/|\.fixture\.|_test\.py$|/test_[^/]+\.py$")
 DOCS = re.compile(r"^docs/|^\.github/|\.md$|\.ya?ml$")
+ORDER = ("core", "tests", "mechanical", "generated", "tooling", "docs+ci")
 
 
 def bucket(path: str, core: set[str], tooling: tuple[str, ...]) -> str:
@@ -40,6 +43,10 @@ def bucket(path: str, core: set[str], tooling: tuple[str, ...]) -> str:
     return "mechanical"
 
 
+def git(repo: str, *args: str) -> str:
+    return subprocess.check_output(["git", "-C", repo, *args], text=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("base")
@@ -51,37 +58,45 @@ def main() -> None:
 
     core = set(args.core)
     tooling = tuple(args.tooling)
-    out = subprocess.check_output(
-        ["git", "-C", args.repo, "diff", "--numstat", f"{args.base}...{args.head}"], text=True
-    )
-    lines: dict[str, int] = defaultdict(int)
-    files: dict[str, list[tuple[int, str]]] = defaultdict(list)
-    total = 0
-    for row in out.splitlines():
+    rng = f"{args.base}...{args.head}"
+    whole = {p: "new file" for p in git(args.repo, "diff", "--name-only", "--diff-filter=A", rng).split()}
+    whole |= {p: "deleted" for p in git(args.repo, "diff", "--name-only", "--diff-filter=D", rng).split()}
+
+    totals: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    files: dict[str, list[tuple[int, int, str]]] = defaultdict(list)
+    for row in git(args.repo, "diff", "--numstat", rng).splitlines():
         add, dele, path = row.split("\t")
         if add == "-":  # binary
             continue
-        n = int(add) + int(dele)
+        a, d = int(add), int(dele)
         b = bucket(path, core, tooling)
-        lines[b] += n
-        files[b].append((n, path))
-        total += n
+        totals[b][0] += a
+        totals[b][1] += d
+        files[b].append((a, d, path))
 
-    missing = core - {p for v in files.values() for _, p in v}
+    missing = core - {p for v in files.values() for _, _, p in v}
     if missing:
         print("WARNING --core paths not in diff:", *sorted(missing), sep="\n  ")
 
-    print(f"total {total} lines, {sum(len(v) for v in files.values())} files")
-    for b in ("generated", "mechanical", "tests", "core", "tooling", "docs+ci"):
-        if lines[b]:
-            print(f"{b:11} {100 * lines[b] / total:5.1f}%  {lines[b]:6} lines  {len(files[b]):3} files")
+    add_all = sum(t[0] for t in totals.values())
+    del_all = sum(t[1] for t in totals.values())
+    print(f"total +{add_all} / -{del_all}, {sum(len(v) for v in files.values())} files\n")
+    print(f"{'bucket':11} {'+':>7} {'-':>7} {'files':>6} {'new':>4} {'deleted':>8}")
+    for b in ORDER:
+        if files[b]:
+            kinds = [whole.get(p) for _, _, p in files[b]]
+            print(
+                f"{b:11} {totals[b][0]:7} {totals[b][1]:7} {len(files[b]):6}"
+                f" {kinds.count('new file'):4} {kinds.count('deleted'):8}"
+            )
     for b in ("core", "mechanical"):
         if not files[b]:
             continue
-        small = sum(1 for n, _ in files[b] if n <= 30)
+        small = sum(1 for a, d, _ in files[b] if a + d <= 30)
         print(f"\n== {b} ({small} files change <=30 lines) ==")
-        for n, p in sorted(files[b], reverse=True):
-            print(f"  {n:5}  {p}")
+        for a, d, p in sorted(files[b], key=lambda f: (-f[0], -f[1], f[2])):
+            note = f"  ({whole[p]})" if p in whole else ""
+            print(f"  +{a:<5} -{d:<5} {p}{note}")
 
 
 if __name__ == "__main__":

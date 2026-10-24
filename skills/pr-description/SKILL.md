@@ -12,7 +12,7 @@ Make the merge case legible from the title and first screen; later sections prov
 | Goal | Action |
 |---|---|
 | Analyze and draft | Load `references/workflow.md`; use three-dot diff analysis, outcome-first title selection, `What / Why / How`, and the first-screen skim gate. |
-| Large diff (roughly 1k+ lines or 20+ files) | Run `scripts/diff-composition.py BASE HEAD --core <behavior files> --tooling <prefixes>`; put the composition table and core breakdown under **What** (template in `references/conditional-sections.md`). |
+| Large diff (roughly 1k+ lines or 20+ files) | Run `scripts/diff-composition.py BASE HEAD --core <behavior files> --tooling <prefixes>`; put the composition table and core table under **What** (template in `references/conditional-sections.md`). |
 | One rule changed across three or more surfaces, or three or more behaviors changed at once | Open **What** with the rule's before and after, then the per-surface Before → After table: grammar from `show-me` (Policy before/after table), placement in `references/conditional-sections.md`; later sections point at it instead of restating it. |
 | Add conditional sections | Load `references/conditional-sections.md` only when a catalog trigger fires. |
 | Show the change (every PR) | Load `show-me` with the verified diff and GitHub destination; place one or more views under **Architecture** (`references/workflow.md`, Architecture). Use `references/artifacts.md` when it returns files to upload. |
@@ -53,9 +53,10 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
    use a file tool, run `scripts/finalize-body.py` (it stamps the full HEAD
    sha, never the merge base), publish with `gh api -F body=@file`, then
    verify the live body byte-for-byte.
-8. Never describe a large diff's size in prose or with estimated percentages;
-   a reviewer prices the PR from the first screen, so the computed composition
-   table with a per-row action goes there, before **Why**.
+8. Never price a large diff in prose, estimates, or one added-plus-deleted
+   churn number; a reviewer prices the PR from the first screen, so the
+   script's tables (+ and − apart, core first, an action per row) go there,
+   before **Why**.
 9. Never attach durations to review passes or to the review; name the commits,
    files, and the one thing to check per pass.
 10. Never open **What** with the most vivid instance when the diff installs a
@@ -77,11 +78,12 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 | Title reads like compressed shorthand to fit a length or a scope list | Rewrite it as the sentence you would say to a teammate; drop plumbing-only scopes, never words (`workflow.md`, Title). |
 | Impact is vague despite strong evidence | Preview the decisive fact in **What**; keep full proof in its conditional section. |
 | Reviewer must scroll to know why to merge | Run the skim gate in `workflow.md` and rewrite the first screen. |
-| Diff is large and the body explains the size in prose, or the composition sits in Reviewer Guide | Run `scripts/diff-composition.py`; move the table and core breakdown under **What** (`conditional-sections.md`, Diff composition). |
+| Diff is large and the body explains the size in prose, or the composition sits in Reviewer Guide | Run `scripts/diff-composition.py`; move the composition and core tables under **What** (`conditional-sections.md`, Diff composition). |
 | **What** opens with an example or consequence ("`JSON.parse` now works") instead of the rule | Rewrite the first sentence as the rule's before → after; the example becomes the second paragraph (`workflow.md`, skim gate). |
 | Many surfaces change and the reviewer must assemble the picture from prose | Add the Before → After table directly under **What** (`conditional-sections.md`). |
 | Risk & Impact or a removed-safeguards list restates the Before → After table | Cut it to what the table cannot carry (Rule 11). |
-| Core breakdown is a wall of per-file line counts | Keep a count only where it changes the reviewer's action (`conditional-sections.md`, Diff composition). |
+| Composition table leads with its biggest bucket, or one churn number hides that most of the diff is deletion | Core logic first, + and − in separate columns (`conditional-sections.md`, Diff composition). |
+| Core breakdown is freeform bullets or one churn total per group | Rebuild it as the core table: New / Deleted / Swapped / Reshaped rows, per-file +/−, one thing to check (`conditional-sections.md`, Diff composition). |
 | A commit table lists test titles | Name the invariants each commit's tests pin, with the file (`workflow.md`, Reviewer Guide). |
 | Body cites SHAs after a rebase or force-push | Sweep with the stale-SHA step in `refresh.md`; rerun the composition script. |
 | Refresh says no-op but the user asked for prose/title improvement | Use the explicit-audit bypass in `refresh.md`. |
@@ -108,4 +110,5 @@ Load on demand; do not reabsorb into this file:
 - `scripts/finalize-body.py` — refuses a body without an Architecture view,
   then stamps the `pr-desc-base` marker.
 - `scripts/diff-composition.py` — buckets a three-dot diff by review weight
-  (generated / mechanical / tests / core / tooling / docs) from `git numstat`.
+  (core first, then tests / mechanical / generated / tooling / docs) from
+  `git numstat`, with + and − and whole-file adds/deletes kept apart.

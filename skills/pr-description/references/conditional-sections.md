@@ -24,7 +24,7 @@ When a reviewer could ask "and what happens to X now?" for several X, prose answ
 
 ### Diff composition — large diffs (roughly 1k+ lines or 20+ files)
 
-The reviewer's first question on a large diff is not "why merge?" but "how much of this must I actually read?" Unanswered, it rejects the PR on size alone. Answer it on the first screen, directly under **What**, with a computed table and a per-bucket action, then name the files that carry behavior with their line counts.
+The reviewer's first question on a large diff is not "why merge?" but "how much of this must I actually read?" Unanswered, it rejects the PR on size alone. Answer it on the first screen, directly under **What**, with two computed tables: the composition table (what to read, per bucket) and the core table (what each behavior change does and what to check).
 
 Compute, never estimate:
 
@@ -36,30 +36,35 @@ python3 ~/.agents/skills/pr-description/scripts/diff-composition.py \
 ```
 
 ```markdown
-**Where the 26k lines are.** <One sentence naming why the diff is large and how many files carry logic.>
+**Where the change is.** +23,250 / −3,586 across 168 files. The review is 2,301 added lines in 14 core files; <one clause naming what the rest is>.
 
-| Share | Lines | Files | What it is | What to do with it |
-| ---: | ---: | ---: | --- | --- |
-| **54%** | 14,077 | 3 | Generated `__ast-snapshots__/*.ast.json` | Skip. CI verifies they match the source. |
-| **18%** | 4,654 | 87 | Mechanical: <the one repeated pattern>; ~750 lines are file moves (`a.ts` → `b.ts`); 56 files change 30 lines or fewer. | Read two owners in full, spot-check the rest. |
-| **14.5%** | 3,771 | 52 | Tests and fixtures (10 new suites, 42 modified). | Read for the invariants they pin, listed under Verification. |
-| **11%** | 2,938 | 14 | **Core logic.** <the four nouns> | This is the review. Breakdown below. |
-| 1.5% | 396 | 12 | Perf harness (`perf-engine/`, `scripts/`); not shipped. | Skim. |
+| Bucket | + | − | Files | What it is | What to do with it |
+| --- | ---: | ---: | ---: | --- | --- |
+| **Core logic** | **2,301** | 637 | 14 | <the four nouns> | **This is the review.** Read the +2,301; check that the −637 removes only what the PR says. Breakdown below. |
+| Tests | 3,402 | 369 | 52 | 10 new suites, 42 modified | Read the +3,402 for the invariants under Verification. |
+| Mechanical | 2,410 | 2,244 | 87 | <the one repeated pattern>; ~750 lines are file moves (`a.ts` → `b.ts`); 56 files change 30 lines or fewer | Read two owners in full, spot-check the rest. |
+| Generated | 14,077 | 0 | 3 | `__ast-snapshots__/*.ast.json` | Skip. CI verifies they match the source. |
+| Tooling | 1,060 | 336 | 12 | Perf harness (`perf-engine/`, `scripts/`); not shipped | Skim. |
 
-**The 11% that carries behavior**, grouped by the change it makes:
+**Core logic, by change:**
 
-1. **<Change>** (1,612 lines): `bootstrap.ts` (429) is new and owns the flow; `run.ts` (982) is the existing function reshaped around it and shrinks from 827 to 683 lines in six hunks; … <one sentence on what the group changes>.
-2. **<Change>** (791 lines): …
+| Change | + | − | Files | What it does | What to check |
+| --- | ---: | ---: | --- | --- | --- |
+| **New:** <change> | **640** | 355 | `bootstrap.ts` (+429, new file), `run.ts` (+211/−355, reshaped in six hunks) | <one sentence of behavior> | <the one thing to verify, e.g. every entry path now goes through bootstrap> |
+| **Deleted:** <change> | 0 | 189 | `legacy-loader.ts` (−189, whole file) | <what stops existing> | <over-reach check, e.g. no caller still imports it> |
+| **Swapped:** <change> | 1,661 | 93 | … | … | … |
 ```
 
 Rules for this block:
 
 - Every number comes from the script. Hand estimates drift (a 57-file, 3.9k-line "tests" guess was 52 files and 3,771 lines when measured).
-- The `--core` list is the honesty check: any file in "mechanical" that changes behavior (a fail-closed branch, a policy seal) moves to core, even at 235 lines. Conversely, a core file whose diff is a reshape, not an addition, says so with before/after line counts and hunk count.
+- Show + and − in separate columns; never one churn total or a churn percentage. A deletion-heavy PR priced by churn looks like a heavy read: "876 lines of core" was +174 to read and −702 to check.
+- Order rows by what the reviewer does, not by size: Core logic first with its + in bold, then tests, mechanical, and the skip-only buckets (generated, tooling, docs) last.
 - Every row ends in a reviewer action: Skip / Skim / Spot-check / Read / This is the review.
-- The core breakdown groups files by the change they make, names each group's files, and ends each group with one sentence of behavior. Four groups is typical; more than six means the PR needs `split-pr`.
-- A per-file line count appears only where it changes what the reviewer does: a new file against a reshaped one (before/after counts and hunk count, as in the template), or the one file that holds most of a group. A count on every file is noise; the composition table already carries the totals.
-- Prose about size ("the diff is mostly mechanical, read honestly…") is not a substitute. A paragraph reads as an excuse; a table with actions reads as a plan. Do not put the table in Reviewer Guide: by then the reviewer has already decided.
+- The `--core` list is the honesty check: any file in "mechanical" that changes behavior (a fail-closed branch, a policy seal) moves to core, even at 235 lines.
+- The core table replaces any freeform list: one row per change, labeled **New**, **Deleted**, **Swapped**, or **Reshaped** (same behavior, restructured), so the reviewer knows whether to read closely or check for over-reach. Name each row's files with their own +/−, marking whole-file adds and deletes (the script flags them) and reshapes with their hunk count. Close with one sentence of behavior and one concrete thing to check. Four rows is typical; more than six means the PR needs `split-pr`.
+- Per-file counts appear only in the core table; the composition table stays at bucket level.
+- Prose about size ("the diff is mostly mechanical, read honestly…") is not a substitute. A paragraph reads as an excuse; a table with actions reads as a plan. Do not put the tables in Reviewer Guide: by then the reviewer has already decided.
 
 ### Scope map — multi-concern diffs that are not large
 
