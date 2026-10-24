@@ -2,7 +2,6 @@
 name: babysit
 description: Drive owned PRs to merge: watch CI and conflicts, address every review, keep the body excellent, and merge the moment it is approved.
 argument-hint: "[PR-number-or-URL ...]"
-disable-model-invocation: true
 ---
 
 # Babysit
