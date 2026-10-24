@@ -29,7 +29,7 @@
 </skills>
 
 <subagents>
-- orchestrate liberally to excess
+- /orchestrate liberally to excess
 - you still are on the hook for what they produce
 - be harsh and aggressive when needed
 </subagents>
