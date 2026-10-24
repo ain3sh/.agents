@@ -13,9 +13,9 @@
 ## Workflow Skills
 
 Slash workflows live in `skills/<name>/SKILL.md`; there is no `commands/`
-directory. `address-review`, `explain-diff`, `implement`, and `post-review` are
-human-only (`disable-model-invocation: true`). `user-invocable` defaults to
-`true`; `/zoom-out` also allows model invocation.
+directory. `address-review`, `babysit`, `explain-diff`, `implement`, and
+`post-review` are human-only (`disable-model-invocation: true`).
+`user-invocable` defaults to `true`; `/zoom-out` also allows model invocation.
 
 | Command | Replaces | Usage |
 |---|---|---|
@@ -24,6 +24,7 @@ human-only (`disable-model-invocation: true`). `user-invocable` defaults to
 | `/open-pr` | ticket + branch + verify + lint + ship mega-prompt (handles fresh + mid-fix) | `/open-pr FAC-456` |
 | `/quality-ship` | scoped checks with live/logged evidence; host-exclusive heavy checks and serial child fan-out; commit/push only when authorized | `/quality-ship` |
 | `/review-pr` | first-pass: bounded, source-first Astra architecture gate → whole-PR Fable structural sweep alongside hands-on acceptance with Astra where isolation permits; audits bodies against **pr-description**, admits evidence at the exercised boundary, and preserves unverified scope; `deeper` is a paired confirm-or-kill wave; `follow-up` reviews source/body/evidence deltas from `./.agents/review.md`, then runs the `deeper` wave over what stays open; `/post-review` publishes approved findings | `/review-pr 123`, `deeper`, `re-review` |
+| `/babysit` | watch CI/conflicts, address every review, keep the body excellent, merge on approval; one background `gh pr checks --watch` per PR plus one head-agnostic `*/5` loop | `/babysit 123 124` |
 | `/address-review` | read reviewer feedback → triage → fix → respond to threads | `/address-review 123` |
 | `/post-review` | publish the full approved review: reread the whole ledger, preserve every final finding's substance, severity, and gating stance, and name every blocker in the verdict; only explicit subset selection narrows the default | `/post-review 123` |
 | `/explain-diff` | standalone HTML walkthrough with diagrams + interactive quiz | `/explain-diff 123` |
