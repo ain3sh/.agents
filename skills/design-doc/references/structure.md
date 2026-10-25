@@ -8,19 +8,24 @@ roadmap.
 
 | Mode | Spine |
 |---|---|
-| RFC / proposal | headline → context (primer first) → goals / non-goals → proposal → decision cards → tradeoffs → rollout → open questions |
+| RFC / proposal | headline → context (primer first) → goals / non-goals → proposal → alternatives → decision cards → tradeoffs → evidence → rollout → open questions |
 | Technical memo / internal sell | metrics → headline → findings → demand → structural constraint → evidence → shipped artifact → limits → deployment. Charts and tables, not decision-card boilerplate |
 | Sync prep | decision needed → evidence → options → recommendation → unresolved questions |
 | Report / retrospective | the markdown source's own order, rendered by `build-md.js`; curate a front with `--front` ([report mode](report-mode.md)) |
 
-Name three things before writing:
+Name five things before writing:
 
 - **The single structural claim**: one sentence, ≤25 words. It becomes the
   `.lede` and the bold sentence of the `.headline`.
 - **The 3–8 proof points or decisions**: decision cards in RFC mode; findings,
   comparisons, or deployment implications in memo mode.
+- **The rival designs**: each credible alternative and the goal it loses on.
+  They become the Alternatives section and the `card-negatives` grid.
 - **The non-goals or current limits**: short, and one of them becomes the
   `.limit` finding.
+- **The machine**: what Fig 1 shows moving, in one sentence ("a drum of
+  pins is the schedule; a hammer drops at lead time and presses the power
+  key"). Commission it now (**animate-process**), so it builds while you write.
 
 **Title, lede, and nav must tell the story in order.** Read the `<h1>`, the
 lede, and the top-bar nav labels in sequence: they must form one spine a
@@ -66,30 +71,44 @@ and never leave TODO markers.
    then the evidence with verbatim numbers and what it costs; `.hnote` = the
    caveat a careful reader raises first. Status and the review-by date go in its
    `.lhead`.
+   Then **Fig 1**, the mechanism moving: an **animate-process** `.iso` fragment
+   or a show-me SVG with `data-motion` ([components](components.md#motion)).
 4. **Optional `.entries#updates`** on a living doc: newest first, `li.now`
    marks the latest.
-5. **Context**: reader primer first, then what breaks today; every motivating
+5. **Context**: reader primer first, as a terms table (`table.terms`: term ·
+   one line), then what breaks today; every motivating
    ticket as an `.entries` row (`ID` in the key column, symptom as the title,
    2–3 sentences of failure and mechanism); then why now.
 6. **Goals**: `.two-col` with a `.panel` of goals and a `.panel.limit` of
    non-goals.
 7. **Proposal**: a `.headline` stating the mental model (≤25 words, one or two
-   components in `code`), a show-me view when 3+ actors or states are involved,
-   the prose the view does not replace, and the disposition table when an old
-   system is displaced.
-8. **Decisions**: `article.decision` × N, usually 60–70% of an RFC by length.
-   All four `dt` slots (Decision, Rationale, Alternatives rejected,
-   Consequence). No intro paragraph.
-9. **Tradeoffs**: a table or short prose, where the decisions need it.
-10. **Evidence**: `.findings` (each links to the table or chart that proves it)
+   components in `code`), the precise view (sequence or state, with
+   `data-motion="walk"`) when 3+ actors or states are involved, the decision
+   logic as a table or code, and the disposition table when an old system is
+   displaced. Prose only for what no view or table can carry.
+8. **Alternatives**: a `.lead` naming the question every design must answer
+   and each rival's answer; one comparison table (`table.stack`, one row per
+   whole design, the chosen design last as `tr.pri`, the goals as columns);
+   then one compact card per rival (`.findings.three.alts > .finding#alt-x`,
+   rows: Loses on / Adds / We keep), never paragraphs. State each rival as its
+   strongest version; "loses on" needs a number or a structural cost against a
+   stated goal. Skip only
+   when no credible rival exists, and say so in the proposal.
+9. **Decisions**: one `table.stack.decisions` (# · Decision · Why · Costs),
+   each cell ≤ ~20 words, `tr id="dN"` for links. No intro paragraph. Promote
+   at most two decisions a reviewer will contest to a full `article.decision`
+   with all four `dt` slots. A whole-design rival already has an alternatives
+   card: link it, do not re-list its costs.
+10. **Tradeoffs**: a table or short prose, where the decisions need it.
+11. **Evidence**: `.findings` (each links to the table or chart that proves it)
     above the tables, charts, and bars. See [components](components.md#progressive-disclosure).
-11. **Rollout**: `.stages` with status pills, a `.timeline` (flag posture,
+12. **Rollout**: `.stages` with status pills, a `.timeline` (flag posture,
     telemetry, the exact rollback), code with the changed line highlighted.
-12. **Open questions**: `ol.numbered`, ordered by how much each answer would
+13. **Open questions**: `ol.numbered`, ordered by how much each answer would
     change the design, highest first.
-13. **Optional `.chapters > details.chap`**: rounds, raw tables, and notes a
+14. **Optional `.chapters > details.chap`**: raw tables, logs, and notes a
     reviewer may want but should not scroll past, one collapsed chapter each.
-14. **`footer.doc`**: provenance only (PR · ticket · HEAD sha · source file ·
+15. **`footer.doc`**: provenance only (PR · ticket · HEAD sha · source file ·
     build date). No colophon, reviewer roster, or typographic credits; they read
     as flourish and get cut in review.
 
@@ -121,6 +140,51 @@ order."
   failure → concrete failures → goals → proposal.
 - **Revising after review is a controlled change**: touch only the sections the
   feedback targets.
+
+## The final design, not the PR's history
+
+A design doc argues the design as it ships: how it works, how it compares with
+the alternatives, what it costs, and what it does not cover. The PR's history
+belongs in the PR body: bugs found while building it, review rounds, which tool
+or test caught what, commit shas as plot, and a "Validation" list of test
+counts.
+
+- **A rejected design is an alternative to compare, not an earlier revision to
+  narrate.** "A per-minute sweep scans every minute" argues; "an earlier
+  revision used a sweep, deleted before merge" reports.
+- **Keep a dev-time measurement only as evidence for a decision**, stated as
+  the mechanism and its counterfactual: "without the re-arm, the loop did not
+  fire; each probe gap was the pause plus one interval." Never "the first live
+  test caught a bug, fixed in `7f6890e`."
+- **Commit shas appear once**, in `footer.doc`, as provenance for cited code.
+- **Grep before sharing**, then rewrite or cut every hit that narrates rather
+  than argues:
+  `rg -n -i 'caught|found by|found live|bug|fixed in|revision|before merge|round table|reversed' <doc>.html`
+
+## Prose budget
+
+A reader learns a mechanism faster by watching it than by reading it. Running
+prose is what remains after figures, tables, and cards carry the rest.
+
+- **Run `prose.js` after every fill and every content pass.** The budget is per
+  run, not per doc: a run is the text (paragraphs, list items, `dd`, callouts)
+  between two visuals (figure, table, card, metric, code, collapsed chapter);
+  headings do not end one. Cap 150 words, about three short paragraphs; it
+  also lists paragraphs over 45 words to split. A long doc stays legal while
+  every screen carries something to look at. One RFC's longest run went
+  2029 → 99 words, and its prose height fell by a third, with nothing a
+  reviewer needed lost.
+- **Tables before paragraphs**: decisions as one table, rivals as row cards,
+  the primer as a terms table, failure modes as a table. A sentence that only
+  restates a table row is cut.
+- **A correction replaces the sentence it corrects.** A fact pass or review
+  round that appends caveat paragraphs grows the page every round; re-run
+  `prose.js` after it, and a longer run is a failure.
+- **A delegation brief carries the run cap and Fig 1.** A brief that dictates a
+  ten-section spine, nine decision cards, and "exceed the brief" without a
+  cap gets a research paper back. Name the figure, the cap, and the
+  table-first components; route the figure to **animate-process** from the
+  start, not as a late pass.
 
 ## Disposition table
 
@@ -169,7 +233,8 @@ wrote; problems in the source go back to its author as flags.
   cross-references. Edits remove or replace text; they rarely add.
 - **Pass 2.5, voice.** Load **voice** for a quick independent sweep for slop,
   false agency, and filler. Keep it surgical.
-- **Pass 3, visual explanations.** Apply **show-me** to structural or
+- **Pass 3, visual explanations.** Fig 1 was commissioned at framing; this
+  pass catches what is still prose. Apply **show-me** to structural or
   quantitative questions still buried in prose, using the facts from the
   source-of-truth pass and this template's components. Place each view where
   its question arises and cut the prose it replaces, keeping rationale and

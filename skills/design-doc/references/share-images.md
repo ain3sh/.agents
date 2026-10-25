@@ -8,7 +8,7 @@ the page.
 | Output | Size | When |
 |---|---|---|
 | Hero thumbnail | 1.6:1 crop at 2x | Every shared link: eyebrow, title, lede, metrics |
-| Slack cards | 1600×900 at 1x | When the argument has more than one postable beat: results, what ships, what failed |
+| Slack cards | 1600×900 at 1x | When the argument has more than one postable beat: results, what ships, what lost |
 
 Read either at `image_quality="high"` before handing it over; bleed, centring,
 and clipping bugs are invisible at default quality. Hand over each PNG path
@@ -54,9 +54,11 @@ output.
 2. **What ships** (`card-ships`): one row per change: id, what it does, its
    measured effect, destination PR, plus a dashed note for the measured option
    that was not selected.
-3. **Negatives kept** (`card-negatives`): a 3×2 grid of arms that failed:
-   name, the number that killed it, why in one sentence, block ids. Values stay
-   neutral; orange is for wins.
+3. **What lost** (`card-negatives`): a 3×2 grid. In an RFC, the rejected
+   designs (name, the number it loses on, why in one sentence, the chosen
+   design's number on the same measure) and the limits the chosen design keeps;
+   in a retro, the arms that failed, with block ids. Never bugs fixed while
+   building: they are PR history. Values stay neutral; orange is for wins.
 
 **Render**
 
