@@ -10,12 +10,13 @@ only loose objects that `git gc` reclaims.
 ```bash
 PR_FILES=$(git diff --name-only "$FORK" HEAD | sort)
 MOVED=$(git diff --name-status --diff-filter=DR "$FORK" "$TARGET_HEAD" | cut -f2 | sort | comm -12 - <(printf '%s\n' "$PR_FILES"))
+printf 'moved:\n%s\n' "$MOVED"
 if SYNCED=$(git merge-tree --write-tree "$TARGET_HEAD" HEAD); then
-  ABSORBED=$(git diff --name-only "$TARGET_HEAD" "$SYNCED" | sort | comm -13 - <(printf '%s\n' "$PR_FILES") | comm -23 - <(printf '%s\n' "$MOVED"))
+  printf 'absorbed:\n'
+  git diff --name-only "$TARGET_HEAD" "$SYNCED" | sort | comm -13 - <(printf '%s\n' "$PR_FILES") | comm -23 - <(printf '%s\n' "$MOVED")
 else
-  ABSORBED="unknown: the sync conflicts; classify the conflicts (§4) first"
+  printf 'absorbed: not computed, because the sync conflicts; classify the conflicts (§4) first\n'
 fi
-printf 'moved:\n%s\nabsorbed:\n%s\n' "$MOVED" "$ABSORBED"
 ```
 
 | Tripwire | Evidence |
@@ -23,7 +24,7 @@ printf 'moved:\n%s\nabsorbed:\n%s\n' "$MOVED" "$ABSORBED"
 | Moved | `moved` lists a file the PR changes that the base deleted or renamed. |
 | Absorbed | `absorbed` lists a file whose change the base already carries, so the synced PR would no longer change it. This catches cherry-picks and squashes alike. |
 | Collision | A conflict or overlap resolution classifies as a genuine collision (§4, §5). |
-| Asked | The user asks whether the PR still belongs: "modernize", "revive", "is this still needed". |
+| Asked | The user asks whether the PR still belongs: "is this still needed", "should this still land", "revive it". |
 
 No tripwire: continue with the next step without comment.
 
@@ -42,7 +43,7 @@ PR's smallest coherent goal from its title, body, and diff, then answer:
 |---|---|---|
 | SYNC | The goal is still useful and the shape still right. | Continue with the next step; report the tripwire and why it did not change the call. |
 | REWORK | The goal is still useful, but syncing would preserve the wrong shape. | Stop before changing history. Report the smallest credible rewrite; proceed only once the user approves it. |
-| CLOSE | The base absorbed, superseded, or invalidated the PR. Every PR file listed under `absorbed` is sufficient on its own. | Stop. Cite the commit or PR that did it. Never close the PR without the user. |
+| CLOSE | The base absorbed, superseded, or invalidated the PR. `absorbed` listing every file the PR changes is enough on its own; a partial list is a REWORK that drops the absorbed part, or a SYNC. | Stop. Cite the commit or PR that did it. Never close the PR without the user. |
 
 ## 1. Judge stack propagation
 

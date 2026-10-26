@@ -19,7 +19,7 @@ for missing dependency/build-artifact failures.
 | Goal | Action |
 |---|---|
 | Resolve the target | Explicit argument → open PR base → remote default; never hardcode `dev` or `main`. |
-| Judge disposition | Run the tripwires in `references/procedure.md` → **Judge disposition**. None fired: sync. One fired: rule SYNC, REWORK, or CLOSE before changing history. |
+| Judge disposition | Run the tripwires in `references/procedure.md` → **Judge disposition**. None fired: sync. One fired: rule SYNC, REWORK, or CLOSE before changing history; a collision found mid-sync aborts back to this step. |
 | Preserve local work | Follow **Freeze the operation** in `references/procedure.md`; preserve only what blocks the sync and own restoration through verification. |
 | Judge stack propagation | Run `stack status` and `stack sync <branch>`; either propagate with `stack-cli` or intentionally sync only the active branch and defer descendants. |
 | Freeze the intended PR shape | Record the expected branch-only count, ordered commit identities, and diff before changing history. |
@@ -70,7 +70,8 @@ ambiguous. Otherwise proceed with the authorized sync without reconfirming it.
 8. Never leave deferred descendants implicitly stale. Name them, distrust their
    CI/diffs, and state the event that will trigger `stack sync --apply`.
 9. Never open a disposition without a tripwire. Age, size, and distance behind
-   the base are not evidence; judging every sync stalls the routine ones.
+   the base never open one, though they may weigh in a verdict a tripwire
+   opened; judging every sync stalls the routine ones.
 10. Never push a REWORK or act on a CLOSE without the user, and never rule
     either without citing the base commit or PR that reshaped or absorbed the
     change.
