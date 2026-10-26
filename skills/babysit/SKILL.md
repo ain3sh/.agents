@@ -45,7 +45,7 @@ event and the `READY` gate.
 | `conflict`, `behind`, `drift` | **sync-target** without asking; its REWORK or CLOSE verdict goes to the user. Stacked: **stack-cli**, merge bottom-up. |
 | `comment`, `review`, `thread`, `reply`, `unresolved` | **address-review**. This invocation confirms its `Fix`, `Respond`, and `Ack` rows; `Decline` rows and open product calls go to the user. |
 | Any push | **pr-description** refresh: the body stays first-screen excellent, never a patch log. |
-| `READY` | Run `pr-watch <pr> --once`. On `READY`, merge with the repo's allowed method (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`) pinned to the checked head (`gh pr merge <pr> --<method> --match-head-commit <sha>`), confirm `MERGED`, stop. On `ACTION`, handle its lines instead. |
+| `READY` | Run `pr-watch <pr> --once`. On `READY`, merge with the repo's allowed method (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`) pinned to the sha that verdict line ends with (`gh pr merge <pr> --<method> --match-head-commit <sha>`), confirm `MERGED`, stop. On `ACTION`, handle its lines instead. |
 | `blocked` | Check, in order: rulesets, required reviewers, merge queue, then `pr-context` for anything GitHub reports that the watcher does not model. |
 | `MERGED`, `CLOSED` | Stop and report. |
 | `ERROR` | Fix the input it names, or wait out GitHub, then restart the watcher. |

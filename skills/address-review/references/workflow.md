@@ -15,10 +15,9 @@ gh api "repos/$REPO/pulls/<number>/comments" | jq '.[] | {id, path, line, body, 
 # Review summary bodies (REQUEST_CHANGES / APPROVE / COMMENT with body).
 gh api "repos/$REPO/pulls/<number>/reviews" | jq '.[] | {id, state, body, user: .user.login}'
 
-# Conversation comments -- drop bots; bot review threads above stay (their findings can be actionable).
-gh api "repos/$REPO/issues/<number>/comments" \
-  | jq '.[] | select(.user.type != "Bot" and (.user.login | endswith("[bot]") | not))
-        | {id, body, user: .user.login}'
+# Conversation comments, bots included: a bot's finding can be actionable. Skip status
+# reports (deploy previews, CI and scan summaries); they need no reply.
+gh api "repos/$REPO/issues/<number>/comments" | jq '.[] | {id, body, user: .user.login}'
 
 # Fetch thread node IDs upfront -- REST API cannot resolve threads.
 gh api graphql -f query='
