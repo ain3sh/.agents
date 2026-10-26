@@ -28,8 +28,9 @@ Events
   check-failed  a check failed on the head; the PR author's own decision
                 whether an optional failure is real
   comment, review, thread, reply
-                new feedback from anyone but you, bots included; CI and deploy
-                bots' top-level comments are skipped because checks carry them
+                new feedback from anyone, bots and your own account included.
+                Skipped: replies the agent marked with AGENT_MARK, and CI and
+                deploy bots' top-level comments, since checks carry that news
   conflict      the branch conflicts with its base
   behind        branch protection requires the branch to be current
   drift         otherwise ready, but base commits since the fork point touch
@@ -90,6 +91,9 @@ STATE_DIR = (
     Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
     / "pr-watch"
 )
+# The agent ends every reply it posts with this. It often shares one GitHub
+# account with the user, so the author alone cannot tell their comments apart.
+AGENT_MARK = "<!-- agent-reply -->"
 STATUS_BOTS = (
     "github-actions",
     "vercel",
@@ -130,7 +134,6 @@ contexts(first: 100, after: $after) {
 """
 QUERY = f"""
 query($owner: String!, $name: String!, $number: Int!, $after: String) {{
-  viewer {{ login }}
   repository(owner: $owner, name: $name) {{
     pullRequest(number: $number) {{
       url state isDraft headRefOid baseRefName mergeStateStatus reviewDecision
@@ -341,7 +344,6 @@ class Watcher:
         pr = data["repository"]["pullRequest"]
         if pr is None:
             fail(f"{self.repo}#{self.number} does not exist")
-        pr["viewer"] = data["viewer"]["login"]
         checks = contexts(pr)
         while checks.get("pageInfo", {}).get("hasNextPage"):
             commit = pr["commits"]["nodes"][0]["commit"]["id"]
@@ -416,20 +418,19 @@ class Watcher:
         return f"drift: {where} changed files this PR touches since the fork point: {', '.join(touched[:5])}{more}"
 
     def feedback(self, pr: Json) -> None:
-        me = pr["viewer"]
         for c in pr["comments"]["nodes"]:
             login = (c["author"] or {}).get("login", "ghost")
             is_status_bot = (c["author"] or {}).get("__typename") == "Bot" and any(
                 b in login for b in STATUS_BOTS
             )
-            if login != me and not is_status_bot:
+            if not is_status_bot and AGENT_MARK not in c["body"]:
                 self.emit(
                     f"c:{c['id']}",
                     f"comment from {login}: {snippet(c['body'])} {c['url']}",
                 )
         for r in pr["reviews"]["nodes"]:
             login = (r["author"] or {}).get("login", "ghost")
-            if login == me or r["state"] in ("PENDING", "DISMISSED"):
+            if r["state"] in ("PENDING", "DISMISSED") or AGENT_MARK in r["body"]:
                 continue
             if r["state"] == "CHANGES_REQUESTED" or r["body"].strip():
                 state = r["state"].lower().replace("_", " ")
@@ -442,7 +443,7 @@ class Watcher:
             where = f"{t['path']}:{t['line']}" if t["line"] else t["path"]
             for index, c in enumerate(t["comments"]["nodes"]):
                 login = (c["author"] or {}).get("login", "ghost")
-                if login != me:
+                if AGENT_MARK not in c["body"]:
                     kind = "thread" if index == 0 else "reply"
                     self.emit(
                         f"c:{c['id']}",

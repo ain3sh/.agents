@@ -149,7 +149,7 @@ Follow the **quality-ship** skill for quality checks, commit, and push:
 
 ## 7. Respond to Threads
 
-Send the row's step-4 reply draft verbatim; append `Fixed in <sha>.` only when a commit landed against it. Do not improvise reply text at API time -- if a row has no draft, return to step 4.
+Send the row's step-4 reply draft verbatim; append `Fixed in <sha>.` only when a commit landed against it. Do not improvise reply text at API time -- if a row has no draft, return to step 4. End every reply with `<!-- agent-reply -->`: the agent often posts from the user's own GitHub account, and the marker is how **babysit**'s watcher tells its replies from the user's comments.
 
 Pick endpoint by surface.
 
@@ -160,6 +160,8 @@ gh api "repos/$REPO/pulls/<n>/comments" --method POST \
 <reply draft #N>
 
 Fixed in <sha>.
+
+<!-- agent-reply -->
 EOF
 )" -F in_reply_to=<comment-id>
 ```
@@ -173,6 +175,8 @@ gh api "repos/$REPO/issues/<n>/comments" --method POST \
 <reply draft #N>
 
 Fixed in <sha>.
+
+<!-- agent-reply -->
 EOF
 )"
 ```
