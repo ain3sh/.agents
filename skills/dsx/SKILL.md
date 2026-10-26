@@ -1,6 +1,6 @@
 ---
 name: dsx
-description: "Use to search past Droid sessions for prior work or usage, and after two failed attempts at the same tooling or environment problem."
+description: "Use when past Droid sessions hold the answer (prior work, the user's exact words, pre-compaction context, usage) or after two failed attempts at one tooling problem."
 ---
 
 # dsx: Droid Session Explorer
