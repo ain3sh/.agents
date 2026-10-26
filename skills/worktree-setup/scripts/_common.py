@@ -478,21 +478,26 @@ def shared_with_source(path: Path, root: Path, source_roots: Sequence[Path]) -> 
     return False
 
 
-def iter_shared_files(
-    source_roots: Sequence[Path], root: Path, directory: Path
-) -> Iterator[Path]:
-    """Files under directory that are the same inode as their source counterpart."""
+def iter_multilink_files(directory: Path) -> Iterator[Path]:
     for entry in iter_tree(directory):
         if not entry.is_file(follow_symlinks=False):
             continue
         try:
-            if entry.stat(follow_symlinks=False).st_nlink < 2:
-                continue
+            if entry.stat(follow_symlinks=False).st_nlink > 1:
+                yield Path(entry.path)
         except OSError:
             continue
-        path = Path(entry.path)
-        if shared_with_source(path, root, source_roots):
-            yield path
+
+
+def iter_shared_files(
+    source_roots: Sequence[Path], root: Path, directory: Path
+) -> Iterator[Path]:
+    """Files under directory that are the same inode as their source counterpart."""
+    return (
+        path
+        for path in iter_multilink_files(directory)
+        if shared_with_source(path, root, source_roots)
+    )
 
 
 def directory_shares_files(

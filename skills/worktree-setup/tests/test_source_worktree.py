@@ -152,6 +152,12 @@ class SourceWorktreeIntegrationTest(unittest.TestCase):
         os.link(source_build, target_build)
         local_build = self.target / "packages/pkg/dist/local.js"
         local_build.write_text("built in target\n")
+        # Older repairs from another sibling left links outside the source too.
+        sibling_build = self.primary / "packages/pkg/dist/sibling.js"
+        sibling_build.parent.mkdir(parents=True)
+        sibling_build.write_text("sibling build\n")
+        target_sibling_build = self.target / "packages/pkg/dist/sibling.js"
+        os.link(sibling_build, target_sibling_build)
 
         flagged = self.script("verify", "--from", "source-branch", check=False)
         self.assertEqual(flagged.returncode, 1, flagged.stdout + flagged.stderr)
@@ -160,6 +166,8 @@ class SourceWorktreeIntegrationTest(unittest.TestCase):
         self.script("repair", "--from", "source-branch")
         self.assertNotEqual(source_build.stat().st_ino, target_build.stat().st_ino)
         self.assertEqual(local_build.read_text(), "built in target\n")
+        self.assertEqual(target_sibling_build.stat().st_nlink, 1)
+        self.assertEqual(target_sibling_build.read_text(), "sibling build\n")
         verified = self.script("verify", "--from", "source-branch")
         self.assertIn("target: ok", verified.stdout)
 

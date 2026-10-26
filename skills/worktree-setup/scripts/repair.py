@@ -28,7 +28,7 @@ from _common import (
     git_ignored_paths,
     git_tracked_paths,
     git_worktrees,
-    iter_shared_files,
+    iter_multilink_files,
     parse_source_args,
     remove,
     repo_lock,
@@ -94,20 +94,29 @@ def already_cloned(src: Path, dst: Path) -> bool:
     )
 
 
-def unshare(src: Path, dst: Path) -> bool:
-    """Swap files dst still hardlinks to src for clones, keeping every file the
-    worktree built itself. Converts trees an older hardlink repair left behind."""
-    shared = [str(path.relative_to(dst)) for path in iter_shared_files([src], dst, dst)]
+def unshare(dst: Path) -> bool:
+    """Swap every hardlinked file in dst for a clone of itself, keeping every
+    file the worktree built. Converts trees older hardlink repairs left behind,
+    whichever worktree they were mirrored from."""
+    shared = [str(path.relative_to(dst)) for path in iter_multilink_files(dst)]
+    if not shared:
+        return False
+    staged = dst.with_name(f".{dst.name}.unshare")
+    remove(staged)
+    staged.mkdir()
     for chunk in batched(shared, 512):
         proc = subprocess.run(
-            ["cp", "-a", "--reflink=auto", "--remove-destination", "--parents"]
-            + ["--", *chunk, str(dst)],
-            cwd=src,
+            ["cp", "-a", "--reflink=auto", "--parents", "--", *chunk, str(staged)],
+            cwd=dst,
             check=False,
         )
         if proc.returncode != 0:
+            remove(staged)
             sys.exit(f"cp failed with exit code {proc.returncode}")
-    return bool(shared)
+    for rel in shared:
+        os.replace(staged / rel, dst / rel)
+    remove(staged)
+    return True
 
 
 def mirror(src: Path, dst: Path, verbose: bool = False) -> bool:
@@ -151,7 +160,7 @@ def clone(src: Path, dst: Path) -> bool:
     if not src.is_dir():
         return False
     if already_cloned(src, dst):
-        return unshare(src, dst)
+        return unshare(dst)
     ensure_disk_headroom(dst)
     # Staged beside dst so the swap is a same-filesystem rename; a rerun
     # clears what an interrupted run left behind.
