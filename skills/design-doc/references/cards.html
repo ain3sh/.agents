@@ -70,7 +70,7 @@
   .note { margin-top: 18px; font-family: var(--mono); font-size: 18px; color: var(--soft); padding: 14px 20px; border: 1px dashed var(--border); border-radius: 4px; }
   .note span { color: var(--meta); }
 
-  /* Archetype 3: negatives kept, a 3x2 grid; values stay neutral, never orange */
+  /* Archetype 3: what lost, a 3x2 grid; values stay neutral, never orange */
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 18px; flex: 1; }
   .cell { position: relative; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; padding: 26px 28px; display: flex; flex-direction: column; }
   .cell::before, .cell::after { content: ""; position: absolute; width: 12px; height: 12px; border: solid var(--meta); }
@@ -129,11 +129,11 @@
   <div class="foot"><span>[shipping state]</span><span class="src">[branch]</span></div>
 </section>
 
-<section class="card" id="card-negatives">
-  <p class="eyebrow">[TICKET]<span class="sep">//</span>[project]<span class="sep">//</span>negative results, kept</p>
-  <h1>What did not work, and stays recorded.</h1>
+<section class="card" id="card-lost">
+  <p class="eyebrow">[TICKET]<span class="sep">//</span>[project]<span class="sep">//</span>[alternatives and limits | negative results]</p>
+  <h1>[Three designs rejected. Three limits kept.]</h1>
   <div class="grid">
-    <div class="cell"><div class="t">[Arm tried]</div><div class="v">[+00%]</div><div class="d">[Why it failed, one sentence from the source.]</div><div class="b">[block ids]</div></div>
+    <div class="cell"><div class="t">[Rejected design, or arm tried]</div><div class="v">[+00%]</div><div class="d">[Where it loses, one sentence from the doc.]</div><div class="b">[the chosen design's number, or block ids]</div></div>
     <div class="cell"><div class="t">[Arm tried]</div><div class="v">[+00%]</div><div class="d">[Why.]</div><div class="b">[block ids]</div></div>
     <div class="cell"><div class="t">[Arm tried]</div><div class="v">[+00%]</div><div class="d">[Why.]</div><div class="b">[block ids]</div></div>
   </div>

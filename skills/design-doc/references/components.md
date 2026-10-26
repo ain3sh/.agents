@@ -58,7 +58,8 @@ layer is optional for the reader who already has enough:
 1. **Hero metrics** (`.metrics`): four numbers that carry the thesis. Values
    white; `.meter .fill` with `--w` shows a share of a whole.
 2. **Headline** (`.headline`): the answer as one bold sentence, the evidence,
-   and the caveat in `.hnote`.
+   and the caveat in `.hnote`. Fig 1, the mechanism moving, sits directly
+   under it.
 3. **Findings** (`.findings > a.finding`): 2–4 claim cards (`.findings.three`
    for three across), each linking to the table, chart, or section that proves
    it. Per card:
@@ -122,6 +123,21 @@ meters and bars grow, the `.lede[data-typed]` types in, the live dot flickers.
 reduced motion, so captures always show settled content. With JS off, `body.nojs`
 keeps everything visible. A new revealed block needs only the `rv` class.
 
+Diagram motion, from the template's last script, runs only while its figure is
+on screen and never under reduced motion or in print:
+
+- `figure.chart .line.pri` draws itself in; chart `.dot`s fade in after it.
+- `figure[data-motion="walk"]`: a token travels every `[marker-end]` arrow in
+  document order and lights it; give arrows the order the story happens in.
+- `figure[data-motion="playhead"]`: a line sweeps viewBox x from `data-x0` to
+  `data-x1` (`data-y0`/`data-y1` its extent). Circles with
+  `data-pulse="label"` ring as it passes. An optional `.mo-read` shows the
+  clock (`data-clock="x,secondsOfDay,pxPerSecond"`) and the label of the
+  `data-spans='[[x0,x1,"label"]]'` entry under it, else `data-rest`.
+
+Captures run with reduced motion, so motion needs its own check
+([verify](verify.md#which-sweep)).
+
 ## Inventory
 
 | Selector | Purpose | When |
@@ -147,13 +163,17 @@ keeps everything visible. A new revealed block needs only the `rv` class.
 | `figure.diagram` (`svg` or `img`) | Container for a show-me view or a raster figure | Where the question arises |
 | `.iso > .iso-figure` | Interactive isometric machine figure, built by **animate-process** and pasted as a fragment | A mechanism the reader should play with; never inside `figure.diagram` |
 | `figure.demo` | Video poster card | Optional, after the headline |
-| `article.decision` | D-card: Decision / Rationale / Alternatives rejected / Consequence | Every key decision; bullets are no substitute |
+| `table.stack.decisions` (`tr id="dN"`) | All decisions: # · Decision · Why · Costs | Decisions section, always |
+| `.findings.three.alts > .finding#alt-x` | Rival card of `.rows`: Loses on / Adds / We keep | Alternatives, under the comparison table |
+| `table.terms` | Two-column glossary: term · one line | The Context primer |
+| `figure[data-motion]` | `walk` or `playhead` motion on an in-theme SVG | Sequences and recorded timelines |
+| `article.decision` | D-card: Decision / Rationale / Alternatives rejected / Consequence | At most two contested decisions, below the decisions table |
 | `pre.code` (`.k` `.s` `.t` `.fn` `.comment` `.hl`) + `.code-caption` | Code with one highlighted line | Source and labelling rules belong to show-me |
-| `blockquote.quote` (`p` + `cite`) | A person's words, verbatim, with name and time | Human texture: a steer or reaction that turned the story; anywhere, often inside a `.timeline` turn |
+| `blockquote.quote` (`p` + `cite`) | A person's words, verbatim, with name and time | A steer that set a constraint the design honours, or in a retro a reaction that turned the story; never chat approval offered as rationale |
 | `.callout` (`.limit`) | Note or warning | Sparingly; each one devalues the rest |
 | `.note` (`.src`) | Small aside; `.src` adds a left rule and a "Source note" label | `.src`: the source's own caveat in a report chapter; never write the label text |
 | `ol.numbered` (`.q`, `.a`) | Numbered questions | Open questions, by leverage |
-| `ol.steps`, `ul.bullets` | Plain lists | Body prose |
+| `ol.steps`, `ul.bullets` | Plain lists | Body prose; `ol.steps` carries the Proposal's how-it-works walk |
 | `.nw` | Keeps a short run on one line (`white-space: nowrap`) | A value and its unit, an id, or a range that must not break, such as `−30.7%` or `E34–E38`; never a whole phrase |
 | `.report-bar` (`.report-toggle`) + `.tiles > a.tile` (`.tile-n` > `.tile-s` + `.tile-h`, `.tile-t`, `.tile-m`) | Full report header with Expand all, and its chapter index | Report mode, built by `build-md.js --front` |
 | `.chapters > details.chap` (`summary`: `.chn`, `.cht`, `.chm`; `.chb` body) | Collapsed chapters at page width; an empty `.chn` draws a neutral dot; with a claim title, `.chn` also carries the source heading | End of `main`; the full record (rewritten bodies via `--log-dir`) |

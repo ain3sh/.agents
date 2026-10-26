@@ -31,6 +31,10 @@ covers every project: `npm i -g playwright marked && playwright install chromium
   already passed a full sweep, and for `build-md.js` output, where one
   stylesheet renders every instance of a component the same way. Read every
   sample at high quality.
+- **Motion check** once before sharing: the sweep runs with reduced motion, so
+  capture Fig 1 and every `data-motion` figure after a few seconds with motion
+  on (animate-process `capture.mjs` on the doc, or a Playwright shot without
+  `reducedMotion`) and read them.
 - **`--print` once before sharing**: check the PDF for clipped tables, split
   cards, and that the log printed open.
 
@@ -56,8 +60,8 @@ opacity) of the first 12 matches.
 
 Re-run the sweep after the content passes. **`scrollHeight` should drop, not
 grow**: one doc went 18820 → 18429px and 17 → 14 segments with no information
-lost. The only sanctioned growth is a Pass-3 diagram; prose height still
-shrinks.
+lost. The only sanctioned growth is a figure; prose height still shrinks, and
+`prose.js` must pass.
 
 ## Checklist before sharing
 
@@ -75,7 +79,10 @@ shrinks.
 - [ ] The page follows the chosen mode; no empty RFC sections or vestigial decision cards in a memo.
 - [ ] The headline states the answer, the evidence, and the caveat; findings each link to their evidence and one is `.limit`; no metric value repeats as a finding claim.
 - [ ] A displaced system has its disposition table.
-- [ ] Decision cards touching product surface passed the smallest-vocabulary audit; each has all four `dt` slots.
+- [ ] The Proposal walks one input through the shipped design end to end, in runtime order and present tense.
+- [ ] An RFC compares the status quo and every credible rival in Alternatives; Evidence rows are head to head on the same frame; the history grep in [structure](structure.md#the-final-design-not-the-prs-history) leaves no narration of the PR.
+- [ ] Decisions are one table that passed the smallest-vocabulary audit; at most two promoted cards, each with all four `dt` slots.
+- [ ] Fig 1 shows the mechanism moving under the headline, read from a motion capture.
 - [ ] Open questions are ordered by leverage.
 - [ ] No TODO markers; no colophon, roster, meta-intros, or navigational sentences.
 - [ ] After any insertion, the lede and the section that owned the point were swept for duplication.
@@ -85,7 +92,7 @@ shrinks.
 - [ ] The sweep matched "Which sweep"; embedded views passed show-me's checks.
 - [ ] No viewport is a single unbroken paragraph block.
 - [ ] `doc.pdf` paginates without clipped tables or split cards.
-- [ ] `scrollHeight` after the content passes ≤ before, unless a Pass-3 diagram was added.
+- [ ] `scrollHeight` after the content passes ≤ before, unless a figure was added; `prose.js` passes.
 - [ ] Orange marks only the primary path, labels, and live state; controls stay grey; no italics, shadows, or extra decoration.
 
 **Publish**

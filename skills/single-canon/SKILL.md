@@ -43,13 +43,14 @@ The hard rules delete legacy vocabulary; this audit stops redundancy from being 
 3. **No dual shapes.** One type per meaning. An internal-vs-serialized split must be forced by an actual serialization boundary (non-serializable members, a real wire format); otherwise collapse to the one shape both sides use.
 4. **Exact unions.** Every member reachable, every reachable state a member. A state enters the union as an explicit literal, never by riding a broader schema that happens to admit it.
 5. **Discriminant-gated optionality.** A field present only in some states hangs off the discriminant (discriminated union, conditional schema), not blanket-optional on the whole shape.
+6. **One constant per bound.** When two layers bound the same job (a lifetime, a retry cap), the layer that cannot see the other's state derives its bound from the shared constant through an ordering invariant, and the constant's doc states that invariant. Example: the backend never sees a loop's `expiresAt`, but its alarm was reported after the loop's last change, so `now - wakeAt >= LOOP_LIFETIME_MS` proves the loop expired. A second timer drifts from the first: shorter abandons wanted work, longer keeps paying for dead work.
 
 Litmus per field and member: *can any consumer observe a difference if this is removed or derived?* If no, delete it and propagate the reduced grammar through the workflow below.
 
 ## Execution workflow
 
 1. Identify the canonical target shape and run the grammar audit on it.
-2. Trace every producer and consumer of that shape.
+2. Trace every producer and consumer of that shape. When the canon is a policy (a timer, limit, or bound) rather than a shape, find siblings by job, not by name: grep the value in every spelling (`days(7)`, `7 * 24 * 60 * 60 * 1000`, `DAY_MS`) and the job's verbs. Fold only siblings with the same job and owner. A lookalike with a different job (an owner-alerting auto-pause tuned so a laptop away for a week survives) stays, and the deliverable says why.
 3. Update all live codepaths to emit and consume only the canonical shape.
 4. Update fixtures, test data, builders, and snapshots to the canonical shape.
 5. Delete legacy handling, branching, comments, and helpers.
@@ -62,6 +63,7 @@ Same bar whether writing or reviewing -- confirm before delivering, reject on vi
 
 - One owner for the canonical contract; producers, consumers, fixtures, and tests all speak only it.
 - The contract's grammar is minimal: no derivable fields, synonym states, dual shapes, or accidentally-wide unions.
+- One constant per bound across layers; a layer that cannot see the canonical state derives its bound from that constant.
 - No old-shape behavior behind conditionals; no translation layers between shapes.
 - No validation branches, runtime logic, or tests whose purpose is recognizing or rejecting legacy shapes.
 - Dead helpers, obsolete legacy-shape tests, and comments describing removed shapes are gone.
