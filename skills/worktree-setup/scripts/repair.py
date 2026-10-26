@@ -15,19 +15,20 @@ import subprocess
 import sys
 from collections import deque
 from collections.abc import Callable
+from itertools import batched
 from pathlib import Path
 
 from _common import (
     CWD,
     EXTRA_MIRROR_DIRS,
     detect_package_build_dirs,
-    directory_shares_files,
     ensure_disk_headroom,
     env_flag,
     find_node_modules,
     git_ignored_paths,
     git_tracked_paths,
     git_worktrees,
+    iter_shared_files,
     parse_source_args,
     remove,
     repo_lock,
@@ -88,10 +89,25 @@ def already_mirrored(src: Path, dst: Path) -> bool:
 
 
 def already_cloned(src: Path, dst: Path) -> bool:
-    # The inode walk converts trees that an older hardlink repair left behind.
     return in_sync(
         src, dst, lambda s, d: (s.st_size, s.st_mtime_ns) == (d.st_size, d.st_mtime_ns)
-    ) and not directory_shares_files([src], dst, dst)
+    )
+
+
+def unshare(src: Path, dst: Path) -> bool:
+    """Swap files dst still hardlinks to src for clones, keeping every file the
+    worktree built itself. Converts trees an older hardlink repair left behind."""
+    shared = [str(path.relative_to(dst)) for path in iter_shared_files([src], dst, dst)]
+    for chunk in batched(shared, 512):
+        proc = subprocess.run(
+            ["cp", "-a", "--reflink=auto", "--remove-destination", "--parents"]
+            + ["--", *chunk, str(dst)],
+            cwd=src,
+            check=False,
+        )
+        if proc.returncode != 0:
+            sys.exit(f"cp failed with exit code {proc.returncode}")
+    return bool(shared)
 
 
 def mirror(src: Path, dst: Path, verbose: bool = False) -> bool:
@@ -135,7 +151,7 @@ def clone(src: Path, dst: Path) -> bool:
     if not src.is_dir():
         return False
     if already_cloned(src, dst):
-        return False
+        return unshare(src, dst)
     ensure_disk_headroom(dst)
     # Staged beside dst so the swap is a same-filesystem rename; a rerun
     # clears what an interrupted run left behind.

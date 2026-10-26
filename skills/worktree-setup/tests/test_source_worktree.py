@@ -150,6 +150,8 @@ class SourceWorktreeIntegrationTest(unittest.TestCase):
         target_build = self.target / "packages/pkg/dist/index.js"
         target_build.unlink()
         os.link(source_build, target_build)
+        local_build = self.target / "packages/pkg/dist/local.js"
+        local_build.write_text("built in target\n")
 
         flagged = self.script("verify", "--from", "source-branch", check=False)
         self.assertEqual(flagged.returncode, 1, flagged.stdout + flagged.stderr)
@@ -157,6 +159,7 @@ class SourceWorktreeIntegrationTest(unittest.TestCase):
 
         self.script("repair", "--from", "source-branch")
         self.assertNotEqual(source_build.stat().st_ino, target_build.stat().st_ino)
+        self.assertEqual(local_build.read_text(), "built in target\n")
         verified = self.script("verify", "--from", "source-branch")
         self.assertIn("target: ok", verified.stdout)
 
