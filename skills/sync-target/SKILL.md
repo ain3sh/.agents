@@ -6,93 +6,61 @@ argument-hint: "[--no-push] [--full-scope] [<target-branch>]"
 
 # Sync Target
 
-Sync the target without changing what the PR claims to contain, and never
-sync a PR the base has already absorbed or reshaped.
+Bring a PR branch up to date with its base so it carries exactly the commits
+and diff it claims, and decide whether it should still land at all when the
+evidence says the base absorbed, moved, or collided with it.
 
-Load skills: **pr-context**, **quality-ship**, **git-advanced**. If the branch
-has a stacked parent or descendants, load **stack-cli** to inspect propagation;
-apply it only when descendants need freshness now. Load **worktree-setup** only
-for missing dependency/build-artifact failures.
+Load skills: **pr-context**, **quality-ship**, **git-advanced**; **stack-cli**
+when the branch has a stacked parent or descendants; **worktree-setup** only
+after missing-module or empty-build-artifact errors.
 
 ## Act
 
-| Goal | Action |
+Run `references/procedure.md` top to bottom; each step owns its commands.
+
+| Step | Goal |
 |---|---|
-| Resolve the target | Explicit argument → open PR base → remote default; never hardcode `dev` or `main`. |
-| Judge disposition | Run the tripwires in `references/procedure.md` → **Judge disposition**. None fired: sync. One fired: rule SYNC, REWORK, or CLOSE before changing history; a collision found mid-sync aborts back to this step. |
-| Preserve local work | Follow **Freeze the operation** in `references/procedure.md`; preserve only what blocks the sync and own restoration through verification. |
-| Judge stack propagation | Run `stack status` and `stack sync <branch>`; either propagate with `stack-cli` or intentionally sync only the active branch and defer descendants. |
-| Freeze the intended PR shape | Record the expected branch-only count, ordered commit identities, and diff before changing history. |
-| Pick the operation | Merge ordinary published branches; replay/rebase branches already rewritten for a split or cleanup. |
-| Resolve and audit | Inspect conflicts plus files changed by both sides; classify judgment calls. |
-| Validate | Run `quality-ship` on every co-touched file and its owning package. |
-| Gate the push | Refuse if the branch-only series or PR diff is not the recorded shape; use an exact lease for rewritten history. |
-
-## Detect
-
-```bash
-CURRENT=$(git rev-parse --abbrev-ref HEAD)
-REMOTE=$(git remote | head -1)
-git fetch "$REMOTE" --prune
-
-TARGET=$(printf '%s\n' $ARGUMENTS | grep -v '^--' | head -1)
-[ -z "$TARGET" ] && TARGET=$(gh pr view --json baseRefName --jq .baseRefName 2>/dev/null)
-[ -z "$TARGET" ] && TARGET=$(git symbolic-ref refs/remotes/"$REMOTE"/HEAD 2>/dev/null | sed "s|refs/remotes/$REMOTE/||")
-
-TARGET_HEAD="$REMOTE/$TARGET"
-FORK=$(git merge-base "$TARGET_HEAD" HEAD)
-
-git rev-list --first-parent --count "$FORK"..HEAD
-git log --first-parent --oneline "$FORK"..HEAD
-git diff --stat "$TARGET_HEAD"...HEAD
-```
-Surface `"$TARGET_HEAD" → "$CURRENT"`. Ask if the target is empty, equals the
-current branch, conflicts with the user's request, or leaves stack scope
-ambiguous. Otherwise proceed with the authorized sync without reconfirming it.
+| §0 Set up | Resolve and pin the target, record the heads, back up the branch. |
+| §1 Preserve local work | Stash only the local work the sync would disturb. |
+| §2 Judge disposition | Run the tripwires; on a hit, rule SYNC, REWORK, or CLOSE. |
+| §3 Judge stack propagation | Decide whether descendants propagate after the push. |
+| §4 Record the intended shape | Write down the series and diff the result must carry. |
+| §5 Sync | Merge, replay, or rework onto the target. |
+| §6 Resolve and audit | Classify every conflict and every file both sides changed. |
+| §7 Prove the shape | Compare the result with §4's record. |
+| §8 Validate | Check the touched files and their packages. |
+| §9 Push | Push through the gate, then propagate. |
+| §10 Finish | Restore local work, clean up, and report. |
 
 ## Rules
 
-1. Never use GitHub `MERGEABLE` as the success invariant—it proves the target
-   can merge, not that the PR contains the intended commit series or diff.
-2. Never merge by reflex after a split, squash, reorder, cherry-pick rebuild,
-   or other deliberate rewrite—replay the recorded commits, not the polluted
-   chain, onto the target.
-3. Never propagate a stack merely because it exists. Compare descendant
-   freshness needs with parent churn and repeated-restack cost.
-4. Never justify extra branch history with the repository's landing strategy.
-   Squash-merging the PR later does not repair a polluted review surface now.
-5. Never push until both the branch-only count/ordered identities and PR diff
-   match the frozen intent.
-6. Never force-push without a backup and an exact lease; never auto-push a
-   Low-confidence resolution.
-7. Never apply a stack preview that mutates branches or PRs beyond the user's
-   explicit scope; summarize the expansion and ask first.
-8. Never leave deferred descendants implicitly stale. Name them, distrust their
-   CI/diffs, and state the event that will trigger `stack sync --apply`.
-9. Never open a disposition without a tripwire. Age, size, and distance behind
-   the base never open one, though they may weigh in a verdict a tripwire
-   opened; judging every sync stalls the routine ones.
-10. Never push a REWORK or act on a CLOSE without the user, and never rule
-    either without citing the base commit or PR that reshaped or absorbed the
-    change.
+1. Never call a sync done until the branch-only series and the PR diff match
+   §4's record. GitHub's `MERGEABLE` only says the base can merge.
+2. Never merge a branch that was split, squashed, reordered, or rebuilt:
+   merging drags the dropped history back into review, and a later squash
+   merge does not clean up the review surface now. Replay it.
+3. Never rewrite history before §0's backup and §1's preservation exist, and
+   never push without an exact lease.
+4. Never open a disposition without a tripwire. Age, size, and distance behind
+   the base weigh in once one is open; they never open one.
+5. Never rule REWORK or CLOSE without the base commit or PR that caused it,
+   and cite it in the rework's commit messages or the close comment.
+6. Never leave by any exit, success, CLOSE, hold, or failure, without running
+   §10.
 
 ## Failure map
 
-| Symptom | Action |
+| Symptom | Go to |
 |---|---|
-| Parent is changing rapidly; descendants are dormant | Sync the active branch only, mark descendants intentionally stale, and defer `stack sync --apply`. |
-| Descendant work/review/merge needs current parent behavior | Load `stack-cli`; preview the stack and apply the approved propagation. |
-| Branch was just split or rewritten | Use `references/procedure.md` → **Replay/rebase mode**. |
-| `origin/$TARGET..HEAD` shows merged predecessors or old sync commits | Stop; rebuild from the intended commit list rather than merging again. |
-| Final tree is correct but commit count is larger than planned | Treat as failure; restore/rebuild before push. |
-| Clean merge reports no conflict markers | Still audit the overlap set in `references/procedure.md`. |
-| A tripwire fired: the base moved, deleted, or already carries the PR's change; a conflict is a genuine collision; or the user asks whether the PR still belongs | `references/procedure.md` → **Judge disposition** before freezing or pushing. |
+| `$TARGET_HEAD..HEAD` holds merged predecessors or old sync commits | §5 Replay mode. |
+| The tree is right but the commit count is larger than planned | §7: the sync failed. |
+| A clean merge with no conflict markers | §6 overlap audit. |
+| A conflict or overlap turns out to be a genuine collision | §6 Collision. |
+| The push lease is rejected | §9. |
 
 ## References
 
-- Load on demand; do not reabsorb into this file:
-  `references/procedure.md` — disposition tripwires and verdicts, freeze
-  packet, merge and replay commands, conflict/overlap audit, validation scope,
-  topology gate, push, and report.
-- Load on demand; do not reabsorb into this file:
-  `../stack-cli/SKILL.md` — stack-wide inspection, repair, retargeting, and undo.
+Load on demand; do not reabsorb into this file:
+
+- `references/procedure.md`: every command and decision, step by step.
+- `../stack-cli/references/propagation.md`: whether descendants propagate now.

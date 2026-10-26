@@ -42,7 +42,7 @@ event and the `READY` gate.
 | Event or verdict | Move |
 |---|---|
 | `check-failed` | Read the failing job's log, load **root-cause-analysis**, fix through **quality-ship**, push. An `(optional)` failure the PR did not cause is a flake: rerun it (`gh run rerun <run-id> --failed`). |
-| `conflict`, `behind`, `drift` | **sync-target** without asking; its REWORK or CLOSE verdict goes to the user. Stacked: **stack-cli**, merge bottom-up. |
+| `conflict`, `behind`, `drift` | **sync-target** without asking, including whatever disposition it rules. Stacked: **stack-cli**, merge bottom-up. |
 | `comment`, `review`, `thread`, `reply`, `unresolved` | **address-review**. This invocation confirms its `Fix`, `Respond`, and `Ack` rows; `Decline` rows and open product calls go to the user. |
 | Any push | **pr-description** refresh: the body stays first-screen excellent, never a patch log. |
 | `READY` | Run `pr-watch <pr> --once`. On `READY`, merge with the repo's allowed method (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`) pinned to the sha that verdict line ends with (`gh pr merge <pr> --<method> --match-head-commit <sha>`), confirm `MERGED`, stop. On `ACTION`, handle its lines instead. |
