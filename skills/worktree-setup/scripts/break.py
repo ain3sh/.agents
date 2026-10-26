@@ -16,18 +16,17 @@ from pathlib import Path
 
 from _common import (
     CWD,
-    EXTRA_MIRROR_DIRS,
-    detect_package_build_dirs,
+    directory_shares_files,
     env_flag,
+    find_mirrored_dirs,
     find_node_modules,
-    git_ignored_paths,
     git_worktrees,
     is_within,
     iter_tree,
     remove,
     repo_lock,
     select_targets,
-    workspaces,
+    shared_with_source,
 )
 
 DRY_RUN = env_flag("WORKTREE_BREAK_DRY_RUN")
@@ -36,56 +35,6 @@ DRY_RUN = env_flag("WORKTREE_BREAK_DRY_RUN")
 # ============================================================================
 # Discovery
 # ============================================================================
-
-
-def find_mirrored_dirs(wt: Path) -> list[Path]:
-    candidates: set[Path] = set()
-    for rel in workspaces(wt).values():
-        for directory in detect_package_build_dirs(wt / rel):
-            candidates.add(wt / rel / directory)
-    for raw in EXTRA_MIRROR_DIRS:
-        candidates.add(wt / raw)
-
-    present = sorted(path for path in candidates if path.exists() or path.is_symlink())
-    rels = [str(path.relative_to(wt)) for path in present]
-    ignored = git_ignored_paths(wt, rels)
-    return [path for path, rel in zip(present, rels) if rel in ignored]
-
-
-def shared_with_source(path: Path, wt: Path, source_repos: list[Path]) -> bool:
-    try:
-        metadata = path.stat(follow_symlinks=False)
-    except OSError:
-        return False
-    for source in source_repos:
-        counterpart = source / path.relative_to(wt)
-        try:
-            source_metadata = counterpart.stat()
-        except OSError:
-            continue
-        if (
-            metadata.st_dev == source_metadata.st_dev
-            and metadata.st_ino == source_metadata.st_ino
-        ):
-            return True
-    return False
-
-
-def directory_shares_files(source_repos: list[Path], wt: Path, directory: Path) -> bool:
-    if directory.is_symlink():
-        try:
-            target = directory.resolve(strict=False)
-        except (OSError, RuntimeError):
-            return False
-        return any(is_within(target, source) for source in source_repos)
-    if not directory.is_dir():
-        return False
-    for entry in iter_tree(directory):
-        if not entry.is_file(follow_symlinks=False):
-            continue
-        if shared_with_source(Path(entry.path), wt, source_repos):
-            return True
-    return False
 
 
 def scan_links(

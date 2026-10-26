@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Repair a git worktree's dev environment from a healthy source: mirror node_modules,
-mirror postinstall build outputs, rewire workspace symlinks, link venvs.
+"""Repair a git worktree's dev environment from a healthy source: hardlink-mirror
+node_modules, clone build outputs, rewire workspace symlinks, link venvs.
 
 Defaults to the cwd worktree and primary source; --from selects a registered
 source worktree. WORKTREE_REPAIR_ALL=1 sweeps all worktrees.
@@ -14,12 +14,14 @@ import shutil
 import subprocess
 import sys
 from collections import deque
+from collections.abc import Callable
 from pathlib import Path
 
 from _common import (
     CWD,
     EXTRA_MIRROR_DIRS,
     detect_package_build_dirs,
+    directory_shares_files,
     ensure_disk_headroom,
     env_flag,
     find_node_modules,
@@ -38,7 +40,7 @@ RSYNC = shutil.which("rsync")
 
 
 # ============================================================================
-# Hardlink mirroring
+# Mirroring and cloning
 # ============================================================================
 
 
@@ -60,7 +62,9 @@ def find_sample_file(root: Path, max_depth: int = 2) -> Path | None:
     return None
 
 
-def already_mirrored(src: Path, dst: Path) -> bool:
+def in_sync(
+    src: Path, dst: Path, same: Callable[[os.stat_result, os.stat_result], bool]
+) -> bool:
     if not dst.is_dir() or dst.is_symlink():
         return False
     try:
@@ -76,10 +80,23 @@ def already_mirrored(src: Path, dst: Path) -> bool:
     cand = dst / sample.relative_to(src)
     if not cand.is_file() or cand.is_symlink():
         return False
-    return sample.stat().st_ino == cand.stat().st_ino
+    return same(sample.stat(), cand.stat())
+
+
+def already_mirrored(src: Path, dst: Path) -> bool:
+    return in_sync(src, dst, lambda s, d: s.st_ino == d.st_ino)
+
+
+def already_cloned(src: Path, dst: Path) -> bool:
+    # The inode walk converts trees that an older hardlink repair left behind.
+    return in_sync(
+        src, dst, lambda s, d: (s.st_size, s.st_mtime_ns) == (d.st_size, d.st_mtime_ns)
+    ) and not directory_shares_files([src], dst, dst)
 
 
 def mirror(src: Path, dst: Path, verbose: bool = False) -> bool:
+    """Hardlink-mirror a dependency tree. Only for trees the worktree never
+    writes (rule: no installs in a shared worktree)."""
     # Non-JS repos have no node_modules in the source; nothing to mirror.
     if not src.is_dir():
         return False
@@ -107,8 +124,36 @@ def mirror(src: Path, dst: Path, verbose: bool = False) -> bool:
     return True
 
 
-def safe_mirror(src: Path, dst: Path, ignored: bool) -> str:
-    """Hardlink-mirror src->dst with safety guards. Returns a status string."""
+def clone(src: Path, dst: Path) -> bool:
+    """Copy-on-write clone of a build output tree.
+
+    Worktrees rebuild these, and common writers (tsc, Bun.write, Bun's
+    sourcemap output) truncate and rewrite the existing inode, so a hardlink
+    would carry the worktree's build into the source. Reflinks keep the disk
+    sharing on CoW filesystems and degrade to a plain copy elsewhere.
+    """
+    if not src.is_dir():
+        return False
+    if already_cloned(src, dst):
+        return False
+    ensure_disk_headroom(dst)
+    # Staged beside dst so the swap is a same-filesystem rename; a rerun
+    # clears what an interrupted run left behind.
+    staged = dst.with_name(f".{dst.name}.clone")
+    remove(staged)
+    proc = subprocess.run(
+        ["cp", "-a", "--reflink=auto", "--", str(src), str(staged)], check=False
+    )
+    if proc.returncode != 0:
+        remove(staged)
+        sys.exit(f"cp failed with exit code {proc.returncode}")
+    remove(dst)
+    staged.rename(dst)
+    return True
+
+
+def safe_clone(src: Path, dst: Path, ignored: bool) -> str:
+    """Clone src->dst with safety guards. Returns a status string."""
     if not src.exists():
         return "src-missing"
     if not src.is_dir():
@@ -117,7 +162,7 @@ def safe_mirror(src: Path, dst: Path, ignored: bool) -> str:
         return "wt-parent-missing"
     if dst.exists() and not ignored:
         return "dst-tracked-refusing"
-    return "rebuilt" if mirror(src, dst) else "fresh"
+    return "rebuilt" if clone(src, dst) else "fresh"
 
 
 # ============================================================================
@@ -200,13 +245,13 @@ def mirror_extras(source: Path, wt: Path) -> str:
     ignored = git_ignored_paths(wt, EXTRA_MIRROR_DIRS)
     parts: list[str] = []
     for rel in EXTRA_MIRROR_DIRS:
-        status = safe_mirror(source / rel, wt / rel, ignored=rel in ignored)
+        status = safe_clone(source / rel, wt / rel, ignored=rel in ignored)
         parts.append(f"{rel}:{status}")
     return " ".join(parts)
 
 
 def mirror_package_builds(source: Path, wt: Path, pkgs: dict[str, Path]) -> str:
-    """Mirror per-package build output dirs (dist/, lib/, etc.) from source."""
+    """Clone per-package build output dirs (dist/, lib/, etc.) from source."""
     candidates: list[tuple[Path, Path, str]] = []
     for rel in pkgs.values():
         # Use the target's package.json -- its build config may differ from the source.
@@ -225,7 +270,7 @@ def mirror_package_builds(source: Path, wt: Path, pkgs: dict[str, Path]) -> str:
         if rel_dir in tracked:
             source_skips += 1
             continue
-        status = safe_mirror(
+        status = safe_clone(
             source / rel / build_dir, wt / rel / build_dir, ignored=rel_dir in ignored
         )
         if status == "rebuilt":

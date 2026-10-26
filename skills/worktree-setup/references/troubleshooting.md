@@ -40,7 +40,7 @@ one-way door into an independent environment -- after it, the worktree needs
 the repository's full install/setup flow, with the repo's required runtime and
 package-manager versions. Reach for break only when sharing itself is the
 problem: install/postinstall/lockfile repros, native builds, patching
-dependencies, or tools that mutate mirrored files in place. Preview with
+dependencies, or tools that mutate `node_modules` in place. Preview with
 `WORKTREE_BREAK_DRY_RUN=1`.
 
 ## Sibling worktrees also broken

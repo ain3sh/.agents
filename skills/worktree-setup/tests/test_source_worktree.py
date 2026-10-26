@@ -128,8 +128,37 @@ class SourceWorktreeIntegrationTest(unittest.TestCase):
         broken = self.script("break")
         self.assertIn("source_symlinks=1", broken.stdout)
         self.assertFalse((self.target / "node_modules").exists())
-        self.assertFalse((self.target / "packages/pkg/dist").exists())
+        # Cloned build outputs share no inodes, so break leaves them in place.
+        self.assertTrue((self.target / "packages/pkg/dist/index.js").is_file())
         self.assertFalse((self.target / ".venv").exists())
+
+    def test_build_outputs_are_cloned_so_rebuilds_stay_local(self) -> None:
+        self.script("repair", "--from", "source-branch")
+        source_build = self.source / "packages/pkg/dist/index.js"
+        target_build = self.target / "packages/pkg/dist/index.js"
+
+        # write_text truncates the existing inode, like tsc and Bun.write do.
+        target_build.write_text("target build\n")
+
+        self.assertEqual(source_build.read_text(), "source build\n")
+        self.script("repair", "--from", "source-branch")
+        self.assertEqual(target_build.read_text(), "source build\n")
+
+    def test_repair_converts_hardlinked_build_outputs(self) -> None:
+        self.script("repair", "--from", "source-branch")
+        source_build = self.source / "packages/pkg/dist/index.js"
+        target_build = self.target / "packages/pkg/dist/index.js"
+        target_build.unlink()
+        os.link(source_build, target_build)
+
+        flagged = self.script("verify", "--from", "source-branch", check=False)
+        self.assertEqual(flagged.returncode, 1, flagged.stdout + flagged.stderr)
+        self.assertIn("packages/pkg/dist shares files", flagged.stdout)
+
+        self.script("repair", "--from", "source-branch")
+        self.assertNotEqual(source_build.stat().st_ino, target_build.stat().st_ino)
+        verified = self.script("verify", "--from", "source-branch")
+        self.assertIn("target: ok", verified.stdout)
 
     def test_source_must_differ_from_target(self) -> None:
         result = self.script("repair", "--from", "target-branch", check=False)

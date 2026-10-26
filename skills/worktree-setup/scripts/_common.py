@@ -436,3 +436,68 @@ def find_node_modules(root: Path) -> list[Path]:
             elif entry.is_dir(follow_symlinks=False):
                 stack.append(entry.path)
     return sorted(found)
+
+
+# ============================================================================
+# Mirrored artifact dirs
+# ============================================================================
+
+
+def find_mirrored_dirs(wt: Path) -> list[Path]:
+    """Present, git-ignored package build dirs and extra mirror dirs in wt."""
+    candidates: set[Path] = set()
+    for rel in workspaces(wt).values():
+        for directory in detect_package_build_dirs(wt / rel):
+            candidates.add(wt / rel / directory)
+    for raw in EXTRA_MIRROR_DIRS:
+        candidates.add(wt / raw)
+
+    present = sorted(path for path in candidates if path.exists() or path.is_symlink())
+    rels = [str(path.relative_to(wt)) for path in present]
+    ignored = git_ignored_paths(wt, rels)
+    return [path for path, rel in zip(present, rels) if rel in ignored]
+
+
+def shared_with_source(path: Path, root: Path, source_roots: Sequence[Path]) -> bool:
+    """Whether path is the same inode as its counterpart under any source root."""
+    try:
+        metadata = path.stat(follow_symlinks=False)
+    except OSError:
+        return False
+    for source in source_roots:
+        counterpart = source / path.relative_to(root)
+        try:
+            source_metadata = counterpart.stat()
+        except OSError:
+            continue
+        if (
+            metadata.st_dev == source_metadata.st_dev
+            and metadata.st_ino == source_metadata.st_ino
+        ):
+            return True
+    return False
+
+
+def directory_shares_files(
+    source_roots: Sequence[Path], root: Path, directory: Path
+) -> bool:
+    """Whether directory (under root) links into a source root, by symlink or inode."""
+    if directory.is_symlink():
+        try:
+            target = directory.resolve(strict=False)
+        except (OSError, RuntimeError):
+            return False
+        return any(is_within(target, source) for source in source_roots)
+    if not directory.is_dir():
+        return False
+    for entry in iter_tree(directory):
+        if not entry.is_file(follow_symlinks=False):
+            continue
+        try:
+            if entry.stat(follow_symlinks=False).st_nlink < 2:
+                continue
+        except OSError:
+            continue
+        if shared_with_source(Path(entry.path), root, source_roots):
+            return True
+    return False

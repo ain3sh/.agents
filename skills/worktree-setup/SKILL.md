@@ -5,7 +5,7 @@ description: "Use when working in a git worktree whose modules or build outputs 
 
 # Worktree Setup
 
-Non-main worktrees share a healthy source worktree's dependencies through hardlink mirrors and relative symlinks -- never install into them. The primary worktree is the default source; `--from <worktree>` selects a registered sibling by path, directory name, or branch. Worktrees created by `worktree-cli new` (shell alias `gwk`) use the invoking worktree as their source (`--no-setup` skips).
+Non-main worktrees share a healthy source worktree's dependencies through hardlinked `node_modules`, copy-on-write clones of build outputs, and relative symlinks -- never install into them. The primary worktree is the default source; `--from <worktree>` selects a registered sibling by path, directory name, or branch. Worktrees created by `worktree-cli new` (shell alias `gwk`) use the invoking worktree as their source (`--no-setup` skips).
 
 ## Act
 
@@ -46,12 +46,12 @@ You are in a worktree when `git rev-parse --show-toplevel` differs from the firs
 | Install was run inside the worktree | `rm -rf` its `node_modules`, rerun repair |
 | Works locally, fails over SSHFS / alternate mount | `worktree-cli repair` |
 | Sibling worktrees also broken | sweep with `WORKTREE_REPAIR_ALL=1` -- read the sweep warning in `references/mechanics.md` first |
-| Tool mutates build outputs in place (would contaminate the source) | `WORKTREE_PACKAGE_BUILD_DIRS=` (empty) + rebuild fresh: `references/mechanics.md` |
+| verify: build dir "shares files with a sibling worktree" | `worktree-cli repair` re-clones it (left by an older hardlink repair) |
 | Worktrees vanished after `git worktree prune` | path migration: `references/troubleshooting.md` |
 
 ## References
 
 Load on demand; do not reabsorb into this file.
 
-- `references/mechanics.md` -- what repair/break/verify each do internally, all env vars, safety guards, hardlink caveats, workspace-discovery scope.
+- `references/mechanics.md` -- what repair/break/verify each do internally, all env vars, safety guards, why build outputs are cloned, workspace-discovery scope.
 - `references/troubleshooting.md` -- extended walkthroughs: self-reference slots and name collisions, path migration after moving repos, choosing break vs repair.

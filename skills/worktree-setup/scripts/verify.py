@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Verify a worktree's dev environment: workspace symlinks, package entry points,
-no stale absolute symlinks. See SKILL.md for env vars and the full check list.
+build dirs independent of siblings, no stale absolute symlinks. See SKILL.md for
+env vars and the full check list.
 Defaults to the cwd worktree and primary source; --from selects a registered
 source worktree. WORKTREE_VERIFY_ALL=1 sweeps all. Exit 0 ok, 1 fail.
 """
@@ -16,8 +17,10 @@ from pathlib import Path
 from _common import (
     CWD,
     collect_export_strings,
+    directory_shares_files,
     disk_pressure_msg,
     env_flag,
+    find_mirrored_dirs,
     find_node_modules,
     git_worktrees,
     iter_tree,
@@ -129,6 +132,19 @@ def check_package_entry_points(
     return findings
 
 
+def check_shared_build_dirs(wt: Path, siblings: list[Path]) -> list[Finding]:
+    return [
+        (
+            "error",
+            f"{directory.relative_to(wt)} shares files with a sibling worktree; "
+            "a rebuild here would overwrite the sibling's copy (rerun repair to "
+            "clone it)",
+        )
+        for directory in find_mirrored_dirs(wt)
+        if directory_shares_files(siblings, wt, directory)
+    ]
+
+
 def find_stale_absolute_symlinks(
     scan_root: Path, allowed_roots: list[str]
 ) -> Iterator[tuple[Path, str]]:
@@ -169,21 +185,24 @@ def run_smoke(wt: Path) -> tuple[bool, str]:
 # ============================================================================
 
 
-def verify_worktree(source_repo: Path, wt: Path) -> bool:
+def verify_worktree(source_repo: Path, wt: Path, siblings: list[Path]) -> bool:
     pkgs = workspaces(wt)
     link_findings = check_workspace_links(wt, pkgs)
     entry_findings = check_package_entry_points(source_repo, wt, pkgs)
+    shared_findings = check_shared_build_dirs(wt, siblings)
     stale = list(find_stale_absolute_symlinks(wt, [str(wt), str(source_repo)]))
     smoke_ok, smoke_msg = run_smoke(wt)
 
-    ok = not link_findings and not entry_findings and not stale and smoke_ok
+    findings = link_findings + entry_findings + shared_findings
+    ok = not findings and not stale and smoke_ok
     print(
         f"{wt.name}: {'ok' if ok else 'FAIL'} "
         f"(workspace_findings={len(link_findings)}, "
         f"entry_findings={len(entry_findings)}, "
+        f"shared_build_dirs={len(shared_findings)}, "
         f"stale_abs={len(stale)}, smoke={smoke_msg})"
     )
-    for severity, msg in link_findings + entry_findings:
+    for severity, msg in findings:
         print(f"  {severity}: {msg}")
     for path, target in stale:
         try:
@@ -208,7 +227,12 @@ def main() -> int:
     targets = [target for target in targets if target != source]
     if msg := disk_pressure_msg(source):
         print(f"warning: {msg}")
-    fail = sum(1 for wt in targets if not verify_worktree(source, wt))
+    worktrees = [primary, *others]
+    fail = sum(
+        1
+        for wt in targets
+        if not verify_worktree(source, wt, [p for p in worktrees if p != wt])
+    )
     return 1 if fail else 0
 
 
