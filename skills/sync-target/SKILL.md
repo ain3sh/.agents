@@ -1,12 +1,13 @@
 ---
 name: sync-target
-description: "Use when asked to sync, merge, rebase, or update a PR branch from its base, or to resolve conflicts, while preserving the review shape."
+description: "Use when asked to sync, merge, rebase, update, or revive a PR branch from its base, or to resolve conflicts, while preserving the review shape."
 argument-hint: "[--no-push] [--full-scope] [<target-branch>]"
 ---
 
 # Sync Target
 
-Sync the target without changing what the PR claims to contain.
+Sync the target without changing what the PR claims to contain, and never
+sync a PR the base has already absorbed or reshaped.
 
 Load skills: **pr-context**, **quality-ship**, **git-advanced**. If the branch
 has a stacked parent or descendants, load **stack-cli** to inspect propagation;
@@ -18,6 +19,7 @@ for missing dependency/build-artifact failures.
 | Goal | Action |
 |---|---|
 | Resolve the target | Explicit argument → open PR base → remote default; never hardcode `dev` or `main`. |
+| Judge disposition | Run the tripwires in `references/procedure.md` → **Judge disposition**. None fired: sync. One fired: rule SYNC, REWORK, or CLOSE before changing history. |
 | Preserve local work | Follow **Freeze the operation** in `references/procedure.md`; preserve only what blocks the sync and own restoration through verification. |
 | Judge stack propagation | Run `stack status` and `stack sync <branch>`; either propagate with `stack-cli` or intentionally sync only the active branch and defer descendants. |
 | Freeze the intended PR shape | Record the expected branch-only count, ordered commit identities, and diff before changing history. |
@@ -67,6 +69,11 @@ ambiguous. Otherwise proceed with the authorized sync without reconfirming it.
    explicit scope; summarize the expansion and ask first.
 8. Never leave deferred descendants implicitly stale. Name them, distrust their
    CI/diffs, and state the event that will trigger `stack sync --apply`.
+9. Never open a disposition without a tripwire. Age, size, and distance behind
+   the base are not evidence; judging every sync stalls the routine ones.
+10. Never push a REWORK or act on a CLOSE without the user, and never rule
+    either without citing the base commit or PR that reshaped or absorbed the
+    change.
 
 ## Failure map
 
@@ -78,11 +85,13 @@ ambiguous. Otherwise proceed with the authorized sync without reconfirming it.
 | `origin/$TARGET..HEAD` shows merged predecessors or old sync commits | Stop; rebuild from the intended commit list rather than merging again. |
 | Final tree is correct but commit count is larger than planned | Treat as failure; restore/rebuild before push. |
 | Clean merge reports no conflict markers | Still audit the overlap set in `references/procedure.md`. |
+| A tripwire fired: the base moved, deleted, or already carries the PR's change; a conflict is a genuine collision; or the user asks whether the PR still belongs | `references/procedure.md` → **Judge disposition** before freezing or pushing. |
 
 ## References
 
 - Load on demand; do not reabsorb into this file:
-  `references/procedure.md` — freeze packet, merge and replay commands,
-  conflict/overlap audit, validation scope, topology gate, push, and report.
+  `references/procedure.md` — disposition tripwires and verdicts, freeze
+  packet, merge and replay commands, conflict/overlap audit, validation scope,
+  topology gate, push, and report.
 - Load on demand; do not reabsorb into this file:
   `../stack-cli/SKILL.md` — stack-wide inspection, repair, retargeting, and undo.

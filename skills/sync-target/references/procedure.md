@@ -1,6 +1,50 @@
 # Sync Target Procedure
 
-## 0. Judge stack propagation
+## 0. Judge disposition
+
+A clean sync proves Git can merge the branch, not that the PR still belongs.
+Run the tripwires in bash with Detect's `TARGET_HEAD` and `FORK`.
+`git merge-tree` previews the sync without touching the worktree; it leaves
+only loose objects that `git gc` reclaims.
+
+```bash
+PR_FILES=$(git diff --name-only "$FORK" HEAD | sort)
+MOVED=$(git diff --name-status --diff-filter=DR "$FORK" "$TARGET_HEAD" | cut -f2 | sort | comm -12 - <(printf '%s\n' "$PR_FILES"))
+if SYNCED=$(git merge-tree --write-tree "$TARGET_HEAD" HEAD); then
+  ABSORBED=$(git diff --name-only "$TARGET_HEAD" "$SYNCED" | sort | comm -13 - <(printf '%s\n' "$PR_FILES") | comm -23 - <(printf '%s\n' "$MOVED"))
+else
+  ABSORBED="unknown: the sync conflicts; classify the conflicts (§4) first"
+fi
+printf 'moved:\n%s\nabsorbed:\n%s\n' "$MOVED" "$ABSORBED"
+```
+
+| Tripwire | Evidence |
+|---|---|
+| Moved | `moved` lists a file the PR changes that the base deleted or renamed. |
+| Absorbed | `absorbed` lists a file whose change the base already carries, so the synced PR would no longer change it. This catches cherry-picks and squashes alike. |
+| Collision | A conflict or overlap resolution classifies as a genuine collision (§4, §5). |
+| Asked | The user asks whether the PR still belongs: "modernize", "revive", "is this still needed". |
+
+No tripwire: continue with the next step without comment.
+
+When one fires, read the base commits behind it
+(`git log --oneline "$FORK..$TARGET_HEAD" -- <paths>`) and the merged PRs
+that carry them (`gh pr list --state merged --search <sha>`). Restate the
+PR's smallest coherent goal from its title, body, and diff, then answer:
+
+- Did the base already solve the same user-facing problem?
+- Did the APIs, types, schemas, or boundaries the PR builds on change?
+- Would landing it restore removed behavior or create a second way to do one
+  job?
+- Is the remaining benefit still worth its maintenance cost?
+
+| Verdict | When | Move |
+|---|---|---|
+| SYNC | The goal is still useful and the shape still right. | Continue with the next step; report the tripwire and why it did not change the call. |
+| REWORK | The goal is still useful, but syncing would preserve the wrong shape. | Stop before changing history. Report the smallest credible rewrite; proceed only once the user approves it. |
+| CLOSE | The base absorbed, superseded, or invalidated the PR. Every PR file listed under `absorbed` is sufficient on its own. | Stop. Cite the commit or PR that did it. Never close the PR without the user. |
+
+## 1. Judge stack propagation
 
 ```bash
 CURRENT=$(git rev-parse --abbrev-ref HEAD)
@@ -22,7 +66,7 @@ branch only.
 If `stack` is unavailable, surface the missing inspection primitive rather
 than guessing about stack scope.
 
-## 1. Freeze the operation
+## 2. Freeze the operation
 
 Inspect the index, working tree, and untracked paths before changing history.
 Leave unrelated work untouched when the chosen operation can safely preserve
@@ -91,7 +135,7 @@ The backup is the committed-history recovery source. Do not use
 `git reset --hard`, checkout, or rebase until it exists and any local work the
 operation would disturb has been preserved.
 
-## 2. Choose one mode
+## 3. Choose one mode
 
 ### Merge mode
 
@@ -138,7 +182,7 @@ git switch "$CURRENT"
 git branch -D "$REPLAY"
 ```
 
-## 3. Resolve conflicts
+## 4. Resolve conflicts
 
 Capture conflict paths before staging:
 
@@ -166,10 +210,11 @@ git cherry-pick --continue  # replay via cherry-pick
 git rebase --continue       # replay via rebase
 ```
 
-Abort rather than improvising if a conflict cannot be resolved inside the
-recorded PR scope.
+A genuine collision is a disposition tripwire: abort the operation
+(`git merge --abort`, `git cherry-pick --abort`, or `git rebase --abort`) and
+return to **Judge disposition** rather than improvising.
 
-## 4. Audit silent auto-resolutions
+## 5. Audit silent auto-resolutions
 
 Conflict markers are not the whole risk. Compute files both sides changed from
 the pre-operation fork:
@@ -188,9 +233,10 @@ hunks and check for:
 - branch logic silently dropped by an auto-resolution
 - upstream behavior silently reverted by the replay
 
-Any semantic repair here is Low confidence and holds the push.
+Any semantic repair here is Low confidence and holds the push; one that
+contradicts the PR's intent is a genuine collision (§4).
 
-## 5. Prove the review shape
+## 6. Prove the review shape
 
 First verify the result's branch-only series:
 
@@ -216,7 +262,7 @@ diff against the recorded source SHAs. If the target did not move, also require
 `git diff --exit-code "$LOCAL_HEAD" HEAD`. If it moved, account for every tree
 delta; do not force equality by restoring old files wholesale.
 
-## 6. Validate the combined result
+## 7. Validate the combined result
 
 Targeted scope is `$CONFLICTS + $OVERLAP`: every co-touched file, not the whole
 target update. Run **quality-ship** with:
@@ -239,7 +285,7 @@ Restore any preserved local work using the recorded stash before the push gate.
 Re-run affected checks if restoration changes validated paths, distinguishing
 the committed sync result from the user's uncommitted changes.
 
-## 7. Push gate
+## 8. Push gate
 
 Hold if any:
 
@@ -268,11 +314,12 @@ git push \
 If `REMOTE_HEAD` was empty, confirm the remote ref still does not exist before
 creating it. Never replace an exact lease with bare `--force`.
 
-## 8. Verify and report
+## 9. Verify and report
 
 Verify the remote SHA, PR base/head, branch-only commit count, mergeability, and
 CI start. Report:
 
+- tripwires fired and the disposition, or none
 - target SHA and operation mode
 - preserved expected commit series
 - conflict and overlap paths
