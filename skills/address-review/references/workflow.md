@@ -15,10 +15,9 @@ gh api "repos/$REPO/pulls/<number>/comments" | jq '.[] | {id, path, line, body, 
 # Review summary bodies (REQUEST_CHANGES / APPROVE / COMMENT with body).
 gh api "repos/$REPO/pulls/<number>/reviews" | jq '.[] | {id, state, body, user: .user.login}'
 
-# Conversation comments -- drop bots; bot review threads above stay (their findings can be actionable).
-gh api "repos/$REPO/issues/<number>/comments" \
-  | jq '.[] | select(.user.type != "Bot" and (.user.login | endswith("[bot]") | not))
-        | {id, body, user: .user.login}'
+# Conversation comments, bots included: a bot's finding can be actionable. Skip status
+# reports (deploy previews, CI and scan summaries); they need no reply.
+gh api "repos/$REPO/issues/<number>/comments" | jq '.[] | {id, body, user: .user.login}'
 
 # Fetch thread node IDs upfront -- REST API cannot resolve threads.
 gh api graphql -f query='
@@ -150,7 +149,7 @@ Follow the **quality-ship** skill for quality checks, commit, and push:
 
 ## 7. Respond to Threads
 
-Send the row's step-4 reply draft verbatim; append `Fixed in <sha>.` only when a commit landed against it. Do not improvise reply text at API time -- if a row has no draft, return to step 4.
+Send the row's step-4 reply draft verbatim; append `Fixed in <sha>.` only when a commit landed against it. Do not improvise reply text at API time -- if a row has no draft, return to step 4. End every reply with `<!-- agent-reply -->`: the agent often posts from the user's own GitHub account, and the marker is how **babysit**'s watcher tells its replies from the user's comments.
 
 Pick endpoint by surface.
 
@@ -161,6 +160,8 @@ gh api "repos/$REPO/pulls/<n>/comments" --method POST \
 <reply draft #N>
 
 Fixed in <sha>.
+
+<!-- agent-reply -->
 EOF
 )" -F in_reply_to=<comment-id>
 ```
@@ -174,6 +175,8 @@ gh api "repos/$REPO/issues/<n>/comments" --method POST \
 <reply draft #N>
 
 Fixed in <sha>.
+
+<!-- agent-reply -->
 EOF
 )"
 ```

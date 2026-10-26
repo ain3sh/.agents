@@ -38,7 +38,7 @@ human-only (`disable-model-invocation: true`).
 
 | Skill | Owns |
 |---|---|
-| **`sync-target`** | Sync one active PR branch without changing its review shape; proceed on clear authorization, preserve/restore blocking local work, inspect stack impact, and merge ordinary branches or replay rewritten/split branches safely. |
+| **`sync-target`** | Sync one active PR branch without changing its review shape; proceed on clear authorization, preserve/restore blocking local work, inspect stack impact, rule and carry out SYNC/REWORK/CLOSE when the base moved, absorbed, or collided with the PR, and merge ordinary branches or replay rewritten/split branches safely. |
 | **`stack-cli`** | Squash-safe stack lifecycle: preview propagation, judge whether descendants need freshness now, apply root/descendant repair and retargeting, merge bottom-up, or undo mutations. |
 | **`git-advanced`** | Rebase, cherry-pick, commit surgery, reflog recovery, and other history-editing primitives. |
 
