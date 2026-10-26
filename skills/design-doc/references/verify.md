@@ -79,7 +79,8 @@ lost. The only sanctioned growth is a figure; prose height still shrinks, and
 - [ ] The page follows the chosen mode; no empty RFC sections or vestigial decision cards in a memo.
 - [ ] The headline states the answer, the evidence, and the caveat; findings each link to their evidence and one is `.limit`; no metric value repeats as a finding claim.
 - [ ] A displaced system has its disposition table.
-- [ ] An RFC compares every credible rival in Alternatives; the history grep in [structure](structure.md#the-final-design-not-the-prs-history) leaves no narration of the PR.
+- [ ] The Proposal walks one input through the shipped design end to end, in runtime order and present tense.
+- [ ] An RFC compares the status quo and every credible rival in Alternatives; Evidence rows are head to head on the same frame; the history grep in [structure](structure.md#the-final-design-not-the-prs-history) leaves no narration of the PR.
 - [ ] Decisions are one table that passed the smallest-vocabulary audit; at most two promoted cards, each with all four `dt` slots.
 - [ ] Fig 1 shows the mechanism moving under the headline, read from a motion capture.
 - [ ] Open questions are ordered by leverage.

@@ -8,7 +8,7 @@ roadmap.
 
 | Mode | Spine |
 |---|---|
-| RFC / proposal | headline → context (primer first) → goals / non-goals → proposal → alternatives → decision cards → tradeoffs → evidence → rollout → open questions |
+| RFC / proposal | headline → Fig 1 → context (primer first) → goals / non-goals → proposal (how it works) → alternatives → decisions → evidence → rollout → open questions |
 | Technical memo / internal sell | metrics → headline → findings → demand → structural constraint → evidence → shipped artifact → limits → deployment. Charts and tables, not decision-card boilerplate |
 | Sync prep | decision needed → evidence → options → recommendation → unresolved questions |
 | Report / retrospective | the markdown source's own order, rendered by `build-md.js`; curate a front with `--front` ([report mode](report-mode.md)) |
@@ -17,10 +17,11 @@ Name five things before writing:
 
 - **The single structural claim**: one sentence, ≤25 words. It becomes the
   `.lede` and the bold sentence of the `.headline`.
-- **The 3–8 proof points or decisions**: decision cards in RFC mode; findings,
+- **The 3–8 proof points or decisions**: decision-table rows in RFC mode; findings,
   comparisons, or deployment implications in memo mode.
-- **The rival designs**: each credible alternative and the goal it loses on.
-  They become the Alternatives section and the `card-negatives` grid.
+- **The rival designs**: the status quo plus each credible alternative, and
+  the goal each loses on. They become the Alternatives section and the
+  `card-lost` grid.
 - **The non-goals or current limits**: short, and one of them becomes the
   `.limit` finding.
 - **The machine**: what Fig 1 shows moving, in one sentence ("a drum of
@@ -85,30 +86,41 @@ and never leave TODO markers.
    components in `code`), the precise view (sequence or state, with
    `data-motion="walk"`) when 3+ actors or states are involved, the decision
    logic as a table or code, and the disposition table when an old system is
-   displaced. Prose only for what no view or table can carry.
+   displaced. Then **how it works**: one concrete input traced through the
+   shipped design end to end, as `ol.steps` numbered to match the walk
+   figure's arrows, each step naming the component (`code`) that acts and the
+   state it leaves behind. Present tense, the order things happen at runtime,
+   never the order they were built. Prose only for what no view or table can
+   carry.
 8. **Alternatives**: a `.lead` naming the question every design must answer
    and each rival's answer; one comparison table (`table.stack`, one row per
-   whole design, the chosen design last as `tr.pri`, the goals as columns);
-   then one compact card per rival (`.findings.three.alts > .finding#alt-x`,
-   rows: Loses on / Adds / We keep), never paragraphs. State each rival as its
+   whole design, the status quo first when one exists, the chosen design last
+   as `tr.pri`, the goals as columns); then one compact card per rival
+   (`.findings.three.alts > .finding#alt-x`, rows: Loses on / Adds / We keep),
+   never paragraphs. State each rival as its
    strongest version; "loses on" needs a number or a structural cost against a
-   stated goal. Skip only
+   stated goal, linked to its Evidence row when one measured it. Skip only
    when no credible rival exists, and say so in the proposal.
 9. **Decisions**: one `table.stack.decisions` (# · Decision · Why · Costs),
    each cell ≤ ~20 words, `tr id="dN"` for links. No intro paragraph. Promote
    at most two decisions a reviewer will contest to a full `article.decision`
    with all four `dt` slots. A whole-design rival already has an alternatives
-   card: link it, do not re-list its costs.
-10. **Tradeoffs**: a table or short prose, where the decisions need it.
-11. **Evidence**: `.findings` (each links to the table or chart that proves it)
-    above the tables, charts, and bars. See [components](components.md#progressive-disclosure).
-12. **Rollout**: `.stages` with status pills, a `.timeline` (flag posture,
+   card: link it, do not re-list its costs. Tradeoffs live in the Costs
+   column and the alternatives table; there is no separate tradeoffs section.
+10. **Evidence**: head to head. Every finding, table row, and bar compares the
+    shipped design (`tr.pri`, `.bar-row.pri`) with the status quo or a rival on
+    the same measure and frame. `.findings` (each links to the table or chart
+    that proves it) sit above the tables, charts, and bars. Tests passing,
+    bugs caught, and review sign-off are PR history, not evidence. See
+    [components](components.md#progressive-disclosure).
+11. **Rollout**: `.stages` with status pills, a `.timeline` (flag posture,
     telemetry, the exact rollback), code with the changed line highlighted.
-13. **Open questions**: `ol.numbered`, ordered by how much each answer would
+12. **Open questions**: `ol.numbered`, ordered by how much each answer would
     change the design, highest first.
-14. **Optional `.chapters > details.chap`**: raw tables, logs, and notes a
-    reviewer may want but should not scroll past, one collapsed chapter each.
-15. **`footer.doc`**: provenance only (PR · ticket · HEAD sha · source file ·
+13. **Optional `.chapters > details.chap`**: raw tables, data, and
+    measurement notes a reviewer may want but should not scroll past, one
+    collapsed chapter each. Never a dev log or review rounds.
+14. **`footer.doc`**: provenance only (PR · ticket · HEAD sha · source file ·
     build date). No colophon, reviewer roster, or typographic credits; they read
     as flourish and get cut in review.
 
@@ -156,10 +168,13 @@ counts.
   the mechanism and its counterfactual: "without the re-arm, the loop did not
   fire; each probe gap was the pause plus one interval." Never "the first live
   test caught a bug, fixed in `7f6890e`."
+- **Describe the design in the present tense, as it runs.** Past tense about
+  the code ("we added a guard", "was changed to") is history; rewrite it as
+  what the guard does and the case it covers.
 - **Commit shas appear once**, in `footer.doc`, as provenance for cited code.
 - **Grep before sharing**, then rewrite or cut every hit that narrates rather
   than argues:
-  `rg -n -i 'caught|found by|found live|bug|fixed in|revision|before merge|round table|reversed' <doc>.html`
+  `rg -n -i 'caught|found by|found live|bug|fixed in|revision|before merge|round table|reversed|initially|originally|turned out' <doc>.html`
 
 ## Prose budget
 

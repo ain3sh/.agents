@@ -686,6 +686,12 @@ Then strip the HTML to text and read all of it, including the collapsed sections
       </svg>
       <figcaption>TODO the finding the diagram shows, in one sentence.</figcaption>
     </figure>
+    <!-- How it works: one concrete input through the shipped design, numbered to match the arrows above.
+         Present tense, runtime order; each step names the component that acts and the state it leaves. -->
+    <h3>How one TODO input moves through it</h3>
+    <ol class="steps">
+      <li><code>TODO component</code> TODO what it does, and the state it leaves behind.</li>
+    </ol>
     <!-- When the proposal displaces a system: one row per function it performs. -->
     <h3>What happens to each function of TODO-old-system</h3>
     <div class="table-wrap rv">
@@ -703,11 +709,12 @@ Then strip the HTML to text and read all of it, including the collapsed sections
     <div class="slabel">04 / Alternatives</div>
     <h2>TODO the rival designs, and where each one loses</h2>
     <p class="lead">TODO the one or two questions every design must answer, and each rival's answer in a clause.</p>
-    <!-- One row per whole design, the chosen one last as tr.pri; the columns are the goals they are judged on. -->
+    <!-- One row per whole design: the status quo first, the chosen one last as tr.pri; the columns are the goals they are judged on. -->
     <div class="table-wrap rv" id="options">
       <table class="stack">
         <thead><tr><th>Design</th><th>TODO goal</th><th>TODO goal</th><th>TODO cost</th></tr></thead>
         <tbody>
+          <tr><td class="key">Today · TODO status quo</td><td>TODO</td><td>TODO</td><td>TODO</td></tr>
           <tr><td class="key">A · TODO</td><td>TODO</td><td>TODO</td><td>TODO</td></tr>
           <tr class="pri"><td class="key">TODO · This design</td><td>TODO</td><td>TODO</td><td>TODO</td></tr>
         </tbody>
@@ -717,7 +724,9 @@ Then strip the HTML to text and read all of it, including the collapsed sections
     <div class="findings three alts">
       <div class="finding rv" id="alt-a"><div class="fnum">A</div><h3>TODO the rival in a few words</h3>
         <div class="rows"><div class="r"><span class="k">Loses on</span><span class="v">TODO its cost against a stated goal</span></div><div class="r"><span class="k">Adds</span><span class="v">TODO new surface</span></div><div class="r"><span class="k">We keep</span><span class="v">TODO the part the chosen design reuses</span></div></div></div>
-    </div>  </section>
+    </div>
+  </section>
+
   <section class="block" id="decisions">
     <div class="slabel">05 / Decisions</div>
     <h2>TODO the choices worth defending</h2>
@@ -730,12 +739,15 @@ Then strip the HTML to text and read all of it, including the collapsed sections
           <tr id="d1"><td class="key">D1</td><td><strong>TODO the choice</strong>, in a clause</td><td>TODO the structural reason it beats the rivals</td><td>TODO what it commits to or rules out</td></tr>
         </tbody>
       </table>
-    </div>  </section>
+    </div>
+  </section>
 
   <section class="block" id="evidence">
     <div class="slabel">06 / Evidence</div>
     <h2>TODO what the measurements show</h2>
-    <!-- Findings: a claim, its number, one click to the evidence. One .limit card carries the honest limit. -->
+    <!-- Head to head: every finding, row, and bar sets the shipped design (.pri) against the status quo or a rival
+         on the same measure and frame. Tests passing and bugs caught are PR history, not evidence.
+         Findings: a claim, its number, one click to the evidence. One .limit card carries the honest limit. -->
     <div class="findings">
       <a class="finding rv" href="#t-results"><div class="fnum">01</div><h3>TODO claim a reader would repeat.</h3><p>TODO the number behind it, verbatim, with its frame.</p>
         <div class="rows"><div class="r"><span class="k">TODO metric</span><span class="v"><span class="was">TODO before</span><span class="to">TODO after</span></span></div></div>
@@ -805,7 +817,7 @@ Then strip the HTML to text and read all of it, including the collapsed sections
     <!-- Optional: everything a reviewer may want but should not have to scroll past, one collapsed chapter each. -->
     <div class="chapters">
       <details class="chap" id="log-1">
-        <summary><span class="chn">Log</span><span class="cht">TODO every round, table, and raw note</span><span class="chm">TODO 4 min · 2 tables</span></summary>
+        <summary><span class="chn">Data</span><span class="cht">TODO raw tables and measurement notes</span><span class="chm">TODO 4 min · 2 tables</span></summary>
         <div class="chb"><p>TODO verbatim detail.</p></div>
       </details>
     </div>

@@ -173,7 +173,7 @@ Captures run with reduced motion, so motion needs its own check
 | `.callout` (`.limit`) | Note or warning | Sparingly; each one devalues the rest |
 | `.note` (`.src`) | Small aside; `.src` adds a left rule and a "Source note" label | `.src`: the source's own caveat in a report chapter; never write the label text |
 | `ol.numbered` (`.q`, `.a`) | Numbered questions | Open questions, by leverage |
-| `ol.steps`, `ul.bullets` | Plain lists | Body prose |
+| `ol.steps`, `ul.bullets` | Plain lists | Body prose; `ol.steps` carries the Proposal's how-it-works walk |
 | `.nw` | Keeps a short run on one line (`white-space: nowrap`) | A value and its unit, an id, or a range that must not break, such as `−30.7%` or `E34–E38`; never a whole phrase |
 | `.report-bar` (`.report-toggle`) + `.tiles > a.tile` (`.tile-n` > `.tile-s` + `.tile-h`, `.tile-t`, `.tile-m`) | Full report header with Expand all, and its chapter index | Report mode, built by `build-md.js --front` |
 | `.chapters > details.chap` (`summary`: `.chn`, `.cht`, `.chm`; `.chb` body) | Collapsed chapters at page width; an empty `.chn` draws a neutral dot; with a claim title, `.chn` also carries the source heading | End of `main`; the full record (rewritten bodies via `--log-dir`) |

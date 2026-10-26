@@ -54,7 +54,7 @@ output.
 2. **What ships** (`card-ships`): one row per change: id, what it does, its
    measured effect, destination PR, plus a dashed note for the measured option
    that was not selected.
-3. **What lost** (`card-negatives`): a 3×2 grid. In an RFC, the rejected
+3. **What lost** (`card-lost`): a 3×2 grid. In an RFC, the rejected
    designs (name, the number it loses on, why in one sentence, the chosen
    design's number on the same measure) and the limits the chosen design keeps;
    in a retro, the arms that failed, with block ids. Never bugs fixed while

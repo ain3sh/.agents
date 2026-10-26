@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 A design doc here is one self-contained, dark HTML page (Geist via Google Fonts, inline styles, a few lines of vanilla JS) that reads like the Factory product: the bottom line first, claims linked to their evidence, and the full record one click away instead of in the reader's scroll. The look exists to get the page read; the structure exists to make the argument legible.
 
-Shape: sticky top bar with scroll-spy nav → hero (eyebrow, title, typed lede, metrics) → **headline** (the answer + its caveat) → **Fig 1**, the mechanism moving → **findings** (claim cards that link to evidence) → the argument's sections → a collapsed **full log** → provenance footer. Prints to A4 on paper colours. Load **show-me** for any visual explanation and **animate-process** for an interactive mechanism figure; this skill owns the argument, scaffold, verification, and publishing.
+Shape: sticky top bar with scroll-spy nav → hero (eyebrow, title, typed lede, metrics) → **headline** (the answer + its caveat) → **Fig 1**, the mechanism moving → **findings** (claim cards that link to evidence) → the argument's sections → a collapsed **full record** → provenance footer. Prints to A4 on paper colours. Load **show-me** for any visual explanation and **animate-process** for an interactive mechanism figure; this skill owns the argument, scaffold, verification, and publishing.
 
 ## Act
 
@@ -39,8 +39,8 @@ Before styling, look for repo canon: `rg --files -g 'DESIGN.md' -g '*brand*'`. I
 ## Rules
 
 1. **Numbers survive verbatim.** Every number, id, verdict, and hedge in the page, metrics, thumbnail, and cards matches its source character for character. Never re-derive or re-round; in report mode prose passes through unchanged too. A rounded number in a card is how a caveat escapes.
-2. **Show it moving, then say it.** The mechanism is an animated figure under the headline (**animate-process**, or a show-me SVG with `data-motion`), decisions are one table, and no stretch of text runs past `prose.js`'s cap before the next visual. One RFC shipped a 2029-word run of text, nine four-slot decision cards, and one static diagram; the owner asked "where are my pretty animations?" and called 40% of it useless ([structure](references/structure.md#prose-budget)).
-3. **Argue the final design, never the PR's history.** Show how it works, the alternatives and where each loses, its costs and limits. Bugs caught while building, review rounds, and fix shas belong in the PR body; a dev-time measurement stays only as evidence for a decision ([structure](references/structure.md#the-final-design-not-the-prs-history)). Handed a bug log, readers review your process instead of the design.
+2. **Show it moving, then say it.** The mechanism is an animated figure under the headline (**animate-process**, or a show-me SVG with `data-motion`), decisions are one table, and no stretch of text runs past `prose.js`'s cap before the next visual. A wall of text around one static diagram reads as a paper and gets skimmed ([structure](references/structure.md#prose-budget)).
+3. **Argue the final design against its rivals, never the PR's history.** Walk the shipped version's process end to end, set it beside the status quo and each credible rival on the same goals, show where each loses, then state its own costs and limits. Bugs caught while building, review rounds, and fix shas belong in the PR body; a dev-time measurement stays only as evidence for a decision ([structure](references/structure.md#the-final-design-not-the-prs-history)). Handed a bug log, readers review your process instead of the design.
 4. **Voice before polish.** Load **voice** for every sentence you write (lede, headline, findings, captions, card headings). One inflated claim loses the most careful reader.
 5. **Never cite an unverified constant, path, or signature.** `rg` it first; when the PR text disagrees with the code, the code wins and you flag the gap.
 6. **Never write a second stylesheet or start from scratch.** `build-md.js` reads the template's styles at build time and `cards.html` mirrors its tokens; a fork drifts on the next template fix.
@@ -62,6 +62,7 @@ Before styling, look for repo canon: `rg --files -g 'DESIGN.md' -g '*brand*'`. I
 | Reviewer says "outline the key callouts" / "make it punchier" | Restructure into headline + findings, not shorter sentences: [components](references/components.md#progressive-disclosure) |
 | "Too much text", "where are the animations", reads like a paper | `prose.js`; decisions → one table, rivals → row cards, primer → terms table, corrections replace sentences; commission Fig 1: [structure](references/structure.md#prose-budget) |
 | Reviewer asks why bugs or PR history are in the doc | Cut the narration, keep decision evidence as mechanism + counterfactual, compare rivals in Alternatives: [structure](references/structure.md#the-final-design-not-the-prs-history) |
+| Reviewer asks "why not X?" | Add X to Alternatives as its strongest version, with the goal it loses on and the number or structural cost behind it: [structure](references/structure.md#fill-the-template-top-down) step 8 |
 | "Unclear what happens to the old system" | Add the disposition table: [structure](references/structure.md#disposition-table) |
 | Gist preview cuts off before the footer | File over ~1 MB truncated by the gist API: [publishing](references/publishing.md#size-budget-first), or deploy to conjure |
 | Shared link shows no preview card | Expected for both gistpreview and conjure (SSO); post the thumbnail or cards: [publishing](references/publishing.md#no-link-previews) |
@@ -72,7 +73,7 @@ Before styling, look for repo canon: `rg --files -g 'DESIGN.md' -g '*brand*'`. I
 Load on demand; do not reabsorb into this file.
 
 - `references/structure.md`: modes and their spines, the source-of-truth pass, fill order, zero-context rules, disposition table, insertion knock-ons, content passes, decision-card and "punchier" traps, citing code.
-- `references/components.md`: visual system and type scale, progressive disclosure (headline → findings → story → full log), metrics and charts, motion, the component inventory.
+- `references/components.md`: visual system and type scale, progressive disclosure (headline → findings → story → full record), metrics and charts, motion, the component inventory.
 - `references/verify.md`: the sweep loop, which sweep when, bugs only a capture shows, re-verification, the pre-share checklist.
 - `references/report-mode.md`: rendering markdown sources with `build-md.js`, `--front` curation, changes-and-impact tables.
 - `references/share-images.md`: hero thumbnail contract and Slack card archetypes.
