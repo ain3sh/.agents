@@ -21,14 +21,14 @@ Resolve the PR and `REPO` from the supplied ref or current review context via **
 | `F<id>`, current tier, status | reconcile the dossier with the full event history for that id |
 | user decision | latest explicit approval, drop, rewording, retier, scope, or verdict choice |
 | prior thread | comment id when an earlier pass already posted it |
-| outgoing body | inline comment, grouped comment, or verdict passage carrying it; otherwise the exclusion reason |
+| outgoing body | inline comment, grouped comment, thread reply (§5), or verdict passage carrying it; otherwise the exclusion reason |
 
 Reconciliation rules:
 
 - **Live** = `confirmed` and approved at the gate. `killed`, `folded→Fn`, user-dropped, and superseded findings stay out; a well-argued notes entry is not a reason to resurrect one.
 - **Explicit user decisions win.** Apply the latest instruction, including this invocation, over earlier decisions; record new decisions using the existing `gate` / `retier` notes events. Chat memory is not a competing source.
 - **Approved means presented.** The gate approved the findings shown to the user, never `candidate` entries that stayed in the notes. A `confirmed` finding the presentation omitted is a conflict (below), not a bonus post.
-- **Already posted** (`posted` status / thread id) is never sent again. If it still gates, the verdict names it and links the thread.
+- **Already posted** (`posted` status / thread id) is never sent again. If it still gates, the verdict names it and links the thread; if follow-up reclassified it, it gets a thread reply (§5).
 - **Grouping keeps every claim.** One comment may carry several findings; each independent claim and ask survives the merge.
 - **Tier fixes gating, and both are fixed here.** Gating follows the **voice** tier, so changing whether a finding gates means a `retier` at the gate. Never recast a gating finding as optional or fast-follow to soften or shorten.
 - **Stale substance is not reposted as fresh.** A current head (§1) that differs from the dossier's `reviewed_head`, or materially new evidence, sends the finding back through `/review-pr` follow-up for revalidation and re-approval. This step never rewrites substance.
@@ -55,7 +55,7 @@ Otherwise post the prose as a plain comment. Don't downgrade severity because a 
 
 ### Verdict body
 
-The verdict body is the standalone judgment from the **review-pr** skill's `references/workflows/first-pass.md` §6 (disposition + root cause, the view, blockers, headline opinion, evidence woven into the claims it backs) -- **not** a recap of the threads you post; GitHub renders those inline. If the upstream handoff omitted one, draft it against that structure -- don't fall back to "Posted N comments on X, Y, Z."
+The verdict body is the standalone judgment from the **review-pr** skill's `references/workflows/first-pass.md` §6 (disposition, then the Architecture section with its views, then blockers by area, non-gating findings, and unanchored pre-existing defects, with evidence woven into the claims it backs) -- **not** a recap of the threads you post; GitHub renders those inline. If the upstream handoff omitted one, draft it against that structure -- don't fall back to "Posted N comments on X, Y, Z."
 
 It always carries one or more **show-me** views (review-pr's `references/workflows/first-pass.md` §6, "The view"). A drop, retier, or rewording made after the gate only removes or re-marks the view's affected nodes and edges. An upstream verdict with no view is a §2 gap: draw one from the approved ruling and findings and show it in that gap's single `AskUser` before the first write.
 
@@ -128,11 +128,28 @@ Add `--argjson start_line <N>` and emit `start_line:$start_line, start_side:"RIG
 
 #### Format rules
 
-- **Severity prefix always** -- begin `BODY` with `**[critical|warning|opinion|suggestion|nit]**`.
+- **Severity prefix always** -- begin `BODY` with `**[critical|warning|opinion|suggestion|nit]**`; a pre-existing finding adds the marker: `**[warning · pre-existing]**`.
 - **Indent matches the file** -- tabs vs spaces; mismatch commits as-is and breaks formatting.
 - **Backtick collision** -- if the replacement contains triple backticks, escalate the suggestion fence to four (` ````suggestion `).
 - **Empty fence deletes the targeted lines** -- use only when deletion is the recommendation.
 - **Group related findings** into one comment where it helps (each claim and ask retained, per §2); max one suggestion block per comment.
+
+### Replies on prior threads (follow-up passes)
+
+Each prior thread whose follow-up classification (review-pr's `references/workflows/follow-up.md` Lane 1) is new this pass gets one reply stating the outcome and its evidence; a rejected deferral's reply says why the reason doesn't hold. Its resolved state then follows the classification: **resolved**, **superseded**, **no longer applicable**, and **accepted deferral** → resolved; **unresolved** and **partially resolved** → open, reopening a thread the author resolved.
+
+```bash
+jq -n --arg body "$BODY" '{body:$body}' \
+| gh api "repos/$REPO/pulls/<number>/comments/<comment_id>/replies" --method POST --input -
+THREAD_ID=$(gh api graphql -F o="${REPO%/*}" -F r="${REPO#*/}" -F n=<number> -f query='
+query($o:String!,$r:String!,$n:Int!){ repository(owner:$o,name:$r){ pullRequest(number:$n){
+  reviewThreads(first:100){ nodes{ id comments(first:1){ nodes{ databaseId } } } } } } }' \
+  --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[0].databaseId == <comment_id>) | .id')
+gh api graphql -F id="$THREAD_ID" -f query='
+mutation($id:ID!){ resolveReviewThread(input:{threadId:$id}){ thread{ isResolved } } }'
+```
+
+Reopen with `unresolveReviewThread` in the same mutation shape. Read back `isResolved` for every thread you touched.
 
 ### Submit the verdict
 
@@ -149,8 +166,8 @@ REVIEW_ID=$(gh api "repos/$REPO/pulls/<number>/reviews" \
 
 Verify with `publish.md`'s round-trip command, reading `repos/$REPO/pulls/<number>/reviews/$REVIEW_ID`; on any difference, fix it with `PUT` on that review and the same `-F body=@…`. `REVIEW_ID` feeds §6.
 
-The event is the verdict approved at the `/review-pr` gate -- don't recompute it here. Default to `COMMENT` when blockers gate or `APPROVE` otherwise; the number of blockers never changes the event. Use `REQUEST_CHANGES` only when the user explicitly requested that verdict type; never infer it from blocking findings. `APPROVE` with non-gating line comments (`suggestion`/`nit`) is legitimate per review-pr's `references/workflows/first-pass.md` §6.
+The event is the verdict approved at the `/review-pr` gate -- don't recompute it here. Default to `COMMENT` when blockers gate or `APPROVE` otherwise; the number of blockers never changes the event. Use `REQUEST_CHANGES` only when the user explicitly requested that verdict type; never infer it from blocking findings. `APPROVE` with non-gating line comments (`opinion`/`suggestion`/`nit`) is legitimate per review-pr's `references/workflows/first-pass.md` §6.
 
 ## 6. Close the Ledger
 
-After submitting, close the ledger for this pass: append the `post` entry (review id, comment ids → anchors) to `./.agents/review.notes.md` and refresh `./.agents/review.md` per the **review-pr** skill's `references/systems/dossier.md` (replace state sections, mark posted findings with their thread ids, append a history line). Skip only for pasted findings with no upstream review session (no ledger exists).
+After submitting, close the ledger for this pass: append the `post` entry (review id, comment ids → anchors, thread replies and resolved-state changes) to `./.agents/review.notes.md` and refresh `./.agents/review.md` per the **review-pr** skill's `references/systems/dossier.md` (replace state sections, mark posted findings with their thread ids, append a history line). Skip only for pasted findings with no upstream review session (no ledger exists).

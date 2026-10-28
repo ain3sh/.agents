@@ -38,7 +38,8 @@ For each dossier finding, verify the response **at mechanism depth**:
 - did the change land at the owning locus, or move the symptom elsewhere?
 - does the intended invariant now hold? Trace it, don't take the reply's word.
 - where tests were added/changed to close a finding, confirm they fail against the previously reviewed source for the stated reason (not an import/compile error) and pass on the new head — comparisons run on parent-arranged disposable snapshots per `systems/workers.md`, never revert/restore inside the live checkout.
-- classify: **resolved / unresolved / partially resolved / superseded / no longer applicable**.
+- classify: **resolved / unresolved / partially resolved / superseded / no longer applicable / accepted deferral**.
+- a pre-existing finding the author declined in its thread with a reason (whether or not they resolved the thread): judge whether the reason holds for this change (scope, risk, cost of fixing it here). Holds → **accepted deferral**: it stops gating, recorded as a `gate` notes entry with the reason. Doesn't hold → **unresolved**, still gating, with why the reason fails.
 
 An author reply of "fixed" with a commit that doesn't establish the invariant is an unresolved finding — say so plainly.
 
@@ -69,7 +70,7 @@ Build the category ledger, pair, reconcile, and admit third workers exactly per 
 
 Present to the user at the approval gate, sections kept separate (this is the gate presentation; the posted verdict takes first-pass §6's shape):
 
-- prior findings: resolved / unresolved / superseded (with mechanism-depth evidence for contested ones);
+- prior findings: resolved / unresolved / superseded / accepted deferral (with mechanism-depth evidence for contested ones, and the judged reason for each deferral);
 - fresh delta findings;
 - interaction-regression findings;
 - suspicions killed during this pass, including the §5 wave's kills, or the wave's skip reason;

@@ -21,11 +21,11 @@ An edit-and-approval gate always stands between you and publishing (in the revie
 |---|---|---|
 | `critical` | Defect blocking merge: correctness, security, data loss, regression (must fix) | yes |
 | `warning` | Significant defect or near-defect that will burn a future reader (address or defend) | yes |
-| `opinion` | Judgment-grade pushback on design, architecture, craft, or taste. Not a defect claim; a position you hold and want engaged (engage; disagreement is fine, dismissal-by-silence is not) | yes |
+| `opinion` | Judgment-grade pushback on design, architecture, craft, or taste. Not a defect claim; a position you hold and want engaged (engage; disagreement is fine, dismissal-by-silence is not) | no |
 | `suggestion` | Recommended improvement, lighter than `opinion` (consider) | no |
 | `nit` | Cosmetic or pure preference (optional) | no |
 
-**Gating follows tier.** Non-gating is reserved for what truly doesn't matter but would be nice: that is a `suggestion` or `nit`. Anything that matters is `opinion` or above and gates, pre-existing defects included.
+**Gating follows tier.** `critical` and `warning` gate; `opinion`, `suggestion`, and `nit` don't, and each still gets its own thread. A concern that should block merge is a `warning` at least: a core architectural problem is never just an `opinion`. Pre-existing defects follow the same rule.
 
 **Precedent:** on shared, core, or pattern-setting code, a defect's cost includes every copy it seeds, since people and agents imitate what merges. A pattern-level defect there rises one tier, up to `warning` (`critical` stays reserved for its own defects), and the finding names what it would teach.
 
