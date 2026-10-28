@@ -39,10 +39,10 @@ Then audit for primitives that convert that foothold into:
 
 ## Skill root
 
-The skill is installed at the absolute path below; use it verbatim from any cwd. All copy-pasteable snippets in this file assume `$SKILL_DIR` is set.
+The skill is installed at the path below; use it from any cwd. All copy-pasteable snippets in this file assume `$SKILL_DIR` is set.
 
 ```bash
-SKILL_DIR=/home/ain3sh/.agents/skills/lolbin-audit
+SKILL_DIR="$HOME/.agents/skills/lolbin-audit"
 ```
 
 ## Prerequisites
@@ -130,7 +130,7 @@ Drop-in script for a CI step (use `--fail-on high` to fail the pipeline only on 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-SKILL_DIR=/home/ain3sh/.agents/skills/lolbin-audit
+SKILL_DIR="$HOME/.agents/skills/lolbin-audit"
 "$SKILL_DIR/scripts/sudoers-audit.sh"  ./infra --format jsonl --fail-on high
 "$SKILL_DIR/scripts/iac-suid-audit.sh" .       --format jsonl --fail-on high
 "$SKILL_DIR/scripts/image-audit.sh"    "$IMAGE_TAG" --format jsonl --fail-on high
@@ -273,7 +273,7 @@ Use `references/findings-template.md` verbatim for the report skeleton. It encod
 Run all of these from any cwd; they should all succeed silently and leave no `__pycache__` behind:
 
 ```bash
-SKILL_DIR=/home/ain3sh/.agents/skills/lolbin-audit
+SKILL_DIR="$HOME/.agents/skills/lolbin-audit"
 python3 -c "import sys; p='$SKILL_DIR/scripts/lolbin_audit.py'; compile(open(p).read(), p, 'exec')"
 bash -n "$SKILL_DIR"/scripts/*.sh
 "$SKILL_DIR/scripts/gtfo-data-dir.sh" >/dev/null

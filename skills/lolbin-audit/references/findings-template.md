@@ -71,7 +71,7 @@ Assume an attacker with `<foothold: low-priv shell / web RCE / sudo as user X / 
 **Regression check (CI gate)**
 
 ```bash
-SKILL_DIR=/home/ain3sh/.agents/skills/lolbin-audit
+SKILL_DIR="$HOME/.agents/skills/lolbin-audit"
 "$SKILL_DIR/scripts/<script>.sh" <target> --format jsonl --fail-on <severity>
 ```
 
@@ -120,7 +120,7 @@ An attacker who compromises the `deploy` user (e.g. via a CI runner takeover, le
 **Regression check**
 
 ```bash
-SKILL_DIR=/home/ain3sh/.agents/skills/lolbin-audit
+SKILL_DIR="$HOME/.agents/skills/lolbin-audit"
 "$SKILL_DIR/scripts/sudoers-audit.sh" infra/ --format jsonl --fail-on high
 ```
 
