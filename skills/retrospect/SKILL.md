@@ -1,5 +1,5 @@
 ---
-name: retrospective
+name: retrospect
 description: "Use when the user asks to scrub or stranger-review changes before a PR: self-review the aggregate diff for dead weight, drift, slop, and scope creep."
 argument-hint: "[<base-ref>]"
 ---

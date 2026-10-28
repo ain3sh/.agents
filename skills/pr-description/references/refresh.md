@@ -82,7 +82,7 @@ Check the description against both:
 - **Generated-appendix drift** — regenerate machine blocks (`<!-- *_START --> … *_END -->`, the `stack` CLI's `<!-- stack:links:start … :end -->` chain block, semantic-diff `<details>`, embedded snippets, file lists); don't update only the human summary. The stack block is refreshed by `stack sync`, never by hand (conditional-sections.md, Lineage).
 - **Verification gaps** — new code paths with no repro, no regression test, or a stale **Not tested** note.
 
-**Size advisory (non-gating)**: if the full `--stat` shows the PR has outgrown reviewability — mixed concerns, sprawling file count, a diff a reviewer can't hold in their head — surface `split-pr` (decompose) or `retrospective` (scrub).
+**Size advisory (non-gating)**: if the full `--stat` shows the PR has outgrown reviewability — mixed concerns, sprawling file count, a diff a reviewer can't hold in their head — surface `split-pr` (decompose) or `retrospect` (scrub).
 
 Nothing stale and no explicit quality audit → re-stamp the marker and stop.
 Do not rewrite for marginal phrasing.

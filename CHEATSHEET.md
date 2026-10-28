@@ -30,7 +30,7 @@ human-only (`disable-model-invocation: true`).
 | `/explain-diff` | standalone HTML walkthrough with diagrams + interactive quiz | `/explain-diff 123` |
 | `/zoom-out` | broader module and caller context in the project's vocabulary; self-loaded before changing, reviewing, or diagnosing unmapped code (`/implement`, `/review-pr`, root-cause-analysis) | `/zoom-out` |
 | `/implement` | spec-first exploration + planning; waits for approval before coding | `/implement FAC-789` or `/implement "<description>"` |
-| `/retrospective` | stranger-review your own diff for entropy (dead weight / junk / perf / drift / scope) | `/retrospective` |
+| `/retrospect` | stranger-review your own diff for entropy (dead weight / junk / perf / drift / scope) | `/retrospect` |
 | `/update-skill` | load harness-optimization (+ RCA/zoom-out/single-canon/patch-coherence as needed) → reflect → update skill → critique ×2 | `/update-skill linear-cli` |
 | `/split-pr` | split long branch into stacked or independent PRs via cherry-pick | `/split-pr feat/big-branch` |
 
@@ -79,7 +79,7 @@ droids land in the same directory and are gitignored. Staffing policy is the
 |---|---|---|
 | `rtk` | `curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh \| sh` | `hooks/pre_tool_use/rtk_rewrite.py` — transparent `Execute` rewriter. Per-surface toggles in `configs/droid.toml`. |
 | check runner + guard | built-in (`scripts/run-check`, `hooks/pre_tool_use/check_guard.py`) | One no-shell grammar: `run-check <label> [--cwd ...] [--env ...] [--exclusive] -- <argv...>`. The Python runner applies the nearest `.nvmrc` through NVM, forwards cancellation signals, and keeps 50 logs. `--exclusive` queues heavy checks across sessions/worktrees; serialize child task/worker fan-out too. The guard denies recognized raw validators and composition around the canonical runner. Toggle/`tools` vocabulary in `configs/droid.toml`. |
-| `slop-scan` | `npm install -g slop-scan` | `/retrospective`, `/review-pr`, `quality-ship` |
+| `slop-scan` | `npm install -g slop-scan` | `/retrospect`, `/review-pr`, `quality-ship` |
 | `react-doctor` | `npm install -g react-doctor` (Node >=22) | `quality-ship` (React branch), `react-doctor` skill |
 | `vulture` | `uv tool install vulture` | `quality-ship` (Python branch) |
 | `arxiv2md` | `uv tool install arxiv2md` | Ad-hoc: pipe arXiv papers into context |
