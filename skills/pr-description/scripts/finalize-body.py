@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Make a PR body publishable: require its Architecture view, then stamp the marker.
 
-    finalize-body.py BODY [--repo DIR]
+    finalize-body.py BODY
 
 Exits 1 without touching BODY when `## Architecture` holds no show-me view
 (show-me/scripts/check-view.py owns what a view is). Otherwise drops every old
-`pr-desc-base` marker and appends one for the repo's full HEAD sha as the final
-line, after any generated block such as `stack:links`. Safe to rerun.
+`pr-desc-base` marker and appends one for the current checkout's full HEAD sha
+as the final line, after any generated block such as `stack:links`. Safe to
+rerun.
 """
 import argparse
 import importlib.util
@@ -29,7 +30,6 @@ def load_has_view():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("body")
-    parser.add_argument("--repo", default=".")
     args = parser.parse_args()
     body = Path(args.body)
     text = body.read_text(encoding="utf-8")
@@ -41,7 +41,7 @@ def main():
         )
         return 1
     sha = subprocess.run(
-        ["git", "-C", args.repo, "rev-parse", "HEAD"],
+        ["git", "rev-parse", "HEAD"],
         check=True, capture_output=True, text=True,
     ).stdout.strip()
     kept = [line for line in text.splitlines() if not MARKER.match(line)]

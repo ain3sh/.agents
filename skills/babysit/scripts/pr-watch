@@ -132,6 +132,13 @@ contexts(first: 100, after: $after) {
   }
 }
 """
+# Comments and reviews page backwards from the newest, so a busy PR's older
+# feedback is still seen on the first run.
+FEEDBACK = {
+    "comments": "id url body author { login __typename }",
+    "reviews": "id url state body author { login }",
+}
+FEEDBACK_PAGE = "pageInfo {{ hasPreviousPage startCursor }} nodes {{ {} }}"
 QUERY = f"""
 query($owner: String!, $name: String!, $number: Int!, $after: String) {{
   repository(owner: $owner, name: $name) {{
@@ -140,13 +147,20 @@ query($owner: String!, $name: String!, $number: Int!, $after: String) {{
       baseRef {{ target {{ oid }} }}
       commits(last: 1) {{ nodes {{ commit {{ id statusCheckRollup {{ {CONTEXTS} }} }} }} }}
       latestOpinionatedReviews(first: 50) {{ nodes {{ state }} }}
-      comments(last: 100) {{ nodes {{ id url body author {{ login __typename }} }} }}
-      reviews(last: 100) {{ nodes {{ id url state body author {{ login }} }} }}
+      comments(last: 100) {{ {FEEDBACK_PAGE.format(FEEDBACK["comments"])} }}
+      reviews(last: 100) {{ {FEEDBACK_PAGE.format(FEEDBACK["reviews"])} }}
       reviewThreads(last: 100) {{ totalCount nodes {{
         isResolved path line
         comments(first: 100) {{ nodes {{ id url body author {{ login }} }} }}
       }} }}
     }}
+  }}
+}}
+"""
+MORE_FEEDBACK = """
+query($owner: String!, $name: String!, $number: Int!, $before: String) {{
+  repository(owner: $owner, name: $name) {{
+    pullRequest(number: $number) {{ {connection}(last: 100, before: $before) {{ {page} }} }}
   }}
 }}
 """
@@ -242,6 +256,8 @@ def parse_target(raw: str, repo: str | None) -> tuple[str, int]:
             fail(
                 f"no --repo given and the current directory has no GitHub repo ({error})"
             )
+    if not re.fullmatch(r"[^/\s]+/[^/\s]+", repo):
+        fail(f"'{repo}' is not an owner/name repo")
     return repo, pr
 
 
@@ -325,11 +341,9 @@ class Watcher:
             print(line, flush=True)
             self.reported.add(key)
         print(f"{verdict} {self.repo}#{self.number} {detail}".rstrip(), flush=True)
-        if self.once:
-            pass
-        elif verdict in ("MERGED", "CLOSED"):
+        if verdict in ("MERGED", "CLOSED"):
             self.state_path.unlink(missing_ok=True)
-        else:
+        elif not self.once:
             self.save()
         sys.exit(code)
 
@@ -349,9 +363,26 @@ class Watcher:
             commit = pr["commits"]["nodes"][0]["commit"]["id"]
             cursor = checks["pageInfo"]["endCursor"]
             page = graphql(MORE_CONTEXTS, id=commit, after=cursor)["node"]
+            if not (page and page["statusCheckRollup"]):
+                raise GhError("the head moved while paging its checks")
             more = page["statusCheckRollup"]["contexts"]
             checks["nodes"] += more["nodes"]
             checks["pageInfo"] = more["pageInfo"]
+        for connection, fields in FEEDBACK.items():
+            feedback = pr[connection]
+            query = MORE_FEEDBACK.format(
+                connection=connection, page=FEEDBACK_PAGE.format(fields)
+            )
+            while feedback["pageInfo"]["hasPreviousPage"]:
+                older = graphql(
+                    query,
+                    owner=self.owner,
+                    name=self.name,
+                    number=self.number,
+                    before=feedback["pageInfo"]["startCursor"],
+                )["repository"]["pullRequest"][connection]
+                feedback["nodes"] = older["nodes"] + feedback["nodes"]
+                feedback["pageInfo"] = older["pageInfo"]
         return pr
 
     def required_checks(self, base: str) -> set[str]:

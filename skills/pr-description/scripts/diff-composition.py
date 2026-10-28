@@ -4,16 +4,16 @@
     diff-composition.py BASE HEAD [--core PATH ...] [--tooling PREFIX ...] [--repo DIR]
 
 Buckets, in order of precedence:
+  core       exactly the paths passed with --core (the files that carry behavior)
   generated  snapshot / lockfile / build-output paths
   tests      *.test.*, *.spec.*, __tests__, __fixtures__, fixtures/
   docs+ci    docs/, .github/, *.md, *.yml
-  core       exactly the paths passed with --core (the files that carry behavior)
   tooling    paths under --tooling prefixes (harness, scripts; not shipped)
   mechanical everything else: the repeated pattern, moves, adoptions
 
-Prints additions, deletions, and whole-file adds/deletes per bucket, core first,
-then every core and mechanical file with its own +/- and whether the diff adds or
-deletes it whole.
+Renamed files count under their new path. Prints additions, deletions, and
+whole-file adds/deletes per bucket, core first, then every core and mechanical
+file with its own +/- and whether the diff adds, deletes, or renames it whole.
 Added lines are what a reviewer reads; deleted lines are checked for over-reach.
 """
 import argparse
@@ -30,14 +30,14 @@ ORDER = ("core", "tests", "mechanical", "generated", "tooling", "docs+ci")
 
 
 def bucket(path: str, core: set[str], tooling: tuple[str, ...]) -> str:
+    if path in core:
+        return "core"
     if GENERATED.search(path):
         return "generated"
     if TESTS.search(path):
         return "tests"
     if DOCS.search(path):
         return "docs+ci"
-    if path in core:
-        return "core"
     if path.startswith(tooling):
         return "tooling"
     return "mechanical"
@@ -45,6 +45,22 @@ def bucket(path: str, core: set[str], tooling: tuple[str, ...]) -> str:
 
 def git(repo: str, *args: str) -> str:
     return subprocess.check_output(["git", "-C", repo, *args], text=True)
+
+
+def numstat(repo: str, rng: str) -> list[tuple[str, str, str, str | None]]:
+    """(added, deleted, path, renamed-from) per file; -z keeps paths with spaces,
+    tabs, or renames intact."""
+    fields = git(repo, "diff", "--numstat", "-z", rng).split("\0")
+    rows, index = [], 0
+    while index < len(fields) and fields[index]:
+        add, dele, path = fields[index].split("\t", 2)
+        if path:
+            rows.append((add, dele, path, None))
+            index += 1
+        else:
+            rows.append((add, dele, fields[index + 2], fields[index + 1]))
+            index += 3
+    return rows
 
 
 def main() -> None:
@@ -59,13 +75,14 @@ def main() -> None:
     core = set(args.core)
     tooling = tuple(args.tooling)
     rng = f"{args.base}...{args.head}"
-    whole = {p: "new file" for p in git(args.repo, "diff", "--name-only", "--diff-filter=A", rng).split()}
-    whole |= {p: "deleted" for p in git(args.repo, "diff", "--name-only", "--diff-filter=D", rng).split()}
+    whole = {p: "new file" for p in git(args.repo, "diff", "--name-only", "-z", "--diff-filter=A", rng).split("\0") if p}
+    whole |= {p: "deleted" for p in git(args.repo, "diff", "--name-only", "-z", "--diff-filter=D", rng).split("\0") if p}
 
     totals: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     files: dict[str, list[tuple[int, int, str]]] = defaultdict(list)
-    for row in git(args.repo, "diff", "--numstat", rng).splitlines():
-        add, dele, path = row.split("\t")
+    for add, dele, path, renamed_from in numstat(args.repo, rng):
+        if renamed_from:
+            whole[path] = f"renamed from {renamed_from}"
         if add == "-":  # binary
             continue
         a, d = int(add), int(dele)
@@ -74,7 +91,7 @@ def main() -> None:
         totals[b][1] += d
         files[b].append((a, d, path))
 
-    missing = core - {p for v in files.values() for _, _, p in v}
+    missing = core - {p for _, _, p in files["core"]}
     if missing:
         print("WARNING --core paths not in diff:", *sorted(missing), sep="\n  ")
 

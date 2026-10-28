@@ -50,7 +50,11 @@ def _read_env_file(path: str) -> dict[str, str]:
     loaded: dict[str, str] = {}
     stripped = text.lstrip()
     if stripped.startswith("{"):
-        for name, value in json.loads(stripped).items():
+        try:
+            entries = json.loads(stripped)
+        except ValueError as exc:
+            raise OSError(f"{path}: invalid JSON ({exc})") from exc
+        for name, value in entries.items():
             if not isinstance(value, str) or _ENV_NAME_RE.fullmatch(name) is None:
                 raise OSError(f"{path}: {name!r} is not a string environment entry")
             loaded[name] = value
@@ -70,6 +74,10 @@ def _read_env_file(path: str) -> dict[str, str]:
             value = value[1:-1]
         loaded[name] = value
     return loaded
+
+
+def _error_status(exc: OSError) -> int:
+    return 127 if isinstance(exc, FileNotFoundError) else 1
 
 
 def _usage() -> None:
@@ -103,7 +111,11 @@ def _parse(argv: list[str]) -> Options:
         if token == "--env-file":
             if index + 1 >= len(argv):
                 _usage()
-            env.update(_read_env_file(argv[index + 1]))
+            try:
+                env.update(_read_env_file(argv[index + 1]))
+            except OSError as exc:
+                print(f"[run-check] error: {exc}", file=sys.stderr)
+                raise SystemExit(_error_status(exc)) from exc
             index += 2
             continue
         if token == "--unset-prefix":
@@ -226,6 +238,7 @@ def _acquire_exclusive(options: Options, emit: Callable[[str], None]) -> BinaryI
     waited_since = time.monotonic()
     shown: list[tuple[object, object]] | None = None
     slots = [path.open("a+b") for path in EXCLUSIVE_LOCK_PATHS]
+    lock: BinaryIO | None = None
     try:
         while (lock := _try_slots(slots)) is None:
             holders = [_lock_holder(slot) for slot in slots]
@@ -389,12 +402,9 @@ def _run(options: Options) -> int:
         if received_signal is None:
             raise
         status = 128 + received_signal
-    except FileNotFoundError as exc:
-        emit(f"[run-check] error: {exc}\n")
-        status = 127
     except OSError as exc:
         emit(f"[run-check] error: {exc}\n")
-        status = 1
+        status = _error_status(exc)
     finally:
         if child is not None:
             if child.stdout is not None:
