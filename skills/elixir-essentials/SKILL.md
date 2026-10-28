@@ -1,10 +1,6 @@
 ---
 name: elixir-essentials
-description: principles for working with Elixir code. Invoke before writing any .ex or .exs file.
-file_patterns:
-  - "**/*.ex"
-  - "**/*.exs"
-auto_suggest: true
+description: Principles for working with Elixir code. Invoke before writing any .ex or .exs file.
 ---
 
 # Elixir Essentials

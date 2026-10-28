@@ -3,7 +3,7 @@ name: opentui
 description: "Use when building terminal UIs with OpenTUI (core API, React or Solid reconciler): components, layout, keyboard input, animation, and tests."
 disable-model-invocation: true
 metadata:
-   references: core, react, solid
+  references: core, react, solid
 ---
 
 # OpenTUI Platform Skill

@@ -1,7 +1,6 @@
 ---
 name: post-review
 description: Publish approved PR findings as inline comments and a review verdict.
-disable-model-invocation: true
 ---
 
 # Post Review

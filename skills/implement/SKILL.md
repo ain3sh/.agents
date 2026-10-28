@@ -1,7 +1,6 @@
 ---
 name: implement
 description: Explore a work item, get plan approval, then implement and validate.
-disable-model-invocation: true
 ---
 
 # Implement

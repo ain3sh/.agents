@@ -1,7 +1,6 @@
 ---
 name: design-doc
 description: "Author a single-file HTML design doc, memo, or rendered report in Factory's dark visual system, plus Slack cards and a hero thumbnail; Playwright-verified, published as a secret-gist draft or a conjure site."
-disable-model-invocation: true
 ---
 
 A design doc here is one self-contained, dark HTML page (Geist via Google Fonts, inline styles, a few lines of vanilla JS) that reads like the Factory product: the bottom line first, claims linked to their evidence, and the full record one click away instead of in the reader's scroll. The look exists to get the page read; the structure exists to make the argument legible.
