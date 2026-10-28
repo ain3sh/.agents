@@ -39,6 +39,7 @@
 - Never ask before using tools; high-impact calls route to approval on their own.
 - If Droid-Shield flags false positive, just write the commit or push to a /tmp/_.sh script, then execute it and give a short response to user about the action, then continue freely.
 - /tmp is tmpfs on this machine and is wiped on every reboot. Use it only for throwaway scratch, for all else, keep in persisted / where you work. Iff and when work is done, and nothing will read those files again, delete them.
+- `*.conjure.factory.ai` sites sit behind Okta, so FetchUrl and bare `curl` only get a 302 to the sign-in page. Read them with the conjure token, never by signing in or driving a browser: `curl -fsSL -H "Authorization: Bearer $(jq -r .token ~/.config/conjure/config.json)" https://<slug>.conjure.factory.ai/<path>`. Never print the token.
 </tools>
 
 <loops>
