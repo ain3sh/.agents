@@ -13,9 +13,9 @@
 ## Workflow Skills
 
 Slash workflows live in `skills/<name>/SKILL.md`; there is no `commands/`
-directory. `address-review`, `explain-diff`, `implement`, and `post-review` are
-human-only (`disable-model-invocation: true`).
-`user-invocable` defaults to `true`; `/zoom-out` also allows model invocation.
+directory. `user-invocable` defaults to `true`, and every workflow below also
+allows model invocation except `/explain-diff`, which is human-only
+(`disable-model-invocation: true`).
 
 | Command | Replaces | Usage |
 |---|---|---|
