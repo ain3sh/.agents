@@ -28,8 +28,8 @@ caller, dependency API, or experiment before deciding.
    spawn a reviewer for a question answerable with a few reads.
 2. **Reject plainly poor structure without a ceremonial clarification round.**
    Name the indirection, misleading name, overlapping mechanism, or hidden
-   ordering assumption. Ask the owner to simplify it; use **structural-review**
-   and **single-canon** when they match.
+   ordering assumption. Ask the owner to simplify it; use **single-canon**
+   and `~/.agents/skills/review-pr/references/lenses/structure.md` when they match.
 3. **Verify the answer.** A convincing narrative is not evidence. Check the
    cited contract or behavior and whether a supported dependency API or release
    already removes the awkwardness. Do not invent an adapter just to conceal a

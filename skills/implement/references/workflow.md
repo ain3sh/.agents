@@ -8,7 +8,7 @@ Load skills at the moment their work begins — not everything up front. Deferri
 - **Once due diligence is done** (exploration complete, before designing or writing code): **single-canon**, **patch-coherence**, **quality-ship**.
 
 **Bug fixes inherit the above, plus:**
-- **At start**: **root-cause-analysis**, **structural-review**, **pr-context**.
+- **At start**: **root-cause-analysis**, **pr-context**, and read `~/.agents/skills/review-pr/references/lenses/structure.md` (the file only; don't load **review-pr**).
 - **Once initial exploration is done** (mid-flow, not at the very end): **droid-control** — drive the real app/TUI/browser to reproduce the failure and later verify the fix.
 
 **Features / enhancements inherit the above, plus:**

@@ -12,7 +12,7 @@ Resolve the PR and `REPO` from the supplied ref or current review context via **
 
 **Default scope.** `/post-review <PR>` publishes the full final review at its approved tiers and gating stances, plus the verdict. Invoking it after the final presentation is explicit confirmation; do not ask again. Trailing text supplies instructions or pasted findings; only an explicit subset narrows the default.
 
-**Read the ledger whole, first.** Before drafting anything, read `./.agents/review.md` and every chunk of `./.agents/review.notes.md` start to end (layout in the **review-pr** skill's `references/dossier.md`) -- not the tail, not a search, not a summary. Verify both belong to the target repo and PR; a mismatched or missing ledger is a gap, not permission to use chat memory. Skip only for pasted findings with no upstream review session: use that list for the same per-finding coverage check without inventing a ledger.
+**Read the ledger whole, first.** Before drafting anything, read `./.agents/review.md` and every chunk of `./.agents/review.notes.md` start to end (layout in the **review-pr** skill's `references/systems/dossier.md`) -- not the tail, not a search, not a summary. Verify both belong to the target repo and PR; a mismatched or missing ledger is a gap, not permission to use chat memory. Skip only for pasted findings with no upstream review session: use that list for the same per-finding coverage check without inventing a ledger.
 
 **Build the coverage table** for every `F<id>` appearing in either file, including notes-only findings. It is a temporary view over existing state, never a new file, dossier field, or status:
 
@@ -153,4 +153,4 @@ The event is the verdict approved at the `/review-pr` gate -- don't recompute it
 
 ## 6. Close the Ledger
 
-After submitting, close the ledger for this pass: append the `post` entry (review id, comment ids → anchors) to `./.agents/review.notes.md` and refresh `./.agents/review.md` per the **review-pr** skill's `references/dossier.md` (replace state sections, mark posted findings with their thread ids, append a history line). Skip only for pasted findings with no upstream review session (no ledger exists).
+After submitting, close the ledger for this pass: append the `post` entry (review id, comment ids → anchors) to `./.agents/review.notes.md` and refresh `./.agents/review.md` per the **review-pr** skill's `references/systems/dossier.md` (replace state sections, mark posted findings with their thread ids, append a history line). Skip only for pasted findings with no upstream review session (no ledger exists).

@@ -4,7 +4,7 @@ Rules for every `Task` dispatched from any review mode. Load before the first di
 
 ## Complexity follows responsibility
 
-- **Heavy — mandatory** for: final correctness or architectural judgment, root-cause tracing, hands-on acceptance and faithful repro (`acceptance.md`), concurrency/state-machine analysis, security analysis, executed adversarial probes, the architecture-gate worker, the structural sweep worker, and adjudication of any candidate finding.
+- **Heavy — mandatory** for: final correctness or architectural judgment, root-cause tracing, hands-on acceptance and faithful repro (`lenses/acceptance.md`), concurrency/state-machine analysis, security analysis, executed adversarial probes, the architecture-gate worker, the structural sweep worker, and adjudication of any candidate finding.
 - **Medium — allowed** for bounded static evidence work: caller/consumer enumeration, contract tracing, schema and locale/key parity audits, prior-art and parallel-PR search, convention mapping, test-gap analysis, line-by-line read-only audits of a bounded file set.
 - **Medium output is evidence, not a finding.** Nothing a medium worker reports is retained as a finding until you (heavy main reviewer) or a heavy paired worker validates it.
 - Genuinely trivial checks (one-file typo PR) run inline — no worker.
@@ -15,7 +15,7 @@ Do not downgrade heavy responsibilities to save tokens; do not pay heavy rates f
 
 Two dispatch classes:
 
-- **Standing dispatches** — mandated by a mode file: the architecture worker at the gate (`architecture-gate.md` §8), and on `continue` the structural sweep worker (`first-pass.md` §4) and the acceptance worker (`acceptance.md`). The owning file fixes each one's subagent type, fallback rule, scope, loads, and return; no ledger entry needed. Standing workers return evidence or findings for your admission and never own a ruling.
+- **Standing dispatches** — mandated by a mode file: the architecture worker at the gate (`lenses/architecture.md` §8), and on `continue` the structural sweep worker (`workflows/first-pass.md` §4) and the acceptance worker (`lenses/acceptance.md`). The owning file fixes each one's subagent type, fallback rule, scope, loads, and return; no ledger entry needed. Standing workers return evidence or findings for your admission and never own a ruling.
 - **Investigation dispatches** — everything else. The owning ledger entry must exist first (see mode files): proposition, path, evidence so far, remaining uncertainty, impact, bounded files. No named unresolved proposition → no worker. Workers never receive "review this area broadly" or the whole diff as scope.
 
 Every investigation-worker prompt includes: the ledger entry verbatim; established facts (reconciled gate report, root-cause model — so it doesn't redo the main pass); bounded file/call-path list; the output schema below; hygiene rules; and neutral confirm-or-kill framing — never directional ("try to disprove first") instructions. Standing workers have no proposition and do not use the schema below: each takes its prompt and return from its owning file, plus the read-only hygiene rules below (the acceptance worker: the target-ownership rules below).
@@ -26,7 +26,7 @@ Each investigated proposition returns **exactly one** outcome:
 
 1. **Confirmed** — PR-introduced defect or structural defect, each with owning locus and severity in **voice** tiers. Defect: violated invariant, mechanism, concrete trigger/reachability, evidence (probe output or quoted source chain). Structural defect: the design property violated — wrong boundary, duplicated or bypassed owner, needlessly broad state or contract, avoidable mechanism, unjustified coupling — shown in quoted source (both loci and the diverging callers when duplication is alleged), plus a direction that preserves the change's verified constraints and genuine contribution. Settled by source alone; a design proposition that needs an invented runtime failure to stand is not confirmed.
 2. **Verified safe / killed** — the exact guard, invariant, or probe result that settles it.
-3. **Pre-existing** — real behavior, not introduced or worsened by the PR (evidence of pre-existence required). It goes to the verdict's **Pre-existing defects** list (`first-pass.md` §6) with severity and `file:line`, separate from the PR's own findings; it does not block the verdict by itself, and the author decides whether to fix it in this PR.
+3. **Pre-existing** — real behavior, not introduced or worsened by the PR (evidence of pre-existence required). It goes to the verdict's **Pre-existing defects** list (`workflows/first-pass.md` §6) with severity and `file:line`, separate from the PR's own findings; it does not block the verdict by itself, and the author decides whether to fix it in this PR.
 4. **Duplicate / subsumed** — names the owning finding or upstream locus.
 5. **Unresolved** — the one exact decisive next probe, not a shrug.
 
@@ -47,7 +47,7 @@ The **parent owns verification targets**: it coordinates a stable revision and e
 
 ## Reconciliation gate
 
-After each investigation dispatch returns, and **before any further dispatch in that category**: compare modalities, kill false positives, separate pre-existing, cluster by owning invariant (**patch-coherence**), record verified-safe, and name any remaining question. No remaining question → category closed. Details in `overcoverage.md` §3–4.
+After each investigation dispatch returns, and **before any further dispatch in that category**: compare modalities, kill false positives, separate pre-existing, cluster by owning invariant (**patch-coherence**), record verified-safe, and name any remaining question. No remaining question → category closed. Details in `workflows/deeper.md` §3–4.
 
 ## Cancellation — evidence-based, never budget-based
 

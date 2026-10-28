@@ -1,6 +1,6 @@
 # Architecture gate
 
-A phase of first-pass, before detailed verification, and of follow-up when its §2 reruns the gate. One question, answered from **current source**: is this the right shape, or would detailed review of it be wasted? Output: `continue` / `revise` with quoted evidence. Not a correctness review — hunt no defects to justify a ruling, invent no runtime failures. Two seats in parallel: the **main reviewer** (owns the ruling) and the **architecture worker** (§8). Both load **structural-review**.
+A phase of first-pass, before detailed verification, and of follow-up when its §2 reruns the gate. One question, answered from **current source**: is this the right shape, or would detailed review of it be wasted? Output: `continue` / `revise` with quoted evidence. Not a correctness review — hunt no defects to justify a ruling, invent no runtime failures. Two seats in parallel: the **main reviewer** (owns the ruling) and the **architecture worker** (§8). Both read `lenses/structure.md`.
 
 ## 1. Problem and constraints
 
@@ -29,7 +29,7 @@ Sibling validity (split): the sibling is the other input's current branch throug
 
 One row per behavior or constraint the change touches — a handful, not per line: **behavior/constraint → current owner or authoritative locus → consumers/readers → proposed change and its impact**. In a split case the row also records the **deciding loci** on the sibling branch and the affected route. Then ask: **if this same policy changes, which sites must change together?** Two or more sites deciding the **same policy** — same reason to change, shown by tracing what each decides and for whom, not by comparing text — is split ownership, unless a real source constraint (cite it) requires separate owners; that row is **justified** and yields no finding and no consolidation direction. Mechanically identical code is a reason to investigate policy identity, never proof of it: independently owned policies can coincide in text today and must be free to diverge. A shared leaf both copies call proves the leaf's ownership, not the policy's. Copies that instantiate one unjustified split are **one finding** at the split.
 
-Confidence is not severity. An unjustified split of the same policy, established from source, is a **confirmed** structural finding, tiered per **structural-review** (`warning` for a boundary leak or duplicated common behavior, `opinion` for a missed reframing), whatever the gate rules. `candidate` means unresolved evidence, never reluctance to state an opinion.
+Confidence is not severity. An unjustified split of the same policy, established from source, is a **confirmed** structural finding, tiered per `lenses/structure.md` (`warning` for a boundary leak or duplicated common behavior, `opinion` for a missed reframing), whatever the gate rules. `candidate` means unresolved evidence, never reluctance to state an opinion.
 
 Hunt prior/parallel art (linked refs, `gh pr list --search "<area>" --state all`): an in-flight PR that subsumes this one is the headline.
 
@@ -67,7 +67,7 @@ A `continue` quotes loci or verified absence/necessity; assertion is not a repor
 
 ## 8. Architecture worker — bounded assignment
 
-Dispatch as `subagent_type: astra`, heavy — a read-only structural specialist, not an orchestrator (it loads no orchestration skill and delegates nothing). If that subagent type is unavailable, the parent reports a specialist blocker at the gate; it never downgrades silently, and a missing report is never counted as `continue`. Load this file and **structural-review** only — never `first-pass.md`. This is a parent-scoped structural assignment on one boundary, not a survey of the PR.
+Dispatch as `subagent_type: astra`, heavy — a read-only structural specialist, not an orchestrator (it loads no orchestration skill and delegates nothing). If that subagent type is unavailable, the parent reports a specialist blocker at the gate; it never downgrades silently, and a missing report is never counted as `continue`. Load this file and `lenses/structure.md` only — never `workflows/first-pass.md`. This is a parent-scoped structural assignment on one boundary, not a survey of the PR.
 
 **Inputs — the current-source slice** (parent-selected, current head): the primary changed boundary or authoritative locus — the shared caller/owner for a routing change; otherwise the changed implementation, contract, state model, config, or document — as whole files; its affected direct delegate(s); the concrete surviving consumer or branch through that owner when one exists, otherwise its actual consumers or readers (no fabricated branches or runtime callers); the narrow contracts needed to read those paths; plus PR target, `HEAD_SHA`, the parent's §1 statement if formed, and ledger candidates if any. The slice states source facts and verified constraints — which inputs take which call paths — never an expected finding or desired ruling.
 

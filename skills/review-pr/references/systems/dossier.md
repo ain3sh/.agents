@@ -43,7 +43,7 @@ Append triggers — each is a moment where unique state exists only in-context:
 - **dispatch** — workers sent: category, session ids, modality pairing.
 - **reconcile** — a worker returned: outcome per proposition, modality agreement or disagreement (a disagreement is itself the named open question). Write before processing the next return.
 - **env** — environment quirk discovered (runtime version pins, filesystem constraints, hoisted binaries); later worker prompts inherit these from the dossier's env notes.
-- **gate** — the architecture-gate ruling (`continue` / `revise`, reason, unreviewed areas on `revise`; a re-rule after the worker returns is a second entry), acceptance admissions and waivers (`acceptance.md`), and approval-gate outcomes: user edits, drops, re-severities, verdict choice.
+- **gate** — the architecture-gate ruling (`continue` / `revise`, reason, unreviewed areas on `revise`; a re-rule after the worker returns is a second entry), acceptance admissions and waivers (`lenses/acceptance.md`), and approval-gate outcomes: user edits, drops, re-severities, verdict choice.
 - **post** — review submitted: review id, comment ids → anchors.
 
 The notes file persists across passes append-only — follow-ups continue the same log.
@@ -71,7 +71,7 @@ date: <ISO date>
 
 ## Root-cause / invariant model
 <2-6 lines: the required behavior and hard constraints, the layer each invariant lives in,
-the admitted gate report (`architecture-gate.md` "Gate report": case, owner and consumers, rows; split-only dispatch predicate, remaining range, paired loci),
+the admitted gate report (`lenses/architecture.md` "Gate report": case, owner and consumers, rows; split-only dispatch predicate, remaining range, paired loci),
 the simplest viable shape you formed, and whether the review confirmed the PR's model.>
 
 ## Architecture gate
@@ -85,7 +85,7 @@ evidence: <per cited artifact: identity (URL/attachment), access state when obse
 audited_body: <body_seen value this audit covers>
 
 ## Acceptance
-- <scenario — surface/platform/mode>: <state, acceptance.md §4 vocabulary verbatim; failed → observation + attribution (F<id> once attributed to the PR | pre-existing → Pre-existing defects list | unsettled); blocked → blocker + next decision; waived → unverified limit; n/a → source reason>; evidence <probe | integration | end-to-end workflow>, <artifact ref, contents inspected>, target <revision/build as established from the evidence>
+- <scenario — surface/platform/mode>: <state, lenses/acceptance.md §4 vocabulary verbatim; failed → observation + attribution (F<id> once attributed to the PR | pre-existing → Pre-existing defects list | unsettled); blocked → blocker + next decision; waived → unverified limit; n/a → source reason>; evidence <probe | integration | end-to-end workflow>, <artifact ref, contents inspected>, target <revision/build as established from the evidence>
 
 ## Findings
 - F<id> <status> <severity> <file:line> — <claim> — <evidence, one line> — thread: <comment id, once posted>

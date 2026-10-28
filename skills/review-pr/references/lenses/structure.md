@@ -1,17 +1,12 @@
----
-name: structural-review
-description: "Use when judging a diff's structure, in review or self-review: hunt simplifications, condition sprawl, file-size growth, and orchestration smells."
----
-
 # Structural Review
 
-Correctness review asks "does this work, at the right layer?" This atom asks what comes after: **is there a reframing of the same behavior that makes the implementation dramatically simpler?** A diff can be root-cause-correct and slop-free yet leave the codebase messier than the obvious alternative shape.
+Correctness review asks "does this work, at the right layer?" This lens asks what comes after: **is there a reframing of the same behavior that makes the implementation dramatically simpler?** A diff can be root-cause-correct and slop-free yet leave the codebase messier than the obvious alternative shape.
 
 Be ambitious. "This could be a bit cleaner" is not the bar. Hunt **code-judo moves**: behavior-preserving restructurings where whole branches, helpers, modes, flags, or layers disappear because the change is framed against the existing architecture instead of bolted onto it. Prefer the version that feels inevitable in hindsight; when complexity can be deleted rather than rearranged, push for deletion.
 
 ## Boundary with sibling skills
 
-This atom owns the simplification hunt and the structural tripwires. It does not own:
+This lens owns the simplification hunt and the structural tripwires. It does not own:
 
 - **Severity** -- `voice` owns the canonical taxonomy; map into it (below), never a local blocker tier or separate approval bar.
 - **Mechanical smells** -- thin wrappers, pass-through helpers, generic casts, duplicate signatures are `slop-scan`'s; don't hand-audit them, and when both fire on a line keep one finding.

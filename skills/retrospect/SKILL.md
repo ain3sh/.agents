@@ -6,7 +6,7 @@ argument-hint: "[<base-ref>]"
 
 Take a beat. Reread what you just shipped as if a stranger wrote it. The bar is **entropy reduction**: leave the diff leaner, sharper, and more consistent than when you started. Every shortcut you leave here is someone else's burden later.
 
-Load skills: **structural-review** (the structural hunt and tripwires) and **single-canon** (legacy/fallback branches). If the session added or moved tests, also load **consolidate-test-suites**.
+Read `~/.agents/skills/review-pr/references/lenses/structure.md` (the structural hunt and tripwires; read the file, don't load **review-pr**). Load skills: **single-canon** (legacy/fallback branches). If the session added or moved tests, also load **consolidate-test-suites**.
 
 ## Todo cadence (non-optional)
 
@@ -47,7 +47,7 @@ Walk each category. Record every finding as a triage candidate — severity come
 
 ### Structure
 
-Run **structural-review**'s hunt and tripwires over the whole diff: reframings that delete branches or layers, abstractions that don't earn their keep, duplicated or bypassed owners, contract muddying. Legacy/fallback branches for state that never existed in the new schema go through **single-canon**. These findings enter triage here like any other; the approval gate in §4 still applies before you apply a remedy.
+Run the structure lens's hunt and tripwires over the whole diff: reframings that delete branches or layers, abstractions that don't earn their keep, duplicated or bypassed owners, contract muddying. Legacy/fallback branches for state that never existed in the new schema go through **single-canon**. These findings enter triage here like any other; the approval gate in §4 still applies before you apply a remedy.
 
 ### Blatant optimization opportunities
 
