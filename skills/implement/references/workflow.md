@@ -5,7 +5,7 @@ Load skills at the moment their work begins — not everything up front. Deferri
 **All work:**
 - **At start**: **worktree-setup**, **ast-grep**, **step-through**, **repo-conventions**.
 - **At start, when the work references externals** (a Linear ticket, Slack thread, Notion doc, ...): the matching CLI skill(s) — **linear-cli**, **slack-cli**, **notion-cli**, ...
-- **Once due diligence is done** (exploration complete, before designing or writing code): **single-canon**, **patch-coherence**, **quality-ship**.
+- **Once due diligence is done** (exploration complete, before designing or writing code): **single-canon**, **patch-coherence**, **quality-ship**, and read the crux lens (Step 3).
 
 **Bug fixes inherit the above, plus:**
 - **At start**: **root-cause-analysis**, **pr-context**, and read `~/.agents/skills/review-pr/references/lenses/structure.md` (the file only; don't load **review-pr**).
@@ -71,6 +71,8 @@ The fix approach in Step 3 should flow directly from the root-cause analysis: ex
 
 ## 3. Think Through the Approach
 
+Build the approach with the crux lens (`~/.agents/skills/review-pr/references/lenses/crux.md`, the file only; don't load **review-pr**). Steps 1–2 above already supply its map and crux; run its steps 3–5, so every mechanism the spec adds traces to the pure core or a sourced layer.
+
 Do **not** take the easiest-but-ugly path. Evaluate the implementation against:
 
 - **Clean architecture**: Proper separation of concerns, single responsibility.
@@ -100,7 +102,7 @@ If a question can be answered by exploring the codebase, do that instead of aski
 
 Present a structured implementation plan:
 
-- **Approach**: High-level strategy and rationale for the chosen path.
+- **Approach**: High-level strategy and rationale for the chosen path, with the crux lens's pure core and layer ledger.
 - **Files to modify/create**: List with a brief description of the changes per file.
 - **Key decisions**: Non-obvious choices and their reasoning.
 - **Risks**: Potential issues, migration concerns, or things to watch.

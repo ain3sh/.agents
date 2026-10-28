@@ -65,17 +65,17 @@ repo: <owner>/<repo>
 reviewed_head: <SHA>
 body_seen: <fingerprint of the raw body (e.g. sha256 of `gh pr view --json body`) + last-edit timestamp>
 base: <base ref> @ <merge-base SHA>
-mode: <first-pass | first-pass+deeper | follow-up | ground-up>
+mode: <first-pass | first-pass+deeper | follow-up | ground-up>, plus `+crux` when the `crux` keyword ran
 verdict: <APPROVE | COMMENT | not yet issued>
 date: <ISO date>
 
 ## Root-cause / invariant model
 <2-6 lines: the required behavior and hard constraints, the layer each invariant lives in,
 the admitted gate report (`lenses/architecture.md` "Gate report": case, owner and consumers, rows; split-only dispatch predicate, remaining range, paired loci),
-the simplest viable shape you formed, and whether the review confirmed the PR's model.>
+the simplest viable shape you formed (its layer ledger when `lenses/crux.md` built it), and whether the review confirmed the PR's model.>
 
 ## Reference design
-<ground-up only, else "none": crux brief; convergent decisions; settled and open divergences; sources; researcher and designer sids>
+<ground-up only, else "none": crux brief; merged layer ledger (shared pure core, convergent layers); settled and open divergences; sources; researcher and designer sids>
 
 ## Architecture gate
 decision: <continue | revise>

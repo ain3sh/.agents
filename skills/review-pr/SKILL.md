@@ -20,6 +20,7 @@ Input: `/review-pr <target> [mode] [operator context...]`
   - `follow-up` / `re-review` → **follow-up** (`references/workflows/follow-up.md`)
   - `ground-up` → **ground-up** (`references/workflows/ground-up.md`)
   - none → auto-detect (below)
+- **Modifier** `crux` (optional; combines with first-pass or follow-up): the architecture gate builds its shape from first principles with `references/lenses/crux.md` (`references/lenses/architecture.md` §5). `ground-up` always runs that lens.
 - **Everything else is operator context** — constraints, focus areas, known history ("author force-pushed", "skip the frontend surface"). Honor it; it overrides auto-detection but never lowers the evidence bar or skips the approval gate.
 
 ## Routing

@@ -41,9 +41,11 @@ summaries.
 **Design**
 
 1. **Ground:** ground yourself in the problem and derive the crux of what we
-   want to achieve.
+   want to achieve (crux lens steps 1–2,
+   `~/.agents/skills/review-pr/references/lenses/crux.md`).
 2. **Round table:** freeform Opuses, Fables, and Astras each solve the crux
-   from first principles.
+   from first principles (that lens's steps 3–5: pure solution, then layers
+   of reality).
 3. **Cross-critique:** send every proposal to every other designer for an
    independent critique.
 4. **Mine:** an Astra breaks down the proposals and critiques.
