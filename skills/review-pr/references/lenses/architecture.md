@@ -31,11 +31,13 @@ One row per behavior or constraint the change touches — a handful, not per lin
 
 Confidence is not severity. An unjustified split of the same policy, established from source, is a **confirmed** structural finding, tiered per `lenses/structure.md` (`warning` for a boundary leak or duplicated common behavior, `opinion` for a missed reframing), whatever the gate rules. `candidate` means unresolved evidence, never reluctance to state an opinion.
 
-Hunt prior/parallel art (linked refs, `gh pr list --search "<area>" --state all`): an in-flight PR that subsumes this one is the headline.
+Hunt prior/parallel art (linked refs, `gh pr list --search "<area>" --state all`): an in-flight PR that subsumes this one is the headline. Industry prior art comes from the reference design's research when one exists (`workflows/ground-up.md` §2).
 
 ## 5. Simplest shape and direction
 
 Write the shape that satisfies §1 with each behavior owned once, preserving the domain core and the PR's contribution. For an unjustified split: where the owner's interface cannot express a required behavior, weigh a minimal interface extension, a common lower-level primitive both routes call, and a separate implementation — by outcome: any extension point is insufficient while a duplicate of the same policy remains. State **one** direction that removes the whole split; never pair it with a bypass alternative that keeps copies. For every other row the direction, if any, addresses the changed owner, contract, state representation, or document structure itself; a shape that stands needs no direction. Set the PR against that shape, the old implementation, and the surviving owner; diff size proves nothing.
+
+**Reference design.** When one exists (`workflows/ground-up.md` §3, or the dossier's *Reference design* on a follow-up), it is this shape: set the PR against it decision by decision instead of deriving the shape from the PR. The comparison is the parent's; the architecture worker still judges from source alone (§8). A PR choice that breaks a convergent decision is a confirmed structural finding, `warning` minimum, with the reference decision as its direction; a divergence settled by research or a hard constraint is tiered by that evidence; an open divergence is an `opinion` naming both options.
 
 ## 6. Ruling
 
@@ -45,7 +47,7 @@ Write the shape that satisfies §1 with each behavior owned once, preserving the
 2. a concrete direction preserving required behavior, constraints, and contribution — "restore the old code" and "extract a helper" are not directions;
 3. adopting it would **materially replace the affected region** — the coordination range, implementation, contract, state representation, or document structure the change owns — so detailed review of that region is wasted. The threshold is that region, not every file: a retained domain core or "the rest still needs review" never defers a material correction.
 
-Insufficient alone: nits, taste, unfamiliarity, diff size, an abstraction that earns its keep, a justified divergence, identical text without demonstrated shared policy, a local predicate extraction, an isolated repeated condition with surrounding coordination intact. Uncertainty gets targeted reads; what they cannot settle is `continue` with a `candidate`, never `revise`.
+Insufficient alone: nits, taste, unfamiliarity, diff size, an abstraction that earns its keep, a justified divergence, identical text without demonstrated shared policy, a local predicate extraction, an isolated repeated condition with surrounding coordination intact. Uncertainty gets targeted reads; what they cannot settle is `continue` with a `candidate`, never `revise`. A convergent reference-design decision the PR breaks in source is not taste: it meets conditions 1 and 2.
 
 ## 7. Gate report
 

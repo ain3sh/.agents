@@ -10,7 +10,7 @@ description: Publish approved PR findings as inline comments and a review verdic
 Usage: `/post-review [<PR-number-or-URL>]`.
 
 Default (`/post-review <PR>` alone): post the full approved review, every live
-finding at its approved tier and gating stance plus a verdict that names every
+finding at its approved tier (gating follows tier) plus a verdict that names every
 blocker and carries at least one view, reconciled against the whole
 ledger (`./.agents/review.md` and all of `./.agents/review.notes.md`) before the
 first write. Use trailing text as

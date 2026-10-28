@@ -1,13 +1,13 @@
 # Overcoverage (`deeper`)
 
-An adversarial second wave with two objectives, run from a completed first pass (review-state summary in-context — or seeded from the dossier per SKILL.md routing) or as the default tail of a follow-up (`workflows/follow-up.md` §5); `systems/workers.md` loaded:
+An adversarial second wave with two objectives, run from a completed first pass (review-state summary in-context — or seeded from the dossier per SKILL.md routing) or as the default tail of a follow-up (`workflows/follow-up.md` §5) or a ground-up review (`workflows/ground-up.md` §5); `systems/workers.md` loaded:
 
 - **A. Adjudicate** every unresolved suspicion from the review-state summary — workers exist to prove findings real *or* kill them as false positives, red herrings, or pre-existing behavior.
 - **B. Expand** into high-risk changed surfaces the first pass did not deeply cover.
 
 It is **not** a generic duplicate scan. Completed first-pass axes (architecture gate, conventions, slop scan, CI triage, acceptance) and completed follow-up lanes stay closed unless new evidence reopens them. An **open** acceptance scenario (`lenses/acceptance.md`) is coverage-map input, never a category: no wave substitutes for a scenario that is not `passed`, and it keeps its actual state in the merged summary (§5).
 
-**Precondition: the latest architecture-gate ruling is `continue`.** After a `revise`, the shape itself is contested and the next step is the author's revision, then follow-up; a wave over the rejected shape runs only when the user explicitly asks for it despite that, and the review-state summary never recommends it.
+**Precondition: the latest architecture-gate ruling is `continue`.** After a `revise`, the shape itself is contested and the next step is the author's revision, then follow-up; a wave over the rejected shape runs only when the user explicitly asks for it despite that, and the review-state summary never recommends it. Invoking `ground-up` is that request: its §5 runs the wave whatever the ruling.
 
 ## 1. Build the category ledger
 
@@ -46,7 +46,7 @@ Lightweight categories (one narrow suspicion, one file) get a single worker, not
 When a pair returns:
 
 - Compare static vs executed evidence; where they disagree, the disagreement itself becomes the named open question.
-- Remove false positives, red herrings, and pre-existing behavior (pre-existing issues move to the verdict's **Pre-existing defects** list per `workflows/first-pass.md` §6, not findings against the PR).
+- Remove false positives and red herrings; mark pre-existing behavior as such (still a finding, per `workflows/first-pass.md` §6).
 - Apply **patch-coherence** across surviving candidates: cluster by violated invariant and owning locus; collapse downstream manifestations into the upstream finding; merge duplicates.
 - Record killed suspicions with the exact invariant/probe that killed them — these go in the dossier's verified-safe section and, where they contradict a headline concern, into the review narrative.
 - State what, if anything, remains verdict-relevant and unresolved.
@@ -68,4 +68,4 @@ The third worker receives the prior results and the exact remaining question —
 
 ## 5. Merge into the review
 
-Fold surviving findings into the first-pass finding set (voice severities, dedupe against existing findings — keep stable `F<id>`s, never renumber), update the review-state summary (confirmed / verified-safe / coverage map), and return to the first-pass **approval gate** (§6 of `workflows/first-pass.md`) with the combined set; a follow-up wave returns to `workflows/follow-up.md` §6 instead. By this point the wave is already fully in the ledger — categories, worker sids, conclusions, kills — so the post-time dossier refresh is a distillation, not a reconstruction.
+Fold surviving findings into the first-pass finding set (voice severities, dedupe against existing findings — keep stable `F<id>`s, never renumber), update the review-state summary (confirmed / verified-safe / coverage map), and return to the first-pass **approval gate** (§6 of `workflows/first-pass.md`) with the combined set; a follow-up wave returns to `workflows/follow-up.md` §6 instead, and a ground-up wave to `workflows/ground-up.md` §6. By this point the wave is already fully in the ledger — categories, worker sids, conclusions, kills — so the post-time dossier refresh is a distillation, not a reconstruction.

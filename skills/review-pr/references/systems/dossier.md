@@ -43,7 +43,7 @@ Append triggers — each is a moment where unique state exists only in-context:
 - **dispatch** — workers sent: category, session ids, modality pairing.
 - **reconcile** — a worker returned: outcome per proposition, modality agreement or disagreement (a disagreement is itself the named open question). Write before processing the next return.
 - **env** — environment quirk discovered (runtime version pins, filesystem constraints, hoisted binaries); later worker prompts inherit these from the dossier's env notes.
-- **gate** — the architecture-gate ruling (`continue` / `revise`, reason, unreviewed areas on `revise`; a re-rule after the worker returns is a second entry), acceptance admissions and waivers (`lenses/acceptance.md`), and approval-gate outcomes: user edits, drops, re-severities, verdict choice.
+- **gate** — the ground-up crux brief and reference design (`workflows/ground-up.md` §1, §3), the complexity-check decision (`workflows/first-pass.md` §1), the architecture-gate ruling (`continue` / `revise`, reason, unreviewed areas on `revise`; a re-rule after the worker returns is a second entry), acceptance admissions and waivers (`lenses/acceptance.md`), and approval-gate outcomes: user edits, drops, re-severities, verdict choice.
 - **post** — review submitted: review id, comment ids → anchors.
 
 The notes file persists across passes append-only — follow-ups continue the same log.
@@ -65,7 +65,7 @@ repo: <owner>/<repo>
 reviewed_head: <SHA>
 body_seen: <fingerprint of the raw body (e.g. sha256 of `gh pr view --json body`) + last-edit timestamp>
 base: <base ref> @ <merge-base SHA>
-mode: <first-pass | first-pass+deeper | follow-up>
+mode: <first-pass | first-pass+deeper | follow-up | ground-up>
 verdict: <APPROVE | COMMENT | not yet issued>
 date: <ISO date>
 
@@ -73,6 +73,9 @@ date: <ISO date>
 <2-6 lines: the required behavior and hard constraints, the layer each invariant lives in,
 the admitted gate report (`lenses/architecture.md` "Gate report": case, owner and consumers, rows; split-only dispatch predicate, remaining range, paired loci),
 the simplest viable shape you formed, and whether the review confirmed the PR's model.>
+
+## Reference design
+<ground-up only, else "none": crux brief; convergent decisions; settled and open divergences; sources; researcher and designer sids>
 
 ## Architecture gate
 decision: <continue | revise>
@@ -85,7 +88,7 @@ evidence: <per cited artifact: identity (URL/attachment), access state when obse
 audited_body: <body_seen value this audit covers>
 
 ## Acceptance
-- <scenario — surface/platform/mode>: <state, lenses/acceptance.md §4 vocabulary verbatim; failed → observation + attribution (F<id> once attributed to the PR | pre-existing → Pre-existing defects list | unsettled); blocked → blocker + next decision; waived → unverified limit; n/a → source reason>; evidence <probe | integration | end-to-end workflow>, <artifact ref, contents inspected>, target <revision/build as established from the evidence>
+- <scenario — surface/platform/mode>: <state, lenses/acceptance.md §4 vocabulary verbatim; failed → observation + attribution (F<id> once attributed to the PR | pre-existing → F<id> marked pre-existing | unsettled); blocked → blocker + next decision; waived → unverified limit; n/a → source reason>; evidence <probe | integration | end-to-end workflow>, <artifact ref, contents inspected>, target <revision/build as established from the evidence>
 
 ## Findings
 - F<id> <status> <severity> <file:line> — <claim> — <evidence, one line> — thread: <comment id, once posted>
@@ -108,6 +111,7 @@ audited_body: <body_seen value this audit covers>
 
 ## History
 - <date> first-pass @ <SHA>: <verdict>, gate <continue | revise>, acceptance <passed x/y; other states listed>, <n> findings
+- <date> ground-up @ <SHA>: <verdict>, gate <continue | revise>, delta <n differ, m missing>, wave <n categories | skipped: reason>, <n> findings
 - <date> follow-up @ <SHA>: <verdict>, <resolved x/y, new z>, wave <n categories | skipped: reason>
 ```
 

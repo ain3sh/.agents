@@ -18,6 +18,7 @@ Input: `/review-pr <target> [mode] [operator context...]`
 - **Mode keyword** (optional, anywhere in the trailing text):
   - `deeper` → **overcoverage** (`references/workflows/deeper.md`)
   - `follow-up` / `re-review` → **follow-up** (`references/workflows/follow-up.md`)
+  - `ground-up` → **ground-up** (`references/workflows/ground-up.md`)
   - none → auto-detect (below)
 - **Everything else is operator context** — constraints, focus areas, known history ("author force-pushed", "skip the frontend surface"). Honor it; it overrides auto-detection but never lowers the evidence bar or skips the approval gate.
 
@@ -33,6 +34,7 @@ Auto-detect (no mode keyword) — check `./.agents/review.md` (worktree-local do
 Rules:
 
 - **Overcoverage (`deeper` → `references/workflows/deeper.md`) after a first pass is never auto-selected** — explicit keyword, or user approval of the first-pass "candidate overcoverage categories" recommendation. Follow-up is the exception: it runs the wave by default over its own residue (`references/workflows/follow-up.md` §5). Fan-out is a deliberate decision, and it is never recommended after a `revise` gate ruling (`references/workflows/deeper.md` precondition). Its input is the review-state summary: same-session first pass, or seeded from the dossier's unresolved/coverage sections when the head is unchanged (head moved → follow-up first).
+- **`ground-up` is never auto-selected** — explicit keyword, or user approval of first-pass's complexity recommendation (`references/workflows/first-pass.md` §1). It runs the first pass and the `deeper` wave inside itself, against a reference design built blind to the PR.
 - **follow-up always starts from the dossier** (`references/systems/dossier.md`), never by replaying the original review transcript. If invoked inside a stale mega-session, say so and recommend a fresh session.
 - **Mode keywords are requests, not facts.** Missing precondition (`deeper` with no first pass and no dossier; `follow-up` with no prior review anywhere) → say so and run the mode whose precondition holds.
 
@@ -49,7 +51,7 @@ Rules:
 
 ## Shared skill loads
 
-All modes load: **pr-context**, **linear-cli**, **voice**, **repo-conventions**, **worktree-setup**, **quality-ship**. First-pass additionally reads `references/lenses/structure.md` (architecture gate and structural sweep) and, through its acceptance worker, **droid-control** plus the surface-fidelity skill a claim triggers; multi-finding reconciliation uses **patch-coherence**. The **description audit** (`references/workflows/first-pass.md` §1) loads **pr-description** in read-only audit posture: that skill is the sole owner of what a good PR body requires; review owns only when to check it and how to tie its claims to evidence. Loading it authorizes no drafting, PATCH, capture, or upload.
+All modes load: **pr-context**, **linear-cli**, **voice**, **repo-conventions**, **worktree-setup**, **quality-ship**. First-pass additionally reads `references/lenses/structure.md` (architecture gate and structural sweep) and, through its acceptance worker, **droid-control** plus the surface-fidelity skill a claim triggers; multi-finding reconciliation uses **patch-coherence**. Ground-up's blind workers add research loads (`references/workflows/ground-up.md` §2). The **description audit** (`references/workflows/first-pass.md` §1) loads **pr-description** in read-only audit posture: that skill is the sole owner of what a good PR body requires; review owns only when to check it and how to tie its claims to evidence. Loading it authorizes no drafting, PATCH, capture, or upload.
 
 When a step needs setup or a validator (repro, slop-scan, scoped test runs), use **worktree-setup**'s `repair.py` and **quality-ship**'s validator patterns; don't wing it — improvised invocations derail focus (and an unfiltered turbo run eats ~9 GB RAM).
 

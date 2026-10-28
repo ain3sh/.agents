@@ -67,13 +67,13 @@ Build the category ledger, pair, reconcile, and admit third workers exactly per 
 
 ## 6. Verdict and close
 
-Present to the user at the approval gate, sections kept separate (this is the gate presentation — the posted verdict's prose stays short per first-pass §6):
+Present to the user at the approval gate, sections kept separate (this is the gate presentation; the posted verdict takes first-pass §6's shape):
 
 - prior findings: resolved / unresolved / superseded (with mechanism-depth evidence for contested ones);
 - fresh delta findings;
 - interaction-regression findings;
 - suspicions killed during this pass, including the §5 wave's kills, or the wave's skip reason;
-- pre-existing defects (→ the verdict's **Pre-existing defects** list per first-pass §6, never blockers; a required acceptance scenario `failed` with pre-existing attribution keeps its state in the verdict as a completeness limit, per first-pass §6);
+- pre-existing defects (findings marked pre-existing, threaded and gated per first-pass §6; a required acceptance scenario `failed` with pre-existing attribution keeps its state in the verdict as a completeness limit, per first-pass §6);
 - current `APPROVE` / `COMMENT` rationale.
 
 Then the standard first-pass **approval gate** and verdict-body rules apply (§6 of `workflows/first-pass.md`) — read that section; "never restate the threads" and requirements-stated-flatly bind here too. On approval: hand off to `/post-review`, append the `post` notes entry, and update the dossier per `systems/dossier.md` (replace state sections, append history line).

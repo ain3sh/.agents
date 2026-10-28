@@ -10,7 +10,7 @@ Resolve the PR and `REPO` from the supplied ref or current review context via **
 
 ## 2. Reconcile the Findings
 
-**Default scope.** `/post-review <PR>` publishes the full final review at its approved tiers and gating stances, plus the verdict. Invoking it after the final presentation is explicit confirmation; do not ask again. Trailing text supplies instructions or pasted findings; only an explicit subset narrows the default.
+**Default scope.** `/post-review <PR>` publishes the full final review at its approved tiers, plus the verdict. Invoking it after the final presentation is explicit confirmation; do not ask again. Trailing text supplies instructions or pasted findings; only an explicit subset narrows the default.
 
 **Read the ledger whole, first.** Before drafting anything, read `./.agents/review.md` and every chunk of `./.agents/review.notes.md` start to end (layout in the **review-pr** skill's `references/systems/dossier.md`) -- not the tail, not a search, not a summary. Verify both belong to the target repo and PR; a mismatched or missing ledger is a gap, not permission to use chat memory. Skip only for pasted findings with no upstream review session: use that list for the same per-finding coverage check without inventing a ledger.
 
@@ -30,11 +30,11 @@ Reconciliation rules:
 - **Approved means presented.** The gate approved the findings shown to the user, never `candidate` entries that stayed in the notes. A `confirmed` finding the presentation omitted is a conflict (below), not a bonus post.
 - **Already posted** (`posted` status / thread id) is never sent again. If it still gates, the verdict names it and links the thread.
 - **Grouping keeps every claim.** One comment may carry several findings; each independent claim and ask survives the merge.
-- **Tier and gating stance are separate, and both are fixed here.** No recasting a blocker as optional or fast-follow to soften or shorten; no turning a non-gating finding into a blocker.
+- **Tier fixes gating, and both are fixed here.** Gating follows the **voice** tier, so changing whether a finding gates means a `retier` at the gate. Never recast a gating finding as optional or fast-follow to soften or shorten.
 - **Stale substance is not reposted as fresh.** A current head (§1) that differs from the dossier's `reviewed_head`, or materially new evidence, sends the finding back through `/review-pr` follow-up for revalidation and re-approval. This step never rewrites substance.
 - **Gaps block publication.** Missing evidence, missing approval, or a genuine unresolved conflict requires one `AskUser` naming the gap. Resume only after resolution or explicit user scope reduction; never silently post a subset or ask again about settled approval.
 
-Each live finding needs a **voice** severity (do not invent or remap tiers), body prose, and a destination. Inline comments need a file path and line(s), optionally a replacement snippet; a broader finding without a useful inline anchor goes in the verdict. Pasted findings need the same information; missing or ambiguous material follows the gap rule above.
+Each live finding needs a **voice** severity (do not invent or remap tiers), body prose, and a destination. Inline comments need a file path and line(s), optionally a replacement snippet. Every finding with a changed line to sit on gets its own thread, a broad one on its most representative line (**voice**); only a finding with no anchor in the diff lives in the verdict alone, and a verdict mention never substitutes for a thread. Pasted findings need the same information; missing or ambiguous material follows the gap rule above.
 
 **Full means final.** Post each finding whole: claim, mechanism and impact, the evidence that backs it, the required action, and any remaining uncertainty. Not the raw candidates, not the investigation diary behind them.
 
@@ -70,12 +70,12 @@ Approval at the `/review-pr` gate covered the findings and disposition, not the 
 - **Persuasion on standard asks**: blockers that are ordinary due diligence (test coverage, ticket reference, meeting a CI gate) are flat imperative requirements with their concrete mechanism -- never hedged, argued for, or defended against imagined pushback ("worth satisfying rather than labeling away", "the gate is genuinely red"). The real-vs-flake triage call stays as a stated fact backing the disposition, not woven into the ask as a plea. Asking for standard protocol needs no apology; spend justification only on genuinely discretionary calls.
 - **Command narration**: the CLI invocations, tool names, and worker dispatches behind a probe (`gh run view`, vitest flags, `slop-scan delta`, typechecker choice). Report the observed fact -- *"the new tests fail on base for the stated reason"* -- never the transcript that produced it. How you learned something is your business; what's true is the review.
 - **Methodology paragraphs**: "Checks run:", "Also verified:", CI pass counts, sweep inventories. If a probe backs a claim, it's already inline in that claim; standalone it's an essay about your process.
-- **Fast-follow / "worth a ticket" framing**: pre-existing issues stay in the verdict's **Pre-existing defects** list (severity, `file:line`, one line each); cut any "worth a ticket", "fast-follow", or "separate PR" framing around them.
+- **Fast-follow / "worth a ticket" framing**: pre-existing defects are findings with their own threads (review-pr's `references/workflows/first-pass.md` §6); cut any "worth a ticket", "fast-follow", or "separate PR" framing around them.
 - **Decorative views**: cut a view that restates a line comment or carries no part of the ruling (review-pr's `references/workflows/first-pass.md` §6, "The view"); if that leaves none, the missing view is a §2 gap.
 
 This applies to line-comment bodies too: findings state the defect and the fix, never the commands run to find it.
 
-Deslop removes ceremony, not substance. It never changes a tier, a gating stance, or a claim; a body that reads shorter because a mechanism, caveat, or ask vanished fails §4.
+Deslop removes ceremony, not substance. It never changes a tier or a claim; a body that reads shorter because a mechanism, caveat, or ask vanished fails §4.
 
 Lead with the ruling and gate in the first two sentences; use the remaining space needed for the complete review.
 
@@ -83,7 +83,7 @@ Lead with the ruling and gate in the first two sentences; use the remaining spac
 
 After the deslop pass and before any external write, walk the §2 coverage table against the final payload:
 
-- Every live row maps to an outgoing comment or verdict passage preserving its claim, mechanism/impact, evidence, ask, uncertainty, tier, and gating stance.
+- Every live row maps to an outgoing comment or verdict passage preserving its claim, mechanism/impact, evidence, ask, uncertainty, and tier.
 - Every excluded row cites its recorded disposition or explicit user decision: unresolved candidate, killed, folded, dropped, superseded, already posted, or scoped out. Never "trimmed for length".
 - Every published finding has a row; the verdict names every still-gating finding, including previously posted ones.
 - Separately compare the verdict with the approved review state and review-pr's `references/workflows/first-pass.md` §6: preserve the architecture ruling, acceptance states and waivers, and coverage limits. These are not invented findings merely to fit the table.
@@ -149,7 +149,7 @@ REVIEW_ID=$(gh api "repos/$REPO/pulls/<number>/reviews" \
 
 Verify with `publish.md`'s round-trip command, reading `repos/$REPO/pulls/<number>/reviews/$REVIEW_ID`; on any difference, fix it with `PUT` on that review and the same `-F body=@…`. `REVIEW_ID` feeds §6.
 
-The event is the verdict approved at the `/review-pr` gate -- don't recompute it here. Default to `COMMENT` when blockers gate or `APPROVE` otherwise; the number of blockers never changes the event. Use `REQUEST_CHANGES` only when the user explicitly requested that verdict type; never infer it from blocking findings. `APPROVE` with non-gating line comments (`opinion`/`nit`/`suggestion`) is legitimate per review-pr's `references/workflows/first-pass.md` §6.
+The event is the verdict approved at the `/review-pr` gate -- don't recompute it here. Default to `COMMENT` when blockers gate or `APPROVE` otherwise; the number of blockers never changes the event. Use `REQUEST_CHANGES` only when the user explicitly requested that verdict type; never infer it from blocking findings. `APPROVE` with non-gating line comments (`suggestion`/`nit`) is legitimate per review-pr's `references/workflows/first-pass.md` §6.
 
 ## 6. Close the Ledger
 

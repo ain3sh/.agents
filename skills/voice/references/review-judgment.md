@@ -17,13 +17,17 @@ An edit-and-approval gate always stands between you and publishing (in the revie
 
 ## Severity taxonomy (canonical; other skills defer here)
 
-| Tier | Meaning (author response) |
-|---|---|
-| `critical` | Defect blocking merge: correctness, security, data loss, regression (must fix) |
-| `warning` | Significant defect or near-defect that will burn a future reader (address or defend) |
-| `opinion` | Judgment-grade pushback on design, architecture, craft, or taste. Not a defect claim; a position you hold and want engaged (engage; disagreement is fine, dismissal-by-silence is not) |
-| `suggestion` | Recommended improvement, lighter than `opinion` (consider) |
-| `nit` | Cosmetic or pure preference (optional) |
+| Tier | Meaning (author response) | Gates |
+|---|---|---|
+| `critical` | Defect blocking merge: correctness, security, data loss, regression (must fix) | yes |
+| `warning` | Significant defect or near-defect that will burn a future reader (address or defend) | yes |
+| `opinion` | Judgment-grade pushback on design, architecture, craft, or taste. Not a defect claim; a position you hold and want engaged (engage; disagreement is fine, dismissal-by-silence is not) | yes |
+| `suggestion` | Recommended improvement, lighter than `opinion` (consider) | no |
+| `nit` | Cosmetic or pure preference (optional) | no |
+
+**Gating follows tier.** Non-gating is reserved for what truly doesn't matter but would be nice: that is a `suggestion` or `nit`. Anything that matters is `opinion` or above and gates, pre-existing defects included.
+
+**Precedent:** on shared, core, or pattern-setting code, a defect's cost includes every copy it seeds, since people and agents imitate what merges. A pattern-level defect there rises one tier, up to `warning` (`critical` stays reserved for its own defects), and the finding names what it would teach.
 
 **Calibration:** *"I'd push back in my own PR"* lands at least `opinion`. *"Footgun"* is a `warning` if likely to fire, an `opinion` if structural. *"Violates single-canon"* is `opinion` minimum. **Always state the *why***: a tier without rationale reads as drive-by, and the author cannot engage it. Tier-to-comment mapping lives in `post-review`; design-grade `opinion`s rarely warrant an apply-clickable suggestion.
 
