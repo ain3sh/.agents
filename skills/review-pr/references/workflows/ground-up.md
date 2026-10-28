@@ -25,7 +25,7 @@ Record it as a `gate` notes entry and in the dossier's *Reference design* sectio
 
 Standing dispatches (`systems/workers.md`), all heavy and read-only, on a parent-arranged snapshot at the base SHA. **Blindness:** a blind worker receives the crux brief and the snapshot, never the diff, PR number, branch, body, or the author's framing, and its prompt tells it not to look the PR up. Unavailable subagent type → report a specialist blocker; never downgrade silently.
 
-- **Prior-art research** (`subagent_type: sol`; split by axis when the space is broad, such as production systems versus published work and open source): how the strongest systems and teams solve this crux, which approaches hold up and which fail and why, and the trade-offs that decide between them. Loads web research tools (WebSearch, FetchUrl) and **paper-search** where the field has literature. Returns approaches with a source per claim, what each optimizes, its failure modes, and which brief constraints it fits or breaks; an unsourced claim is marked as recall.
+- **Prior-art research** (`subagent_type: sol`; split by axis when the space is broad, such as production systems versus published work and open source): how the strongest systems and teams solve this crux, which approaches hold up and which fail and why, and the trade-offs that decide between them. Uses web research tools (WebSearch, FetchUrl), plus the `paper-search` MCP tools when connected and the field has literature. Returns approaches with a source per claim, what each optimizes, its failure modes, and which brief constraints it fits or breaks; an unsourced claim is marked as recall.
 - **Independent designs**, dispatched once research returns, each given the brief and the research digest. At least two designers on different models (`fable`, `opus`); add `sol` when the crux spans several subsystems. Each designs what it would ship in this codebase, from base source, and returns: owners and boundaries; state model and contracts as types and signatures; data and control flow as **show-me** views; each key decision with the rejected alternative and why; the invariants it must hold; the failure modes it handles; build and migration cost. Every decision cites the base source or research it rests on.
 
 Scale with the problem: a crux with independent sub-problems gets a research axis and a designer pair per sub-problem. Record each dispatch as a `dispatch` notes entry and each return as a `reconcile` entry.
@@ -41,7 +41,7 @@ Write the **reference design**: crux, constraints, convergent decisions, settled
 
 ## 4. First pass against the reference design
 
-Now read the PR. Run `workflows/first-pass.md` §1–§5 in full (skip §1's complexity check; you are here), with three differences:
+Now read the PR. Run `workflows/first-pass.md` §1–§5 in full, minus two §1 steps this workflow's §1 already did (the complexity check and the ledger scaffold), with three differences:
 
 - The architecture gate sets the PR against the reference design (`lenses/architecture.md` §5).
 - A `revise` ruling does not stop the pass. The delta needs the whole PR, so §3–§4 run in full anyway; a finding the reference direction would subsume says so.

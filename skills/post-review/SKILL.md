@@ -16,6 +16,7 @@ Default (`/post-review <PR>` alone): post the full approved review, every live f
 Load skills: **pr-context**, **voice**, **show-me**. **voice** is required here: use its severity taxonomy and craft rules for every posted body instead of rephrasing approved findings into generic review-speak.
 
 Then follow §1–§6 in order.
+
 ## 1. Resolve PR Identity
 
 Resolve the PR and `REPO` from the supplied ref or current review context via **pr-context**. Ask for the PR ref via `AskUser` if neither is available. Fetch the live PR head as `HEAD_SHA`, even when context already holds a SHA.
@@ -40,7 +41,7 @@ Reconciliation rules:
 - **Live** = `confirmed` and approved at the gate. `killed`, `folded→Fn`, user-dropped, and superseded findings stay out; a well-argued notes entry is not a reason to resurrect one.
 - **Explicit user decisions win.** Apply the latest instruction, including this invocation, over earlier decisions; record new decisions using the existing `gate` / `retier` notes events. Chat memory is not a competing source.
 - **Approved means presented.** The gate approved the findings shown to the user, never `candidate` entries that stayed in the notes. A `confirmed` finding the presentation omitted is a conflict (below), not a bonus post.
-- **Already posted** (`posted` status / thread id) is never sent again. If it still gates, the verdict names it and links the thread; if follow-up reclassified it, it gets a thread reply (§5).
+- **Already posted** (`posted` status / thread id) is never sent again. If it still gates (status `resolved` or `deferred` means it doesn't), the verdict names it and links the thread; if follow-up reclassified it, it gets a thread reply (§5).
 - **Grouping keeps every claim.** One comment may carry several findings; each independent claim and ask survives the merge.
 - **Tier fixes gating, and both are fixed here.** Gating follows the **voice** tier, so changing whether a finding gates means a `retier` at the gate. Never recast a gating finding as optional or fast-follow to soften or shorten.
 - **Stale substance is not reposted as fresh.** A current head (§1) that differs from the dossier's `reviewed_head`, or materially new evidence, sends the finding back through `/review-pr` follow-up for revalidation and re-approval. This step never rewrites substance.
@@ -153,9 +154,10 @@ Each prior thread whose follow-up classification (review-pr's `references/workfl
 ```bash
 jq -n --arg body "$BODY" '{body:$body}' \
 | gh api "repos/$REPO/pulls/<number>/comments/<comment_id>/replies" --method POST --input -
-THREAD_ID=$(gh api graphql -F o="${REPO%/*}" -F r="${REPO#*/}" -F n=<number> -f query='
-query($o:String!,$r:String!,$n:Int!){ repository(owner:$o,name:$r){ pullRequest(number:$n){
-  reviewThreads(first:100){ nodes{ id comments(first:1){ nodes{ databaseId } } } } } } }' \
+THREAD_ID=$(gh api graphql --paginate -F o="${REPO%/*}" -F r="${REPO#*/}" -F n=<number> -f query='
+query($o:String!,$r:String!,$n:Int!,$endCursor:String){ repository(owner:$o,name:$r){ pullRequest(number:$n){
+  reviewThreads(first:100, after:$endCursor){ pageInfo{ hasNextPage endCursor }
+    nodes{ id comments(first:1){ nodes{ databaseId } } } } } } }' \
   --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[0].databaseId == <comment_id>) | .id')
 gh api graphql -F id="$THREAD_ID" -f query='
 mutation($id:ID!){ resolveReviewThread(input:{threadId:$id}){ thread{ isResolved } } }'

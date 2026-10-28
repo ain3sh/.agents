@@ -43,7 +43,7 @@ Append triggers — each is a moment where unique state exists only in-context:
 - **dispatch** — workers sent: category, session ids, modality pairing.
 - **reconcile** — a worker returned: outcome per proposition, modality agreement or disagreement (a disagreement is itself the named open question). Write before processing the next return.
 - **env** — environment quirk discovered (runtime version pins, filesystem constraints, hoisted binaries); later worker prompts inherit these from the dossier's env notes.
-- **gate** — the ground-up crux brief and reference design (`workflows/ground-up.md` §1, §3), the complexity-check decision (`workflows/first-pass.md` §1), the architecture-gate ruling (`continue` / `revise`, reason, unreviewed areas on `revise`; a re-rule after the worker returns is a second entry), acceptance admissions and waivers (`lenses/acceptance.md`), and approval-gate outcomes: user edits, drops, re-severities, verdict choice.
+- **gate** — follow-up deferral judgments (`workflows/follow-up.md` Lane 1), the ground-up crux brief and reference design (`workflows/ground-up.md` §1, §3), the complexity-check decision (`workflows/first-pass.md` §1), the architecture-gate ruling (`continue` / `revise`, reason, unreviewed areas on `revise`; a re-rule after the worker returns is a second entry), acceptance admissions and waivers (`lenses/acceptance.md`), and approval-gate outcomes: user edits, drops, re-severities, verdict choice.
 - **post** — review submitted: review id, comment ids → anchors.
 
 The notes file persists across passes append-only — follow-ups continue the same log.
@@ -52,7 +52,7 @@ The notes file persists across passes append-only — follow-ups continue the sa
 
 Refreshed at checkpoints, not per event (the notes carry the loss-proof burden): after the architecture-gate ruling, after the review-state summary, at each category close, at the approval gate, and after posting — `/post-review` owns the final write of a pass. Replace state sections each pass; append one history line.
 
-Findings carry **stable IDs** (`F1, F2, …`, assigned at candidate time, never renumbered or reused) and a **status**: `candidate | confirmed | killed | folded→Fn | posted`. Notes entries reference these IDs; tier changes appear in the notes as `retier` entries, the dossier shows only the current tier.
+Findings carry **stable IDs** (`F1, F2, …`, assigned at candidate time, never renumbered or reused) and a **status**: `candidate | confirmed | killed | folded→Fn | posted | resolved | deferred`. Follow-up sets the last two (`workflows/follow-up.md` Lane 1): `resolved` means the finding no longer stands (fixed, superseded, or no longer applicable), `deferred` that it stands but its decline was accepted; neither gates. Notes entries reference these IDs; tier changes appear in the notes as `retier` entries, the dossier shows only the current tier.
 
 On load (routing/follow-up): verify the dossier's PR number matches the target — mismatch (e.g. run from a shared worktree) → treat as no dossier. Worktree deleted → both files gone; that's fine — the GitHub review thread is the durable fallback, and follow-up reconstructs the minimum from it.
 

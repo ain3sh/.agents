@@ -46,7 +46,10 @@ class Options:
 
 def _read_env_file(path: str) -> dict[str, str]:
     """Load KEY=VALUE pairs from a JSON object or dotenv file without echoing them."""
-    text = Path(path).expanduser().read_text()
+    try:
+        text = Path(path).expanduser().read_text()
+    except UnicodeDecodeError as exc:
+        raise OSError(f"{path}: not UTF-8 text ({exc.reason})") from exc
     loaded: dict[str, str] = {}
     stripped = text.lstrip()
     if stripped.startswith("{"):

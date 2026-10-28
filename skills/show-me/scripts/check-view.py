@@ -15,7 +15,7 @@ import sys
 
 VIEW = re.compile(r"^\s*(```|~~~|\||!\[|<picture|<img)")
 FENCE = re.compile(r"^\s*(`{3,}|~{3,})(.*)$")
-HEADING = re.compile(r"^ {0,3}## (.*?)\s*#*\s*$")
+HEADING = re.compile(r"^ {0,3}## (.*?)(?:\s+#+)?\s*$")
 
 
 def scope(lines, section):
