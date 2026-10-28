@@ -10,14 +10,14 @@ The guards elsewhere in this skill (the gate's `revise` threshold, "taste is ins
 
 Scaffold the ledger pair (`systems/dossier.md`, `mode: ground-up`). Fetch PR metadata, the linked ticket or issue, and `gh pr diff --name-only` through **pr-context**. Do not read the diff, the branch, or the design sections of the PR body yet: a PR body usually describes its solution, so take only the problem from it. Arriving from first-pass after reading the diff, write the brief anyway and lean harder on §2; the reference design comes from the blind workers, and you only synthesize it.
 
-Run `lenses/crux.md` steps 1–2 on the base revision: the map, then the **crux brief**. Record the brief as a `gate` notes entry and in the dossier's *Reference design* section.
+Run `lenses/crux.md` steps 1–2 on the base revision: the map, then the **crux brief**. Record the brief, and how the review got here (the `ground-up` keyword or a yes to first-pass's complexity check), as a `gate` notes entry; the brief also goes in the dossier's *Reference design* section.
 
 ## 2. Blind phase
 
 Standing dispatches (`systems/workers.md`), all heavy and read-only, on a parent-arranged snapshot at the base SHA. **Blindness:** a blind worker receives the crux brief, the snapshot, and `lenses/crux.md`, never the diff, PR number, branch, body, or the author's framing, and its prompt tells it not to look the PR up. Unavailable subagent type → report a specialist blocker; never downgrade silently.
 
 - **Prior-art research** (`subagent_type: sol`; split by axis when the space is broad, such as production systems versus published work and open source): how the strongest systems and teams solve this crux, which approaches hold up and which fail and why, and the trade-offs that decide between them. Uses web research tools (WebSearch, FetchUrl), plus the `paper-search` MCP tools when connected and the field has literature. Returns approaches with a source per claim, what each optimizes, its failure modes, and which brief constraints it fits or breaks; an unsourced claim is marked as recall.
-- **Independent designs**, dispatched once research returns, each given the brief and the research digest. At least two designers on different models (`fable`, `opus`); add `sol` when the crux spans several subsystems. Each builds what it would ship in this codebase by `lenses/crux.md` steps 3–5, from base source, and returns its **layer ledger** plus: owners and boundaries; state model and contracts as types and signatures; data and control flow as **show-me** views; each key decision with the rejected alternative and why; the failure modes it handles; build and migration cost. Every layer and decision cites the base source or research it rests on.
+- **Independent designs**, dispatched once research returns, each given the brief and the research digest. At least two designers on different models (`fable`, `opus`); add `sol` when the crux spans several subsystems. Each loads `lenses/crux.md` (which brings in **zoom-out** and **patch-coherence**) and **show-me**, then builds what it would ship in this codebase by `lenses/crux.md` steps 3–5, from base source, and returns its **layer ledger** plus: owners and boundaries; state model and contracts as types and signatures; data and control flow as **show-me** views; each key decision with the rejected alternative and why; the failure modes it handles; build and migration cost. Every layer and decision cites the base source or research it rests on.
 
 Scale with the problem: a crux with independent sub-problems gets a research axis and a designer pair per sub-problem. Record each dispatch as a `dispatch` notes entry and each return as a `reconcile` entry.
 
@@ -35,7 +35,7 @@ Write the **reference design** as one merged layer ledger: the shared pure core,
 Now read the PR. Run `workflows/first-pass.md` §1–§5 in full, minus two §1 steps this workflow's §1 already did (the complexity check and the ledger scaffold), with three differences:
 
 - The architecture gate sets the PR against the reference design (`lenses/architecture.md` §5).
-- A `revise` ruling does not stop the pass. The delta needs the whole PR, so §3–§4 run in full anyway; a finding the reference direction would subsume says so.
+- A `revise` ruling does not stop the pass, and first-pass's clauses written for a ruling that does stop it don't apply. The delta needs the whole PR, so §3–§4 and the structural sweep run in full anyway, and §5 records the coverage actually reached: no *Unreviewed* list, and a *Verified-safe* list of what was verified. A finding the reference direction would subsume says so.
 - Record the **delta**: for every reference decision, the PR's choice is *matches*, *differs*, or *missing*. Each difference is a finding (`F<id>`), tiered per `lenses/architecture.md` §5. Then run `lenses/crux.md` §5's complexity accounting of the PR against the reference ledger: each PR mechanism traces to a row or is accidental complexity.
 
 ## 5. Deeper, by default

@@ -39,8 +39,8 @@ For each dossier finding, verify the response **at mechanism depth**:
 - does the intended invariant now hold? Trace it, don't take the reply's word.
 - where tests were added/changed to close a finding, confirm they fail against the previously reviewed source for the stated reason (not an import/compile error) and pass on the new head — comparisons run on parent-arranged disposable snapshots per `systems/workers.md`, never revert/restore inside the live checkout.
 - classify: **resolved / unresolved / partially resolved / superseded / no longer applicable / accepted deferral**.
-- a pre-existing finding the author declined in its thread with a reason (whether or not they resolved the thread): judge whether the reason holds for this change (scope, risk, cost of fixing it here). Holds → **accepted deferral**: it stops gating, recorded as a `gate` notes entry with the reason. Doesn't hold → **unresolved**, still gating, with why the reason fails.
-- set the dossier status from the class: resolved, superseded, and no longer applicable → `resolved`; accepted deferral → `deferred`; unresolved and partially resolved keep theirs and still gate.
+- a pre-existing finding the author declined in its thread with a reason (whether or not they resolved the thread): judge whether the reason holds for this change (scope, risk, cost of fixing it here). Holds → **accepted deferral**: it stops gating, recorded as a `gate` notes entry with the reason. Doesn't hold → **unresolved** and gating whatever its tier (**voice**), with why the reason fails.
+- set the dossier status from the class: resolved, superseded, and no longer applicable → `resolved`; accepted deferral → `deferred`; unresolved and partially resolved keep theirs and gate per **voice** (by tier, except a rejected decline, which gates whatever its tier).
 
 An author reply of "fixed" with a commit that doesn't establish the invariant is an unresolved finding — say so plainly.
 

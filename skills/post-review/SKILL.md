@@ -43,7 +43,7 @@ Reconciliation rules:
 - **Approved means presented.** The gate approved the findings shown to the user, never `candidate` entries that stayed in the notes. A `confirmed` finding the presentation omitted is a conflict (below), not a bonus post.
 - **Already posted** (`posted` status / thread id) is never sent again. If it still gates (status `resolved` or `deferred` means it doesn't), the verdict names it and links the thread; if follow-up reclassified it, it gets a thread reply (§5).
 - **Grouping keeps every claim.** One comment may carry several findings; each independent claim and ask survives the merge.
-- **Tier fixes gating, and both are fixed here.** Gating follows the **voice** tier, so changing whether a finding gates means a `retier` at the gate. Never recast a gating finding as optional or fast-follow to soften or shorten.
+- **Tier fixes gating, and both are fixed here.** Gating follows **voice** (the tier, plus its rejected-decline exception), so changing whether a finding gates means a `retier` at the gate. Never recast a gating finding as optional or fast-follow to soften or shorten.
 - **Stale substance is not reposted as fresh.** A current head (§1) that differs from the dossier's `reviewed_head`, or materially new evidence, sends the finding back through `/review-pr` follow-up for revalidation and re-approval. This step never rewrites substance.
 - **Gaps block publication.** Missing evidence, missing approval, or a genuine unresolved conflict requires one `AskUser` naming the gap. Resume only after resolution or explicit user scope reduction; never silently post a subset or ask again about settled approval.
 
