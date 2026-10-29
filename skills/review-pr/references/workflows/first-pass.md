@@ -194,4 +194,4 @@ Pre-existing defects found en route are findings like any other, marked *pre-exi
 
 Omit an empty section, except **Architecture**. Length follows the findings: every passage carries a ruling, an ask, or a view, and recaps or process narration are cut at any length.
 
-Once confirmed: hand off to `/post-review <PR>` with findings and verdict body (suggestion-block decisions live there — review judgment must not be biased toward apply-clickable issues). Posting appends the `post` notes entry (review id, comment ids → anchors) and refreshes the dossier per `systems/dossier.md`.
+Once confirmed: hand off to `/post-review <PR>` with findings and verdict body (suggestion-block decisions live there — review judgment must not be biased toward apply-clickable issues). Posting appends the `post` notes entry and refreshes the dossier per `systems/dossier.md`.

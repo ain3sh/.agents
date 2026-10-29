@@ -5,7 +5,7 @@ description: Publish approved PR findings as inline comments and a review verdic
 
 # Post Review
 
-The posting half of the review workflow. Findings come from an upstream `/review-pr` (typical) or fresh paste. Publish only in §5: §2-§4 reconcile, draft, and check the whole payload first.
+The posting half of the review workflow. Findings come from an upstream `/review-pr` (typical) or fresh paste. Publish only in §5: §2–§4 reconcile, draft, and check the whole payload first.
 
 ## Act
 
@@ -184,4 +184,4 @@ The event is the verdict approved at the `/review-pr` gate -- don't recompute it
 
 ## 6. Close the Ledger
 
-After submitting, close the ledger for this pass: append the `post` entry (review id, comment ids → anchors, thread replies and resolved-state changes) to `./.agents/review.notes.md` and refresh `./.agents/review.md` per the **review-pr** skill's `references/systems/dossier.md` (replace state sections, mark posted findings with their thread ids, append a history line). Skip only for pasted findings with no upstream review session (no ledger exists).
+After submitting, close the ledger for this pass: append the `post` entry (fields per review-pr's `references/systems/dossier.md`) to `./.agents/review.notes.md` and refresh `./.agents/review.md` per the **review-pr** skill's `references/systems/dossier.md` (replace state sections, mark posted findings with their thread ids, append a history line). Skip only for pasted findings with no upstream review session (no ledger exists).

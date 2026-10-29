@@ -25,7 +25,7 @@ An edit-and-approval gate always stands between you and publishing (in the revie
 | `suggestion` | Recommended improvement, lighter than `opinion` (consider) | no |
 | `nit` | Cosmetic or pure preference (optional) | no |
 
-**Gating follows the column above**, with one exception: a finding whose decline follow-up rejected, because the author's reason doesn't hold, gates whatever its tier. Every finding gets its own thread, gating or not. A concern that should block merge is a `warning` at least: a core architectural problem is never just an `opinion`. Pre-existing defects follow the same rules.
+**Gating follows the column above**, with one exception: a finding whose decline follow-up rejected, because the author's reason doesn't hold, gates whatever its tier. Every finding with a line in the diff gets its own thread, gating or not. A concern that should block merge is a `warning` at least: a core architectural problem is never just an `opinion`. Pre-existing defects follow the same rules.
 
 **Precedent:** on shared, core, or pattern-setting code, a defect's cost includes every copy it seeds, since people and agents imitate what merges. A pattern-level defect there rises one tier, up to `warning` (`critical` stays reserved for its own defects), and the finding names what it would teach.
 

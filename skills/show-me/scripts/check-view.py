@@ -26,8 +26,8 @@ def scope(lines, section):
         match = FENCE.match(line)
         if fence is None and match:
             fence = match.group(1)
-        elif fence and match and match.group(1)[0] == fence[0] \
-                and len(match.group(1)) >= len(fence) and not match.group(2).strip():
+        elif (fence and match and match.group(1)[0] == fence[0]
+                and len(match.group(1)) >= len(fence) and not match.group(2).strip()):
             fence = None
         elif fence is None and (heading := HEADING.match(line)):
             inside = heading.group(1) == section
