@@ -15,6 +15,10 @@ machine-specific paths from the artifact and its caption.
 gh-attach --repo owner/repo --url /absolute/path/diagram.png
 ```
 
+By default it uses `GH_TOKEN`; `--user <account>` uses that logged-in gh
+account's token instead, which may carry scopes `GH_TOKEN` lacks (uploads need
+`repo`, and a scopeless token gets 404).
+
 For theme variants, upload each file and substitute its URL into the
 [show-me picture pattern](../../show-me/references/surfaces.md#reusing-and-embedding-assets).
 If the local machine lacks a browser-authenticated GitHub session, use a
