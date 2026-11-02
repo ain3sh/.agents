@@ -12,19 +12,18 @@ repo or use `raw.githubusercontent.com`. Exclude secrets, tokens, and
 machine-specific paths from the artifact and its caption.
 
 ```bash
-gh-attach --repo owner/repo --user factory-ain3sh --url /absolute/path/diagram.png
+gh-attach --repo owner/repo --url /absolute/path/diagram.png
 ```
 
-`--user` takes that account's repo-scoped OAuth token from
-`~/.config/gh/hosts.yml`, which the ain3sh-dev template writes. Without it,
-`gh-attach` uses `GH_TOKEN`, which on a Factory computer is the GitHub App's
-scopeless `ghu_` token; the upload endpoint requires `repo` scope and answers
-404 to it, for any repository.
+By default it uses `GH_TOKEN`; `--user <account>` uses that logged-in gh
+account's token instead, which may carry scopes `GH_TOKEN` lacks (uploads need
+`repo`, and a scopeless token gets 404).
 
 For theme variants, upload each file and substitute its URL into the
 [show-me picture pattern](../../show-me/references/surfaces.md#reusing-and-embedding-assets).
-If the machine has no such token, use a trusted machine or `--session-file`;
-don't expose session material. Keep machine/auth details out of public PR prose.
+If the local machine lacks a browser-authenticated GitHub session, use a
+trusted machine or `--session-file`; don't expose session material. Keep
+machine/auth details out of public PR prose.
 
 ## Placement
 
