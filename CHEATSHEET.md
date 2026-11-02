@@ -86,7 +86,7 @@ droids land in the same directory and are gitignored. Staffing policy is the
 | `witr` | `go install github.com/pranshuparmar/witr/cmd/witr@latest` | Standalone "why is this running?" tracer |
 | `nlsh` | `go install github.com/abakermi/nlsh@latest` | Wrapper + inlined config in `~/.zshrc` (materializes `~/.nlshrc` on call); uses OpenRouter via `OPENROUTER_API_KEY` |
 | `excalirender` | At `~/.local/bin/`; if missing: `curl -fsSL https://raw.githubusercontent.com/JonRC/excalirender/main/install.sh \| PREFIX=$HOME/.local sh` | Renders `.excalidraw` → PNG/SVG/PDF. `excalidraw` owns commands; **show-me** selects the destination format and embedding. |
-| `gh-attach` | At `~/.local/bin/` | Uploads images/clips to GitHub's CDN for authorized PR publication. `pr-description` owns upload and placement (artifacts.md, visual-evidence.md). |
+| `gh-attach` | At `~/.local/bin/` | Uploads images/clips to GitHub's CDN for authorized PR publication; pass `--user factory-ain3sh` (the scopeless `GH_TOKEN` gets 404). `pr-description` owns upload and placement (artifacts.md, visual-evidence.md). |
 | `paperclip` MCP | HTTP MCP + `paperclip login` | Biomedical lit (`~/.factory/mcp.json`) |
 | `paper-search` MCP | `npx -y paper-search-mcp-nodejs` | 14 academic platforms (`~/.factory/mcp.json`) |
 
