@@ -19,7 +19,9 @@ gh api graphql -f query='query{repository(owner:"Factory-AI",name:"factory-mono"
   (`pr-desc-base` marker equals the head); no further commits planned before
   merge.
 - Skip the post when the PR already holds the approval it needs. Approvals
-  survive new pushes; never ask an approver again.
+  survive new pushes; never ask an approver again. An approved PR with green
+  checks gets no post of any kind: merge it, or leave it to PR Shepherd's
+  merge when it is a workstream PR. Never post asking someone else to merge.
 - Also request the reviewers on GitHub so the PR shows them:
   `gh api repos/Factory-AI/factory-mono/pulls/N/requested_reviewers -X POST -f 'reviewers[]=<login>'`.
 
