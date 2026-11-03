@@ -19,18 +19,19 @@ By default it uses `GH_TOKEN`; `--user <account>` uses that logged-in gh
 account's token instead, which may carry scopes `GH_TOKEN` lacks (uploads need
 `repo`, and a scopeless token gets 404).
 
-For theme variants, upload each file and substitute its URL into the
-[show-me picture pattern](../../show-me/references/surfaces.md#reusing-and-embedding-assets).
-If the local machine lacks a browser-authenticated GitHub session, use a
+Each view is one opaque PNG ([show-me Image](../../show-me/references/surfaces.md#image));
+embed it as `<img alt="<takeaway>" src="<url>" />` with alt text that states
+its takeaway, not its topic. If the local machine lacks a browser-authenticated GitHub session, use a
 trusted machine or `--session-file`; don't expose session material. Keep
 machine/auth details out of public PR prose.
 
 ## Placement
 
-- Explanatory views go under `## Architecture`, whether Mermaid, code, or an
-  uploaded image. Return to `references/publish.md` for the body write.
-- Live screenshots and recordings go under `## Visual Evidence`, per
-  `references/visual-evidence.md`.
+- Explanatory views go under `## Architecture` as uploaded images; only
+  verbatim source the reader copies stays Markdown text. Return to
+  `references/publish.md` for the body write.
+- The demo video goes in **What**; live screenshots and other recordings go
+  under `## Visual Evidence`, per `references/visual-evidence.md`.
 - Carry over show-me's caption and selectable code companion; don't add a
   prose transcription or a second rendering of the same view.
 - An editable Excalidraw link is optional and needs authorization to upload

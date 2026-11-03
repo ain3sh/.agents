@@ -48,7 +48,7 @@ Rules:
 5. **User approval before posting.** Present findings + draft verdict in plain chat prose (never `AskUser`), wait for explicit confirmation, then hand off to `/post-review`.
 6. **Workers follow the contract.** Before the first `Task` dispatch in any mode, load `references/systems/workers.md` — complexity-by-responsibility, output schema, reconciliation, and cancellation rules live there. Every mode obeys it.
 7. **Ledger discipline.** Scaffold the paired ledger (`references/systems/dossier.md`: `review.md` current state + append-only `review.notes.md`) at review start, before verification. Notes entries are appended **in the same turn as the event they record** — candidate, confirm/kill, fold, retier, dispatch, reconciliation, gate decision, post — never batched to end-of-phase; a context compaction between turns must never cost a conclusion. Workers never touch either file. Every follow-up starts by loading the dossier and continues the same notes log.
-8. **Views compress, never decorate.** Load `show-me` for a verified source→sink trace, state flow, or dependency chain spanning more than two actors, and for the verdict's required view (`references/workflows/first-pass.md` §6 owns what it draws and what is cut). Elsewhere, surface a view only where it replaces a prose chain in the review state or a finding.
+8. **Views compress, never decorate.** Load `show-me` for a verified source→sink trace, state flow, or dependency chain spanning more than two actors, and for verdict views (`references/workflows/first-pass.md` §6 owns when one earns its place and what is cut). Elsewhere, surface a view only where it replaces a prose chain in the review state or a finding.
 
 ## Shared skill loads
 

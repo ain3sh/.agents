@@ -64,7 +64,7 @@ src/
 ```
 
 **Who acts in what order? How can state change?** Sequence or state diagram
-(numbered text in a terminal, Mermaid on GitHub or in a browser); grammars and
+(numbered text in a terminal, an image on GitHub or Slack); grammars and
 actor rules in `references/representations.md`.
 
 **What changed?** A `diff` fence over the shape that already exists, when most
@@ -101,9 +101,10 @@ run(job: QueuedJob): Promise<DoneJob>
 surface, old mechanism and limit, new limit and pointer, owning commit; the
 surprise row marked (`references/representations.md`).
 
-**Too dense for text or Mermaid?** One focused HTML file (diagram, explainer,
-mockup) in the product's colors and type with real labels, then open it or
-hand it to the caller (`references/surfaces.md`).
+**Needs layout, color, or emphasis, or headed for GitHub or Slack?** One
+focused HTML view (diagram, table, panels, mockup) in the product's colors and
+type with real labels: opened in a browser, or captured as the image GitHub and
+Slack get (`references/surfaces.md`).
 
 Use one view per question. Several questions earn several views: a tree beside
 the diff that changes it is normal; a code companion (one typed block) fills a
@@ -114,7 +115,7 @@ and boundary the question needs and nothing it does not.
 |---|---|
 | `/show-me [target] [as <form>]` | Resolve the target from arguments or the current topic, reread its source, write the reader's question, choose the shape above. Honor `as <form>` unless it would distort the evidence; then name the mismatch in one sentence and use the closest lossless form. |
 | Compose into a PR, design doc, or review | Take the caller's verified facts, reader question, destination, theme, and whether a view is required; return the checked view and any companion. The caller owns placement, document-wide checks, and publishing. Do not restart its analysis. |
-| Render or embed | `references/surfaces.md`: terminal text, GitHub Mermaid/code/images, Slack images, browser HTML/SVG, reused Excalidraw renders. |
+| Render or embed | `references/surfaces.md`: terminal text, dark-themed GitHub and Slack images (only verbatim source stays text), browser HTML/SVG, reused Excalidraw renders. |
 | A simple fact | One sentence, no view; a caller that requires a view gets the smallest relation the fact sits on (Check before sending). |
 
 ## Detect
@@ -174,6 +175,7 @@ no relation earns a view, say so and let the owning workflow omit its section.
 | Two views answer the same question | Keep the clearer one; a companion fills a detail, it does not repeat the view. |
 | Inline output too dense | Reduce scope, not font size; move to a browser HTML view only when the detail is essential. |
 | Mermaid or HTML would land in a plain terminal | Use the terminal grammar in `references/surfaces.md`. |
+| A GitHub or Slack view is a Mermaid fence, an ASCII grid, a text-block tree, or a diagram squeezed into Markdown | Build the HTML view and ship the captured image (`references/surfaces.md#image`). |
 | Panels, a table, or a wide tree would land in Slack as a code block | Send an image (`references/surfaces.md#slack`). |
 | Output is a full walkthrough or RFC | Cut to the views; `/explain-diff` owns walkthroughs, `design-doc` owns RFCs and memos. |
 

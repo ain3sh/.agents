@@ -11,7 +11,7 @@ The posting half of the review workflow. Findings come from an upstream `/review
 
 Usage: `/post-review [<PR-number-or-URL>]`.
 
-Default (`/post-review <PR>` alone): post the full approved review, every live finding at its approved tier (gating follows tier) plus a verdict that names every blocker and carries at least one view, reconciled against the whole ledger (`./.agents/review.md` and all of `./.agents/review.notes.md`) before the first write. Use trailing text as instructions or pasted findings; only explicit subset selection narrows the default.
+Default (`/post-review <PR>` alone): post the full approved review, every live finding at its approved tier (gating follows tier) plus a verdict that names every blocker, reconciled against the whole ledger (`./.agents/review.md` and all of `./.agents/review.notes.md`) before the first write. Use trailing text as instructions or pasted findings; only explicit subset selection narrows the default.
 
 Load skills: **pr-context**, **voice**, **show-me**. **voice** is required here: use its severity taxonomy and craft rules for every posted body instead of rephrasing approved findings into generic review-speak.
 
@@ -45,7 +45,7 @@ Reconciliation rules:
 - **Grouping keeps every claim.** One comment may carry several findings; each independent claim and ask survives the merge.
 - **Tier fixes gating, and both are fixed here.** Gating follows **voice** (the tier, plus its rejected-decline exception), so changing whether a finding gates means a `retier` at the gate. Never recast a gating finding as optional or fast-follow to soften or shorten.
 - **Stale substance is not reposted as fresh.** A current head (§1) that differs from the dossier's `reviewed_head`, or materially new evidence, sends the finding back through `/review-pr` follow-up for revalidation and re-approval. This step never rewrites substance.
-- **Gaps block publication.** Missing evidence, missing approval, or a genuine unresolved conflict requires one `AskUser` naming the gap. Resume only after resolution or explicit user scope reduction; never silently post a subset or ask again about settled approval.
+- **Gaps block publication.** Missing evidence, missing approval, or a genuine unresolved conflict requires one plain-chat decision message naming the gap, in AGENTS.md's decision shape. Resume only after resolution or explicit user scope reduction; never silently post a subset or ask again about settled approval.
 
 Each live finding needs a **voice** severity (do not invent or remap tiers), body prose, and a destination. Inline comments need a file path and line(s), optionally a replacement snippet. Every finding with a changed line to sit on gets its own thread, a broad one on its most representative line (**voice**); only a finding with no anchor in the diff lives in the verdict alone, and a verdict mention never substitutes for a thread. Pasted findings need the same information; missing or ambiguous material follows the gap rule above.
 
@@ -68,9 +68,9 @@ Otherwise post the prose as a plain comment. Don't downgrade severity because a 
 
 ### Verdict body
 
-The verdict body is the standalone judgment from the **review-pr** skill's `references/workflows/first-pass.md` §6 (disposition, then the Architecture section with its views, then blockers by area, non-gating findings, and unanchored pre-existing defects, with evidence woven into the claims it backs) -- **not** a recap of the threads you post; GitHub renders those inline. If the upstream handoff omitted one, draft it against that structure -- don't fall back to "Posted N comments on X, Y, Z."
+The verdict body is the standalone judgment from the **review-pr** skill's `references/workflows/first-pass.md` §6 (an `@author` ruling paragraph, then `## Architecture`, a `##` section per remaining gating area with continuously numbered asks, `## Non-gating`, and unanchored pre-existing defects, with evidence woven into the claims it backs) -- **not** a recap of the threads you post; GitHub renders those inline. If the upstream handoff omitted one, draft it against that structure -- don't fall back to "Posted N comments on X, Y, Z."
 
-It always carries one or more **show-me** views (review-pr's `references/workflows/first-pass.md` §6, "The view"). A drop, retier, or rewording made after the gate only removes or re-marks the view's affected nodes and edges. An upstream verdict with no view is a §2 gap: draw one from the approved ruling and findings and show it in that gap's single `AskUser` before the first write.
+Views appear only where they carry part of the ruling (first-pass §6, "Views"); a verdict with none is complete. Each is one polished uploaded image (**show-me** surfaces, Image). A drop, retier, or rewording made after the gate only removes or re-marks the view's affected nodes and edges, and a view left carrying nothing is cut.
 
 It names **every** still-gating finding, numbered, each with its concrete ask, including linked threads for already-posted blockers. There is no count limit. The GitHub event (§5) does not make these asks optional.
 
@@ -84,7 +84,7 @@ Approval at the `/review-pr` gate covered the findings and disposition, not the 
 - **Command narration**: the CLI invocations, tool names, and worker dispatches behind a probe (`gh run view`, vitest flags, `slop-scan delta`, typechecker choice). Report the observed fact -- *"the new tests fail on base for the stated reason"* -- never the transcript that produced it. How you learned something is your business; what's true is the review.
 - **Methodology paragraphs**: "Checks run:", "Also verified:", CI pass counts, sweep inventories. If a probe backs a claim, it's already inline in that claim; standalone it's an essay about your process.
 - **Fast-follow / "worth a ticket" framing**: pre-existing defects are findings with their own threads (review-pr's `references/workflows/first-pass.md` §6); cut any "worth a ticket", "fast-follow", or "separate PR" framing around them.
-- **Decorative views**: cut a view that restates a line comment or carries no part of the ruling (review-pr's `references/workflows/first-pass.md` §6, "The view"); if that leaves none, the missing view is a §2 gap.
+- **Decorative views**: cut a view that restates an ask or a line comment, or carries no part of the ruling (review-pr's `references/workflows/first-pass.md` §6, "Views"); if that leaves none, post without one.
 
 This applies to line-comment bodies too: findings state the defect and the fix, never the commands run to find it.
 
@@ -101,9 +101,9 @@ After the deslop pass and before any external write, walk the §2 coverage table
 - Every published finding has a row; the verdict names every still-gating finding, including previously posted ones.
 - Separately compare the verdict with the approved review state and review-pr's `references/workflows/first-pass.md` §6: preserve the architecture ruling, acceptance states and waivers, and coverage limits. These are not invented findings merely to fit the table.
 - Grouped comments still carry each claim they merged.
-- Every verdict view's nodes and edges trace to the approved ruling and findings, and the exact Mermaid being posted passed **show-me**'s render check.
+- Every verdict image's nodes, edges, and rows trace to the approved ruling and findings, and the exact PNG being posted passed **show-me**'s image check.
 
-Restore what deslop dropped and run the check again. A gap the ledger cannot close is a §2 `AskUser`, not a silent omission.
+Restore what deslop dropped and run the check again. A gap the ledger cannot close is a §2 decision, not a silent omission.
 
 ## 5. Post
 
@@ -167,10 +167,9 @@ Reopen with `unresolveReviewThread` in the same mutation shape. Read back `isRes
 
 ### Submit the verdict
 
-Write the verdict to `/tmp/verdict-<number>.md` with a file tool and pass it with `-F body=@…`, as `pr-description/references/publish.md` does; a body typed inline in a quoted argument expands backticks and `$`. Post only after the view check passes; a nonzero exit is a §4 failure.
+Upload each view's PNG first (`gh-attach --repo "$REPO" --url <png>`, per `pr-description/references/artifacts.md`) and embed it as `<img alt="<takeaway>" src="<url>" />` beside the asks it carries. Write the verdict to `/tmp/verdict-<number>.md` with a file tool and pass it with `-F body=@…`, as `pr-description/references/publish.md` does; a body typed inline in a quoted argument expands backticks and `$`.
 
 ```bash
-python3 ~/.agents/skills/show-me/scripts/check-view.py /tmp/verdict-<number>.md &&
 REVIEW_ID=$(gh api "repos/$REPO/pulls/<number>/reviews" \
   --method POST \
   -f event="<COMMENT|APPROVE|REQUEST_CHANGES>" \

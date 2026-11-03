@@ -7,7 +7,7 @@ Changing the renderer never fixes a badly chosen relationship.
 | Destination | Displays | Grammar |
 |---|---|---|
 | Terminal (chat reply, CLI, tool output) | Markdown text and fenced code; a ```` ```mermaid ```` or HTML block appears as raw source unless the client is known to render it | typed fences, indented trees, aligned tables, numbered sequence lines |
-| GitHub body or comment | Markdown, fenced code, Mermaid at the host's pinned version and theme, uploaded images; strips HTML styles and scripts | Mermaid for interaction, state, and graph; Markdown code for code shape; trees and hunks for structure |
+| GitHub body or comment | Markdown, fenced code, uploaded images; Mermaid only at the host's pinned version and theme; strips HTML styles and scripts | an uploaded image for every view; Markdown code only for verbatim source the reader copies |
 | Slack message or thread | mrkdwn: bold, italic, code spans, unhighlighted code blocks that rewrap on narrow panes, `•` bullets, links; uploaded images. No tables, headers, Mermaid, or highlighting | a short code-block tree or sequence; everything else an image |
 | Browser file or document | HTML, inline SVG, embedded images, selectable code | one focused file, or a figure inside the caller's document |
 
@@ -27,31 +27,28 @@ not a second diagram policy.
 
 ## GitHub
 
-- Mermaid supports direction (`LR`, `TB`), `subgraph` grouping, notes, edge
-  labels, and theme directives, and it renders natively, is editable in the PR,
-  and diffs as text. GitHub pins the Mermaid version and theme, so custom
-  fonts, CSS, and `%%{init}%%` theming may be ignored, and layout control is
-  less than a custom HTML view. Use real symbol or file names in nodes, data
-  on edges, `<br/>` for long labels. Use HTML/SVG for custom responsive layout,
-  or load `excalidraw` when an editable drawing is useful or already exists.
-  Choose for readability, not only after Mermaid fails.
-- Code: fenced with a language; path on the line above. Anything the reviewer
-  should open gets a permalink pinned to a sha, never a branch:
+- Only verbatim source stays text: quoted lines, real hunks, and type
+  signatures the reader will copy, fenced with a language and the path on the
+  line above. Anything the reviewer should open gets a permalink pinned to a
+  sha, never a branch:
   `https://github.com/<owner>/<repo>/blob/<sha>/<path>#L<n>-L<m>`.
-- `diff` fences hold real source hunks or real structure lines, never summary
-  bullets ("Layout must encode a relation" in `representations.md`).
-- A browser HTML view does not embed. Capture the diagram, not the whole
-  explanation page, as PNG at 2× display resolution ([capture](#capture-to-png)). Keep its code companion
-  as Markdown text so it stays selectable. Render light and dark variants for
-  theme-aware destinations; use the picture pattern below. Return files to
-  `pr-description/references/artifacts.md` for authorized upload and placement.
-- Render check before delivery: parse the exact emitted Mermaid with the local
-  `mermaid` package (never a retyped copy) and render it at PR reading width,
-  then inspect that arrows land on the intended lifelines and labels do not
-  collide. Reading the source is not rendering proof; Mermaid rejects
-  characters that look harmless in prose. When rendering is delegated, hand
-  over only after the passing result is back; when no renderer is reachable,
-  deliver only a draft labelled `render unverified`.
+- `diff` fences hold real source hunks only, never summary bullets ("Layout
+  must encode a relation" in `representations.md`); a structural before/after
+  is an image.
+- Every other view ships as one polished [image](#image): call and file
+  trees, pseudocode, diagrams, sequences, state and dependency graphs,
+  before/after panels, charts, and tables that carry badges, color, or grouped
+  emphasis. Never a text block standing in for a picture. Markdown and GitHub's
+  pinned Mermaid cannot carry layout, color, or emphasis, and a rough view
+  gets skimmed past. A table of plain values the reader copies (computed
+  counts) stays Markdown.
+- Never paste a Mermaid fence or ASCII panels into GitHub. Mermaid may author
+  a diagram you render locally in the house theme and capture.
+- The image's alt text states its takeaway, not its topic: "Reference
+  decisions compared with this PR: 8 differ or missing, 1 partial, 2 match".
+  Keep a code companion as Markdown text beside it so it stays selectable.
+  Return files to `pr-description/references/artifacts.md` for authorized
+  upload and placement.
 
 ## Slack
 
@@ -60,21 +57,39 @@ view becomes.
 
 - Text only when the view survives rewrapping: a numbered sequence or a tree
   of about 10 lines under about 60 columns, in a code block.
-- Everything else is an image: before/after panels, tables (including policy
-  before/after), wide call trees, several views in one answer. Build one
-  self-contained HTML view (Browser recipe) and [capture it](#capture-to-png).
-  Never post ASCII panels or a Markdown table in a code block: the reader gets
-  an unhighlighted grid that rewraps on a phone, and asks for an image.
-- Image: opaque background, because Slack shows one file in both themes and
-  has no `<picture>` switch; 1200 to 1400 CSS px wide with body text of at
-  least 14px, so the expanded view reads; a title naming the question and a
-  one-sentence subtitle with the takeaway; real symbols and paths in
-  monospace. Before/after panels keep matching rows in matching positions and
-  badge each row (unchanged, new, moved); the trade-off goes in a footer line.
+- Everything else is an [image](#image): before/after panels, tables
+  (including policy before/after), wide call trees, several views in one
+  answer. Never post ASCII panels or a Markdown table in a code block: the
+  reader gets an unhighlighted grid that rewraps on a phone, and asks for an
+  image.
 - Text reply: answer the question in its first sentence ("Yes, one change:
   ..."), point at the image, and keep only what the image cannot carry or the
   reader will copy, such as the function to search for. Never restate the image.
 - Hand the PNG and the reply to `slack-cli` delivery.
+
+## Image
+
+One recipe for every image destination (GitHub, Slack). The output is the
+captured PNG; author it however reads best (hand SVG, Mermaid themed locally,
+an `excalidraw` render).
+
+- One self-contained HTML view per image (Browser recipe), reusing
+  `design-doc`'s tokens (`../../design-doc/references/template.html`) so every
+  image in one body or thread shares a look.
+- Width by destination: GitHub about 900 CSS px, because a PR body column is
+  about 880 px wide and GitHub shrinks wider images, text included; Slack 1200
+  to 1400 CSS px, read expanded. Body text at least 14px; capture at 2×
+  ([capture](#capture-to-png)).
+- Dark theme by default, on an opaque background: both hosts show one file in
+  light and dark themes, and `design-doc`'s dark tokens are the house look.
+- A title naming the question and a one-sentence subtitle with the takeaway;
+  real symbols and paths in monospace. Before/after panels keep matching rows
+  in matching positions and badge each row (unchanged, new, moved); tables
+  mark the surprise row; a trade-off goes in a footer line.
+- Check before handing it over: `Read` the PNG at `image_quality="high"`.
+  Nothing clipped or overlapping, every label readable at the destination
+  width, every arrow on its intended target. An image you cannot render and
+  inspect is an unverified draft, never published.
 
 ## Browser
 
@@ -152,8 +167,8 @@ Its format follows the destination:
   render PNG variants; that skill owns source-color and inversion rules.
 
 Inline SVG can share document CSS. An SVG loaded through `<img>` cannot; embed
-pre-rendered theme variants as `data:image/svg+xml;base64,...` instead. Use
-this pattern for those data URIs or the uploaded PNG URLs:
+pre-rendered theme variants as `data:image/svg+xml;base64,...` instead, with
+this pattern (HTML documents only; GitHub and Slack take one opaque image):
 
 ```html
 <picture>

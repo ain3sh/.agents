@@ -92,8 +92,8 @@ open.
 The short grammars (pseudocode, call tree, component tree, file tree, diff of
 shape, types) live in `SKILL.md`; this file holds the ones that need rules.
 Every example is illustrative; its symbols are placeholders for real ones. Text
-grammars render everywhere. Mermaid variants render on GitHub and in a browser
-(`surfaces.md`).
+grammars render everywhere. Mermaid variants author diagrams you render locally
+and capture for GitHub and Slack (`surfaces.md#image`).
 
 ### Sequence
 
@@ -107,7 +107,7 @@ Terminal grammar:
 5. Queue  → Worker: deliver(jobId)
 ```
 
-GitHub and browser grammar:
+Diagram grammar (render locally, ship the image):
 
 ```mermaid
 sequenceDiagram

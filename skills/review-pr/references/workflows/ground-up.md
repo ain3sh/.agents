@@ -54,4 +54,4 @@ Untraced PR mechanisms:
 - <mechanism, file:line>: no ledger row — F<id>
 ```
 
-Then first-pass §6's approval gate and verdict. The verdict's **Architecture** section leads with the delta, and its view sets the PR's shape beside the reference design.
+Then first-pass §6's approval gate and verdict. The verdict's **Architecture** section leads with the delta: its views set the PR's shape beside the reference design and tabulate each reference decision as matches, differs, or missing.

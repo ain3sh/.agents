@@ -12,13 +12,13 @@ Emit this checklist and tick it as you work:
 pr-description checklist:
 - [ ] Diff analyzed three-dot; what/type/scope/why extracted
 - [ ] Strongest evidence and material merge cost identified
-- [ ] Title: plain-language outcome a teammate would say, type(scope), imperative, within any repo-enforced limit
+- [ ] Title: `type(scope): <verb> <change> [so <payoff>]` a teammate would say; true or false against the diff; within any repo-enforced limit
 - [ ] First screen passes the skim gate (five questions on a large diff)
 - [ ] Large diff? Composition table computed by scripts/diff-composition.py, placed under What
 - [ ] Rule across 3+ surfaces, or 3+ behaviors? First sentence states before → after; Before → After table under What
 - [ ] Six required sections present; conditional catalog walked row by row
 - [ ] Architecture: one or more show-me views, each answering its own question, accepted for GitHub
-- [ ] Concrete visual change? Live proof attached high in body (visual-evidence.md)
+- [ ] Concrete visual change? Demo video in What, stills under Visual Evidence (visual-evidence.md)
 - [ ] Verification outcome-first; CI compressed to one line
 - [ ] Body length scales with complexity, not effort
 - [ ] Body composed with a file tool, passed `scripts/finalize-body.py`, applied through REST (publish.md)
@@ -38,32 +38,43 @@ base.
 
 ## Title
 
-Format: `type(scope): imperative description`. Write the description the way
-you would tell a teammate what the PR does: plain words, a complete phrase,
-and what it replaces when it replaces something. A reader of the PR list should
-know what changed without opening the PR.
+Format: `type(scope): <verb> <change> [so <payoff>]`. The verb phrase says what
+the PR does, in the imperative, the way you would tell a teammate: plain words,
+a complete phrase, and what it replaces when it replaces something. A reader of
+the PR list should know what changed without opening the PR.
 
-Choose the highest stable abstraction the diff and evidence prove:
+Pitch the change at the highest level the diff itself performs:
 
-1. user or operator outcome
-2. product capability or observable behavior
-3. safety, reliability, or architectural invariant
-4. implementation mechanism
+1. observable behavior or capability
+2. safety, reliability, or architectural invariant
+3. implementation mechanism
 
-Use the mechanism when it is the durable value of the PR. Include a magnitude
-only when it is verified, representative, and materially distinguishes the
-change.
+Use the mechanism only when it is the durable value of the PR. Add the user or
+operator payoff as a `so` clause when the change alone does not make it
+obvious. The payoff never replaces the change: an outcome-only title is a
+release note, not a commit subject. It drops the imperative, fits many
+different diffs, and gives the reviewer nothing to check against the Files tab.
+Outcome-first belongs to the body's first screen, not the title.
+
+Test: a reviewer holding only the title and the diff can mark the title true
+or false.
+
+Include a magnitude only when it is verified, representative, and materially
+distinguishes the change.
 
 Length follows clarity. Honor a limit only when the repository enforces one (CI
 title check, commitlint); never compress the description into a noun stack or
 shorthand to fit an assumed cap. Scopes are routing metadata: name the declared
-scopes that own the behavior, not every touched package, and never shorten the
-description to make room for them. On squash-merge repositories, the title is
-the permanent commit subject, so it must read well in `git log`.
+scopes where the new behavior lives, not every package that changed to follow
+it, and never shorten the description to make room for them. On squash-merge
+repositories, the title is the permanent commit subject, so it must read well
+in `git log`.
 
-| Compressed | Plain |
-|---|---|
-| `feat(cli, daemon-core, common): cap daemon sessions with one limit` | `feat(cli, daemon-core): replace subagent limits with one per-daemon session limit` |
+| Flaw | Weak | Strong |
+|---|---|---|
+| Compressed | `feat(cli, daemon-core, common): cap daemon sessions with one limit` | `feat(cli, daemon-core): replace subagent limits with one per-daemon session limit` |
+| Outcome only | `fix(daemon-core, frontend, cli): renamed sessions keep their names across Droid clients` | `fix(daemon-core): sync every session rename to Cloud Sync so other clients show it` |
+| Mechanism only | `fix(daemon-core): call update-title after applyManualSessionTitle` | same as above |
 
 ## First-screen skim gate
 
@@ -94,7 +105,10 @@ composition and core tables from `conditional-sections.md` directly under
 already priced the PR as unreviewable.
 
 Use two to four short sentences plus one compact table or list when that scans
-faster. The opening stands alone without the ticket. For a large structural PR,
+faster. The opening stands alone without the ticket. A demo video, when the
+change has one, sits on its own line right after the **What** paragraph that
+states the change and its proof, before any table (`visual-evidence.md`,
+Placement). For a large structural PR,
 the order is **What** (outcome + decisive number) → composition table → core
 table → **Why** → **How** → one-line **Net effect for users**.
 
@@ -123,7 +137,7 @@ Description.
 | # | Section | Fires when |
 |---|---|---|
 | 1 | Description | always; inline Before → After table (multi-surface), diff composition (large diff), anti-goals, scope map, design link, or RCA as needed |
-| 2 | Visual Evidence | concrete UI/TUI/CLI/rendered-media change |
+| 2 | Visual Evidence | concrete UI/TUI/CLI/rendered-media change; its demo video sits in **What** |
 | 3 | Repro Recipe | new feature or fixed bug with a manual surface |
 | 4 | Architecture | always; one `show-me` view per reader question |
 | 5 | Related Issue | always; add lineage/stack block when applicable |
@@ -198,7 +212,10 @@ Every body carries one or more `show-me` views here, so the reviewer holds the
 relation the diff changes before reading lines. Name the question the Files tab
 cannot answer, then load `show-me` with that question, the verified diff and
 source, the GitHub destination, and that the view is required. `show-me` picks
-the grammar and runs the acceptance and render checks.
+the grammar and runs the acceptance and render checks. On GitHub every view,
+trees and pseudocode included, ships as one polished, dark-themed uploaded
+image whose alt text states its takeaway; only verbatim source the reader
+copies stays Markdown text (`show-me` surfaces, GitHub).
 
 | Change | Reader question for `show-me` |
 |---|---|

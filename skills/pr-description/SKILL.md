@@ -11,12 +11,12 @@ Make the merge case legible from the title and first screen; later sections prov
 
 | Goal | Action |
 |---|---|
-| Analyze and draft | Load `references/workflow.md`; use three-dot diff analysis, outcome-first title selection, `What / Why / How`, and the first-screen skim gate. |
+| Analyze and draft | Load `references/workflow.md`; use three-dot diff analysis, change-plus-payoff title selection, `What / Why / How`, and the first-screen skim gate. |
 | Large diff (roughly 1k+ lines or 20+ files) | Run `scripts/diff-composition.py BASE HEAD --core <behavior files> --tooling <prefixes>`; put the composition table and core table under **What** (template in `references/conditional-sections.md`). |
 | One rule changed across three or more surfaces, or three or more behaviors changed at once | Open **What** with the rule's before and after, then the per-surface Before → After table: grammar from `show-me` (Policy before/after table), placement in `references/conditional-sections.md`; later sections point at it instead of restating it. |
 | Add conditional sections | Load `references/conditional-sections.md` only when a catalog trigger fires. |
-| Show the change (every PR) | Load `show-me` with the verified diff and GitHub destination; place one or more views under **Architecture** (`references/workflow.md`, Architecture). Use `references/artifacts.md` when it returns files to upload. |
-| Show a visual change | Open the PR first, then load `references/visual-evidence.md` and capture live proof. |
+| Show the change (every PR) | Load `show-me` with the verified diff and GitHub destination; place one or more views under **Architecture** as uploaded dark-themed images, never text blocks; only verbatim source stays text (`references/workflow.md`, Architecture). Upload through `references/artifacts.md`. |
+| Show a visual change | Open the PR first, then load `references/visual-evidence.md` and capture live proof; the demo video goes in **What**. |
 | Refresh an existing PR | Load `references/refresh.md`; explicit title/body audits bypass the no-diff throttle. |
 | Publish or PATCH | Load `references/publish.md`; compose with a file tool and use GitHub REST. |
 
@@ -35,9 +35,10 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 
 ## Rules
 
-1. Never title the mechanism when the diff proves a higher-level outcome,
-   behavior, or invariant; the reviewer should not reverse-engineer value from
-   implementation nouns.
+1. Never title the mechanism when the diff proves a higher-level behavior or
+   invariant, and never trade the change for its outcome: the title says what
+   the PR does, in the imperative, with the payoff as a `so` clause when it
+   is not obvious (`workflow.md`, Title).
 2. Never replace `What / Why / How` with a second description schema; strengthen
    **What** with concrete impact and decisive evidence.
 3. Never let section order bury a merge-defining fact; preview it in
@@ -75,6 +76,7 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 | Symptom | Action |
 |---|---|
 | Title is valid but says only how | Apply the abstraction ladder in `workflow.md`; choose the highest proven delta. |
+| Title states only the outcome and reads like a release note | Lead with the verb phrase the diff performs; keep the outcome as `so …` (`workflow.md`, Title). |
 | Title reads like compressed shorthand to fit a length or a scope list | Rewrite it as the sentence you would say to a teammate; drop plumbing-only scopes, never words (`workflow.md`, Title). |
 | Impact is vague despite strong evidence | Preview the decisive fact in **What**; keep full proof in its conditional section. |
 | Reviewer must scroll to know why to merge | Run the skim gate in `workflow.md` and rewrite the first screen. |
@@ -90,6 +92,8 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 | Repeated refreshes read like commit history | Replace the revision log with only changes since the last human review. |
 | Architecture reads like a changelog, or the diff seems to have nothing to draw | Name the reader's question per concern and draw that relation (`workflow.md`, Architecture). |
 | Recording adds no reviewer signal | Follow `visual-evidence.md`; remove net-zero evidence. |
+| Demo video sits under Visual Evidence, below the fold | Move it into **What**, right after the paragraph that states the change and its proof (`visual-evidence.md`, Placement). |
+| Architecture view is a Mermaid fence or ASCII diagram | Ship it as a polished uploaded image (`show-me` surfaces, Image). |
 | GitHub body differs after PATCH | Follow the byte-compare verification in `publish.md`. |
 
 ## References
