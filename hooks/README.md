@@ -14,6 +14,7 @@ High-level, reusable hooks for Factory Droid that prioritize clear behavior, rel
 hooks/
 ├── tests/
 │   ├── test_check_guard.py
+│   ├── test_wait_guard.py
 │   ├── test_env_vars.py
 │   ├── test_io.py
 │   └── test_tool_wrappers.py
@@ -24,6 +25,7 @@ hooks/
 │   ├── config.py
 │   ├── env.py
 │   ├── tokens.py
+│   ├── shell.py
 │   ├── clipboard.py
 │   └── vscode_workspace.py
 ├── pre_tool_use/
@@ -31,6 +33,7 @@ hooks/
 │   ├── commit_review_guard.py
 │   ├── rtk_rewrite.py
 │   ├── check_guard.py
+│   ├── wait_guard.py
 │   ├── tirith_guard.py
 │   └── vscode_auto_ensure.py
 ├── post_tool_use/
@@ -126,6 +129,7 @@ if __name__ == "__main__":
 - **`commit_review_guard.py`**: blocks `git push` if CodeRabbit CLI reports findings; runs on detected push commands.
 - **`rtk_rewrite.py`**: transparently rewrites `Execute` commands through [`rtk`](https://github.com/rtk-ai/rtk) (`rtk rewrite <cmd>`) to compress tool output and save 60-90% tokens. Fails open: missing rtk, unsupported command, or explicit surface disable → pass-through. Per-surface toggles live under `[hooks.pre_tool_use.rtk.surfaces]` in `configs/droid.toml`.
 - **`check_guard.py`**: requires recognized validators to use the no-shell `scripts/run-check <label> [--cwd ...] [--env ...] [--exclusive] -- <argv...>` grammar. The Python runner owns cwd, environment, attached execution, complete live stdout/stderr, bounded logs, signal forwarding, and exact exit status. Its optional `--exclusive` slot queues heavy checks across sessions/worktrees without blocking cheap checks. The guard tokenizes with Python's standard shell lexer, denies recognized raw validators and shell composition around the canonical runner, and never reconstructs commands. It is a cooperation guard, not a Bash sandbox. Violations also hard-fail `droid exec` by design; internal hook errors fail open. The validator vocabulary is the `tools` list under `[hooks.pre_tool_use.checks]` in `configs/droid.toml`; structural package/test runners live in the hook. Registered for `PreToolUse` on `Execute`.
+- **`wait_guard.py`**: denies in-turn waiting on GitHub: a `sleep` or `watch` primitive in the same command as a `gh pr checks|view|status`, `gh run view|list|watch`, or PR/CI `gh api` query (foreground or background), and a foreground `gh run watch` / `gh pr checks --watch`. The deny returns the one watcher grammar, babysit's `pr-watch <pr>` as a fireAndForget Execute, whose exit wakes the agent. It shares the shell lexer in `utils/shell.py` with `check_guard.py`, ignores heredoc bodies, and fails open on anything else. Toggle: `[hooks.pre_tool_use.waits]` in `configs/droid.toml`. Registered for `PreToolUse` on `Execute`.
 - **`vscode_auto_ensure.py`**: transparently spawns/reuses the isolated headless VSCode instance behind `vscode:*` MCP tool calls (see `skills/vscode-workspace`). First call on a cold workspace blocks ~10-30s; later calls cost one socket health check. A failed ensure denies with the real reason; hook errors fail open.
 
 ### PostToolUse

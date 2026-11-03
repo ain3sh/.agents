@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import shlex
 import sys
 from pathlib import Path
 
@@ -29,6 +28,15 @@ from utils import (  # type: ignore
     load_toml,
     read_input_as,
 )
+from utils.shell import (  # type: ignore
+    ASSIGNMENT_RE,
+    is_shell_operator,
+    normalize_token,
+    normalize_tokens,
+    segments,
+    strip_heredocs,
+    tokenize,
+)
 
 HOOK_EVENT = "PreToolUse"
 RUNNER = "~/.agents/scripts/run-check"
@@ -38,9 +46,6 @@ CANONICAL = (
     "[--env-file <path>]... [--unset-prefix <prefix>]... [--exclusive] "
     "-- <same scoped validator argv...>"
 )
-
-_SHELL_PUNCTUATION = "|&;<>\n"
-_ASSIGNMENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=.*")
 
 _PREFIX = (
     r"(?:(?:command|exec|rtk|time)\s+)*"
@@ -70,100 +75,19 @@ def _validator_re(tools: list[str]) -> re.Pattern[str]:
     return re.compile(rf"^\s*{_PREFIX}(?:{tools_alt}{_RUNNERS})")
 
 
-def _heredoc_delimiters(line: str) -> list[tuple[str, bool]]:
-    """(delimiter, strips_tabs) for each heredoc the line opens, in order."""
-    try:
-        tokens = _tokenize(line)
-    except ValueError:
-        return []
-    return [
-        (_normalize_token(word.removeprefix("-")), word.startswith("-"))
-        for operator, word in zip(tokens, tokens[1:])
-        if operator == "<<"
-    ]
-
-
-def _strip_heredocs(command: str) -> str:
-    """Drop heredoc bodies: they are stdin data, never commands to check."""
-    kept: list[str] = []
-    pending: list[tuple[str, bool]] = []
-    for line in command.split("\n"):
-        if pending:
-            delimiter, strips_tabs = pending[0]
-            if (line.lstrip("\t") if strips_tabs else line) == delimiter:
-                pending.pop(0)
-            continue
-        kept.append(line)
-        pending = _heredoc_delimiters(line)
-    return "\n".join(kept)
-
-
-def _tokenize(command: str) -> list[str]:
-    lexer = shlex.shlex(
-        command,
-        posix=False,
-        punctuation_chars=_SHELL_PUNCTUATION,
-    )
-    lexer.commenters = ""
-    lexer.whitespace = " \t\r"
-    lexer.whitespace_split = True
-    return list(lexer)
-
-
-def _normalize_token(token: str) -> str:
-    try:
-        values = shlex.split(token, posix=True)
-    except ValueError:
-        return token
-    return values[0] if len(values) == 1 else token
-
-
-def _normalize_tokens(tokens: list[str]) -> list[str]:
-    return [_normalize_token(token) for token in tokens]
-
-
-def _is_shell_operator(token: str) -> bool:
-    return (
-        token == "\n"
-        or bool(token)
-        and all(char in _SHELL_PUNCTUATION for char in token)
-    )
-
-
-def _is_segment_separator(token: str) -> bool:
-    return _is_shell_operator(token) and (
-        "\n" in token or ";" in token or "&&" in token or "||" in token
-    )
-
-
-def _segments(tokens: list[str]) -> list[list[str]]:
-    segments: list[list[str]] = []
-    current: list[str] = []
-    for token in tokens:
-        if _is_segment_separator(token):
-            if current:
-                segments.append(current)
-                current = []
-            continue
-        current.append(token)
-    if current:
-        segments.append(current)
-    return segments
-
-
 def _is_run_check(tokens: list[str]) -> bool:
-    return bool(tokens) and Path(_normalize_token(tokens[0])).name == "run-check"
+    return bool(tokens) and Path(normalize_token(tokens[0])).name == "run-check"
 
 
 def _is_canonical_run_check(token: str) -> bool:
-    normalized = _normalize_token(token)
+    normalized = normalize_token(token)
     return normalized in {RUNNER, str(RUNNER_PATH)}
 
 
 def _run_check_index(tokens: list[str]) -> int | None:
-    normalized = _normalize_tokens(tokens)
+    normalized = normalize_tokens(tokens)
     index = 0
-    while index < len(normalized) and _ASSIGNMENT_RE.fullmatch(normalized[index]):
+    while index < len(normalized) and ASSIGNMENT_RE.fullmatch(normalized[index]):
         index += 1
     if index < len(normalized) and Path(normalized[index]).name == "run-check":
         return index
@@ -172,13 +96,13 @@ def _run_check_index(tokens: list[str]) -> int | None:
 
 def _validator_tokens(tokens: list[str]) -> list[str]:
     index = 0
-    while index < len(tokens) and _ASSIGNMENT_RE.fullmatch(tokens[index]):
+    while index < len(tokens) and ASSIGNMENT_RE.fullmatch(tokens[index]):
         index += 1
     return tokens[index:]
 
 
 def _is_validator(tokens: list[str], validator_re: re.Pattern[str]) -> bool:
-    command = _validator_tokens(_normalize_tokens(tokens))
+    command = _validator_tokens(normalize_tokens(tokens))
     return bool(command) and bool(validator_re.match(" ".join(command)))
 
 
@@ -186,7 +110,7 @@ def _valid_run_check(tokens: list[str]) -> bool:
     if len(tokens) < 4 or not _is_run_check(tokens):
         return False
 
-    tokens = _normalize_tokens(tokens)
+    tokens = normalize_tokens(tokens)
     label = tokens[1]
     if not label or label.startswith("-"):
         return False
@@ -207,7 +131,7 @@ def _valid_run_check(tokens: list[str]) -> bool:
         if token == "--env":
             if (
                 index + 1 >= len(tokens)
-                or _ASSIGNMENT_RE.fullmatch(tokens[index + 1]) is None
+                or ASSIGNMENT_RE.fullmatch(tokens[index + 1]) is None
             ):
                 return False
             index += 2
@@ -231,20 +155,20 @@ def _violation(
     fire_and_forget: bool,
     validator_re: re.Pattern[str],
 ) -> str | None:
-    tokens = _tokenize(_strip_heredocs(command))
-    segments = _segments(tokens)
-    operators = [token for token in tokens if _is_shell_operator(token)]
+    tokens = tokenize(strip_heredocs(command))
+    command_segments = segments(tokens)
+    operators = [token for token in tokens if is_shell_operator(token)]
 
     run_check_segments = [
         (segment, index)
-        for segment in segments
+        for segment in command_segments
         if (index := _run_check_index(segment)) is not None
     ]
     if run_check_segments:
         if fire_and_forget:
             return "checks must stay attached in the foreground"
         segment, index = run_check_segments[0]
-        if len(segments) != 1 or operators or index != 0:
+        if len(command_segments) != 1 or operators or index != 0:
             return "run-check must be the entire shell command"
         if not _is_canonical_run_check(segment[0]):
             return "checks must invoke the canonical run-check path"
@@ -252,7 +176,7 @@ def _violation(
             return "run-check arguments do not match the accepted grammar"
         return None
 
-    if any(_is_validator(segment, validator_re) for segment in segments):
+    if any(_is_validator(segment, validator_re) for segment in command_segments):
         return "validator commands must use run-check"
     return None
 

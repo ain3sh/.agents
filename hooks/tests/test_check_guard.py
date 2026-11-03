@@ -51,6 +51,24 @@ class CheckGuardTest(unittest.TestCase):
 
         self.assertIsNone(self.analyze(command))
 
+    def test_playwright_install_is_not_a_validator(self) -> None:
+        validators = _validator_re(["playwright test"])
+        self.assertIsNone(
+            _violation(
+                "npx playwright install chromium",
+                fire_and_forget=False,
+                validator_re=validators,
+            )
+        )
+        self.assertEqual(
+            _violation(
+                "npx playwright test e2e/login.spec.ts",
+                fire_and_forget=False,
+                validator_re=validators,
+            ),
+            "validator commands must use run-check",
+        )
+
     def test_rejects_raw_validator(self) -> None:
         self.assertEqual(
             self.analyze("npm run test -- src/foo.test.ts"),
@@ -189,7 +207,8 @@ class RunCheckTest(unittest.TestCase):
         lock_dir = tempfile.TemporaryDirectory()
         cls.addClassCleanup(lock_dir.cleanup)
         environ = mock.patch.dict(
-            os.environ, {"DROID_CHECK_LOCK_PATH": str(Path(lock_dir.name) / "slot.lock")}
+            os.environ,
+            {"DROID_CHECK_LOCK_PATH": str(Path(lock_dir.name) / "slot.lock")},
         )
         environ.start()
         cls.addClassCleanup(environ.stop)

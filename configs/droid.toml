@@ -105,12 +105,18 @@ enabled = true
 # (npm/pnpm/yarn/bun run <test|lint|...>, turbo, go test, cargo test/clippy,
 # make ...test/check/lint) are matched in the hook itself.
 tools = [
-  "vitest", "jest", "pytest", "playwright",
+  "vitest", "jest", "pytest", "playwright test",
   "eslint", "biome", "oxlint", "prettier", "oxfmt", "knip",
   "tsc", "pyright", "mypy",
   "ruff", "vulture", "golangci-lint",
   "slop-scan", "react-doctor",
 ]
+
+[hooks.pre_tool_use.waits]
+# Deny in-turn waiting on GitHub (sleep/watch poll loops around gh PR or CI
+# queries, and foreground `gh run watch` / `gh pr checks --watch`); the deny
+# hands back babysit's pr-watch as a fireAndForget job. Fails open.
+enabled = true
 
 [hooks.pre_tool_use.tirith]
 # Tirith terminal-security guard — https://github.com/sheeki03/tirith
