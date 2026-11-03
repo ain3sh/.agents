@@ -9,8 +9,6 @@ readonly BINARY="$HOME/.local/bin/cli-proxy-api"
 # native client profile but do not force the beta onto upstream requests.
 readonly REDACT_BETA='redact-thinking-[0-9]{4}-[0-9]{2}-[0-9]{2}'
 readonly CLAUDE_REQUEST_REL='internal/runtime/executor/claude_executor_request.go'
-readonly CODEX_WS_REL='internal/runtime/executor/codex_websockets_executor.go'
-readonly GPT61_PATCH="$HOME/.agents/model-proxy/gpt61-sol.patch"
 readonly CONFIG_FILE="${CLIPROXY_CONFIG:-$HOME/.agents/model-proxy/config.yaml}"
 readonly PROXY_CTL="$HOME/.agents/model-proxy/model-proxy"
 
@@ -33,7 +31,7 @@ for arg in "$@"; do
     esac
 done
 
-for command in git go python3; do
+for command in git go; do
     command -v "$command" >/dev/null || {
         echo "error: required command not found: $command" >&2
         exit 1
@@ -55,16 +53,22 @@ fi
     exit 1
 }
 
-workdir="$(mktemp -d -t cliproxyapi-update.XXXXXX)"
+# A full Go build outgrows tmpfs-backed /tmp, so keep the clone, build
+# scratch, and binary on disk.
+cache_root="${XDG_CACHE_HOME:-$HOME/.cache}"
+mkdir -p "$cache_root"
+workdir="$(mktemp -d -p "$cache_root" cliproxyapi-update.XXXXXX)"
+export GOTMPDIR="$workdir/gotmp"
+mkdir "$GOTMPDIR"
 cleanup() {
     rm -rf "$workdir"
 }
 trap cleanup EXIT
 
 echo "[1/4] Fetching CLIProxyAPI $tag..."
-git clone --quiet --depth 1 --branch "$tag" "$REPO_URL" "$workdir/source"
+git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$tag" "$REPO_URL" "$workdir/source"
 
-echo "[2/4] Applying local request patches..."
+echo "[2/4] Applying local request patch..."
 claude_request="$workdir/source/$CLAUDE_REQUEST_REL"
 if [[ ! -f "$claude_request" ]]; then
     echo "error: upstream Claude request builder moved: $CLAUDE_REQUEST_REL" >&2
@@ -93,85 +97,6 @@ else
 fi
 echo "Patch: $patch_status"
 
-# Codex Fast mode is only honored by the ChatGPT backend over the Responses
-# WebSocket transport. Droid is an HTTP/SSE client, so bridge streaming
-# priority requests onto CLIProxyAPI's existing upstream WebSocket executor.
-codex_ws="$workdir/source/$CODEX_WS_REL"
-if [[ ! -f "$codex_ws" ]]; then
-    echo "error: upstream Codex WebSocket dispatcher moved: $CODEX_WS_REL" >&2
-    exit 1
-fi
-python3 - "$codex_ws" <<'PY'
-from pathlib import Path
-import sys
-
-path = Path(sys.argv[1])
-source = path.read_text()
-
-old_imports = '''\t"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-\tcliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-\tcliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-'''
-new_imports = '''\t"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-\t"github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor/helps"
-\t"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-\tcliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-\tcliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-\tsdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
-\t"github.com/tidwall/gjson"
-'''
-old_condition = '''\tif cliproxyexecutor.DownstreamWebsocket(ctx) && codexWebsocketsEnabled(auth) {
-\t\treturn e.wsExec.ExecuteStream(ctx, auth, req, opts)
-\t}
-'''
-new_condition = '''\tif codexWebsocketsEnabled(auth) && (cliproxyexecutor.DownstreamWebsocket(ctx) || e.priorityWebsocketRequested(req, opts)) {
-\t\treturn e.wsExec.ExecuteStream(ctx, auth, req, opts)
-\t}
-'''
-insert_before = '''func (e *CodexAutoExecutor) Refresh(ctx context.Context, auth *cliproxyauth.Auth) (*cliproxyauth.Auth, error) {
-'''
-helper = '''// priorityWebsocketRequested reports whether the final translated request asks
-// for Codex Fast mode. The ChatGPT Codex backend only honors this tier over
-// its Responses WebSocket transport, even when the downstream client uses SSE.
-func (e *CodexAutoExecutor) priorityWebsocketRequested(req cliproxyexecutor.Request, opts cliproxyexecutor.Options) bool {
-\tif e == nil || e.httpExec == nil {
-\t\treturn false
-\t}
-\tbaseModel := thinking.ParseSuffix(req.Model).ModelName
-\tfrom := opts.SourceFormat
-\tto := sdktranslator.FromString("codex")
-\toriginal := req.Payload
-\tif len(opts.OriginalRequest) > 0 {
-\t\toriginal = opts.OriginalRequest
-\t}
-\toriginalTranslated, body := translateCodexRequestPair(from, to, baseModel, original, req.Payload, false, helps.APIKeyModelIsCompat(req))
-\trequestedModel := helps.PayloadRequestedModel(opts, req.Model)
-\tbody = helps.ApplyPayloadConfigWithRequestForExecutor(e.httpExec.cfg, "codex-websockets", baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, helps.PayloadRequestPath(opts), opts.Headers)
-\treturn strings.EqualFold(strings.TrimSpace(gjson.GetBytes(body, "service_tier").String()), "priority")
-}
-
-'''
-
-for old, new, label in (
-    (old_imports, new_imports, "imports"),
-    (old_condition, new_condition, "stream dispatch"),
-    (insert_before, helper + insert_before, "priority helper"),
-):
-    if old not in source:
-        raise SystemExit(f"error: failed to apply Codex fast WebSocket patch ({label}); upstream changed")
-    source = source.replace(old, new, 1)
-
-path.write_text(source)
-PY
-echo "Patch: applied (bridged Codex priority SSE requests to upstream WebSocket)"
-
-# Register the exact upstream ID only when the release catalog lacks it.
-if ! grep -q '"id": "gpt-6.1-sol"' "$workdir/source/internal/registry/models/models.json"; then
-    git -C "$workdir/source" apply --check "$GPT61_PATCH"
-    git -C "$workdir/source" apply "$GPT61_PATCH"
-    echo "Patch: applied (registered GPT-6.1 Sol for Codex OAuth)"
-fi
-
 echo "[3/4] Testing and building..."
 # Compile a focused regression test against the patched source. This verifies
 # behavior instead of rejecting harmless constant, comment, and detector uses.
@@ -181,10 +106,6 @@ package executor
 import (
     "strings"
     "testing"
-
-    "github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-    cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-    sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 )
 
 func TestLocalNoForcedRedactThinkingBeta(t *testing.T) {
@@ -195,48 +116,10 @@ func TestLocalNoForcedRedactThinkingBeta(t *testing.T) {
         }
     }
 }
-
-func TestLocalPriorityWebsocketBridgeDetection(t *testing.T) {
-    executor := NewCodexAutoExecutor(nil)
-    opts := cliproxyexecutor.Options{SourceFormat: sdktranslator.FromString("openai-response")}
-    priority := cliproxyexecutor.Request{
-        Model: "gpt-6.1-sol",
-        Payload: []byte(`{"model":"gpt-6.1-sol","service_tier":"priority","input":"hi"}`),
-    }
-    standard := cliproxyexecutor.Request{
-        Model: "gpt-6.1-sol",
-        Payload: []byte(`{"model":"gpt-6.1-sol","input":"hi"}`),
-    }
-    if !executor.priorityWebsocketRequested(priority, opts) {
-        t.Fatal("priority request did not select the WebSocket bridge")
-    }
-    if executor.priorityWebsocketRequested(standard, opts) {
-        t.Fatal("standard request unexpectedly selected the WebSocket bridge")
-    }
-}
-
-func TestLocalGPT61SolCatalog(t *testing.T) {
-    for _, models := range [][]*registry.ModelInfo{
-        registry.GetCodexTeamModels(),
-        registry.GetCodexPlusModels(),
-        registry.GetCodexProModels(),
-    } {
-        found := false
-        for _, model := range models {
-            if model.ID == "gpt-6.1-sol" {
-                found = true
-                break
-            }
-        }
-        if !found {
-            t.Fatal("GPT-6.1 Sol is missing from a paid Codex catalog")
-        }
-    }
-}
 EOF
-gofmt -w "$codex_ws" "$workdir/source/internal/runtime/executor/zz_local_no_redact_thinking_test.go"
 go -C "$workdir/source" test ./internal/runtime/executor \
-    -run '^(TestLocalNoForcedRedactThinkingBeta|TestLocalPriorityWebsocketBridgeDetection|TestLocalGPT61SolCatalog|TestApplyClaudeHeaders_FastModeBetaIsConditional)$' -count=1
+    -run '^(TestLocalNoForcedRedactThinkingBeta|TestApplyClaudeHeaders_FastModeBetaIsConditional)$' -count=1 -v |
+    grep -E '^(--- |ok|FAIL|PASS)'
 version="${tag#v}"
 commit="$(git -C "$workdir/source" rev-parse --short HEAD)"
 build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

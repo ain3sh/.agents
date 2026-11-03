@@ -57,8 +57,7 @@ payload:
           protocol: "codex"
       params:
         # Fast is service_tier=priority on the base model, not a separate upstream model.
-        # Droid speaks HTTP/SSE, so the local build bridges only these priority requests
-        # to Codex WebSockets; plain Sol remains standard-speed HTTP for workers.
+        # Plain Sol stays standard speed for workers.
         "service_tier": "priority"
     - models:
         - name: "gpt-*"
@@ -130,22 +129,12 @@ payload:
         "reasoning.effort": "high"
         "reasoning.summary": "auto"
         "parallel_tool_calls": true
-  filter: # remove parameters after overrides
-    - models:
-        - name: "gpt-6.1-sol-fast"
-          protocol: "codex"
-        - name: "gpt-6-luna-fast"
-          protocol: "codex"
-      params:
-        # Fast requests are bridged to Codex WebSockets, which rejects these fields.
-        - "prompt_cache_retention"
-        - "safety_identifier"
-        # default: # only set parameters when they are missing in the payload
-        #   - models:
-        #       - name: "" # supports wildcards (e.g., "gemini-*")
-        #         protocol: "" # restricts the rule to a specific protocol, options: openai, gemini, claude, codex
-        #     params: # json path (gjson/sjson syntax) -> value
-        #       "": 
+  # default: # only set parameters when they are missing in the payload
+  #   - models:
+  #       - name: "" # supports wildcards (e.g., "gemini-*")
+  #         protocol: "" # restricts the rule to a specific protocol, options: openai, gemini, claude, codex
+  #     params: # json path (gjson/sjson syntax) -> value
+  #       "":
 # ------------------------------------------------------------------------------
 
 # network proxy
