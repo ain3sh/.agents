@@ -22,7 +22,7 @@ pr-description checklist:
 - [ ] Verification outcome-first; CI compressed to one line
 - [ ] Body length scales with complexity, not effort
 - [ ] Body composed with a file tool, passed `scripts/finalize-body.py`, applied through REST (publish.md)
-- [ ] Refresh only: base resolved and marker re-stamped (refresh.md)
+- [ ] Refresh only: base resolved and markers re-stamped (refresh.md)
 ```
 
 ## Analyze the diff

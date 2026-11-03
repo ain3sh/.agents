@@ -51,9 +51,10 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 6. Never fabricate magnitude, proof, mitigation, or rollout state. Preview
    only evidence the diff or live verification actually supports.
 7. Never compose the body through shell heredocs or publish with `gh pr edit`;
-   use a file tool, run `scripts/finalize-body.py` (it stamps the full HEAD
-   sha, never the merge base), publish with `gh api -F body=@file`, then
-   verify the live body byte-for-byte.
+   use a file tool, run `scripts/finalize-body.py` (it appends the writing
+   session's `FACTORY_SESSION_ID` to the body's session list and stamps the
+   full HEAD sha, never the merge base), publish with `gh api -F body=@file`,
+   then verify the live body byte-for-byte.
 8. Never price a large diff in prose, estimates, or one added-plus-deleted
    churn number; a reviewer prices the PR from the first screen, so the
    script's tables (+ and − apart, core first, an action per row) go there,
@@ -112,7 +113,7 @@ Load on demand; do not reabsorb into this file:
 - `references/publish.md` — GitHub REST operations, finalize, and round-trip
   verification.
 - `scripts/finalize-body.py` — refuses a body without an Architecture view,
-  then stamps the `pr-desc-base` marker.
+  then stamps the `pr-desc-sessions` and `pr-desc-base` markers.
 - `scripts/diff-composition.py` — buckets a three-dot diff by review weight
   (core first, then tests / mechanical / generated / tooling / docs) from
   `git numstat`, with + and − and whole-file adds/deletes kept apart.

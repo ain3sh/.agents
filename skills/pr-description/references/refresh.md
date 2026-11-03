@@ -8,13 +8,14 @@ refresh runs after pushes in `/open-pr`, `/split-pr`, `/address-review`, and
 
 ## The synced-base marker (keystone)
 
-Every body this skill writes ends with one invisible line — the commit the description was last reconciled against:
+Every body this skill writes ends with two invisible lines — every Droid session that has written it, oldest first (a PR Shepherd worker that never opened the PR included), then the commit the description was last reconciled against:
 
 ```markdown
+<!-- pr-desc-sessions: <FACTORY_SESSION_ID> <FACTORY_SESSION_ID> ... -->
 <!-- pr-desc-base: <full-HEAD-sha> -->
 ```
 
-An HTML comment: invisible when rendered, present in the raw body. It turns "what changed since I last touched this?" from a timestamp guess into `git log <base>..HEAD`. Every refresh resolves it, then **re-stamps it to current HEAD as its final act** (idempotent). Each stacked PR carries its own. It powers everything below: incremental focus (Phase 1), the revision log (Phase 2), verification staleness (Phase 1), the no-op throttle.
+An HTML comment: invisible when rendered, present in the raw body. It turns "what changed since I last touched this?" from a timestamp guess into `git log <base>..HEAD`. Every refresh resolves the base, then **re-stamps as its final act**: appends the current session once, replaces the base with HEAD (idempotent). Each stacked PR carries its own. It powers everything below: incremental focus (Phase 1), the revision log (Phase 2), verification staleness (Phase 1), the no-op throttle.
 
 ## Phase 0 — resolve the base
 
@@ -27,7 +28,7 @@ DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print 
 git fetch -q origin "$DEFAULT_BRANCH"
 
 # 1. Marker — deterministic, written by every prior refresh.
-BASE=$(rg -o 'pr-desc-base: \K[0-9a-f]{7,40}' /tmp/pr-current-body.md | tail -1)
+BASE=$(rg -oP 'pr-desc-base: \K[0-9a-f]{7,40}' /tmp/pr-current-body.md | tail -1)
 
 # 2. Fallback for marker-less PRs (predate this skill, or hand-authored): map the
 #    body's last-edit time to the commit the branch was at then. Best-effort —
@@ -84,7 +85,7 @@ Check the description against both:
 
 **Size advisory (non-gating)**: if the full `--stat` shows the PR has outgrown reviewability — mixed concerns, sprawling file count, a diff a reviewer can't hold in their head — surface `split-pr` (decompose) or `retrospect` (scrub).
 
-Nothing stale and no explicit quality audit → re-stamp the marker and stop.
+Nothing stale and no explicit quality audit → re-stamp the markers and stop.
 Do not rewrite for marginal phrasing.
 
 ## Phase 2 — coherence pass
@@ -99,15 +100,16 @@ The body proper reads as one authored piece, not a log of patches — with **one
    - **Conditional sections re-evaluated both ways** — add newly-triggered (>3 consumers → Reverse Dependencies; new metric → Telemetry) **and remove** newly-untriggered (risky migration extracted to its own PR → drop Migration & Rollout / RCA). An orphaned section describing absent work is staleness too.
    - Every evidence claim revalidated or narrowed; every generated appendix regenerated (or replaced with a tighter Reviewer Guide if it adds bulk without aiding review).
 3. Apply via REST. Draft the body marker-free with a file tool, never a shell
-   heredoc; then finalize, PATCH body (and title, same call), and
-   verify the round-trip, all with the commands in `publish.md`.
+   heredoc; then finalize with `--prior /tmp/pr-current-body.md` so the live
+   session list survives the marker-free draft, PATCH body (and title, same
+   call), and verify the round-trip, all with the commands in `publish.md`.
 4. **No-op re-stamp** (automatic refresh only; Phase 1 found nothing or the
    throttle hit): copy `/tmp/pr-current-body.md` to `/tmp/pr-body.md` and
-   publish per `publish.md`, prose untouched; finalize replaces the marker. A
+   publish per `publish.md`, prose untouched; finalize re-stamps the markers. A
    body finalize refuses for a missing Architecture view is View drift, not a
    no-op.
 
-**Squash-merge note**: the marker is inert if it lands in a squash commit message; strip it in the final pre-merge refresh if your repo mirrors body→commit and you want a clean message.
+**Squash-merge note**: the markers are inert if they land in a squash commit message; strip them in the final pre-merge refresh if your repo mirrors body→commit and you want a clean message.
 
 **Bar**: would a reviewer get a wrong or incomplete picture, or have to scroll
 past the merge case before understanding why to approve? Fix that; do not chase

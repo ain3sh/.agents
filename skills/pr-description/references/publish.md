@@ -21,7 +21,7 @@ PR_NUM=$(gh pr view --json number --jq '.number')
 
 | Goal | Command |
 |---|---|
-| Finalize (every publish, before `gh pr create` or PATCH) | `python3 ~/.agents/skills/pr-description/scripts/finalize-body.py /tmp/pr-body.md`: exits 1 without writing when `## Architecture` holds no view; otherwise replaces any old marker with the full HEAD sha as the final line |
+| Finalize (every publish, before `gh pr create` or PATCH) | `python3 ~/.agents/skills/pr-description/scripts/finalize-body.py /tmp/pr-body.md`: exits 1 without writing when `FACTORY_SESSION_ID` is unset or `## Architecture` holds no view; otherwise appends the session to the `pr-desc-sessions` list once, then replaces the base marker with the full HEAD sha as the final line. A refresh adds `--prior /tmp/pr-current-body.md` (`refresh.md`) |
 | Update body | `gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -F body=@/tmp/pr-body.md` |
 | Update title | `gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f title='<type(scope): description>'` |
 | Title and body in one call | `gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f title='…' -F body=@/tmp/pr-body.md` |
