@@ -53,7 +53,9 @@ summaries.
    clean proposal from all of the above.
 6. **Attack:** the round-table designers critique both proposals.
 7. **Converge:** derive the final, golden proposal yourself, unless the attack
-   found glaring issues in either; then go back to Mine.
+   found glaring issues in either; then go back to Mine. Fix findings by
+   cutting (AGENTS.md, "When findings arrive"); a finding only a new mechanism
+   can answer goes back to Mine as a constraint.
 8. **Finalize:** a fresh Fable judges the write-up (completeness, clarity), not
    the architecture; apply its feedback.
 
@@ -62,7 +64,9 @@ summaries.
 1. **Build:** fan out builders extensively.
 2. **Attack:** fan out attackers extensively, incrementally or at the end.
 3. **Fix:** reuse builders for minor issues; start fresh ones for extensive
-   issues.
+   issues. When a round's fixes would add more mechanism than they remove,
+   stop fixing and send that part back through Design with the findings as
+   constraints.
 4. **Review:** attackers confirm their issues are fixed, then review-pr
    subagents (Astras and Opuses) review. Loop with Fix until clean.
 5. **Finish:** report what was done, how, and the deliverables, with a
