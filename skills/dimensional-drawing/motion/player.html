@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- Headless player for dimensional-drawing motion scenes.
+     render.mjs injects: STAGE_W, STAGE_H, BG, the scene CSS and the scene JS.
+     Scene API: kit.scene(id, { init(kit), render(t) }); render(t) must be a pure function of time. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap">
+<style>
+  html, body { margin: 0; background: var(--bg, #fff); }
+  #stage { position: absolute; left: 0; top: 0; overflow: hidden; --sans: Arimo, Helvetica, Arial, sans-serif; }
+</style>
+<style id="scene-css">/*__CSS__*/</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+  const cfg = window.__CFG__ || { w: 1920, h: 1080, bg: '#ffffff' };
+  const stage = document.getElementById('stage');
+  stage.style.width = cfg.w + 'px';
+  stage.style.height = cfg.h + 'px';
+  stage.style.background = cfg.bg;
+  document.documentElement.style.setProperty('--bg', cfg.bg);
+
+  // Minimal kit: the only helpers a scene may rely on.
+  var SCENES = {};
+  var kit = (function () {
+    const clamp01 = x => Math.max(0, Math.min(1, x));
+    const seg = (t, a, b) => clamp01((t - a) / (b - a));
+    const lerp = (a, b, p) => a + (b - a) * p;
+    const eo = x => 1 - Math.pow(1 - x, 3);
+    const ei = x => x * x * x;
+    const eio = x => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+    return {
+      seg, lerp, eo, ei, eio, clamp01, stage,
+      width: cfg.w, height: cfg.h,
+      h: s => { const d = document.createElement('div'); d.innerHTML = s.trim(); return d.firstElementChild; },
+      css: s => { const st = document.createElement('style'); st.textContent = s; stage.appendChild(st); },
+      scene: (id, o) => { SCENES[id] = o; },
+    };
+  })();
+</script>
+<script id="scene-js">/*__JS__*/</script>
+<script>
+  const ids = Object.keys(SCENES);
+  const SC = SCENES[cfg.scene] || SCENES[ids[0]];
+  SC.init(kit);
+  window.R = t => SC.render(t, kit);
+  window.R(0);
+  window.__READY__ = true;
+</script>
+</body>
+</html>

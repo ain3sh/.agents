@@ -1,0 +1,20 @@
+#stage { --ground:#ffffff; --main:#111111; --second:#111112; --accent:#767676; color:var(--second); font-family:var(--sans, system-ui, sans-serif) }
+.ground { position:absolute; inset:0; background:var(--ground) }
+.dw-cam { position:absolute; left:0; top:0; width:1900px; height:1060px; transform-origin:0 0 }
+.dw-svg { position:absolute; left:0; top:0; overflow:visible; --u:1 }
+.dw-svg text { font-family:var(--sans, system-ui, sans-serif); text-transform:uppercase }
+.dw-svg .border { fill:none; stroke:var(--main); stroke-width:1.2 }
+.dw-svg .obj { fill:var(--ground); stroke:var(--main); stroke-width:calc(1.6px * var(--u)); stroke-linejoin:round }
+.dw-svg .well { fill:color-mix(in srgb, var(--second) 5%, var(--ground)); stroke:var(--main); stroke-width:calc(1px * var(--u)) }
+.dw-svg .hug { fill:color-mix(in srgb, var(--second) 10%, var(--ground)); stroke:var(--main); stroke-width:calc(1px * var(--u)) }
+.dw-svg .slot { fill:none; stroke:color-mix(in srgb, var(--second) 75%, var(--ground)); stroke-width:calc(.8px * var(--u)); stroke-dasharray:calc(4px * var(--u)) calc(3px * var(--u)) }
+.dw-svg .thin { fill:none; stroke:var(--main); stroke-width:calc(.8px * var(--u)) }
+.dw-svg .ph { fill:none; stroke:var(--accent); stroke-width:calc(.8px * var(--u)); stroke-dasharray:calc(14px * var(--u)) calc(3px * var(--u)) calc(3px * var(--u)) calc(3px * var(--u)) }
+.dw-svg .cl { fill:none; stroke:var(--accent); stroke-width:.7; stroke-dasharray:16 3 2 3 }
+.dw-svg .dl, .dw-svg .lead { stroke:var(--main); stroke-width:.7; fill:none }
+.dw-svg .ext { stroke:var(--main); stroke-width:.55; fill:none }
+.dw-svg .arrow, .dw-svg .dot { fill:var(--main) }
+.dw-svg .hl { stroke:color-mix(in srgb, var(--second) 70%, var(--ground)); stroke-width:.7 }
+.dw-svg .hs { stroke:var(--main); stroke-width:calc(.8px * var(--u)) }
+.dw-svg .env { fill:none; stroke:var(--main); stroke-width:.8; stroke-dasharray:10 3 2 3 }
+.dw-svg .nb { fill:var(--ground); stroke:var(--main); stroke-width:.9 }

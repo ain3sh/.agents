@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dialog · Dimensional Drawing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;600;700&display=swap">
+<style>
+/* Layout: one Apple-style dimensional drawing sheet (notes · section · plan · tables · details · layouts · title block), black on white, single light theme by design. */
+:root{--paper:#ececec;--sheet:#ffffff;--ink:#111;--ink2:#444;--ink3:#7a7a7a;--fill:#f3f3f3;--fill2:#e6e6e6;--f:'Arimo','Helvetica Neue',Helvetica,Arial,sans-serif;color-scheme:light}
+body{background:var(--paper);color:var(--ink);font-family:var(--f)}
+.wrap{max-width:1760px;margin:0 auto;padding-block:24px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.scroll{overflow-x:auto;background:var(--sheet);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+svg{display:block;width:100%;min-width:1100px;height:auto}
+.tb{background:var(--sheet);border:1.5px solid var(--ink);display:grid;grid-template-columns:2.2fr 1fr 1fr 1fr;margin-bottom:24px}
+.tb>div{border-right:1px solid #d0d0d0;border-bottom:1px solid #d0d0d0;padding:10px 12px;min-width:0}
+.tb .big{grid-row:span 2;display:flex;flex-direction:column;justify-content:space-between;gap:12px}
+.tb h1{font-size:clamp(26px,4vw,40px);line-height:1;margin:0;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.lbl{text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--ink3);font-weight:600}
+.tb .v{font-size:13px;margin-top:2px;font-variant-numeric:tabular-nums}
+.tb .notes{grid-column:1/-1;border-right:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px 24px;font-size:13px;color:var(--ink2)}
+.tb .notes ol{margin:4px 0 0;padding-left:18px}
+.tb .figs{grid-column:1/-1;border-right:0;border-bottom:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px 18px}
+.tb .figs .v{font-size:17px}
+@media (max-width:640px){.tb{grid-template-columns:1fr 1fr}.tb .big{grid-column:1/-1;grid-row:auto}}
+.sheetwrap{margin-bottom:28px}
+.foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink2);padding:10px 2px 0}
+.foot b{font-weight:600;color:var(--ink)}
+/* drawing */
+.u{font-family:var(--f);text-transform:uppercase;letter-spacing:.07em}
+.border{fill:none;stroke:var(--ink);stroke-width:1.2}
+.obj{fill:var(--sheet);stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
+.well{fill:var(--fill);stroke:var(--ink);stroke-width:1}
+.slot{fill:none;stroke:var(--ink2);stroke-width:.8;stroke-dasharray:4 3}
+.hug{fill:var(--fill2);stroke:var(--ink);stroke-width:1}
+.thin{fill:none;stroke:var(--ink);stroke-width:.8}
+.ph{fill:none;stroke:var(--ink3);stroke-width:.8;stroke-dasharray:14 3 3 3}
+.cl{fill:none;stroke:var(--ink3);stroke-width:.7;stroke-dasharray:16 3 2 3}
+.cut{stroke:var(--ink);stroke-width:2}
+.dl{stroke:var(--ink);stroke-width:.7;fill:none}
+.ext{stroke:var(--ink);stroke-width:.55;fill:none}
+.arrow{fill:var(--ink)}
+.hl{stroke:var(--ink2);stroke-width:.7}
+.hs{stroke:var(--ink);stroke-width:.8}
+.env{fill:none;stroke:var(--ink);stroke-width:.8;stroke-dasharray:10 3 2 3}
+.dt{font:400 11px var(--f);fill:var(--ink);paint-order:stroke;stroke:var(--sheet);stroke-width:4px;stroke-linejoin:round}
+.dts{font:400 9.5px var(--f);fill:var(--ink2);letter-spacing:.06em;text-transform:uppercase;paint-order:stroke;stroke:var(--sheet);stroke-width:3px}
+.sl{font:400 9px var(--f);fill:var(--ink2);letter-spacing:.08em;text-transform:uppercase}
+.nt{font:400 11.5px var(--f);fill:var(--ink);letter-spacing:.06em;text-transform:uppercase}
+.nth{font:700 13px var(--f);fill:var(--ink);letter-spacing:.06em}
+.vt{font:400 12px var(--f);fill:var(--ink);letter-spacing:.1em;text-transform:uppercase}
+.vtb{font:400 20px var(--f);fill:var(--ink);letter-spacing:.06em}
+.nb{fill:var(--sheet);stroke:var(--ink);stroke-width:.9}
+.nbt{font:400 9.5px var(--f);fill:var(--ink)}
+.lead{stroke:var(--ink);stroke-width:.7;fill:none}
+.dot{fill:var(--ink)}
+.th{font:400 10.5px var(--f);fill:var(--ink);letter-spacing:.05em;text-transform:uppercase}
+.tc{font:400 10.5px var(--f);fill:var(--ink)}
+.tbk{font:400 7px var(--f);fill:var(--ink2);letter-spacing:.04em;text-transform:uppercase}
+.tbt{font:700 15px var(--f);fill:var(--ink)}
+.tbv{font:400 17px var(--f);fill:var(--ink);letter-spacing:.06em}
+
+/* title block restyled to match the drawing sheet: thin black rules, plain caps lettering */
+.tb{border:1.2px solid var(--ink);border-radius:16px;overflow:hidden}
+.tb>div{border-right:.8px solid var(--ink);border-bottom:.8px solid var(--ink);padding:10px 14px}
+.tb>div:nth-child(4),.tb>div:nth-child(7){border-right:0}
+.tb .lbl{font-size:9.5px;font-weight:400;letter-spacing:.06em;color:var(--ink2)}
+.tb h1{font-weight:400;letter-spacing:.1em;font-size:clamp(28px,4vw,44px);margin-top:4px}
+.tb .v{font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
+.tb .big .v{font-size:11px;color:var(--ink2);line-height:1.6}
+.tb .notes{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);line-height:1.9}
+.tb .notes ol{padding-left:20px}
+.tb .nh{font-weight:700;font-size:13px;letter-spacing:.06em}
+.tb .nh span{font-weight:400;font-size:11.5px;margin-left:6px}
+.tb .figs>div{border-left:.8px solid var(--ink);padding-left:14px}
+.tb .figs>div:first-child{border-left:0;padding-left:0}
+.tb .figs .v{font-size:18px;letter-spacing:.06em;text-transform:none;margin-top:4px}
+.foot{font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.foot b{font-weight:700}
+</style>
+
+<style>body{margin:0}</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="tb">
+    <div class="big">
+      <div><div class="lbl">UI component · dimensional drawing</div><h1>Dialog</h1></div>
+      <div class="v" style="color:var(--ink2)">Architecture only: slots, spacing, radii, layers and viewport placement. Content is out of scope.</div>
+    </div>
+    <div><div class="lbl">Dwg no.</div><div class="v">UI-DIALOG-001</div></div>
+    <div><div class="lbl">Rev</div><div class="v">A · 2026-10-23</div></div>
+    <div><div class="lbl">Sheets</div><div class="v">1</div></div>
+    <div><div class="lbl">Units</div><div class="v">CSS px @ 1×</div></div>
+    <div><div class="lbl">Scale</div><div class="v">As noted</div></div>
+    <div><div class="lbl">Source</div><div class="v">Invite dialog · Card Showcase</div></div>
+    <div class="notes">
+      <div><span class="nh">NOTES:<span>(UNLESS OTHERWISE SPECIFIED)</span></span><ol>
+        <li>Do not scale from screen. Read the numbers.</li>
+        <li>All dimensions in CSS px at 1×. Padding is measured inside the 1 px border.</li>
+        <li>Slots are placeholders. Text, icons and copy are not part of the drawing.</li></ol></div>
+      <div><span class="nh" aria-hidden="true">&nbsp;</span><ol start="4">
+        <li>Every dimension is a variable (S1, R2, H5…). Derived values are written as formulas.</li>
+        <li>HUG = sized by its content · FLEX = takes the remaining space · FILL = full width of its parent.</li>
+        <li>[TBD] = not defined in the source. Grayscale by design; color is out of scope.</li></ol></div>
+    </div>
+    <div class="figs">
+      <div><div class="lbl">W · dialog-w</div><div class="v">420 fixed</div></div>
+      <div><div class="lbl">S2 · body-pad</div><div class="v">14</div></div>
+      <div><div class="lbl">S3 · body-gap</div><div class="v">16</div></div>
+      <div><div class="lbl">H5 · input-h</div><div class="v">40</div></div>
+      <div><div class="lbl">H1 · header-min</div><div class="v">2·S1 + H3</div></div>
+      <div><div class="lbl">R2 · r-body</div><div class="v">R1 − B − S6</div></div>
+      <div><div class="lbl">MH · max-h</div><div class="v">100vh − 2·V1</div></div>
+    </div>
+  </header>
+  <div class="sheetwrap"><div class="scroll"><svg id="sh1" viewBox="0 0 1700 1060" role="img" aria-label="Single-sheet dimensional drawing of a dialog component: plan view with slots and variable dimensions, exploded view with scrim, header controls, footer actions, field, nested corner and radius details, viewport placement, variable tables"></svg></div>
+  <div class="foot"><span>2026-10-23 &nbsp;|&nbsp; UI component reference</span><span><b>Dialog, architecture</b> &nbsp;|&nbsp; 1</span></div></div>
+</div>
+<script>
+(function(){
+const NS='http://www.w3.org/2000/svg';let sv,A,HAT,uid=0;
+function mk(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)if(a[k]!=null)e.setAttribute(k,a[k]);(p||sv).appendChild(e);return e}
+function tx(x,y,s,c,a,p){const t=mk('text',Object.assign({x:x,y:y,class:c||'dt'},a||{}),p);t.textContent=s;return t}
+function begin(id){sv=document.getElementById(id);sv.innerHTML='';const n=uid++;const d=mk('defs',{});const m=mk('marker',{id:'ar'+n,viewBox:'0 0 10 10',refX:10,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse',markerUnits:'userSpaceOnUse'},d);mk('path',{d:'M0,1.7 L10,5 L0,8.3 z',class:'arrow'},m);
+ const pt=mk('pattern',{id:'hat'+n,width:5,height:5,patternUnits:'userSpaceOnUse',patternTransform:'rotate(45)'},d);mk('line',{x1:0,y1:0,x2:0,y2:5,class:'hl'},pt);A='url(#ar'+n+')';HAT='url(#hat'+n+')';rr(20,20,1660,1020,16,'border')}
+
+/* ---- kit ---- */
+function dimH(x1,x2,y,e1,e2,l,o){o=o||{};[[x1,e1],[x2,e2]].forEach(([x,e])=>{if(e==null)return;const s=Math.sign(y-e)||1;mk('line',{x1:x,y1:e+s*3,x2:x,y2:y+s*5,class:'ext'})});
+ if(x2-x1>=28)mk('line',{x1:x1,y1:y,x2:x2,y2:y,class:'dl','marker-start':A,'marker-end':A});else{mk('line',{x1:x1-13,y1:y,x2:x1,y2:y,class:'dl','marker-end':A});mk('line',{x1:x2+13,y1:y,x2:x2,y2:y,class:'dl','marker-end':A});mk('line',{x1:x1,y1:y,x2:x2,y2:y,class:'dl'})}
+ tx((x1+x2)/2+(o.dx||0),(o.below?y+13:y-4)+(o.dy||0),l,o.c||'dt',{'text-anchor':'middle'})}
+function dimV(y1,y2,x,e1,e2,l,o){o=o||{};[[y1,e1],[y2,e2]].forEach(([y,e])=>{if(e==null)return;const s=Math.sign(x-e)||1;mk('line',{x1:e+s*3,y1:y,x2:x+s*5,y2:y,class:'ext'})});
+ if(y2-y1>=28)mk('line',{x1:x,y1:y1,x2:x,y2:y2,class:'dl','marker-start':A,'marker-end':A});else{mk('line',{x1:x,y1:y1-13,x2:x,y2:y1,class:'dl','marker-end':A});mk('line',{x1:x,y1:y2+13,x2:x,y2:y2,class:'dl','marker-end':A});mk('line',{x1:x,y1:y1,x2:x,y2:y2,class:'dl'})}
+ const c=(y1+y2)/2;if(o.side){const r=o.side==='r';tx(r?x+6:x-6,c+4,l,o.c||'dt',{'text-anchor':r?'start':'end'})}else tx(x-5,c,l,o.c||'dt',{'text-anchor':'middle',transform:'rotate(-90 '+(x-5)+' '+c+')'})}
+function callout(px,py,ex,ey,l,dir,c){const s=dir||(ex>=px?1:-1);mk('circle',{cx:px,cy:py,r:1.8,class:'dot'});mk('polyline',{points:px+','+py+' '+ex+','+ey+' '+(ex+s*10)+','+ey,class:'lead'});tx(ex+s*14,ey+4,l,c||'dt',{'text-anchor':s>0?'start':'end'})}
+function rad(cx,cy,r,c,l,L){const sx=c.includes('l')?-1:1,sy=c.includes('t')?-1:1;const ox=cx-sx*r,oy=cy-sy*r;const px=ox+sx*r*Math.SQRT1_2,py=oy+sy*r*Math.SQRT1_2;callout(px,py,px+sx*L,py+sy*L,l,sx)}
+function nb(x,y,n){mk('rect',{x:x-6,y:y-6,width:12,height:12,class:'nb'});tx(x,y+3.5,String(n),'nbt',{'text-anchor':'middle'})}
+function rr(x,y,w,h,r,c){return mk('rect',{x:x,y:y,width:w,height:h,rx:r,class:c})}
+function slotLabel(x,y,w,h,l,al){tx(al==='l'?x+6:x+w/2,y+h/2+3.2,l,'sl',{'text-anchor':al==='l'?'start':'middle'})}
+function title(x,y,t,s){tx(x,y,t,'vt',{'text-anchor':'middle'});if(s)tx(x,y+14,s,'dts',{'text-anchor':'middle'})}
+function notes(list,extra){const NX=50,NY=58;tx(NX,NY,'NOTES:','nth');tx(NX+62,NY,'(UNLESS OTHERWISE SPECIFIED)','nt');
+ list.forEach(([n,t],i)=>{const y=NY+30+i*24;if(n){nb(NX+6,y-4,n);tx(NX+22,y,t,'nt')}else tx(NX,y,t,'nt')})}
+function table(x,y,ttl,rows){const ws=[40,88,96],rh=17;tx(x,y-8,ttl,'vt');
+ const all=[['Code','Variable','Value']].concat(rows);all.forEach((r,i)=>{let cx2=x;r.forEach((c,j)=>{mk('rect',{x:cx2,y:y+i*rh,width:ws[j],height:rh,class:'thin'});tx(cx2+(j?ws[j]/2:6),y+i*rh+12,c,i?'tc':'th',{'text-anchor':j?'middle':'start'});cx2+=ws[j]})});return y+all.length*rh+36}
+function detailRef(cx,cy,r,lbl,lx,ly){mk('circle',{cx:cx,cy:cy,r:r,class:'ph'});const a=Math.atan2(ly-cy,lx-cx);mk('line',{x1:cx+r*Math.cos(a),y1:cy+r*Math.sin(a),x2:lx,y2:ly,class:'lead'});tx(lx+(lx<cx?-4:4),ly+4,lbl,'dts',{'text-anchor':lx<cx?'end':'start'})}
+function titleBlock(n,name){const TBX=1226,TBY=930;
+ rr(TBX,TBY,440,92,0,'thin');mk('line',{x1:TBX+200,y1:TBY,x2:TBX+200,y2:TBY+92,class:'thin'});
+ ['NOTICE: REFERENCE DRAWING FOR A','UI CARD COMPONENT. ARCHITECTURE','ONLY. CONTENT, COLOR AND COPY','ARE OUT OF SCOPE.','SHEET: '+name].forEach((t,i)=>tx(TBX+8,TBY+18+i*11,t,'tbk'));
+ tx(TBX+210,TBY+22,'Card component','tbt');
+ mk('line',{x1:TBX+200,y1:TBY+32,x2:TBX+440,y2:TBY+32,class:'thin'});mk('line',{x1:TBX+200,y1:TBY+62,x2:TBX+440,y2:TBY+62,class:'thin'});
+ mk('line',{x1:TBX+236,y1:TBY+32,x2:TBX+236,y2:TBY+92,class:'thin'});mk('line',{x1:TBX+400,y1:TBY+32,x2:TBX+400,y2:TBY+62,class:'thin'});
+ tx(TBX+204,TBY+41,'SIZE','tbk');tx(TBX+210,TBY+57,'D','tbv');tx(TBX+240,TBY+41,'DRAWING NUMBER','tbk');tx(TBX+242,TBY+57,'UI-CARD-001','tc');tx(TBX+404,TBY+41,'REV.','tbk');tx(TBX+412,TBY+57,'D','tc');
+ tx(TBX+204,TBY+71,'SCALE','tbk');tx(TBX+242,TBY+84,'NOTED','tbv');mk('line',{x1:TBX+340,y1:TBY+62,x2:TBX+340,y2:TBY+92,class:'thin'});tx(TBX+344,TBY+71,'UNITS','tbk');tx(TBX+346,TBY+85,'CSS PX','tc');
+ tx(TBX+404,TBY+71,'SHT','tbk');tx(TBX+408,TBY+85,n+' OF 2','tc')}
+
+const W=420,H=448;
+const VAR={
+ spacing:[['S1','dialog-pad','14'],['S2','body-pad','14'],['S3','body-gap','16'],['S4','field-gap','8'],['S5','lead-gap','10'],['S6','body-inset','4'],['S7','action-gap','8'],['S8','gap-min','12'],['S9','input-pad-x','12'],['S10','primary-pad-x','14'],['S11','secondary-pad-x','16']],
+ size:[['B','border','1'],['Z1','lead-size','32'],['Z2','close-size','32'],['I1','icon-size','16'],['H3','action-h','36'],['H5','input-h','40'],['H1','header-min','2·S1+H3 = 64'],['H2','footer-h','2·S1+H3 = 64'],['W','dialog-w','420']],
+ radius:[['R1','r-dialog','16'],['R2','r-body','R1−B−S6 = 11'],['R3','r-control','10'],['R4','r-pill','h ÷ 2']],
+ shadow:[['Y','shadow-y','32'],['BL','shadow-blur','72'],['SP','shadow-spread','−16'],['E1','env-top','BL+SP−Y = 24'],['E2','env-side','BL+SP = 56'],['E3','env-bottom','BL+SP+Y = 88']],
+ viewport:[['V1','viewport-margin','[TBD]'],['MH','max-h','100vh−2·V1']]
+};
+function xbox(x,y,w,h){mk('rect',{x:x,y:y,width:w,height:h,class:'thin'});mk('path',{d:'M'+x+','+y+' l'+w+','+h+' M'+(x+w)+','+y+' l'+(-w)+','+h,class:'thin'})}
+function dialogPlan(ox,oy,k){const X=v=>ox+v*k,Y=v=>oy+v*k;
+ const r=(x,y,w,h,rx,c,l,al)=>{mk('rect',{x:X(x),y:Y(y),width:w*k,height:h*k,rx:rx*k,class:c});if(l)slotLabel(X(x),Y(y),w*k,h*k,l,al)};
+ r(0,0,W,H,16,'obj');
+ mk('line',{x1:X(1),y1:Y(65),x2:X(419),y2:Y(65),class:'ph'});mk('line',{x1:X(1),y1:Y(383),x2:X(419),y2:Y(383),class:'ph'});
+ mk('circle',{cx:X(31),cy:Y(33),r:16*k,class:'hug'});xbox(X(23),Y(25),16*k,16*k);
+ r(57,23,304,20,2,'slot','Title slot · flex','l');
+ r(373,17,32,32,10,'slot');xbox(X(381),Y(25),16*k,16*k);
+ r(5,65,410,318,11,'well');
+ r(20,80,380,40,2,'slot','Content slot · fill');r(20,136,380,68,2,'slot','Content slot · fill');
+ [[220,246],[302,328]].forEach(([l,i])=>{r(20,l,380,18,2,'slot','Label slot','l');r(20,i,380,40,10,'hug');r(32,i+10,356,20,2,'slot','Value slot','l')});
+ r(197,397,90,36,18,'hug','Secondary');r(295,397,110,36,10,'hug','Primary');
+ mk('line',{x1:X(-16),y1:Y(33),x2:X(436),y2:Y(33),class:'cl'});mk('line',{x1:X(-16),y1:Y(415),x2:X(436),y2:Y(415),class:'cl'});
+ return {X:X,Y:Y}}
+
+begin('sh1');
+notes([[1,'TITLE SLOT FLEXES (MIN-WIDTH 0) AND WRAPS. HEADER GROWS PAST H1.'],[2,'BODY INSET S6 FROM CONTAINER. BODY RADIUS R2 = R1 − B − S6 (DERIVED).'],[3,'LEAD, CLOSE AND FOOTER ACTIONS HUG THEIR CONTENT AND NEVER SHRINK.'],[4,'FOOTER ACTIONS ALIGN TO THE END: SECONDARY, THEN PRIMARY, GAP S7.'],[5,'DIALOG CENTERS ON BOTH AXES ABOVE A FULL-BLEED SCRIM.'],[6,'MAX HEIGHT MH = 100VH − 2·V1. OVERFLOW BEHAVIOR [TBD].'],[7,'CLOSE IS Z2. HIT AREA 44 MIN ON TOUCH LAYOUTS.'],[8,'W IS FIXED IN SOURCE. NARROW-VIEWPORT BEHAVIOR [TBD].']]);
+
+/* ---- PLAN VIEW 0.9:1 ---- */
+{const k=.9,PX=720,PY=232;const {X,Y}=dialogPlan(PX,PY,k);
+ const ty=Y(-30);dimH(X(1),X(15),ty,Y(0),Y(17),'S1',{dx:-9});dimH(X(15),X(47),ty,null,Y(17),'Z1');dimH(X(47),X(57),ty,null,Y(23),'S5',{dx:9});dimH(X(57),X(361),ty,null,Y(23),'FLEX','dts');
+ dimH(X(361),X(373),ty,null,Y(17),'S8');dimH(X(373),X(405),ty,null,Y(17),'Z2');dimH(X(405),X(419),ty,null,Y(0),'S1',{dx:9});
+ dimH(X(0),X(420),Y(-62),Y(-34),Y(-34),'W');tx(X(210),Y(-80),'W = 420 · FIXED','dts',{'text-anchor':'middle'});nb(X(280),Y(-84),8);
+ const by=Y(H+30);dimH(X(15),X(197),by,Y(H),Y(433),'FLEX',{below:true,c:'dts'});dimH(X(197),X(287),by,null,Y(433),'HUG',{below:true,c:'dts'});dimH(X(287),X(295),by,null,Y(433),'S7',{below:true});
+ dimH(X(295),X(405),by,null,Y(433),'HUG',{below:true,c:'dts'});dimH(X(405),X(419),by,null,Y(H),'S1',{below:true,dx:6});
+ const lx=X(-58);dimV(Y(1),Y(65),lx,X(0),X(0),'H1');dimV(Y(65),Y(383),lx,null,X(5),'HUG','dts');dimV(Y(383),Y(447),lx,null,X(0),'H2');
+ dimV(Y(0),Y(H),X(-96),X(-62),X(-62),'(REF '+H+')');
+ [[1,15,'S1'],[15,51,'H3'],[51,65,'S1'],[66,80,'S2'],[120,136,'S3'],[204,220,'S3'],[238,246,'S4'],[246,286,'H5'],[286,302,'S3'],[368,382,'S2'],[383,397,'S1'],[397,433,'H3'],[433,447,'S1']].forEach(([a,b,l])=>dimV(Y(a),Y(b),X(452),X(420),X(420),l,{side:'r'}));
+ rad(X(0),Y(H),16*k,'bl','R1',22);rad(X(5),Y(383),11*k,'bl','R2',20);rad(X(405),Y(433),10*k,'br','R3',22);
+ nb(X(350),Y(33),1);nb(X(389),Y(7),3);nb(X(60),Y(415),4);nb(X(342),Y(7),7);nb(X(12),Y(-46),5);
+ detailRef(X(6),Y(66),13,'DETAIL C',X(42),Y(57));
+ detailRef(X(389),Y(33),22,'DETAIL D',X(330),Y(57));
+ detailRef(X(32),Y(266),24,'DETAIL E',X(108),Y(295));
+ detailRef(X(300),Y(415),26,'DETAIL F',X(168),Y(415));
+ title(X(210),Y(H+82),'Plan view','Scale 0.9:1 · reference content');}
+
+/* ---- EXPLODED VIEW (with scrim) ---- */
+{const sc=.45,TX=330,TY=560,gap=46,a=.94*sc,b=.17*sc,c=-.34*sc,dd=.47*sc;
+ const P=(x,y,z)=>[TX+a*x+c*y,TY+b*x+dd*y-z];
+ const G=z=>mk('g',{transform:'matrix('+a+','+b+','+c+','+dd+','+TX+','+(TY-z)+')'});
+ const R2=(g,x,y,w,h,r,cls,extra)=>mk('rect',Object.assign({x:x,y:y,width:w,height:h,rx:r,class:cls,'vector-effect':'non-scaling-stroke'},extra||{}),g);
+ const L2=(g,x1,y1,x2,y2,cls)=>mk('line',{x1:x1,y1:y1,x2:x2,y2:y2,class:cls,'vector-effect':'non-scaling-stroke'},g);
+ [[0,0],[W,0],[W,H],[0,H]].forEach(([x,y])=>{const p1=P(x,y,gap*2),p2=P(x,y,gap*5);mk('line',{x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],class:'ph'})});
+ let g=G(0);R2(g,-60,-60,540,568,0,'thin');
+ g=G(gap);R2(g,-60,-60,540,568,0,'thin',{fill:HAT,'fill-opacity':.35});
+ g=G(gap*2);R2(g,16,48,388,H-32,16,'hs',{fill:HAT});
+ g=G(gap*3);R2(g,0,0,W,H,16,'obj');L2(g,1,65,419,65,'ph');L2(g,1,383,419,383,'ph');
+ g=G(gap*4);R2(g,5,65,410,318,11,'well');
+ g=G(gap*5);mk('circle',{cx:31,cy:33,r:16,class:'hug','vector-effect':'non-scaling-stroke'},g);R2(g,57,23,304,20,2,'slot');R2(g,373,17,32,32,10,'slot');R2(g,20,80,380,40,2,'slot');R2(g,20,136,380,68,2,'slot');
+ [[220,246],[302,328]].forEach(([l,i])=>{R2(g,20,l,380,18,2,'slot');R2(g,20,i,380,40,10,'hug')});R2(g,197,397,90,36,18,'hug');R2(g,295,397,110,36,10,'hug');
+ const LX=215;
+ [[0,[-60,508],'L0 · Viewport','Reference 1280 × 800'],[gap,[-60,508],'L1 · Scrim','Full-bleed, below the dialog'],[gap*2,[16,H+16],'L2 · Shadow','Footprint · Y · BL · SP'],[gap*3,[0,H],'L3 · Container','R1 · B · header / body / footer'],[gap*4,[5,383],'L4 · Body','R2 · inset S6'],[gap*5,[20,368],'L5 · Slots & controls','Lead · title · close · fields']].forEach(([z,[x,y],t,st])=>{
+  const p1=P(x,y,z);mk('circle',{cx:p1[0],cy:p1[1],r:1.8,class:'dot'});mk('polyline',{points:p1[0]+','+p1[1]+' '+(LX+10)+','+p1[1]+' '+LX+','+p1[1],class:'lead'});
+  tx(LX-4,p1[1]-2,t,'vt',{'text-anchor':'end'});tx(LX-4,p1[1]+11,st,'dts',{'text-anchor':'end'})});
+ title(390,TY+168,'Exploded view','Axonometric · z gaps not to scale');}
+
+/* ---- DETAIL D · header controls 2:1 ---- */
+{const DX=1196,DY=250,q=2;
+ mk('circle',{cx:DX+32,cy:DY+32,r:32,class:'hug'});xbox(DX+16,DY+16,32,32);
+ mk('rect',{x:DX+120,y:DY,width:64,height:64,rx:20,class:'slot'});xbox(DX+136,DY+16,32,32);
+ dimH(DX,DX+64,DY-16,DY+32,DY,'Z1');dimH(DX+120,DX+184,DY-16,DY,DY,'Z2');
+ dimH(DX+136,DX+168,DY+82,DY+48,DY+48,'I1',{below:true});dimH(DX+120,DX+136,DY+82,DY+64,null,'(Z2−I1)÷2',{below:true,dy:14});
+ callout(DX+32-22.6,DY+32+22.6,DX-6,DY+86,'R4',-1);rad(DX+184,DY+64,20,'br','R3',16);
+ tx(DX+32,DY+108,'LEAD','sl',{'text-anchor':'middle'});tx(DX+152,DY+122,'CLOSE','sl',{'text-anchor':'middle'});
+ nb(DX+196,DY+8,7);
+ title(DX+100,DY+150,'Detail D · header controls','Scale 2:1');}
+
+/* ---- DETAIL F · footer actions 1:1 ---- */
+{const FX=1180,FY=500;
+ mk('line',{x1:FX+222,y1:FY-38,x2:FX+222,y2:FY+66,class:'ph'});tx(FX+218,FY-44,'CONTAINER EDGE','dts',{'text-anchor':'end'});
+ mk('rect',{x:FX,y:FY,width:90,height:36,rx:18,class:'hug'});mk('rect',{x:FX+98,y:FY,width:110,height:36,rx:10,class:'hug'});
+ slotLabel(FX,FY,90,36,'Secondary');slotLabel(FX+98,FY,110,36,'Primary');
+ const t=FY-14;dimH(FX,FX+90,t,FY,FY,'HUG',{c:'dts'});dimH(FX+90,FX+98,t,null,FY,'S7');dimH(FX+98,FX+208,t,null,FY,'HUG',{c:'dts'});dimH(FX+208,FX+222,t,null,null,'S1',{dx:8});
+ dimV(FY,FY+36,FX-14,FX,FX,'H3',{side:'l'});
+ dimH(FX,FX+16,FY+52,FY+36,FY+36,'S11',{below:true,dx:-6});dimH(FX+98,FX+112,FY+52,FY+36,FY+36,'S10',{below:true,dx:-4});
+ [FX+16,FX+112].forEach(x=>mk('line',{x1:x,y1:FY+8,x2:x,y2:FY+28,class:'ext'}));
+ tx(FX+180,FY+64,'R4 · R3','dts');nb(FX+50,FY+80,4);
+ title(FX+111,FY+108,'Detail F · footer actions','Scale 1:1');}
+
+/* ---- VIEWPORT PLACEMENT 0.25:1 ---- */
+{const s=.25,VX=80,VY=780,vw=1280*s,vh=800*s,dw=W*s,dh=H*s,dx=VX+(vw-dw)/2,dy=VY+(vh-dh)/2,m=40*s;
+ mk('rect',{x:VX,y:VY,width:vw,height:vh,class:'thin',fill:HAT,'fill-opacity':.35});
+ mk('rect',{x:VX+vw/2-dw/2,y:VY+m,width:dw,height:vh-2*m,class:'ph'});
+ mk('rect',{x:dx-56*s,y:dy-24*s,width:dw+112*s,height:dh+112*s,class:'env'});
+ mk('rect',{x:dx,y:dy,width:dw,height:dh,rx:16*s,class:'obj'});
+ mk('line',{x1:VX-8,y1:VY+vh/2,x2:VX+vw+8,y2:VY+vh/2,class:'cl'});mk('line',{x1:VX+vw/2,y1:VY-8,x2:VX+vw/2,y2:VY+vh+8,class:'cl'});
+ dimH(VX,VX+vw,VY-16,VY,VY,'100VW');dimV(VY,VY+vh,VX-16,VX,VX,'100VH');
+ dimV(VY,VY+m,VX+vw+18,VX+vw/2+dw/2,VX+vw/2+dw/2,'V1 [TBD]',{side:'r'});dimV(VY+vh-m,VY+vh,VX+vw+18,VX+vw/2+dw/2,VX+vw/2+dw/2,'V1',{side:'r'});
+ dimV(VY+m,VY+vh-m,VX+vw+60,VX+vw/2+dw/2+4,VX+vw/2+dw/2+4,'MH',{side:'r'});
+ callout(dx+dw+12,dy+dh+6,VX+vw-20,VY+vh-24,'E1 · E2 · E3',1,'dts');
+ callout(VX+30,VY+30,VX+20,VY+vh+16,'Scrim',-1,'dts');
+ nb(VX+vw-14,VY+m+14,6);nb(dx-14,dy-14,5);
+ title(VX+vw/2,VY+vh+34,'Viewport placement','Scale 0.25:1 · reference 1280 × 800');}
+
+/* ---- DETAIL C · nested corner 4:1 ---- */
+{const K=4,CX=560,CY=956;const P=(u,v)=>[CX+u*K,CY-v*K];
+ const arc=(o,r)=>{const a1=P(o,36),a2=P(o,16),a3=P(16,o),a4=P(36,o);return 'M'+a1+' L'+a2+' A'+r*K+' '+r*K+' 0 0 0 '+a3+' L'+a4};
+ mk('path',{d:arc(0,16),class:'obj',fill:'none'});mk('path',{d:arc(1,15),class:'thin'});mk('path',{d:arc(5,11),class:'thin'});
+ const cc=P(16,16);mk('path',{d:'M'+(cc[0]-6)+','+cc[1]+' h12 M'+cc[0]+','+(cc[1]-6)+' v12',class:'thin'});
+ [[16,'R1',205],[11,'R2',250]].forEach(([r,l,dg],i)=>{const a=dg*Math.PI/180,ex=cc[0]+r*K*Math.cos(a),ey=cc[1]-r*K*Math.sin(a);mk('line',{x1:cc[0],y1:cc[1],x2:ex,y2:ey,class:'dl','marker-end':A});tx(i?(cc[0]+ex)/2+8:(cc[0]+ex)/2-6,i?(cc[1]+ey)/2+2:(cc[1]+ey)/2-6,l,'dt',{'text-anchor':i?'start':'end'})});
+ dimH(P(0,0)[0],P(1,0)[0],P(0,32)[1],P(0,36)[1],P(1,36)[1],'B',{dx:-10});dimH(P(1,0)[0],P(5,0)[0],P(0,32)[1],null,P(5,36)[1],'S6',{dx:12});
+ tx(P(9,30)[0],P(9,30)[1],'R2 = R1 − B − S6','dt');
+ title(CX+72,CY+38,'Detail C · nested corner','Scale 4:1');}
+
+/* ---- DETAIL E · field 1:1 ---- */
+{const EX=790,EY=860,FW=240;
+ mk('rect',{x:EX,y:EY,width:FW,height:18,rx:2,class:'slot'});slotLabel(EX,EY,FW,18,'Label slot','l');
+ mk('rect',{x:EX,y:EY+26,width:FW,height:40,rx:10,class:'hug'});mk('rect',{x:EX+12,y:EY+36,width:FW-24,height:20,rx:2,class:'slot'});slotLabel(EX+12,EY+36,FW-24,20,'Value slot','l');
+ dimV(EY,EY+18,EX-16,EX,EX,'HUG',{side:'l',c:'dts'});dimV(EY+18,EY+26,EX-16,null,EX,'S4',{side:'l'});dimV(EY+26,EY+66,EX-16,null,EX,'H5',{side:'l'});
+ const b=EY+84;dimH(EX,EX+12,b,EY+66,EY+56,'S9',{below:true,dx:-8});dimH(EX+12,EX+FW-12,b,null,EY+56,'FILL',{below:true,c:'dts'});dimH(EX+FW-12,EX+FW,b,EY+56,EY+66,'S9',{below:true,dx:8});
+ rad(EX+FW,EY+26,10,'tr','R3',16);
+ title(EX+FW/2,EY+134,'Detail E · field','Scale 1:1 · label → input');}
+
+/* ---- RADIUS DETAILS 2:1 ---- */
+{const q=2,y0=950,L=30,items=[['R1','Container',16],['R2','Body',11],['R3','Control',10],['R4','Pill (h = H3)',18]];
+ items.forEach(([c,n,r],i)=>{const x0=1100+i*80;const P=(u,v)=>[x0+u*q,y0-v*q];
+  mk('path',{d:'M'+P(0,L)+' L'+P(0,r)+' A'+r*q+' '+r*q+' 0 0 0 '+P(r,0)+' L'+P(L,0),class:'obj',fill:'none'});
+  const cc=P(r,r);mk('path',{d:'M'+(cc[0]-4)+','+cc[1]+' h8 M'+cc[0]+','+(cc[1]-4)+' v8',class:'thin'});
+  const a=225*Math.PI/180;mk('line',{x1:cc[0],y1:cc[1],x2:cc[0]+r*q*Math.cos(a),y2:cc[1]-r*q*Math.sin(a),class:'dl','marker-end':A});
+  tx(x0+L*q/2+4,y0-L*q+12,c,'dt');tx(x0,y0+16,n,'dts');});
+ title(1250,y0+44,'Radius details','Scale 2:1');}
+
+{let y=table(1426,86,'Spacing',VAR.spacing);y=table(1426,y,'Size',VAR.size);y=table(1426,y,'Radius',VAR.radius);y=table(1426,y,'Shadow',VAR.shadow);table(1426,y,'Viewport',VAR.viewport);}
+})();
+</script>
+
+</body>
+</html>
