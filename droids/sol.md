@@ -1,6 +1,6 @@
 ---
 name: sol
-description: GPT-6.1 Sol for implementation, research, and adversarial review.
+description: GPT-6.1 Sol. Use only when the user asks for Sol by name.
 model: gpt-6.1-sol
 reasoningEffort: high
 ---

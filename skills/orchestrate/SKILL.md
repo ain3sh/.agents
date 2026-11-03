@@ -11,6 +11,11 @@ understandable or ready to merge.
 
 ## Models
 
+Staff every seat with a named droid from this list. Never staff with `worker` or
+`explorer`: they run whatever model the complexity tier in settings resolves to
+(medium is Sol), so the seat gets a model nobody chose. Use `sol` only when the
+user names it.
+
 ### Opus
 
 - Default for a lot of things
