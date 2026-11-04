@@ -55,7 +55,7 @@ script's docstring defines every event and the `READY` gate.
 | Event or verdict | Move |
 |---|---|
 | `check-failed` | Read the failing job's log, load **root-cause-analysis**, fix through **quality-ship**, push. An `(optional)` failure the PR did not cause is a flake: rerun it (`gh run rerun <run-id> --failed`). |
-| `conflict`, `behind`, `drift` | **sync-target** without asking, including whatever disposition it rules. Stacked: **stack-cli**, merge bottom-up. |
+| `conflict`, `behind` | **sync-target** without asking, including whatever disposition it rules. Stacked: **stack-cli**, merge bottom-up. |
 | `comment`, `review`, `thread`, `unresolved` | **address-review**. This invocation confirms its `Fix`, `Respond`, and `Ack` rows; `Decline` rows and open product calls go to the user. |
 | Any push | **pr-description** refresh: the body stays first-screen excellent, never a patch log. |
 | `READY` | Run `pr-watch <pr> --once`. On `READY`, merge with the repo's allowed method (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`) pinned to the sha that verdict line ends with (`gh pr merge <pr> --<method> --match-head-commit <sha>`), confirm `MERGED`, stop. On `ACTION`, handle its lines instead; on `WAIT`, follow its row. |
@@ -69,15 +69,17 @@ script's docstring defines every event and the `READY` gate.
 1. A new commit does **not** dismiss prior reviews. Read `reviewDecision` and
    `latestReviews`; never infer review state from a push, and never re-request
    an approver.
-2. Never merge on a stale `READY`. The `--once` run immediately before the
-   merge is the gate: base commits since the fork point that touch the PR's
-   files mean **sync-target** and fresh green checks first, because CI never
-   tested them together.
-3. Never devolve the PR's sleek excellence to clear a comment: no
+2. Never merge on a stale `READY`: the `--once` run immediately before the
+   merge is the gate.
+3. Never sync a PR the watcher has not flagged `conflict` or `behind`, even
+   when base commits touch its files. A sync restarts CI and puts a PR that
+   could merge now behind another run; GitHub flags `behind` whenever the
+   base requires a current branch.
+4. Never devolve the PR's sleek excellence to clear a comment: no
    suppressions, no patch at the tagged line when the cause lives elsewhere,
    no body that narrates review rounds.
-4. Repeated review rounds that keep finding issues are a red flag. Stop
+5. Repeated review rounds that keep finding issues are a red flag. Stop
    patching where feedback happens to be tagged: load **zoom-out**, find the
    root cause (**root-cause-analysis**, **patch-coherence**), and fix it at
    its layer.
-5. Report only state changes: what moved, what you did, what waits on the user.
+6. Report only state changes: what moved, what you did, what waits on the user.
