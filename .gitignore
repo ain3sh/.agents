@@ -14,3 +14,5 @@ __pycache__/
 # Factory-generated mission droids share the personal discovery directory.
 /droids/scrutiny-feature-reviewer.md
 /droids/user-testing-flow-validator.md
+# Ledgers an agent keeps when its cwd is $HOME land here; untracked files stop update-checkouts.sh fast-forwarding this checkout.
+/ledgers/
