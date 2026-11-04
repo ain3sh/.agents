@@ -8,10 +8,11 @@ current checkout. Run one background job per PR. It polls quietly and exits on
 the first poll that needs a decision, so the job's exit is the wake-up. Restart
 it after acting: it remembers what it already reported.
 
---once evaluates the merge gate a single time, counting feedback no run has
-reported yet (all of it on a PR no watcher has run on), without waiting or
-recording anything. Run it immediately before merging, and pin the merge to
-the head sha that the verdict line ends with.
+--once evaluates the PR a single time and reports everything open now, without
+waiting. It neither reads nor saves reported keys, though a MERGED or CLOSED
+verdict still deletes the PR's state. Run it whenever you need the PR's
+current state and immediately before merging; pin the merge to the head sha
+that the verdict line ends with.
 
 Stdout carries event lines, then one verdict line; progress goes to stderr.
 
@@ -31,26 +32,40 @@ Events
                 waits for approval", on a PR with neither an approval nor the
                 e2e:run label, is that workflow waiting by design: a wait,
                 not a failure
-  comment, review, thread, reply
-                new feedback from anyone, bots and your own account included.
-                Skipped: replies the agent marked with AGENT_MARK, and CI and
-                deploy bots' top-level comments, since checks carry that news
+  comment, review
+                a top-level comment or review posted, or edited by a human,
+                after the agent's latest response; comments from CI and
+                deploy bots and factory-service-* accounts are skipped, since
+                checks carry that news
+  thread        a review thread that is unresolved, not outdated, and whose
+                last comment is not the agent's
   conflict      the branch conflicts with its base
   behind        branch protection requires the branch to be current
   drift         otherwise ready, but base commits since the fork point touch
                 files this PR changes
-  unresolved    otherwise ready, but review threads are unresolved
+  unresolved    otherwise ready, but review threads are unresolved, answered
+                and outdated ones included: they still block merging
   blocked       otherwise ready, but GitHub still reports BLOCKED
   incomplete    the PR has more than 100 review threads, so READY is
                 impossible to prove; check them by hand
 
-State lives in $XDG_STATE_HOME/pr-watch (default ~/.local/state/pr-watch). The
-first run on a PR that reads it from GitHub records its existing comments,
-reviews, and threads as seen without reporting them, so start it only once the
-PR's current state is handled. After that every event is reported once per PR (gate events once per
-head and base): a restart never re-wakes on something already reported, and
-feedback that arrived while no watcher ran is reported on the next start. A
-MERGED or CLOSED exit deletes the PR's state.
+Feedback events describe what is open on GitHub now, not what changed since a
+run. The agent's words are exactly the comments, reviews, and thread replies
+carrying AGENT_MARK; authors and commits never count, since the agent shares
+an account with its user. Its latest response is the newest of those anywhere
+on the PR. A thread stays settled while a marked reply has its last word; a
+top-level comment or review is settled by any later response, until its author
+edits it. Only a human's edit reopens: bots and factory-service-* accounts
+(GitHub Users that automation drives) rewrite status reports in place, so only
+their new comments are news.
+
+State lives in $XDG_STATE_HOME/pr-watch (default ~/.local/state/pr-watch): the
+keys the watcher has reported, so a restart never re-wakes on what it already
+reported. There is no first-run baseline: a first run reports everything open.
+Feedback is keyed by comment and its version, a human's latest edit or else
+its posting (a thread by its last comment), so a new reply or a human's edit
+wakes the watcher once; gate events are keyed by head and base. A MERGED or
+CLOSED exit deletes the PR's state.
 
 Adapted from pr-wait in https://github.com/t3dotgg/tstack:
 
@@ -88,6 +103,7 @@ import re
 import subprocess
 import sys
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -100,7 +116,12 @@ STATE_DIR = (
 # The agent ends every reply it posts with this. It often shares one GitHub
 # account with the user, so the author alone cannot tell their comments apart.
 AGENT_MARK = "<!-- agent-reply -->"
+NEVER = datetime.min.replace(tzinfo=UTC)
+# Service accounts are GitHub Users that automation drives, such as the snyk
+# scanner, so their author type alone reads as human.
+SERVICE_PREFIX = "factory-service-"
 STATUS_BOTS = (
+    SERVICE_PREFIX,
     "github-actions",
     "vercel",
     "netlify",
@@ -143,43 +164,52 @@ contexts(first: 100, after: $after) {
   }
 }
 """
-# The first fetch of each run pages comments and reviews back to the oldest, so
-# feedback that arrived while no watcher ran is seen even on a busy PR; later
-# polls read only the newest 100, which covers anything one interval can add.
+NOTE = "id url body createdAt lastEditedAt author { login __typename }"
+# Comments page oldest-ward until their update time reaches the agent's latest
+# response, so every comment posted or edited since arrives. Reviews can only
+# order by creation, so they page to the oldest: an edit to any review surfaces,
+# and a PR rarely has more than one page of them.
 FEEDBACK = {
-    "comments": "id url body author { login __typename }",
-    "reviews": "id url state body author { login }",
+    "comments": (
+        "updatedAt",
+        f"""comments(last: 100, before: $before, orderBy: {{field: UPDATED_AT, direction: ASC}}) {{
+          pageInfo {{ hasPreviousPage startCursor }} nodes {{ updatedAt {NOTE} }}
+        }}""",
+    ),
+    "reviews": (
+        None,
+        f"""reviews(last: 100, before: $before) {{
+          pageInfo {{ hasPreviousPage startCursor }} nodes {{ state submittedAt {NOTE} }}
+        }}""",
+    ),
 }
-FEEDBACK_PAGE = "pageInfo {{ hasPreviousPage startCursor }} nodes {{ {} }}"
 QUERY = f"""
-query($owner: String!, $name: String!, $number: Int!, $after: String) {{
+query($owner: String!, $name: String!, $number: Int!, $after: String, $before: String) {{
   repository(owner: $owner, name: $name) {{
     pullRequest(number: $number) {{
-      url state isDraft headRefOid baseRefName mergeStateStatus reviewDecision
+      id url state isDraft headRefOid baseRefName mergeStateStatus reviewDecision
       baseRef {{ target {{ oid }} }}
       commits(last: 1) {{ nodes {{ commit {{ id statusCheckRollup {{ {CONTEXTS} }} }} }} }}
       latestOpinionatedReviews(first: 100) {{ nodes {{ state }} }}
       labels(first: 100) {{ nodes {{ name }} }}
-      comments(last: 100) {{ {FEEDBACK_PAGE.format(FEEDBACK["comments"])} }}
-      reviews(last: 100) {{ {FEEDBACK_PAGE.format(FEEDBACK["reviews"])} }}
+      {FEEDBACK["comments"][1]}
+      {FEEDBACK["reviews"][1]}
       reviewThreads(last: 100) {{ totalCount nodes {{
-        isResolved path line
-        comments(first: 100) {{ nodes {{ id url body author {{ login }} }} }}
+        isResolved isOutdated path line
+        comments(last: 100) {{ nodes {{ {NOTE} }} }}
       }} }}
     }}
-  }}
-}}
-"""
-MORE_FEEDBACK = """
-query($owner: String!, $name: String!, $number: Int!, $before: String) {{
-  repository(owner: $owner, name: $name) {{
-    pullRequest(number: $number) {{ {connection}(last: 100, before: $before) {{ {page} }} }}
   }}
 }}
 """
 MORE_CONTEXTS = f"""
 query($id: ID!, $after: String) {{
   node(id: $id) {{ ... on Commit {{ statusCheckRollup {{ {CONTEXTS} }} }} }}
+}}
+"""
+MORE_FEEDBACK = """
+query($id: ID!, $before: String) {{
+  node(id: $id) {{ ... on PullRequest {{ {connection} }} }}
 }}
 """
 
@@ -251,6 +281,59 @@ def snippet(body: str, limit: int = 160) -> str:
     return text if len(text) <= limit else text[: limit - 3] + "..."
 
 
+def login(node: Json) -> str:
+    return (node["author"] or {}).get("login", "ghost")
+
+
+def marked(node: Json) -> bool:
+    return AGENT_MARK in node["body"]
+
+
+def posted(node: Json) -> str:
+    """When a comment or reply was created, or a review submitted."""
+    return node.get("submittedAt") or node["createdAt"]
+
+
+def human(node: Json) -> bool:
+    author = node["author"] or {}
+    return author.get("__typename") == "User" and not login(node).startswith(
+        SERVICE_PREFIX
+    )
+
+
+def status_bot(node: Json) -> bool:
+    return not human(node) and any(b in login(node) for b in STATUS_BOTS)
+
+
+def stamp(node: Json) -> str:
+    """The version of a note: a human's latest edit, else its posting. Bots
+    and service accounts edit status reports in place, which is no news."""
+    versions = [posted(node)]
+    if human(node) and node["lastEditedAt"]:
+        versions.append(node["lastEditedAt"])
+    return max(versions, key=datetime.fromisoformat)
+
+
+def reviews(pr: Json) -> list[Json]:
+    return [
+        r for r in pr["reviews"]["nodes"] if r["state"] not in ("PENDING", "DISMISSED")
+    ]
+
+
+def responded(pr: Json) -> datetime:
+    """When the agent last responded: its newest marked comment, review, or
+    thread reply, anywhere on the PR."""
+    replies = [c for t in pr["reviewThreads"]["nodes"] for c in t["comments"]["nodes"]]
+    return max(
+        (
+            datetime.fromisoformat(posted(n))
+            for n in pr["comments"]["nodes"] + reviews(pr) + replies
+            if marked(n)
+        ),
+        default=NEVER,
+    )
+
+
 def parse_target(raw: str, repo: str | None) -> tuple[str, int]:
     url = re.fullmatch(
         r"https?://github\.com/([^/\s]+/[^/\s]+)/pull/(\d+)\S*", raw.strip()
@@ -320,16 +403,12 @@ class Watcher:
         slug = f"{repo.replace('/', '__')}__{number}"
         self.state_path = STATE_DIR / f"{slug}.json"
         self.lock_path = STATE_DIR / f"{slug}.lock"
-        try:
-            self.reported: set[str] = set(json.loads(self.state_path.read_text()))
-            self.baseline = False
-        except FileNotFoundError:
-            self.reported = set()
-            self.baseline = not once
+        self.reported: set[str] = set()
+        if not once and self.state_path.exists():
+            self.reported = set(json.loads(self.state_path.read_text()))
         self.events: list[tuple[str, str]] = []
         self.required: dict[str, set[str]] = {}
         self.previous: Any = None
-        self.history_read = False
         self.status = ""
 
     def lock(self) -> Any:
@@ -360,9 +439,6 @@ class Watcher:
             print(line, flush=True)
             self.reported.add(key)
         print(f"{verdict} {self.repo}#{self.number} {detail}".rstrip(), flush=True)
-        # State is written only after a successful read, by the baseline or by a
-        # printed report: an ERROR exit on a first run must leave none, or the
-        # next start would skip the baseline and report the PR's whole history.
         if verdict in ("MERGED", "CLOSED"):
             self.state_path.unlink(missing_ok=True)
         elif self.events and not self.once:
@@ -390,23 +466,17 @@ class Watcher:
             more = page["statusCheckRollup"]["contexts"]
             checks["nodes"] += more["nodes"]
             checks["pageInfo"] = more["pageInfo"]
-        if not self.history_read:
-            for connection, fields in FEEDBACK.items():
-                feedback = pr[connection]
-                query = MORE_FEEDBACK.format(
-                    connection=connection, page=FEEDBACK_PAGE.format(fields)
-                )
-                while feedback["pageInfo"]["hasPreviousPage"]:
-                    older = graphql(
-                        query,
-                        owner=self.owner,
-                        name=self.name,
-                        number=self.number,
-                        before=feedback["pageInfo"]["startCursor"],
-                    )["repository"]["pullRequest"][connection]
-                    feedback["nodes"] = older["nodes"] + feedback["nodes"]
-                    feedback["pageInfo"] = older["pageInfo"]
-            self.history_read = True
+        for name, (order, connection) in FEEDBACK.items():
+            notes = pr[name]
+            while notes["pageInfo"]["hasPreviousPage"] and (
+                order is None
+                or datetime.fromisoformat(notes["nodes"][0][order]) > responded(pr)
+            ):
+                query = MORE_FEEDBACK.format(connection=connection)
+                cursor = notes["pageInfo"]["startCursor"]
+                more = graphql(query, id=pr["id"], before=cursor)["node"][name]
+                notes["nodes"] = more["nodes"] + notes["nodes"]
+                notes["pageInfo"] = more["pageInfo"]
         return pr
 
     def gates(self, pr: Json) -> set[str]:
@@ -503,37 +573,36 @@ class Watcher:
         return f"drift: {where} changed files this PR touches since the fork point: {', '.join(touched[:5])}{more}"
 
     def feedback(self, pr: Json) -> None:
+        """Queue every feedback item open now, as the module docstring defines it."""
+        latest = responded(pr)
+
+        def fresh(node: Json) -> bool:
+            return not marked(node) and datetime.fromisoformat(stamp(node)) > latest
+
         for c in pr["comments"]["nodes"]:
-            login = (c["author"] or {}).get("login", "ghost")
-            is_status_bot = (c["author"] or {}).get("__typename") == "Bot" and any(
-                b in login for b in STATUS_BOTS
-            )
-            if not is_status_bot and AGENT_MARK not in c["body"]:
+            if fresh(c) and not status_bot(c):
                 self.emit(
-                    f"c:{c['id']}",
-                    f"comment from {login}: {snippet(c['body'])} {c['url']}",
+                    f"c:{c['id']}:{stamp(c)}",
+                    f"comment from {login(c)}: {snippet(c['body'])} {c['url']}",
                 )
-        for r in pr["reviews"]["nodes"]:
-            login = (r["author"] or {}).get("login", "ghost")
-            if r["state"] in ("PENDING", "DISMISSED") or AGENT_MARK in r["body"]:
-                continue
-            if r["state"] == "CHANGES_REQUESTED" or r["body"].strip():
+        for r in reviews(pr):
+            if fresh(r) and (r["state"] == "CHANGES_REQUESTED" or r["body"].strip()):
                 state = r["state"].lower().replace("_", " ")
                 text = f": {snippet(r['body'])}" if r["body"].strip() else ""
                 self.emit(
-                    f"c:{r['id']}",
-                    f"review from {login} ({state}){text} {r['url']}",
+                    f"c:{r['id']}:{stamp(r)}",
+                    f"review from {login(r)} ({state}){text} {r['url']}",
                 )
         for t in pr["reviewThreads"]["nodes"]:
+            nodes = t["comments"]["nodes"]
+            if t["isResolved"] or t["isOutdated"] or not nodes or marked(nodes[-1]):
+                continue
+            last = nodes[-1]
             where = f"{t['path']}:{t['line']}" if t["line"] else t["path"]
-            for index, c in enumerate(t["comments"]["nodes"]):
-                login = (c["author"] or {}).get("login", "ghost")
-                if AGENT_MARK not in c["body"]:
-                    kind = "thread" if index == 0 else "reply"
-                    self.emit(
-                        f"c:{c['id']}",
-                        f"{kind} from {login} on {where}: {snippet(c['body'])} {c['url']}",
-                    )
+            self.emit(
+                f"c:{last['id']}:{stamp(last)}",
+                f"thread from {login(last)} on {where}: {snippet(last['body'])} {last['url']}",
+            )
 
     def evaluate(
         self, pr: Json, checks: dict[str, Json], stable: bool
@@ -657,12 +726,6 @@ class Watcher:
         stable, self.previous = snapshot == self.previous, snapshot
 
         self.feedback(pr)
-        if self.baseline:
-            self.baseline = False
-            self.reported.update(key for key, _ in self.events)
-            self.save()
-            log(f"first run: marked {len(self.events)} existing feedback items seen")
-            self.events = []
         gating = self.required_checks(pr["baseRefName"]) or set(checks)
         for name, entry in sorted(checks.items()):
             if entry["bucket"] == "fail" and name not in gating:
