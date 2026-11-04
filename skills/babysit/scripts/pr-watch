@@ -9,8 +9,9 @@ the first poll that needs a decision, so the job's exit is the wake-up. Restart
 it after acting: it remembers what it already reported.
 
 --once evaluates the merge gate a single time, counting feedback no run has
-reported yet, without waiting or recording anything. Run it immediately before
-merging, and pin the merge to the head sha that the verdict line ends with.
+reported yet (all of it on a PR no watcher has run on), without waiting or
+recording anything. Run it immediately before merging, and pin the merge to
+the head sha that the verdict line ends with.
 
 Stdout carries event lines, then one verdict line; progress goes to stderr.
 
@@ -26,7 +27,10 @@ Stdout carries event lines, then one verdict line; progress goes to stderr.
 
 Events
   check-failed  a check failed on the head; the PR author's own decision
-                whether an optional failure is real
+                whether an optional failure is real. A run annotated "E2E
+                waits for approval", on a PR with neither an approval nor the
+                e2e:run label, is that workflow waiting by design: a wait,
+                not a failure
   comment, review, thread, reply
                 new feedback from anyone, bots and your own account included.
                 Skipped: replies the agent marked with AGENT_MARK, and CI and
@@ -40,10 +44,12 @@ Events
   incomplete    the PR has more than 100 review threads, so READY is
                 impossible to prove; check them by hand
 
-State lives in $XDG_STATE_HOME/pr-watch (default ~/.local/state/pr-watch). Every
-event is reported once per PR (gate events once per head and base): a restart
-never re-wakes on something already reported, and feedback that arrived while
-no watcher ran, or before the first run, is reported on the next start. A
+State lives in $XDG_STATE_HOME/pr-watch (default ~/.local/state/pr-watch). The
+first run on a PR that reads it from GitHub records its existing comments,
+reviews, and threads as seen without reporting them, so start it only once the
+PR's current state is handled. After that every event is reported once per PR (gate events once per
+head and base): a restart never re-wakes on something already reported, and
+feedback that arrived while no watcher ran is reported on the next start. A
 MERGED or CLOSED exit deletes the PR's state.
 
 Adapted from pr-wait in https://github.com/t3dotgg/tstack:
@@ -103,9 +109,14 @@ STATUS_BOTS = (
     "codecov",
 )
 PASSED = {"SUCCESS", "NEUTRAL", "SKIPPED"}
+# The E2E workflow fails its status jobs by design until the PR has an approving
+# review or this label, annotating each with GATE_TITLE. The match is the
+# annotation, not the check name, so a reworded gate fails loudly again.
+GATE_TITLE = "E2E waits for approval"
+GATE_LABEL = "e2e:run"
 # Worst run wins per name, except a cancelled run loses to any other run: a
 # concurrency group cancels the duplicate push or pull_request run of a job.
-RANK = {"fail": 3, "pending": 2, "pass": 1, "cancelled": 0}
+RANK = {"fail": 3, "pending": 2, "gate": 2, "pass": 1, "cancelled": 0}
 MERGEABLE = {"CLEAN", "UNSTABLE", "HAS_HOOKS"}
 # The compare API lists at most 300 files and the PR files API at most 3000; a
 # list at its cap may hide an overlap.
@@ -127,7 +138,7 @@ contexts(first: 100, after: $after) {
   pageInfo { hasNextPage endCursor }
   nodes {
     __typename
-    ... on CheckRun { name status conclusion detailsUrl }
+    ... on CheckRun { id name status conclusion detailsUrl }
     ... on StatusContext { context state targetUrl }
   }
 }
@@ -147,7 +158,8 @@ query($owner: String!, $name: String!, $number: Int!, $after: String) {{
       url state isDraft headRefOid baseRefName mergeStateStatus reviewDecision
       baseRef {{ target {{ oid }} }}
       commits(last: 1) {{ nodes {{ commit {{ id statusCheckRollup {{ {CONTEXTS} }} }} }} }}
-      latestOpinionatedReviews(first: 50) {{ nodes {{ state }} }}
+      latestOpinionatedReviews(first: 100) {{ nodes {{ state }} }}
+      labels(first: 100) {{ nodes {{ name }} }}
       comments(last: 100) {{ {FEEDBACK_PAGE.format(FEEDBACK["comments"])} }}
       reviews(last: 100) {{ {FEEDBACK_PAGE.format(FEEDBACK["reviews"])} }}
       reviewThreads(last: 100) {{ totalCount nodes {{
@@ -262,8 +274,10 @@ def parse_target(raw: str, repo: str | None) -> tuple[str, int]:
     return repo, pr
 
 
-def bucket(node: Json) -> str:
+def bucket(node: Json, gates: set[str]) -> str:
     if node["__typename"] == "CheckRun":
+        if node["id"] in gates:
+            return "gate"
         if node["status"] != "COMPLETED":
             return "pending"
         if node["conclusion"] == "CANCELLED":
@@ -280,14 +294,15 @@ def contexts(pr: Json) -> Json:
     return (rollup or {}).get("contexts") or {"nodes": []}
 
 
-def collapse_checks(pr: Json) -> dict[str, Json]:
-    """One entry per check name with its pass, pending, or fail bucket; a job's
-    push and pull_request runs share a name, and either failing fails the job."""
+def collapse_checks(pr: Json, gates: set[str]) -> dict[str, Json]:
+    """One entry per check name with its pass, pending, gate, or fail bucket; a
+    job's push and pull_request runs share a name, and either failing fails the
+    job."""
     checks: dict[str, Json] = {}
     for node in contexts(pr)["nodes"]:
         name = node.get("name") or node.get("context")
         entry = {
-            "bucket": bucket(node),
+            "bucket": bucket(node, gates),
             "url": node.get("detailsUrl") or node.get("targetUrl") or "",
         }
         if name not in checks or RANK[entry["bucket"]] > RANK[checks[name]["bucket"]]:
@@ -307,8 +322,10 @@ class Watcher:
         self.lock_path = STATE_DIR / f"{slug}.lock"
         try:
             self.reported: set[str] = set(json.loads(self.state_path.read_text()))
+            self.baseline = False
         except FileNotFoundError:
             self.reported = set()
+            self.baseline = not once
         self.events: list[tuple[str, str]] = []
         self.required: dict[str, set[str]] = {}
         self.previous: Any = None
@@ -343,9 +360,12 @@ class Watcher:
             print(line, flush=True)
             self.reported.add(key)
         print(f"{verdict} {self.repo}#{self.number} {detail}".rstrip(), flush=True)
+        # State is written only after a successful read, by the baseline or by a
+        # printed report: an ERROR exit on a first run must leave none, or the
+        # next start would skip the baseline and report the PR's whole history.
         if verdict in ("MERGED", "CLOSED"):
             self.state_path.unlink(missing_ok=True)
-        elif not self.once:
+        elif self.events and not self.once:
             self.save()
         sys.exit(code)
 
@@ -388,6 +408,36 @@ class Watcher:
                     feedback["pageInfo"] = older["pageInfo"]
             self.history_read = True
         return pr
+
+    def gates(self, pr: Json) -> set[str]:
+        """Failed head runs that are the E2E approval gate still waiting. Asked
+        only while the PR has neither an approval nor the label, in one batch
+        per poll: a run can be rerequested or updated and gain annotations."""
+        if any(
+            r["state"] == "APPROVED" for r in pr["latestOpinionatedReviews"]["nodes"]
+        ) or any(label["name"] == GATE_LABEL for label in pr["labels"]["nodes"]):
+            return set()
+        failed = [
+            n["id"]
+            for n in contexts(pr)["nodes"]
+            if n["__typename"] == "CheckRun" and n["conclusion"] == "FAILURE"
+        ]
+        if not failed:
+            return set()
+        data = graphql(
+            "query {"
+            + " ".join(
+                f"r{i}: node(id: {json.dumps(run)}) {{ ... on CheckRun {{ annotations(first: 5) {{ nodes {{ title }} }} }} }}"
+                for i, run in enumerate(failed)
+            )
+            + "}"
+        )
+        gated = set()
+        for i, run in enumerate(failed):
+            notes = ((data[f"r{i}"] or {}).get("annotations") or {}).get("nodes")
+            if any(n["title"] == GATE_TITLE for n in notes or []):
+                gated.add(run)
+        return gated
 
     def required_checks(self, base: str) -> set[str]:
         """Required check names per base, so a required check that has not
@@ -532,10 +582,15 @@ class Watcher:
             for n in gating | set(checks)
             if checks.get(n, {"bucket": "pending"})["bucket"] == "pending"
         )
+        gated = sorted(n for n, c in checks.items() if c["bucket"] == "gate")
         if pending:
             waits.append(f"pending checks ({len(pending)}): {', '.join(pending[:5])}")
         elif not stable:
             waits.append("checks settling")
+        if gated:
+            waits.append(
+                f"E2E gate ({len(gated)} checks): runs once approved or labelled {GATE_LABEL}"
+            )
         if pr["isDraft"]:
             waits.append("draft")
         decision = pr["reviewDecision"]
@@ -584,7 +639,7 @@ class Watcher:
             self.finish("MERGED", pr["url"], 0)
         if pr["state"] == "CLOSED":
             self.finish("CLOSED", pr["url"], 1)
-        checks = collapse_checks(pr)
+        checks = collapse_checks(pr, self.gates(pr))
         if self.once:
             self.feedback(pr)
             actions, waits = self.evaluate(pr, checks, stable=True)
@@ -602,6 +657,12 @@ class Watcher:
         stable, self.previous = snapshot == self.previous, snapshot
 
         self.feedback(pr)
+        if self.baseline:
+            self.baseline = False
+            self.reported.update(key for key, _ in self.events)
+            self.save()
+            log(f"first run: marked {len(self.events)} existing feedback items seen")
+            self.events = []
         gating = self.required_checks(pr["baseRefName"]) or set(checks)
         for name, entry in sorted(checks.items()):
             if entry["bucket"] == "fail" and name not in gating:

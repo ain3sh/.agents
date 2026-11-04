@@ -30,10 +30,10 @@ wake-up. Output is event lines, then one verdict: `READY` or `MERGED` (exit 0),
 `ACTION` or `CLOSED` (1), `ERROR` (2). The script's docstring defines every
 event and the `READY` gate.
 
-- Start it once the PR's current state is handled, and again in the same turn
-  after every action (push, reply, sync). It remembers what it reported, so
-  feedback that lands between runs arrives on the restart and nothing handled
-  wakes you twice.
+- Start it once the PR's current state is handled, since its first run on a PR
+  marks existing feedback seen, and again in the same turn after every action
+  (push, reply, sync). It remembers what it reported, so feedback that lands
+  between runs arrives on the restart and nothing handled wakes you twice.
 - A second watcher on the same PR exits 2 at once. Kill the first only if its
   exit can no longer reach you.
 
