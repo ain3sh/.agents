@@ -38,7 +38,8 @@ script's docstring defines every event and the `READY` gate.
   deploy bots, from service accounts, and Linear's issue linkback are
   skipped outright.
   Only replies carrying `<!-- agent-reply -->` count as yours (address-review
-  ends every reply with it); pushes and unmarked comments from your account
+  ends every reply with it); pushes, unmarked comments from your account, and
+  replies still sitting in your pending review, which nobody else can read,
   never settle anything.
 - Answered and outdated threads never wake you as feedback, but while
   unresolved they block `READY` through `unresolved`.
@@ -58,6 +59,7 @@ script's docstring defines every event and the `READY` gate.
 | `check-failed` | Read the failing job's log, load **root-cause-analysis**, fix through **quality-ship**, push. An `(optional)` failure the PR did not cause is a flake: rerun it (`gh run rerun <run-id> --failed`). When the only red is an `(optional)` check that also fails on the base branch or across many PRs, note it in the body and merge on the `--once` `READY`. |
 | `conflict`, `behind` | **sync-target** without asking, including whatever disposition it rules. Stacked: **stack-cli**, merge bottom-up. |
 | `comment`, `review`, `thread`, `unresolved` | **address-review**. This invocation confirms its `Fix`, `Respond`, and `Ack` rows; `Decline` rows and open product calls go to the user. |
+| `pending-review` | Your account holds an unsubmitted review, so GitHub filed your replies into it and nobody else can read them. Run **address-review** step 7's pending-review check: read its comments, then submit it with `submitPullRequestReview` and `event:COMMENT`. Re-run `pr-watch <pr> --once`. |
 | Any push | **pr-description** refresh: the body stays first-screen excellent, never a patch log. |
 | `READY` | Run `pr-watch <pr> --once`. On `READY`, merge with the repo's allowed method (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`) pinned to the sha that verdict line ends with (`gh pr merge <pr> --<method> --match-head-commit <sha>`), confirm `MERGED`, stop. On `ACTION`, handle its lines instead; on `WAIT`, follow its row. |
 | `WAIT` | Nothing to do; end the turn. The next Cockpit change notice wakes you. |

@@ -91,6 +91,66 @@ def comment(author: str, kind: str, body: str) -> dict[str, Any]:
     }
 
 
+def thread_comment(
+    id: str, author: str, body: str, at: str, state: str = "SUBMITTED"
+) -> dict[str, Any]:
+    return {
+        **comment(author, "User", body),
+        "id": id,
+        "url": f"https://github.com/{REPO}/pull/{NUMBER}#discussion_{id}",
+        "createdAt": at,
+        "state": state,
+    }
+
+
+def replied_pr(*, submitted: bool, resolved: bool) -> dict[str, Any]:
+    """A human's top-level comment and review thread, both answered by one
+    later marked reply that sits in the agent's own review: submitted, or
+    still pending and so visible to the agent alone."""
+    pr = pull_request("CLEAN")
+    pr["comments"] = page(
+        [{**comment("someone", "User", "Why?"), "createdAt": "2026-01-01T00:00:00Z"}]
+    )
+    pr["reviews"] = page(
+        [
+            {
+                **comment("me", "User", ""),
+                "id": "PRR_1",
+                "url": f"https://github.com/{REPO}/pull/{NUMBER}#pullrequestreview-1",
+                "state": "COMMENTED" if submitted else "PENDING",
+                "submittedAt": "2026-01-03T00:00:00Z" if submitted else None,
+                "comments": {"totalCount": 1},
+            }
+        ]
+    )
+    pr["reviewThreads"] = {
+        "totalCount": 1,
+        "nodes": [
+            {
+                "isResolved": resolved,
+                "isOutdated": False,
+                "path": "a.py",
+                "line": 3,
+                "comments": {
+                    "nodes": [
+                        thread_comment(
+                            "r1", "someone", "Rename this.", "2026-01-02T00:00:00Z"
+                        ),
+                        thread_comment(
+                            "r2",
+                            "me",
+                            f"Renamed.\n\n{pr_watch.AGENT_MARK}",
+                            "2026-01-03T00:00:00Z",
+                            "SUBMITTED" if submitted else "PENDING",
+                        ),
+                    ]
+                },
+            }
+        ],
+    }
+    return pr
+
+
 LINKBACK = (
     '<!-- linear-linkback -->\n<details>\n<summary><a href="https://linear.app/'
     'acme/issue/ENG-1/x">ENG-1 x</a></summary>\n</details>'
@@ -178,6 +238,41 @@ class OnceVerdictTest(unittest.TestCase):
                 self.assertEqual(code, 1)
                 self.assertTrue(lines[0].startswith(f"comment from {author}: "), lines)
                 self.assertEqual(lines[-1], f"ACTION {REPO}#{NUMBER} @ {HEAD}")
+
+    def test_pending_review_hides_replies_and_blocks_ready(self) -> None:
+        url = f"https://github.com/{REPO}/pull/{NUMBER}"
+        asked = f"comment from someone: Why? {url}#issuecomment-1"
+        thread = f"thread from someone on a.py:3: Rename this. {url}#discussion_r1"
+        pending = (
+            "pending-review: your unsubmitted review hides comments (1) from "
+            f"everyone else {url}#pullrequestreview-1"
+        )
+        verdict = f"ACTION {REPO}#{NUMBER} @ {HEAD}"
+        for resolved, expected in (
+            (False, [asked, thread, pending, verdict]),
+            (True, [asked, pending, verdict]),
+        ):
+            with self.subTest(resolved=resolved):
+                code, lines = self.once(replied_pr(submitted=False, resolved=resolved))
+                self.assertEqual(lines, expected)
+                self.assertEqual(code, 1)
+
+    def test_submitted_reply_settles_its_thread_and_comment(self) -> None:
+        code, lines = self.once(replied_pr(submitted=True, resolved=False))
+        self.assertEqual(
+            lines,
+            [
+                (
+                    "unresolved review threads (1): "
+                    f"https://github.com/{REPO}/pull/{NUMBER}#discussion_r1"
+                ),
+                f"ACTION {REPO}#{NUMBER} @ {HEAD}",
+            ],
+        )
+        self.assertEqual(code, 1)
+        code, lines = self.once(replied_pr(submitted=True, resolved=True))
+        self.assertEqual(lines, [f"READY {REPO}#{NUMBER} @ {HEAD}"])
+        self.assertEqual(code, 0)
 
     def test_unapproved_clean_green_pr_waits_for_review(self) -> None:
         code, lines = self.once(pull_request("CLEAN", approved=False))

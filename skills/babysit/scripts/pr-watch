@@ -19,8 +19,9 @@ Stdout carries event lines, then one verdict line; progress goes to stderr.
 
   READY   exit 0  approved; every check finished and every gating check passed
                   (required checks, or all checks when the base requires none);
-                  no unresolved review thread; and GitHub reports it mergeable
-                  (CLEAN, HAS_HOOKS, or UNSTABLE), however far the base moved
+                  no unresolved review thread; no pending review; and GitHub
+                  reports it mergeable (CLEAN, HAS_HOOKS, or UNSTABLE), however
+                  far the base moved
   MERGED  exit 0
   ACTION  exit 1  the event lines say what needs doing
   CLOSED  exit 1
@@ -41,7 +42,12 @@ Events
                 checks carry that news, as is Linear's linkback comment to the
                 issue
   thread        a review thread that is unresolved, not outdated, and whose
-                last comment is not the agent's
+                last submitted comment is not the agent's
+  pending-review
+                the viewer's review is unsubmitted. GraphQL review mutations
+                file the account's comments and thread replies into it, where
+                only the account can read them, so its threads read as
+                answered to the agent and as silent to everyone else
   conflict      the branch conflicts with its base
   behind        branch protection requires the branch to be current; GitHub
                 reports BEHIND only then, so a behind PR on any other base
@@ -55,19 +61,21 @@ Events
 Feedback events describe what is open on GitHub now, not what changed since a
 run. The agent's words are exactly the comments, reviews, and thread replies
 carrying AGENT_MARK; authors and commits never count, since the agent shares
-an account with its user. Its latest response is the newest of those anywhere
-on the PR. A thread stays settled while a marked reply has its last word; a
-top-level comment or review is settled by any later response, until its author
-edits it. Only a human's edit reopens: bots and factory-service-* accounts
-(GitHub Users that automation drives) rewrite status reports in place, so only
-their new comments are news.
+an account with its user, and neither does a pending review or its comments,
+which nobody else can read. Its latest response is the newest of those
+anywhere on the PR. A thread stays settled while a marked reply has its last
+word; a top-level comment or review is settled by any later response, until
+its author edits it. Only a human's edit reopens: bots and factory-service-*
+accounts (GitHub Users that automation drives) rewrite status reports in
+place, so only their new comments are news.
 
 State lives in $XDG_STATE_HOME/pr-watch (default ~/.local/state/pr-watch): the
 keys the watcher has reported, so a restart never re-wakes on what it already
 reported. There is no first-run baseline: a first run reports everything open.
 Feedback is keyed by comment and its version, a human's latest edit or else
 its posting (a thread by its last comment), so a new reply or a human's edit
-wakes the watcher once; gate events are keyed by head and base. A MERGED or
+wakes the watcher once; a pending review by its comment count, so each reply
+filed into it wakes again; gate events are keyed by head and base. A MERGED or
 CLOSED exit deletes the PR's state.
 
 Adapted from pr-wait in https://github.com/t3dotgg/tstack:
@@ -182,7 +190,8 @@ FEEDBACK = {
     "reviews": (
         None,
         f"""reviews(last: 100, before: $before) {{
-          pageInfo {{ hasPreviousPage startCursor }} nodes {{ state submittedAt {NOTE} }}
+          pageInfo {{ hasPreviousPage startCursor }}
+          nodes {{ state submittedAt comments {{ totalCount }} {NOTE} }}
         }}""",
     ),
 }
@@ -199,7 +208,7 @@ query($owner: String!, $name: String!, $number: Int!, $after: String, $before: S
       {FEEDBACK["reviews"][1]}
       reviewThreads(last: 100) {{ totalCount nodes {{
         isResolved isOutdated path line
-        comments(last: 100) {{ nodes {{ {NOTE} }} }}
+        comments(last: 100) {{ nodes {{ state {NOTE} }} }}
       }} }}
     }}
   }}
@@ -327,14 +336,21 @@ def reviews(pr: Json) -> list[Json]:
     ]
 
 
+def replies(thread: Json) -> list[Json]:
+    """A thread's comments as everyone else sees them. A pending review
+    hides its comments from all but their author, who is the viewer, so a
+    reply filed into one answers nothing."""
+    return [c for c in thread["comments"]["nodes"] if c["state"] == "SUBMITTED"]
+
+
 def responded(pr: Json) -> datetime:
     """When the agent last responded: its newest marked comment, review, or
     thread reply, anywhere on the PR."""
-    replies = [c for t in pr["reviewThreads"]["nodes"] for c in t["comments"]["nodes"]]
+    notes = [c for t in pr["reviewThreads"]["nodes"] for c in replies(t)]
     return max(
         (
             datetime.fromisoformat(posted(n))
-            for n in pr["comments"]["nodes"] + reviews(pr) + replies
+            for n in pr["comments"]["nodes"] + reviews(pr) + notes
             if marked(n)
         ),
         default=NEVER,
@@ -568,7 +584,7 @@ class Watcher:
                     f"review from {login(r)} ({state}){text} {r['url']}",
                 )
         for t in pr["reviewThreads"]["nodes"]:
-            nodes = t["comments"]["nodes"]
+            nodes = replies(t)
             if t["isResolved"] or t["isOutdated"] or not nodes or marked(nodes[-1]):
                 continue
             last = nodes[-1]
@@ -597,6 +613,17 @@ class Watcher:
                     f"incomplete: more than {THREAD_PAGE} review threads, so check them by hand before merging",
                 )
             )
+        # Only the viewer's own pending review is visible, and GitHub allows
+        # one per account per PR.
+        for r in pr["reviews"]["nodes"]:
+            if r["state"] == "PENDING":
+                count = r["comments"]["totalCount"]
+                actions.append(
+                    (
+                        f"pending-review:{r['id']}:{count}",
+                        f"pending-review: your unsubmitted review hides comments ({count}) from everyone else {r['url']}",
+                    )
+                )
         if state == "DIRTY":
             actions.append(
                 (
@@ -651,9 +678,9 @@ class Watcher:
             return actions, waits
 
         unresolved = [
-            t["comments"]["nodes"][0]["url"]
+            notes[0]["url"]
             for t in pr["reviewThreads"]["nodes"]
-            if not t["isResolved"] and t["comments"]["nodes"]
+            if not t["isResolved"] and (notes := replies(t))
         ]
         if unresolved:
             return [
