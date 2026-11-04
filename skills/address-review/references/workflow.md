@@ -151,11 +151,29 @@ Follow the **quality-ship** skill for quality checks, commit, and push:
 
 Send the row's step-4 reply draft verbatim; append `Fixed in <sha>.` only when a commit landed against it. Do not improvise reply text at API time -- if a row has no draft, return to step 4. End every reply with `<!-- agent-reply -->`: the agent often posts from the user's own GitHub account, and the marker is how **babysit**'s watcher tells its replies from the user's comments.
 
+**Pending review first.** GitHub keeps at most one pending review per account per PR, and GraphQL review mutations (`addPullRequestReviewThreadReply` among them) file the account's comments into it, where only the account can read them: reviewers see no answer. Before the first reply, look for yours (a pending review is visible only to its author, so any node here is yours):
+
+```bash
+gh api graphql -F o="${REPO%/*}" -F r="${REPO#*/}" -F n=<n> -f query='
+query($o:String!,$r:String!,$n:Int!){ repository(owner:$o,name:$r){ pullRequest(number:$n){
+  reviews(states:PENDING, first:1){ nodes{ id url comments(first:100){ totalCount nodes{ id path url body } } } } } } }' \
+  --jq '.data.repository.pullRequest.reviews.nodes[0]'
+```
+
+If it prints a review, read its comments: nobody else has seen them. Delete each one a reply you are about to send supersedes (`deletePullRequestReviewComment(input:{id:"<comment-id>"})`), then submit the review as a comment, and read back `COMMENTED` before replying. Delete an empty review instead (`deletePullRequestReview(input:{pullRequestReviewId:"<review-id>"})`).
+
+```bash
+gh api graphql -F id=<review-id> -f query='
+mutation($id:ID!){ submitPullRequestReview(input:{pullRequestReviewId:$id, event:COMMENT}){ pullRequestReview{ state url } } }'
+```
+
+The REST reply below fails with HTTP 422 `user_id can only have one pending review per pull request` while one exists. That error means run this check; never route around it through GraphQL `addPullRequestReviewThreadReply`, which files the reply into the pending review without a word.
+
 Pick endpoint by surface.
 
 **Inline thread** (from `pulls/<n>/comments`, anchor `#discussion_r...`) -- reply on the thread:
 ```bash
-gh api "repos/$REPO/pulls/<n>/comments" --method POST \
+gh api "repos/$REPO/pulls/<n>/comments/<comment-id>/replies" --method POST \
   -f body="$(cat <<'EOF'
 <reply draft #N>
 
@@ -163,7 +181,7 @@ Fixed in <sha>.
 
 <!-- agent-reply -->
 EOF
-)" -F in_reply_to=<comment-id>
+)"
 ```
 
 **Review body** (from `pulls/<n>/reviews`, anchor `#pullrequestreview-...`) -- no thread to attach to. Quote-reply via PR issue comment, one per distinct point, quoting only the span you address:
@@ -181,7 +199,7 @@ EOF
 )"
 ```
 
-**Conversation comment** (from `issues/<n>/comments`, anchor `#issuecomment-...`) -- no thread, no `in_reply_to`. Use the review-body quote-reply pattern above.
+**Conversation comment** (from `issues/<n>/comments`, anchor `#issuecomment-...`) -- no thread to reply on. Use the review-body quote-reply pattern above.
 
 ## 8. Resolve Threads
 
