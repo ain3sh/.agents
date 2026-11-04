@@ -54,7 +54,7 @@ script's docstring defines every event and the `READY` gate.
 
 | Event or verdict | Move |
 |---|---|
-| `check-failed` | Read the failing job's log, load **root-cause-analysis**, fix through **quality-ship**, push. An `(optional)` failure the PR did not cause is a flake: rerun it (`gh run rerun <run-id> --failed`). |
+| `check-failed` | Read the failing job's log, load **root-cause-analysis**, fix through **quality-ship**, push. An `(optional)` failure the PR did not cause is a flake: rerun it (`gh run rerun <run-id> --failed`). When the only red is an `(optional)` check that also fails on the base branch or across many PRs, note it in the body and merge on the `--once` `READY`. |
 | `conflict`, `behind` | **sync-target** without asking, including whatever disposition it rules. Stacked: **stack-cli**, merge bottom-up. |
 | `comment`, `review`, `thread`, `unresolved` | **address-review**. This invocation confirms its `Fix`, `Respond`, and `Ack` rows; `Decline` rows and open product calls go to the user. |
 | Any push | **pr-description** refresh: the body stays first-screen excellent, never a patch log. |
