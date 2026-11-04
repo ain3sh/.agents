@@ -151,16 +151,21 @@ Follow the **quality-ship** skill for quality checks, commit, and push:
 
 Send the row's step-4 reply draft verbatim; append `Fixed in <sha>.` only when a commit landed against it. Do not improvise reply text at API time -- if a row has no draft, return to step 4. End every reply with `<!-- agent-reply -->`: the agent often posts from the user's own GitHub account, and the marker is how **babysit**'s watcher tells its replies from the user's comments.
 
-**Pending review first.** GitHub keeps at most one pending review per account per PR, and GraphQL review mutations (`addPullRequestReviewThreadReply` among them) file the account's comments into it, where only the account can read them: reviewers see no answer. Before the first reply, look for yours (a pending review is visible only to its author, so any node here is yours):
+**Pending review first.** GitHub keeps at most one pending review per account per PR, and GraphQL review mutations (`addPullRequestReviewThreadReply` among them) file the account's comments into it, where only the account can read them: reviewers see no answer. Before the first reply, look for the account's pending review (only its author can see one, so any review printed here belongs to the account). The query pages through every comment and prints the review once per page of 100:
 
 ```bash
-gh api graphql -F o="${REPO%/*}" -F r="${REPO#*/}" -F n=<n> -f query='
-query($o:String!,$r:String!,$n:Int!){ repository(owner:$o,name:$r){ pullRequest(number:$n){
-  reviews(states:PENDING, first:1){ nodes{ id url comments(first:100){ totalCount nodes{ id path url body } } } } } } }' \
-  --jq '.data.repository.pullRequest.reviews.nodes[0]'
+gh api graphql --paginate -F o="${REPO%/*}" -F r="${REPO#*/}" -F n=<n> -f query='
+query($o:String!,$r:String!,$n:Int!,$endCursor:String){ repository(owner:$o,name:$r){ pullRequest(number:$n){
+  reviews(states:PENDING, first:1){ nodes{ id url body
+    comments(first:100, after:$endCursor){ pageInfo{ hasNextPage endCursor } nodes{ id path url body } } } } } } }' \
+  --jq '.data.repository.pullRequest.reviews.nodes[0] // empty | {id, url, body, comments: .comments.nodes}'
 ```
 
-If it prints a review, read its comments: nobody else has seen them. Delete each one a reply you are about to send supersedes (`deletePullRequestReviewComment(input:{id:"<comment-id>"})`), then submit the review as a comment, and read back `COMMENTED` before replying. Delete an empty review instead (`deletePullRequestReview(input:{pullRequestReviewId:"<review-id>"})`).
+If it prints a review, read its body and every comment on every page: nobody else has seen them. The account is shared with the user, so a pending draft is yours only when it carries `<!-- agent-reply -->`. Act on the first case that fits:
+
+- **Empty**: the body is empty and there are 0 comments. Delete the review (`deletePullRequestReview(input:{pullRequestReviewId:"<review-id>"})`).
+- **All yours**: the body, if non-empty, and every comment carry the mark. Delete each comment a reply you are about to send supersedes (`deletePullRequestReviewComment(input:{id:"<comment-id>"})`). If that leaves the review empty, delete it; otherwise submit it as a comment and read back `COMMENTED` before replying.
+- **Any unmarked content**: it may be the user's unsent feedback. Do not submit, edit, or delete any of it. Report it as an open decision with the review URL and each unmarked comment's URL, and send no reply on this PR until the user settles it.
 
 ```bash
 gh api graphql -F id=<review-id> -f query='
@@ -171,7 +176,7 @@ The REST reply below fails with HTTP 422 `user_id can only have one pending revi
 
 Pick endpoint by surface.
 
-**Inline thread** (from `pulls/<n>/comments`, anchor `#discussion_r...`) -- reply on the thread:
+**Inline thread** (from `pulls/<n>/comments`, anchor `#discussion_r...`) -- reply on the thread. `<comment-id>` must be the thread's top-level comment (the one with no `in_reply_to_id`): GitHub does not support replies to replies.
 ```bash
 gh api "repos/$REPO/pulls/<n>/comments/<comment-id>/replies" --method POST \
   -f body="$(cat <<'EOF'
