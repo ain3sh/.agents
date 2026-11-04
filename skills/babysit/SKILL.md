@@ -27,8 +27,8 @@ One watcher per PR and nothing else: no `sleep`+poll, no cron loop. Run it as a
 
 It polls quietly and exits on the first poll that needs you, so its exit is the
 wake-up. Output is event lines, then one verdict: `READY` or `MERGED` (exit 0),
-`ACTION` or `CLOSED` (1), `ERROR` (2). The script's docstring defines every
-event and the `READY` gate.
+`ACTION` or `CLOSED` (1), `ERROR` (2), and from `--once` only, `WAIT` (3). The
+script's docstring defines every event and the `READY` gate.
 
 - Feedback events are what is open on GitHub now: a thread that is unresolved,
   not outdated, and whose last comment is not your marked reply, or a
@@ -58,7 +58,8 @@ event and the `READY` gate.
 | `conflict`, `behind`, `drift` | **sync-target** without asking, including whatever disposition it rules. Stacked: **stack-cli**, merge bottom-up. |
 | `comment`, `review`, `thread`, `unresolved` | **address-review**. This invocation confirms its `Fix`, `Respond`, and `Ack` rows; `Decline` rows and open product calls go to the user. |
 | Any push | **pr-description** refresh: the body stays first-screen excellent, never a patch log. |
-| `READY` | Run `pr-watch <pr> --once`. On `READY`, merge with the repo's allowed method (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`) pinned to the sha that verdict line ends with (`gh pr merge <pr> --<method> --match-head-commit <sha>`), confirm `MERGED`, stop. On `ACTION`, handle its lines instead. |
+| `READY` | Run `pr-watch <pr> --once`. On `READY`, merge with the repo's allowed method (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`) pinned to the sha that verdict line ends with (`gh pr merge <pr> --<method> --match-head-commit <sha>`), confirm `MERGED`, stop. On `ACTION`, handle its lines instead; on `WAIT`, follow its row. |
+| `WAIT` | Nothing to do; end the turn. The next Cockpit change notice wakes you. |
 | `blocked` | Check, in order: rulesets, required reviewers, merge queue, then `pr-context` for anything GitHub reports that the watcher does not model. |
 | `MERGED`, `CLOSED` | Stop and report. |
 | `ERROR` | Fix the input it names, or wait out GitHub, then restart the watcher. |
