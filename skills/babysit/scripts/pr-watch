@@ -38,7 +38,8 @@ Events
                 a top-level comment or review posted, or edited by a human,
                 after the agent's latest response; comments from CI and
                 deploy bots and factory-service-* accounts are skipped, since
-                checks carry that news
+                checks carry that news, as is Linear's linkback comment to the
+                issue
   thread        a review thread that is unresolved, not outdated, and whose
                 last comment is not the agent's
   conflict      the branch conflicts with its base
@@ -131,6 +132,10 @@ STATUS_BOTS = (
     "cloudflare",
     "codecov",
 )
+# Linear's bot links every PR to its issue in one comment opening with this
+# marker: a link, not feedback. Its other comments still count.
+LINEAR_BOT = "linear-code"
+LINKBACK = "<!-- linear-linkback -->"
 PASSED = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 # The E2E workflow fails its status jobs by design until the PR has an approving
 # review or this label, annotating each with GATE_TITLE. The match is the
@@ -299,8 +304,12 @@ def human(node: Json) -> bool:
     )
 
 
-def status_bot(node: Json) -> bool:
-    return not human(node) and any(b in login(node) for b in STATUS_BOTS)
+def noise(node: Json) -> bool:
+    """A bot comment that is no feedback: a status report or Linear's linkback."""
+    return not human(node) and (
+        any(b in login(node) for b in STATUS_BOTS)
+        or (login(node) == LINEAR_BOT and node["body"].startswith(LINKBACK))
+    )
 
 
 def stamp(node: Json) -> str:
@@ -545,7 +554,7 @@ class Watcher:
             return not marked(node) and datetime.fromisoformat(stamp(node)) > latest
 
         for c in pr["comments"]["nodes"]:
-            if fresh(c) and not status_bot(c):
+            if fresh(c) and not noise(c):
                 self.emit(
                     f"c:{c['id']}:{stamp(c)}",
                     f"comment from {login(c)}: {snippet(c['body'])} {c['url']}",

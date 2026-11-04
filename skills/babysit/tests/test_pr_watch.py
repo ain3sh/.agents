@@ -79,6 +79,24 @@ def pull_request(
     }
 
 
+def comment(author: str, kind: str, body: str) -> dict[str, Any]:
+    return {
+        "id": f"IC_{author}",
+        "url": f"https://github.com/{REPO}/pull/{NUMBER}#issuecomment-1",
+        "body": body,
+        "createdAt": "2026-01-01T00:00:00Z",
+        "updatedAt": "2026-01-01T00:00:00Z",
+        "lastEditedAt": None,
+        "author": {"login": author, "__typename": kind},
+    }
+
+
+LINKBACK = (
+    '<!-- linear-linkback -->\n<details>\n<summary><a href="https://linear.app/'
+    'acme/issue/ENG-1/x">ENG-1 x</a></summary>\n</details>'
+)
+
+
 def fake_gh(*args: str) -> str:
     """A ruleset requiring REQUIRED and no readable classic protection. Any
     other read fails the test: the verdict rests on the PR query alone, never
@@ -140,6 +158,26 @@ class OnceVerdictTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertTrue(lines[0].startswith("behind: "), lines)
         self.assertEqual(lines[-1], f"ACTION {REPO}#{NUMBER} @ {HEAD}")
+
+    def test_linear_linkback_is_not_feedback(self) -> None:
+        pr = pull_request("CLEAN")
+        pr["comments"] = page([comment("linear-code", "Bot", LINKBACK)])
+        code, lines = self.once(pr)
+        self.assertEqual(lines, [f"READY {REPO}#{NUMBER} @ {HEAD}"])
+        self.assertEqual(code, 0)
+
+    def test_other_comments_like_the_linkback_are_feedback(self) -> None:
+        for author, kind, body in (
+            ("linear-code", "Bot", "This issue was moved to Done."),
+            ("someone", "User", LINKBACK),
+        ):
+            with self.subTest(author=author):
+                pr = pull_request("CLEAN")
+                pr["comments"] = page([comment(author, kind, body)])
+                code, lines = self.once(pr)
+                self.assertEqual(code, 1)
+                self.assertTrue(lines[0].startswith(f"comment from {author}: "), lines)
+                self.assertEqual(lines[-1], f"ACTION {REPO}#{NUMBER} @ {HEAD}")
 
     def test_unapproved_clean_green_pr_waits_for_review(self) -> None:
         code, lines = self.once(pull_request("CLEAN", approved=False))

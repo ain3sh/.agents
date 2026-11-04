@@ -35,7 +35,8 @@ script's docstring defines every event and the `READY` gate.
   top-level comment or review posted, or edited by a human, after your latest
   marked reply. Bots and `factory-service-*` accounts rewrite status reports
   in place, so their edits never reopen anything. Comments from CI and
-  deploy bots and from service accounts are skipped outright.
+  deploy bots, from service accounts, and Linear's issue linkback are
+  skipped outright.
   Only replies carrying `<!-- agent-reply -->` count as yours (address-review
   ends every reply with it); pushes and unmarked comments from your account
   never settle anything.
