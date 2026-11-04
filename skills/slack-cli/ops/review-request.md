@@ -72,8 +72,9 @@ slack msg send C08867C315E "<update>" --thread <TS>          # every follow-up
 slack msg react C08867C315E <TS> merged                      # once the PR merges
 ```
 
-New head after review feedback, answers to questions, and the merge notice are
-thread replies on that ts. When the PR merges, also react `:merged:` on the
+Answers to questions, steps that move the review (a nudge, a new reviewer's
+request), and the merge notice are thread replies on that ts. A new head posts
+nothing: a reply per sync is noise that teaches reviewers to skip the thread. When the PR merges, also react `:merged:` on the
 post itself, so anyone scanning the channel sees the request is closed without
 opening the thread. A second top-level post for the same PR is noise; if the
 first post is wrong, `msg update` it.

@@ -46,7 +46,7 @@ every review thread addressed and no approval yet is a review-request moment.
 | Markdown renders incorrectly | Use [Slack message formatting](ops/cli.md#slack-message-formatting). |
 | Reply is stiff or too terse to evaluate | Re-run [voice's reply checks](../voice/references/external-replies.md#preserve-substance-before-sending). |
 | Unsure whom to tag or where to post a PR | Use the diff-path table in [review requests](ops/review-request.md#channel-and-reviewer-scope). |
-| PR changed after the review post | Reply in the post's thread with the new head; never a second top-level post. |
+| PR changed after the review post | Post nothing: a new head is no news to reviewers. Only a step that moves the review (an answer, a nudge, a new reviewer's request, an escalation) or the merge notice goes in the post's thread. |
 | PR merged after the review post | React `:merged:` on the post and reply in its thread with the merge commit ([delivery](ops/review-request.md#delivery)). |
 
 ## References
