@@ -18,17 +18,33 @@ Load skills: **pr-context**, **address-review**, **pr-description**,
 
 ## Watch
 
-One watcher per PR and nothing else: no `sleep`+poll, no cron loop. Run it as a
-`fireAndForget` Execute:
+Never `sleep`+poll, run a cron loop, or use `gh run watch` or
+`gh pr checks --watch`, which poll REST every 3 seconds.
 
 ```bash
-~/.agents/skills/babysit/scripts/pr-watch <pr> [--repo owner/name]
+~/.agents/skills/babysit/scripts/pr-watch <pr> [--repo owner/name] [--once]
 ```
 
-It polls quietly and exits on the first poll that needs you, so its exit is the
-wake-up. Output is event lines, then one verdict: `READY` or `MERGED` (exit 0),
+Output is event lines, then one verdict: `READY` or `MERGED` (exit 0),
 `ACTION` or `CLOSED` (1), `ERROR` (2), and from `--once` only, `WAIT` (3). The
 script's docstring defines every event and the `READY` gate.
+
+What wakes you depends on where you run:
+
+- **Cockpit change notices reach your session** (a cluster agent's do): the
+  notice is your watcher. When you start, read each PR's current mark as your
+  brief says, then run `pr-watch <url> --once` on each one you may act on; after
+  that, on each PR a notice lists. Never start a blocking watcher: it
+  polls GraphQL every 30 seconds on the budget the cockpit needs to detect
+  changes, and it freezes when your computer pauses while you are idle.
+- **Otherwise**, run `pr-watch <pr>` as a `fireAndForget` Execute, one per PR.
+  It polls quietly and exits on the first poll that needs you, so its exit is
+  the wake-up. Start it again in the same turn after every action (push,
+  reply, sync). It remembers what it reported, so an item left open wakes you
+  once; a first run reports everything open. A second watcher on the same PR
+  exits 2 at once; kill the first only if its exit can no longer reach you.
+
+What it reports:
 
 - Feedback events are what is open on GitHub now: a thread that is unresolved,
   not outdated, and whose last comment is not your marked reply, or a
@@ -44,28 +60,24 @@ script's docstring defines every event and the `READY` gate.
 - Answered and outdated threads never wake you as feedback, but while
   unresolved they block `READY` through `unresolved`.
 - `--once` reports everything open without reading or saving what it
-  reported, though `MERGED` or `CLOSED` still deletes the watcher's state.
-  Run it whenever you need the PR's current state.
-- Start the watcher again in the same turn after every action (push, reply,
-  sync). It remembers what it reported, so an item left open wakes you once;
-  a first run reports everything open.
-- A second watcher on the same PR exits 2 at once. Kill the first only if its
-  exit can no longer reach you.
+  reported, though `MERGED` or `CLOSED` still deletes the watcher's state. It
+  lists each failed optional check beside whatever verdict it gives. Run it
+  whenever you need the PR's current state.
 
 ## Act
 
 | Event or verdict | Move |
 |---|---|
-| `check-failed` | Read the failing job's log, load **root-cause-analysis**, fix through **quality-ship**, push. An `(optional)` failure the PR did not cause is a flake: rerun it (`gh run rerun <run-id> --failed`). When the only red is an `(optional)` check that also fails on the base branch or across many PRs, note it in the body and merge on the `--once` `READY`. |
+| `check-failed` | Read the failing job's log, load **root-cause-analysis**, fix through **quality-ship**, push. An `(optional)` failure the PR did not cause is a flake: rerun it (`gh run rerun <run-id> --failed`). When the only red is an `(optional)` check that also fails on the base branch or across many PRs, note it in the body and merge on the `--once` `READY`. `--once` lists optional failures beside any verdict: settle each here before you merge. |
 | `conflict`, `behind` | **sync-target** without asking, including whatever disposition it rules. Stacked: **stack-cli**, merge bottom-up. |
 | `comment`, `review`, `thread`, `unresolved` | **address-review**. This invocation confirms its `Fix`, `Respond`, and `Ack` rows; `Decline` rows and open product calls go to the user. |
 | `pending-review` | Your account holds an unsubmitted review, and nobody else can read what is in it. The account is shared with the user, so the event alone does not say whose drafts these are: inspect them with **address-review** step 7's pending-review check, which submits or deletes the review only when its body, if non-empty, and every comment carry `<!-- agent-reply -->`. If any pending content lacks the mark, report it to the user and never submit or delete it. Re-run `pr-watch <pr> --once`. |
 | Any push | **pr-description** refresh: the body stays first-screen excellent, never a patch log. |
 | `READY` | Run `pr-watch <pr> --once`. On `READY`, merge with the repo's allowed method (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`) pinned to the sha that verdict line ends with (`gh pr merge <pr> --<method> --match-head-commit <sha>`), confirm `MERGED`, stop. On `ACTION`, handle its lines instead; on `WAIT`, follow its row. |
-| `WAIT` | Nothing to do; end the turn. The next Cockpit change notice wakes you. |
+| `WAIT` | After handling its event lines, start the watcher again, or under change notices, end the turn. |
 | `blocked` | Check, in order: rulesets, required reviewers, merge queue, then `pr-context` for anything GitHub reports that the watcher does not model. |
 | `MERGED`, `CLOSED` | Stop and report. |
-| `ERROR` | Fix the input it names, or wait out GitHub, then restart the watcher. |
+| `ERROR` | Fix the input it names, or wait out GitHub, then run pr-watch again. |
 
 ## Rules
 

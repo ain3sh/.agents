@@ -172,6 +172,7 @@ STACK_28805 = (
     "dev",
 )
 VERCEL = "Vercel – delegation-router-dev"
+VERCEL_FAILED = f"check-failed {VERCEL} (optional) https://vercel.com/factory/delegation-router-dev"
 CHECKS_28805 = [
     check("lint"),
     check("Validate PR", "CANCELLED"),
@@ -361,15 +362,25 @@ class OnceVerdictTest(unittest.TestCase):
         return exit.exception.code, out.getvalue().splitlines()
 
     def test_approved_mergeable_green_pr_is_ready(self) -> None:
-        for state, checks in (
-            ("CLEAN", None),
-            ("HAS_HOOKS", None),
-            ("UNSTABLE", [*map(check, REQUIRED), check("optional", "FAILURE")]),
+        # A failed optional check is listed beside the verdict and never sets it.
+        failed = "check-failed optional (optional) https://ci/optional"
+        for state, checks, listed in (
+            ("CLEAN", None, []),
+            ("HAS_HOOKS", None, []),
+            ("UNSTABLE", [*map(check, REQUIRED), check("optional", "FAILURE")], [failed]),
         ):
             with self.subTest(state=state):
                 code, lines = self.once(pull_request(state, checks=checks))
-                self.assertEqual(lines, [f"READY {REPO}#{NUMBER} @ {HEAD}"])
+                self.assertEqual(lines, [*listed, f"READY {REPO}#{NUMBER} @ {HEAD}"])
                 self.assertEqual(code, 0)
+
+    def test_failed_optional_check_is_listed_beside_a_wait(self) -> None:
+        code, lines = self.once(
+            pull_request("BLOCKED", approved=False, checks=[*map(check, REQUIRED), check("prem", "FAILURE")])
+        )
+        self.assertEqual(code, 3)
+        self.assertEqual(lines[0], "check-failed prem (optional) https://ci/prem")
+        self.assertEqual(lines[-1], f"WAIT {REPO}#{NUMBER} @ {HEAD}")
 
     def test_conflict_needs_action(self) -> None:
         code, lines = self.once(pull_request("DIRTY"))
@@ -559,7 +570,7 @@ class OnceVerdictTest(unittest.TestCase):
         pr["baseRefName"] = STACK_28805[0]
         pr["baseRef"], refs = stacked(STACK_28805)
         self.assertEqual(
-            self.once(pr, **refs), (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"])
+            self.once(pr, **refs), (0, [VERCEL_FAILED, f"READY {REPO}#{NUMBER} @ {HEAD}"])
         )
         contexts = pr["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]
         contexts["nodes"][0] = check("lint", "FAILURE")
@@ -569,6 +580,7 @@ class OnceVerdictTest(unittest.TestCase):
                 1,
                 [
                     "check-failed lint (gating) https://ci/lint",
+                    VERCEL_FAILED,
                     f"ACTION {REPO}#{NUMBER} @ {HEAD}",
                 ],
             ),
@@ -586,13 +598,13 @@ class OnceVerdictTest(unittest.TestCase):
             self.once(pr),
             (
                 3,
-                ["waiting: pending checks (1): test", f"WAIT {REPO}#{NUMBER} @ {HEAD}"],
+                [VERCEL_FAILED, "waiting: pending checks (1): test", f"WAIT {REPO}#{NUMBER} @ {HEAD}"],
             ),
         )
         pr["baseRefName"] = STACK_28805[0]
         pr["baseRef"], refs = stacked(STACK_28805, noise=True)
         self.assertEqual(
-            self.once(pr, **refs), (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"])
+            self.once(pr, **refs), (0, [VERCEL_FAILED, f"READY {REPO}#{NUMBER} @ {HEAD}"])
         )
 
     def test_a_branch_heading_more_open_prs_than_one_query_reads_is_an_error(
@@ -617,7 +629,7 @@ class OnceVerdictTest(unittest.TestCase):
             self.once(pull_request("UNSTABLE", checks=CHECKS_28805)),
             (
                 3,
-                ["waiting: pending checks (1): test", f"WAIT {REPO}#{NUMBER} @ {HEAD}"],
+                [VERCEL_FAILED, "waiting: pending checks (1): test", f"WAIT {REPO}#{NUMBER} @ {HEAD}"],
             ),
         )
 
@@ -724,11 +736,10 @@ class OnceVerdictTest(unittest.TestCase):
         pr["url"] = URL_30918
         pr["baseRefName"] = STACK_28805[0]
         pr["baseRef"], refs = stacked(STACK_28805)
-        vercel = f"check-failed {VERCEL} (optional) https://vercel.com/factory/delegation-router-dev"
         watcher = pr_watch.Watcher(REPO, NUMBER, 30, once=False)
         self.assertEqual(
             self.watch(watcher, pr, [ASK_30918], **refs),
-            (1, [vercel, f"ACTION {REPO}#{NUMBER} @ {HEAD}"]),
+            (1, [VERCEL_FAILED, f"ACTION {REPO}#{NUMBER} @ {HEAD}"]),
         )
         watcher = pr_watch.Watcher(REPO, NUMBER, 30, once=False)
         for _ in range(3):

@@ -10,7 +10,9 @@ it after acting: it remembers what it already reported.
 
 --once evaluates the PR a single time and reports everything open now, without
 waiting: ACTION when any line needs the agent, WAIT when only waiting lines
-remain, READY otherwise. It neither reads nor saves reported keys, though a
+remain, READY otherwise. Each failed optional check is listed whatever the
+verdict, and never sets it, since whether one is real is the agent's call. It
+neither reads nor saves reported keys, though a
 MERGED or CLOSED verdict still deletes the PR's state. Run it whenever you
 need the PR's current state and immediately before merging; pin the merge to
 the head sha that the verdict line ends with.
@@ -25,7 +27,7 @@ Stdout carries event lines, then one verdict line; progress goes to stderr.
   ACTION  exit 1  the event lines say what needs doing
   CLOSED  exit 1
   ERROR   exit 2  bad input, another watcher holds the PR, or GitHub failed
-  WAIT    exit 3  --once only: nothing for the agent to do; the waiting lines
+  WAIT    exit 3  --once only: nothing gates on the agent; the waiting lines
                   name what resolves without it
 
 Events
@@ -886,6 +888,11 @@ class Watcher:
         gating = self.gating(pr, checks)
         if waiting:
             checks |= {n: {"bucket": "gate", "url": ""} for n in gating - set(checks)}
+        optional = [
+            (f"fail:{head}:{name}:{entry['url']}", f"check-failed {name} (optional) {entry['url']}")
+            for name, entry in sorted(checks.items())
+            if entry["bucket"] == "fail" and name not in gating
+        ]
         if self.once:
             self.feedback(pr)
             actions, waits = self.evaluate(pr, checks, gating, asked, stable=True)
@@ -893,7 +900,7 @@ class Watcher:
             verdict, code = (
                 ("ACTION", 1) if self.events else ("WAIT", 3) if waits else ("READY", 0)
             )
-            self.events += [("", f"waiting: {w}") for w in waits]
+            self.events += optional + [("", f"waiting: {w}") for w in waits]
             self.finish(verdict, f"@ {head}", code)
 
         # Checks register a few seconds after a push; two identical polls in a
@@ -906,12 +913,8 @@ class Watcher:
         stable, self.previous = snapshot == self.previous, snapshot
 
         self.feedback(pr)
-        for name, entry in sorted(checks.items()):
-            if entry["bucket"] == "fail" and name not in gating:
-                self.emit(
-                    f"fail:{head}:{name}:{entry['url']}",
-                    f"check-failed {name} (optional) {entry['url']}",
-                )
+        for key, line in optional:
+            self.emit(key, line)
         actions, waits = self.evaluate(pr, checks, gating, asked, stable)
         for key, line in actions:
             self.emit(key, line)
