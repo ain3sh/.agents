@@ -5,6 +5,7 @@ import importlib.machinery
 import importlib.util
 import io
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -317,12 +318,16 @@ class OnceVerdictTest(unittest.TestCase):
             self.addCleanup(patch.stop)
 
     def once(
-        self, pr: dict[str, Any], asks: Any = (), **refs: Any
+        self,
+        pr: dict[str, Any],
+        asks: Any = (),
+        notes: dict[str, list[str]] | None = None,
+        **refs: Any,
     ) -> tuple[int, list[str]]:
         """Run `pr-watch --once` against pr, with asks as agents/asks.json's
-        list (None: no file; a str: the file's text) and refs answering the
-        stack query for each qualified ref name; return its exit code and
-        stdout lines."""
+        list (None: no file; a str: the file's text), notes as each check
+        run's annotation titles by id, and refs answering the stack query for
+        each qualified ref name; return its exit code and stdout lines."""
         out = io.StringIO()
         if asks is None:
             blob = None
@@ -332,7 +337,19 @@ class OnceVerdictTest(unittest.TestCase):
         data = {"repository": {"pullRequest": pr}, "asks": {"object": blob}}
 
         def answer(query: str, **variables: Any) -> Any:
-            return data if query == pr_watch.QUERY else refs[variables["ref"]]
+            if query == pr_watch.QUERY:
+                return data
+            if "annotations" in query:
+                runs = re.findall(r'node\(id: "([^"]+)"\)', query)
+                return {
+                    f"r{i}": {
+                        "annotations": {
+                            "nodes": [{"title": t} for t in (notes or {}).get(run, [])]
+                        }
+                    }
+                    for i, run in enumerate(runs)
+                }
+            return refs[variables["ref"]]
 
         with (
             mock.patch.object(pr_watch, "graphql", side_effect=answer),
@@ -388,6 +405,90 @@ class OnceVerdictTest(unittest.TestCase):
                 self.assertEqual(code, 1)
                 self.assertTrue(lines[0].startswith(f"comment from {author}: "), lines)
                 self.assertEqual(lines[-1], f"ACTION {REPO}#{NUMBER} @ {HEAD}")
+
+    def test_a_bots_edit_after_the_agents_response_reopens_its_comment(self) -> None:
+        # factory-mono#28661: the QA bot's report from Oct 25 was rewritten to
+        # FAILED on Nov 4, after the owner's last reply. A status bot's
+        # rewrite stays noise.
+        qa = {
+            **comment(
+                "factory-droid", "Bot", "<!-- qa-report -->\n## QA: FAILED (32 / 34)"
+            ),
+            "lastEditedAt": "2026-01-03T00:00:00Z",
+        }
+        reply = {
+            **comment("me", "User", f"Fixed.\n\n{pr_watch.AGENT_MARK}"),
+            "id": "IC_me",
+            "createdAt": "2026-01-02T00:00:00Z",
+        }
+        status = {
+            **comment("github-actions", "Bot", "Deployed"),
+            "lastEditedAt": qa["lastEditedAt"],
+        }
+        ready = f"READY {REPO}#{NUMBER} @ {HEAD}"
+        for notes, expected in (
+            (
+                [qa, reply, status],
+                (
+                    1,
+                    [
+                        f"comment from factory-droid: ## QA: FAILED (32 / 34) {qa['url']}",
+                        f"ACTION {REPO}#{NUMBER} @ {HEAD}",
+                    ],
+                ),
+            ),
+            ([{**qa, "lastEditedAt": None}, reply, status], (0, [ready])),
+            ([{**qa, "lastEditedAt": "2026-01-01T12:00:00Z"}, reply], (0, [ready])),
+        ):
+            with self.subTest(edited=notes[0]["lastEditedAt"]):
+                pr = pull_request("CLEAN")
+                pr["comments"] = page(notes)
+                self.assertEqual(self.once(pr), expected)
+
+    def test_the_e2e_gate_waits_whether_its_status_runs_fail_or_skip(self) -> None:
+        # factory-mono#28500 @ a53d9819506 and #30792 @ 49453fb39a0, heads with
+        # dev #30901: the plan job's notice says the gate waits, the status
+        # jobs skip under their unrendered names, and the required checks they
+        # would report never do. Older heads fail the status runs, annotated.
+        gate = [pr_watch.GATE_TITLE]
+        skipped = check("test${{ needs.plan.outputs.wait }}", "SKIPPED")
+        waiting = "waiting: E2E gate (1 checks): runs once approved or labelled e2e:run"
+        verdict = f"WAIT {REPO}#{NUMBER} @ {HEAD}"
+        review = "waiting: review: review required"
+        pending = "waiting: pending checks (1): test"
+        for name, approved, checks, notes, expected in (
+            (
+                "plan notice",
+                False,
+                [check("lint"), check("plan"), skipped],
+                {"run-plan": gate},
+                [waiting, review],
+            ),
+            (
+                "failed status run",
+                False,
+                [check("lint"), check("test", "FAILURE")],
+                {"run-test": gate},
+                [waiting, review],
+            ),
+            (
+                "no notice",
+                False,
+                [check("lint"), check("plan"), skipped],
+                {},
+                [pending, review],
+            ),
+            (
+                "approved",
+                True,
+                [check("lint"), check("plan"), skipped],
+                {"run-plan": gate},
+                [pending],
+            ),
+        ):
+            with self.subTest(name):
+                pr = pull_request("CLEAN", approved=approved, checks=checks)
+                self.assertEqual(self.once(pr, notes=notes), (3, [*expected, verdict]))
 
     def test_pending_review_hides_replies_and_blocks_ready(self) -> None:
         url = f"https://github.com/{REPO}/pull/{NUMBER}"

@@ -30,13 +30,15 @@ Stdout carries event lines, then one verdict line; progress goes to stderr.
 
 Events
   check-failed  a check failed on the head; the PR author's own decision
-                whether an optional failure is real. A run annotated "E2E
-                waits for approval", on a PR with neither an approval nor the
-                e2e:run label, is that workflow waiting by design: a wait,
-                not a failure
+                whether an optional failure is real. While a PR has neither
+                an approval nor the e2e:run label, the E2E workflow waits by
+                design, and its "E2E waits for approval" annotation says so:
+                on each failed status run (the older form), or as the plan
+                job's notice while the status jobs skip and their required
+                checks never report. Either is a wait, not a failure
   comment, review
-                a top-level comment or review posted, or edited by a human,
-                after the agent's latest response; comments from CI and
+                a top-level comment or review posted or edited after the
+                agent's latest response; comments from CI and
                 deploy bots and factory-service-* accounts are skipped, since
                 checks carry that news, as is Linear's linkback comment to the
                 issue
@@ -80,18 +82,19 @@ an account with its user, and neither does a pending review or its comments,
 which nobody else can read. Its latest response is the newest of those
 anywhere on the PR. A thread stays settled while a marked reply has its last
 word; a top-level comment or review is settled by any later response, until
-its author edits it. Only a human's edit reopens: bots and factory-service-*
-accounts (GitHub Users that automation drives) rewrite status reports in
-place, so only their new comments are news.
+its author edits it. A bot's edit reopens too: a QA bot rewrites its report
+in place when a run fails (factory-mono#28661 went from passing to FAILED
+32/34 in an edit). Status bots, whose in-place rewrites only repeat what checks
+say, are skipped whatever they post.
 
 State lives in $XDG_STATE_HOME/pr-watch (default ~/.local/state/pr-watch): the
 keys the watcher has reported, so a restart never re-wakes on what it already
 reported. There is no first-run baseline: a first run reports everything open.
 Its required/ directory caches each base's required checks for every process,
 revalidated by ETag on each process's first read.
-Feedback is keyed by comment and its version, a human's latest edit or else
-its posting (a thread by its last comment), so a new reply or a human's edit
-wakes the watcher once; a pending review by its comment count, so each reply
+Feedback is keyed by comment and its version, its latest edit or else its
+posting (a thread by its last comment), so a new reply or an edit wakes the
+watcher once; a pending review by its comment count, so each reply
 filed into it wakes again; gate events are keyed by head and base. A MERGED or
 CLOSED exit deletes the PR's state.
 
@@ -164,11 +167,15 @@ STATUS_BOTS = (
 LINEAR_BOT = "linear-code"
 LINKBACK = "<!-- linear-linkback -->"
 PASSED = {"SUCCESS", "NEUTRAL", "SKIPPED"}
-# The E2E workflow fails its status jobs by design until the PR has an approving
-# review or this label, annotating each with GATE_TITLE. The match is the
-# annotation, not the check name, so a reworded gate fails loudly again.
+# The E2E workflow waits by design until the PR has an approving review or this
+# label. It used to fail its status jobs, annotating each with GATE_TITLE; since
+# factory-mono#30901 its PLAN_JOB carries GATE_TITLE as a notice and the status
+# jobs skip, so their required checks never report (a skipped job's name is its
+# unrendered template, matching no required name). The match is the annotation,
+# not a check name, so a reworded gate fails loudly again.
 GATE_TITLE = "E2E waits for approval"
 GATE_LABEL = "e2e:run"
+PLAN_JOB = "plan"
 # Worst run wins per name, except a cancelled run loses to any other run: a
 # concurrency group cancels the duplicate push or pull_request run of a job.
 RANK = {"fail": 3, "pending": 2, "gate": 2, "pass": 1, "cancelled": 0}
@@ -396,12 +403,10 @@ def noise(node: Json) -> bool:
 
 
 def stamp(node: Json) -> str:
-    """The version of a note: a human's latest edit, else its posting. Bots
-    and service accounts edit status reports in place, which is no news."""
-    versions = [posted(node)]
-    if human(node) and node["lastEditedAt"]:
-        versions.append(node["lastEditedAt"])
-    return max(versions, key=datetime.fromisoformat)
+    """The version of a note: its latest edit, else its posting."""
+    return max(
+        filter(None, (posted(node), node["lastEditedAt"])), key=datetime.fromisoformat
+    )
 
 
 def reviews(pr: Json) -> list[Json]:
@@ -646,35 +651,41 @@ class Watcher:
             return set(checks)
         return required if landing == pr["baseRefName"] else required & set(checks)
 
-    def gates(self, pr: Json) -> set[str]:
-        """Failed head runs that are the E2E approval gate still waiting. Asked
-        only while the PR has neither an approval nor the label, in one batch
-        per poll: a run can be rerequested or updated and gain annotations."""
+    def gates(self, pr: Json) -> tuple[set[str], bool]:
+        """Whether the E2E approval gate is waiting (GATE_TITLE on a failed or
+        plan run of the head), and its failed runs. Asked only while the PR has
+        neither an approval nor the label, in one batch per poll: a run can be
+        rerequested or updated and gain annotations."""
         if any(
             r["state"] == "APPROVED" for r in pr["latestOpinionatedReviews"]["nodes"]
         ) or any(label["name"] == GATE_LABEL for label in pr["labels"]["nodes"]):
-            return set()
-        failed = [
-            n["id"]
+            return set(), False
+        runs = {
+            n["id"]: n["conclusion"] == "FAILURE"
             for n in contexts(pr)["nodes"]
-            if n["__typename"] == "CheckRun" and n["conclusion"] == "FAILURE"
-        ]
-        if not failed:
-            return set()
+            if n["__typename"] == "CheckRun"
+            and (n["conclusion"] == "FAILURE" or n["name"] == PLAN_JOB)
+        }
+        if not runs:
+            return set(), False
         data = graphql(
             "query {"
             + " ".join(
                 f"r{i}: node(id: {json.dumps(run)}) {{ ... on CheckRun {{ annotations(first: 5) {{ nodes {{ title }} }} }} }}"
-                for i, run in enumerate(failed)
+                for i, run in enumerate(runs)
             )
             + "}"
         )
-        gated = set()
-        for i, run in enumerate(failed):
-            notes = ((data[f"r{i}"] or {}).get("annotations") or {}).get("nodes")
-            if any(n["title"] == GATE_TITLE for n in notes or []):
-                gated.add(run)
-        return gated
+        annotated = {
+            run
+            for i, run in enumerate(runs)
+            if any(
+                n["title"] == GATE_TITLE
+                for n in ((data[f"r{i}"] or {}).get("annotations") or {}).get("nodes")
+                or []
+            )
+        }
+        return {run for run in annotated if runs[run]}, bool(annotated)
 
     def required_checks(self, base: str) -> set[str]:
         """Required check names per base, so a required check that has not
@@ -870,8 +881,11 @@ class Watcher:
             self.finish("MERGED", pr["url"], 0)
         if pr["state"] == "CLOSED":
             self.finish("CLOSED", pr["url"], 1)
-        checks = collapse_checks(pr, self.gates(pr))
+        failed, waiting = self.gates(pr)
+        checks = collapse_checks(pr, failed)
         gating = self.gating(pr, checks)
+        if waiting:
+            checks |= {n: {"bucket": "gate", "url": ""} for n in gating - set(checks)}
         if self.once:
             self.feedback(pr)
             actions, waits = self.evaluate(pr, checks, gating, asked, stable=True)
