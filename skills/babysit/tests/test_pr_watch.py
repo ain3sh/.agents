@@ -19,6 +19,8 @@ pr_watch = importlib.util.module_from_spec(
 _loader.exec_module(pr_watch)
 
 REPO = "o/r"
+REPO_ID = "R_1"
+FORK_ID = "R_fork"
 NUMBER = 7
 HEAD = "a" * 40
 BASE_OID = "b" * 40
@@ -52,7 +54,8 @@ def pull_request(
         "baseRefName": "dev",
         "mergeStateStatus": state,
         "reviewDecision": "APPROVED" if approved else "REVIEW_REQUIRED",
-        "baseRef": {"target": {"oid": BASE_OID}, **stacked(("dev",))},
+        "baseRepository": {"id": REPO_ID},
+        "baseRef": {"target": {"oid": BASE_OID}, **heads()},
         "commits": {
             "nodes": [
                 {
@@ -211,15 +214,53 @@ ASK_30918 = {
 }
 
 
-def stacked(branches: tuple[str, ...], depth: int = 4) -> dict[str, Any]:
-    """A ref's open PRs as the PR query answers them for branches[0], each
-    branch the head of an open PR into the next, cut off depth PRs down."""
-    if len(branches) == 1:
-        return {"associatedPullRequests": {"nodes": []}}
-    below: dict[str, Any] = {"baseRefName": branches[1]}
-    if depth > 1:
-        below["baseRef"] = stacked(branches[1:], depth - 1)
-    return {"associatedPullRequests": {"nodes": [below]}}
+def pr_node(
+    head: str, base: str, head_repo: str | None = REPO_ID, base_repo: str = REPO_ID
+) -> dict[str, Any]:
+    """An open PR as HEADS lists it; a head_repo of None is a deleted fork."""
+    return {
+        "headRefName": head,
+        "baseRefName": base,
+        "headRepository": head_repo and {"id": head_repo},
+        "baseRepository": {"id": base_repo},
+    }
+
+
+def heads(*nodes: dict[str, Any], total: int | None = None) -> dict[str, Any]:
+    """A ref's open PRs as HEADS answers them."""
+    count = len(nodes) if total is None else total
+    return {"associatedPullRequests": {"totalCount": count, "nodes": list(nodes)}}
+
+
+# Forks' PRs that pull o/r's branch into the fork's own copy of it, as GitHub
+# lists them on o/r's ref (trycua/cua main on 2026-11-05), and one a fork
+# opened into o/r from its own branch of the same name.
+def forks(branch: str) -> list[dict[str, Any]]:
+    return [
+        pr_node(branch, branch, base_repo=FORK_ID),
+        pr_node(branch, branch, head_repo=None, base_repo=FORK_ID),
+        pr_node(branch, "dev", head_repo=FORK_ID),
+    ]
+
+
+def stacked(
+    branches: tuple[str, ...], noise: bool = False
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The PR's baseRef for branches[0] and the stack query's answer for each
+    branch above it, each branch the head of an open PR into the next, with
+    forks' PRs listed first when noise is set."""
+    answers = [
+        heads(
+            *(forks(b) if noise else []),
+            *([pr_node(b, branches[i + 1])] if i + 1 < len(branches) else []),
+        )
+        for i, b in enumerate(branches)
+    ]
+    refs = {
+        f"refs/heads/{b}": {"repository": {"ref": a}}
+        for b, a in zip(branches[1:], answers[1:])
+    }
+    return {"target": {"oid": BASE_OID}, **answers[0]}, refs
 
 
 RULES = f"repos/{REPO}/rules/branches/dev"
@@ -405,12 +446,14 @@ class OnceVerdictTest(unittest.TestCase):
         # which require nothing, fails the test, and would make Vercel gate.
         pr = pull_request("UNSTABLE", checks=list(CHECKS_28805))
         pr["baseRefName"] = STACK_28805[0]
-        pr["baseRef"] = {"target": {"oid": BASE_OID}, **stacked(STACK_28805)}
-        self.assertEqual(self.once(pr), (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"]))
+        pr["baseRef"], refs = stacked(STACK_28805)
+        self.assertEqual(
+            self.once(pr, **refs), (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"])
+        )
         contexts = pr["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]
         contexts["nodes"][0] = check("lint", "FAILURE")
         self.assertEqual(
-            self.once(pr),
+            self.once(pr, **refs),
             (
                 1,
                 [
@@ -420,16 +463,40 @@ class OnceVerdictTest(unittest.TestCase):
             ),
         )
 
-    def test_a_stack_deeper_than_the_query_is_followed_down(self) -> None:
-        branches = (*(f"s{i}" for i in range(pr_watch.STACK_DEPTH + 2)), "dev")
-        pr = pull_request("CLEAN", checks=CHECKS_28805)
-        pr["baseRefName"] = branches[0]
-        pr["baseRef"] = {"target": {"oid": BASE_OID}, **stacked(branches)}
-        rest = branches[pr_watch.STACK_DEPTH :]
-        ref = {"repository": {"ref": stacked(rest)}}
+    def test_forks_prs_that_pull_a_branch_into_their_own_copy_are_no_stack(
+        self,
+    ) -> None:
+        # Into dev, a PR waits for dev's unstarted required check; read as a
+        # stack, dev "loops back to dev". Stacked, the walk passes the forks'
+        # PRs on every branch and lands in dev, where only lint reports.
+        pr = pull_request("UNSTABLE", checks=CHECKS_28805)
+        pr["baseRef"], refs = stacked(("dev",), noise=True)
         self.assertEqual(
-            self.once(pr, **{f"refs/heads/{rest[0]}": ref}),
-            (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"]),
+            self.once(pr),
+            (
+                3,
+                ["waiting: pending checks (1): test", f"WAIT {REPO}#{NUMBER} @ {HEAD}"],
+            ),
+        )
+        pr["baseRefName"] = STACK_28805[0]
+        pr["baseRef"], refs = stacked(STACK_28805, noise=True)
+        self.assertEqual(
+            self.once(pr, **refs), (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"])
+        )
+
+    def test_a_branch_heading_more_open_prs_than_one_query_reads_is_an_error(
+        self,
+    ) -> None:
+        pr = pull_request("CLEAN")
+        pr["baseRef"] = {"target": {"oid": BASE_OID}, **heads(*forks("dev"), total=101)}
+        self.assertEqual(
+            self.once(pr),
+            (
+                2,
+                [
+                    f"ERROR {REPO}#{NUMBER} GitHub failed: dev heads 101 open PRs, more than one query reads"
+                ],
+            ),
         )
 
     def test_a_pr_into_its_landing_branch_waits_for_unstarted_required_checks(
@@ -479,8 +546,8 @@ class OnceVerdictTest(unittest.TestCase):
     def test_a_stack_that_loops_is_an_error(self) -> None:
         pr = pull_request("CLEAN")
         pr["baseRefName"] = "a"
-        pr["baseRef"] = {"target": {"oid": BASE_OID}, **stacked(("a", "b", "a"))}
-        code, lines = self.once(pr)
+        pr["baseRef"], refs = stacked(("a", "b", "a"))
+        code, lines = self.once(pr, **refs)
         self.assertEqual(code, 2)
         self.assertEqual(
             lines[-1],
@@ -504,18 +571,22 @@ class OnceVerdictTest(unittest.TestCase):
         )
 
     def watch(
-        self, watcher: Any, pr: dict[str, Any], asks: list[Any]
+        self, watcher: Any, pr: dict[str, Any], asks: list[Any], **refs: Any
     ) -> tuple[Any, list[str]]:
-        """One watch-mode poll of pr: its exit code (None while it keeps
-        waiting) and stdout lines."""
+        """One watch-mode poll of pr, with refs as in once: its exit code (None
+        while it keeps waiting) and stdout lines."""
         out = io.StringIO()
         data = {
             "repository": {"pullRequest": pr},
             "asks": {"object": {"text": json.dumps({"asks": asks})}},
         }
+
+        def answer(query: str, **variables: Any) -> Any:
+            return data if query == pr_watch.QUERY else refs[variables["ref"]]
+
         code = None
         with (
-            mock.patch.object(pr_watch, "graphql", return_value=data),
+            mock.patch.object(pr_watch, "graphql", side_effect=answer),
             contextlib.redirect_stdout(out),
             contextlib.redirect_stderr(io.StringIO()),
         ):
@@ -531,18 +602,19 @@ class OnceVerdictTest(unittest.TestCase):
         pr = pull_request("UNSTABLE", checks=list(CHECKS_28805))
         pr["url"] = URL_30918
         pr["baseRefName"] = STACK_28805[0]
-        pr["baseRef"] = {"target": {"oid": BASE_OID}, **stacked(STACK_28805)}
+        pr["baseRef"], refs = stacked(STACK_28805)
         vercel = f"check-failed {VERCEL} (optional) https://vercel.com/factory/delegation-router-dev"
         watcher = pr_watch.Watcher(REPO, NUMBER, 30, once=False)
         self.assertEqual(
-            self.watch(watcher, pr, [ASK_30918]),
+            self.watch(watcher, pr, [ASK_30918], **refs),
             (1, [vercel, f"ACTION {REPO}#{NUMBER} @ {HEAD}"]),
         )
         watcher = pr_watch.Watcher(REPO, NUMBER, 30, once=False)
         for _ in range(3):
-            self.assertEqual(self.watch(watcher, pr, [ASK_30918]), (None, []))
+            self.assertEqual(self.watch(watcher, pr, [ASK_30918], **refs), (None, []))
         self.assertEqual(
-            self.watch(watcher, pr, []), (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"])
+            self.watch(watcher, pr, [], **refs),
+            (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"]),
         )
 
     def test_unapproved_clean_green_pr_waits_for_review(self) -> None:

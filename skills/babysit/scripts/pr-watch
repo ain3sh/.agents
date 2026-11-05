@@ -59,10 +59,12 @@ Events
 
 Gating checks are the required checks of the branch the PR finally lands in:
 its base, or for a stacked PR the base of the bottom PR of its stack (each
-open PR whose head is the base below it, followed down). A stacked PR gates
-only on the ones reporting on its head, since workflows into the landing
-branch often filter on it and run only once GitHub retargets the PR there. A
-landing branch that requires none makes every check gate.
+open PR from the base below it into another branch of the same repository,
+followed down; a fork's PR that pulls the branch into its own copy is no part
+of it). A stacked PR gates only on the ones reporting on its head, since
+workflows into the landing branch often filter on it and run only once GitHub
+retargets the PR there. A landing branch that requires none makes every check
+gate.
 
 An open ask is one in ASKS (Ainesh's agents/asks.json at main) whose prs
 names the PR: the PR waits on his answer whatever its checks and reviews say,
@@ -185,17 +187,19 @@ RATE_LIMITED = re.compile(r"rate limit|abuse detection|HTTP 429", re.IGNORECASE)
 # gh ends its last stderr line with the status; a rate-limit 403 never gets here.
 DENIED = re.compile(r"\(HTTP 40[34]\)$")
 DENIED_TTL = 24 * 3600
-# The PR query follows a stack this many PRs down; each further STACK_DEPTH
-# PRs cost one more query.
-STACK_DEPTH = 4
 # Ainesh's open asks; the file is absent until someone writes one.
 ASKS = ("factory-ain3sh", "software-factory", "main:agents/asks.json")
 
 
-def stack(depth: int) -> str:
-    """The open PR whose head is a ref, and the same for its base, depth PRs down."""
-    below = f" baseRef {{ {stack(depth - 1)} }}" if depth > 1 else ""
-    return f"associatedPullRequests(states: OPEN, first: 1) {{ nodes {{ baseRefName{below} }} }}"
+# The open PRs whose head is a ref. They include forks' PRs that pull the
+# branch into the fork's own copy of it (trycua/cua main had 3), so the stack
+# above a branch is the one from this repository into this repository
+# (Watcher.landing). Each branch of a stack costs one query: widening the
+# list at every level of one nested query costs 11 points at 10 a level.
+HEADS = """associatedPullRequests(states: OPEN, first: 100) {
+  totalCount
+  nodes { headRefName baseRefName headRepository { id } baseRepository { id } }
+}"""
 
 
 CONTEXTS = """
@@ -233,7 +237,8 @@ query($owner: String!, $name: String!, $number: Int!, $after: String, $before: S
   repository(owner: $owner, name: $name) {{
     pullRequest(number: $number) {{
       id url state isDraft headRefOid baseRefName mergeStateStatus reviewDecision
-      baseRef {{ target {{ oid }} {stack(STACK_DEPTH)} }}
+      baseRepository {{ id }}
+      baseRef {{ target {{ oid }} {HEADS} }}
       commits(last: 1) {{ nodes {{ commit {{ id statusCheckRollup {{ {CONTEXTS} }} }} }} }}
       latestOpinionatedReviews(first: 100) {{ nodes {{ state }} }}
       labels(first: 100) {{ nodes {{ name }} }}
@@ -252,7 +257,7 @@ query($owner: String!, $name: String!, $number: Int!, $after: String, $before: S
 """
 STACK = f"""
 query($owner: String!, $name: String!, $ref: String!) {{
-  repository(owner: $owner, name: $name) {{ ref(qualifiedName: $ref) {{ {stack(STACK_DEPTH)} }} }}
+  repository(owner: $owner, name: $name) {{ ref(qualifiedName: $ref) {{ {HEADS} }} }}
 }}
 """
 MORE_CONTEXTS = f"""
@@ -598,23 +603,32 @@ class Watcher:
 
     def landing(self, pr: Json) -> str:
         """The branch the PR finally lands in, as the module docstring defines it."""
+        repo = pr["baseRepository"]["id"]
         branch, ref, seen = pr["baseRefName"], pr["baseRef"], {pr["baseRefName"]}
         while ref is not None:
-            above = ref["associatedPullRequests"]["nodes"]
+            heads = ref["associatedPullRequests"]
+            if heads["totalCount"] > len(heads["nodes"]):
+                raise GhError(
+                    f"{branch} heads {heads['totalCount']} open PRs, more than one query reads"
+                )
+            above = [
+                n["baseRefName"]
+                for n in heads["nodes"]
+                if n["headRefName"] == branch
+                and n["baseRepository"]["id"] == repo
+                and (n["headRepository"] or {}).get("id") == repo
+            ]
             if not above:
                 return branch
-            if above[0]["baseRefName"] in seen:
+            if above[0] in seen:
                 raise GhError(
-                    f"the stack under {pr['baseRefName']} loops back to {above[0]['baseRefName']}"
+                    f"the stack under {pr['baseRefName']} loops back to {above[0]}"
                 )
-            branch = above[0]["baseRefName"]
+            branch = above[0]
             seen.add(branch)
-            if "baseRef" in above[0]:
-                ref = above[0]["baseRef"]
-            else:
-                ref = graphql(
-                    STACK, owner=self.owner, name=self.name, ref=f"refs/heads/{branch}"
-                )["repository"]["ref"]
+            ref = graphql(
+                STACK, owner=self.owner, name=self.name, ref=f"refs/heads/{branch}"
+            )["repository"]["ref"]
         return branch
 
     def gating(self, pr: Json, checks: dict[str, Json]) -> set[str]:
