@@ -571,6 +571,20 @@ class RequiredChecksErrorTest(unittest.TestCase):
                         pr_watch.GhError, pr_watch.revalidate, RULES, {}, list
                     )
 
+    def test_an_unparsable_or_empty_graphql_answer_is_a_retryable_error(self) -> None:
+        for body in (
+            "<html>502 Bad Gateway</html>",
+            '{"errors": []}',
+            '{"data": null}',
+        ):
+            with (
+                self.subTest(body=body),
+                mock.patch.object(pr_watch, "gh", return_value=body),
+            ):
+                self.assertRaises(
+                    pr_watch.GhError, pr_watch.graphql, "query { viewer { login } }"
+                )
+
     def test_abuse_detection_is_a_rate_limit(self) -> None:
         self.assertTrue(
             pr_watch.RATE_LIMITED.search(

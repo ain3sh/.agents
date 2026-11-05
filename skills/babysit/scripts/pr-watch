@@ -325,7 +325,14 @@ def graphql(query: str, **variables: str | int) -> Json:
     args = ["api", "graphql", "-f", f"query={query}"]
     for key, value in variables.items():
         args += ["-F" if isinstance(value, int) else "-f", f"{key}={value}"]
-    return json.loads(gh(*args))["data"]
+    out = gh(*args)
+    try:
+        data = json.loads(out)["data"]
+    except (ValueError, KeyError, TypeError) as error:
+        raise GhError(f"GitHub answered no GraphQL data: {snippet(out)}") from error
+    if data is None:
+        raise GhError(f"GitHub answered no GraphQL data: {snippet(out)}")
+    return data
 
 
 def revalidate(source: str, entry: Json, parse: Callable[[Any], list[str]]) -> Json:
