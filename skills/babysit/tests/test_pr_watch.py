@@ -4,6 +4,7 @@ import contextlib
 import importlib.machinery
 import importlib.util
 import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -157,15 +158,30 @@ LINKBACK = (
 )
 
 
+RULES = f"repos/{REPO}/rules/branches/dev"
+ETAG = 'W/"1"'
+
+
 def fake_gh(*args: str) -> str:
-    """A ruleset requiring REQUIRED and no readable classic protection. Any
-    other read fails the test: the verdict rests on the PR query alone, never
-    on how far the base moved since the fork point."""
-    path = args[1]
-    if path == f"repos/{REPO}/rules/branches/dev":
-        return "\n".join(REQUIRED) + "\n"
+    """A ruleset requiring REQUIRED, unchanged since ETAG, and no readable
+    classic protection. Any other read fails the test: the verdict rests on
+    the PR query alone, never on how far the base moved since the fork point."""
+    path = args[-1]
+    if path == RULES:
+        if f"If-None-Match: {ETAG}" in args:
+            raise pr_watch.GhError("gh: HTTP 304")
+        rules = [
+            {"type": "deletion"},
+            {
+                "type": "required_status_checks",
+                "parameters": {
+                    "required_status_checks": [{"context": n} for n in REQUIRED]
+                },
+            },
+        ]
+        return f"HTTP/2.0 200 OK\r\nEtag: {ETAG}\r\n\r\n{json.dumps(rules)}"
     if path.endswith("/protection/required_status_checks"):
-        raise pr_watch.GhError("HTTP 403: Resource not accessible by integration")
+        raise pr_watch.GhError("gh: Resource not accessible by integration (HTTP 403)")
     raise AssertionError(f"unexpected gh call: {args}")
 
 
@@ -173,9 +189,10 @@ class OnceVerdictTest(unittest.TestCase):
     def setUp(self) -> None:
         state = tempfile.TemporaryDirectory()
         self.addCleanup(state.cleanup)
+        self.gh = mock.Mock(side_effect=fake_gh)
         for patch in (
             mock.patch.object(pr_watch, "STATE_DIR", Path(state.name)),
-            mock.patch.object(pr_watch, "gh", fake_gh),
+            mock.patch.object(pr_watch, "gh", self.gh),
         ):
             patch.start()
             self.addCleanup(patch.stop)
@@ -274,6 +291,33 @@ class OnceVerdictTest(unittest.TestCase):
         self.assertEqual(lines, [f"READY {REPO}#{NUMBER} @ {HEAD}"])
         self.assertEqual(code, 0)
 
+    def test_later_runs_revalidate_required_checks_for_free(self) -> None:
+        # Each --once is a new process: the second reads the first's cache,
+        # revalidates the ruleset by ETag, and skips the denied protection read.
+        for calls in (
+            [mock.call("api", "--include", RULES), mock.ANY],
+            [mock.call("api", "--include", "-H", f"If-None-Match: {ETAG}", RULES)],
+        ):
+            self.gh.reset_mock()
+            code, lines = self.once(pull_request("CLEAN", checks=[check("lint")]))
+            self.assertEqual(self.gh.call_args_list, calls)
+            self.assertEqual(lines[0], "waiting: pending checks (1): test")
+            self.assertEqual(code, 3)
+
+    def test_an_unreadable_required_checks_cache_is_a_miss(self) -> None:
+        path = (
+            Path(pr_watch.STATE_DIR)
+            / "required"
+            / f"{REPO.replace('/', '%2F')}%3Adev.json"
+        )
+        path.parent.mkdir(parents=True)
+        path.write_text("{not json")
+        self.once(pull_request("CLEAN", checks=[check("lint")]))
+        self.assertEqual(
+            self.gh.call_args_list, [mock.call("api", "--include", RULES), mock.ANY]
+        )
+        self.assertEqual(json.loads(path.read_text())[RULES]["etag"], ETAG)
+
     def test_unapproved_clean_green_pr_waits_for_review(self) -> None:
         code, lines = self.once(pull_request("CLEAN", approved=False))
         self.assertEqual(
@@ -281,6 +325,31 @@ class OnceVerdictTest(unittest.TestCase):
             ["waiting: review: review required", f"WAIT {REPO}#{NUMBER} @ {HEAD}"],
         )
         self.assertEqual(code, 3)
+
+
+class RequiredChecksErrorTest(unittest.TestCase):
+    def test_only_a_final_404_or_403_is_cached_as_denied(self) -> None:
+        for message, denied in (
+            ("gh: Not Found (HTTP 404)", True),
+            ("gh: Resource not accessible by integration (HTTP 403)", True),
+            ("gh: Bad Gateway (HTTP 502) at /requests/403", False),
+        ):
+            with mock.patch.object(
+                pr_watch, "gh", side_effect=pr_watch.GhError(message)
+            ):
+                if denied:
+                    self.assertIn("denied", pr_watch.revalidate(RULES, {}, list))
+                else:
+                    self.assertRaises(
+                        pr_watch.GhError, pr_watch.revalidate, RULES, {}, list
+                    )
+
+    def test_abuse_detection_is_a_rate_limit(self) -> None:
+        self.assertTrue(
+            pr_watch.RATE_LIMITED.search(
+                "gh: You have triggered an abuse detection mechanism. (HTTP 403)"
+            )
+        )
 
 
 if __name__ == "__main__":

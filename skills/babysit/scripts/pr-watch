@@ -72,6 +72,8 @@ place, so only their new comments are news.
 State lives in $XDG_STATE_HOME/pr-watch (default ~/.local/state/pr-watch): the
 keys the watcher has reported, so a restart never re-wakes on what it already
 reported. There is no first-run baseline: a first run reports everything open.
+Its required/ directory caches each base's required checks for every process,
+revalidated by ETag on each process's first read.
 Feedback is keyed by comment and its version, a human's latest edit or else
 its posting (a thread by its last comment), so a new reply or a human's edit
 wakes the watcher once; a pending review by its comment count, so each reply
@@ -114,9 +116,11 @@ import re
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, NoReturn
+from urllib.parse import quote
 
 Json = dict[str, Any]
 
@@ -163,7 +167,13 @@ TRANSIENT = re.compile(
     r"could not resolve host|TLS handshake|Something went wrong",
     re.IGNORECASE,
 )
-RATE_LIMITED = re.compile(r"rate limit|HTTP 429", re.IGNORECASE)
+# GitHub words its secondary limit as abuse detection too, with a 403.
+RATE_LIMITED = re.compile(r"rate limit|abuse detection|HTTP 429", re.IGNORECASE)
+# A 404 or 403 carries no ETag to revalidate against. For classic protection
+# it means the token lacks admin, which changes only when the token gains it.
+# gh ends its last stderr line with the status; a rate-limit 403 never gets here.
+DENIED = re.compile(r"\(HTTP 40[34]\)$")
+DENIED_TTL = 24 * 3600
 
 CONTEXTS = """
 contexts(first: 100, after: $after) {
@@ -285,6 +295,25 @@ def graphql(query: str, **variables: str | int) -> Json:
     for key, value in variables.items():
         args += ["-F" if isinstance(value, int) else "-f", f"{key}={value}"]
     return json.loads(gh(*args))["data"]
+
+
+def revalidate(source: str, entry: Json, parse: Callable[[Any], list[str]]) -> Json:
+    """A source's cache entry, refreshed: {etag, names} from a readable source,
+    or {denied} when it 404s or 403s. Only the 200 needs --include, for its
+    ETag; gh exits 1 on a 304, which only this conditional request receives."""
+    etag = entry.get("etag")
+    header = ["-H", f"If-None-Match: {etag}"] if etag else []
+    try:
+        out = gh("api", "--include", *header, source)
+    except GhError as error:
+        if "HTTP 304" in str(error):
+            return entry
+        if not DENIED.search(str(error)):
+            raise
+        return {"denied": time.time()}
+    head, body = re.split(r"\r?\n\r?\n", out, maxsplit=1)
+    tag = re.search(r"^etag: *(\S+)", head, re.IGNORECASE | re.MULTILINE)
+    return {"etag": tag and tag[1], "names": parse(json.loads(body))}
 
 
 def snippet(body: str, limit: int = 160) -> str:
@@ -536,25 +565,39 @@ class Watcher:
         """Required check names per base, so a required check that has not
         started counts as pending instead of passing by omission. Rulesets are
         readable with read access; classic protection needs admin and 404s or
-        403s otherwise. Any other failure propagates so the next poll retries."""
+        403s otherwise. Any other failure propagates so the next poll retries.
+        Every process shares one cache per base and revalidates it by ETag: a
+        304 costs no rate limit."""
         if base not in self.required:
-            sources = (
-                (
-                    f"repos/{self.repo}/rules/branches/{base}",
-                    '.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context',
-                ),
-                (
-                    f"repos/{self.repo}/branches/{base}/protection/required_status_checks",
-                    ".contexts[]?, .checks[]?.context",
-                ),
+            path = (
+                STATE_DIR / "required" / f"{quote(f'{self.repo}:{base}', safe='')}.json"
             )
+            try:
+                cache: Json = json.loads(path.read_text())
+            except (OSError, ValueError):
+                cache = {}
+            sources = {
+                f"repos/{self.repo}/rules/branches/{base}": lambda rules: [
+                    check["context"]
+                    for rule in rules
+                    if rule["type"] == "required_status_checks"
+                    for check in rule["parameters"]["required_status_checks"]
+                ],
+                f"repos/{self.repo}/branches/{base}/protection/required_status_checks": lambda protection: [
+                    *protection.get("contexts", []),
+                    *(check["context"] for check in protection.get("checks", [])),
+                ],
+            }
             names: set[str] = set()
-            for path, jq in sources:
-                try:
-                    names.update(filter(None, gh("api", path, "--jq", jq).splitlines()))
-                except GhError as error:
-                    if "404" not in str(error) and "403" not in str(error):
-                        raise
+            for source, parse in sources.items():
+                entry = cache.get(source, {})
+                if time.time() - entry.get("denied", 0) >= DENIED_TTL:
+                    entry = cache[source] = revalidate(source, entry, parse)
+                names.update(entry.get("names", []))
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_suffix(f".{os.getpid()}.tmp")
+            tmp.write_text(json.dumps(cache))
+            tmp.replace(path)
             self.required[base] = names
             log(
                 f"gating checks on {base}: "
