@@ -20,9 +20,9 @@ the head sha that the verdict line ends with.
 Stdout carries event lines, then one verdict line; progress goes to stderr.
 
   READY   exit 0  approved; every check finished and every gating check passed;
-                  no unresolved review thread; no pending review; no open ask
-                  names it; and GitHub reports it mergeable (CLEAN, HAS_HOOKS,
-                  or UNSTABLE), however far the base moved
+                  no unresolved review thread; no pending review; and GitHub
+                  reports it mergeable (CLEAN, HAS_HOOKS, or UNSTABLE), however
+                  far the base moved
   MERGED  exit 0
   ACTION  exit 1  the event lines say what needs doing
   CLOSED  exit 1
@@ -69,13 +69,6 @@ of it). A stacked PR gates only on the ones reporting on its head, since
 workflows into the landing branch often filter on it and run only once GitHub
 retargets the PR there. A landing branch that requires none makes every check
 gate.
-
-An open ask is one in ASKS (Ainesh's agents/asks.json at main) whose prs
-names the PR: the PR waits on his answer whatever its checks and reviews say,
-and the waiting line names the ask. A reply, the orchestrator's answer to
-something he asked, names no PRs and holds nothing, so it is skipped. The file
-is read with the PR on every poll; an unreadable one, or any other ask without
-an id and prs, fails the poll rather than read as no asks.
 
 Feedback events describe what is open on GitHub now, not what changed since a
 run. The agent's words are exactly the comments, reviews, and thread replies
@@ -198,8 +191,6 @@ RATE_LIMITED = re.compile(r"rate limit|abuse detection|HTTP 429", re.IGNORECASE)
 # gh ends its last stderr line with the status; a rate-limit 403 never gets here.
 DENIED = re.compile(r"\(HTTP 40[34]\)$")
 DENIED_TTL = 24 * 3600
-# Ainesh's open asks; the file is absent until someone writes one.
-ASKS = ("factory-ain3sh", "software-factory", "main:agents/asks.json")
 
 
 # The open PRs whose head is a ref. They include forks' PRs that pull the
@@ -260,9 +251,6 @@ query($owner: String!, $name: String!, $number: Int!, $after: String, $before: S
         comments(last: 100) {{ nodes {{ state {NOTE} }} }}
       }} }}
     }}
-  }}
-  asks: repository(owner: "{ASKS[0]}", name: "{ASKS[1]}") {{
-    object(expression: "{ASKS[2]}") {{ ... on Blob {{ text }} }}
   }}
 }}
 """
@@ -475,36 +463,6 @@ def bucket(node: Json, gates: set[str]) -> str:
     )
 
 
-def asking(data: Json, url: str) -> list[str]:
-    """Ids of the open asks naming the PR at url, from the PR query's answer."""
-    if data["asks"] is None:
-        raise GhError(f"cannot read {ASKS[0]}/{ASKS[1]}")
-    blob = data["asks"]["object"]
-    if blob is None:
-        return []
-    try:
-        asks = json.loads(blob["text"])["asks"]
-    except (ValueError, KeyError, TypeError) as error:
-        raise GhError(f"{ASKS[2]} in {ASKS[1]} is unreadable: {error!r}") from error
-    if not isinstance(asks, list):
-        raise GhError(f"{ASKS[2]} in {ASKS[1]} is not a list of asks")
-    holding = []
-    for i, a in enumerate(asks):
-        if isinstance(a, dict) and a.get("kind") == "reply":
-            continue
-        if not (
-            isinstance(a, dict)
-            and isinstance(a.get("id"), str)
-            and isinstance(a.get("prs"), list)
-            and all(isinstance(u, str) for u in a["prs"])
-        ):
-            raise GhError(
-                f"{ASKS[2]} in {ASKS[1]}: asks[{i}] is no reply and lacks an id or prs"
-            )
-        holding.append(a)
-    return [a["id"] for a in holding if url in a["prs"]]
-
-
 def contexts(pr: Json) -> Json:
     commits = pr["commits"]["nodes"]
     rollup = commits[0]["commit"]["statusCheckRollup"] if commits else None
@@ -585,13 +543,11 @@ class Watcher:
         if key not in self.reported:
             self.events.append((key, line))
 
-    def fetch(self) -> tuple[Json, list[str]]:
-        """The PR, and the ids of the open asks naming it."""
+    def fetch(self) -> Json:
         data = graphql(QUERY, owner=self.owner, name=self.name, number=self.number)
         pr = data["repository"]["pullRequest"]
         if pr is None:
             fail(f"{self.repo}#{self.number} does not exist")
-        asked = asking(data, pr["url"])
         checks = contexts(pr)
         while checks.get("pageInfo", {}).get("hasNextPage"):
             commit = pr["commits"]["nodes"][0]["commit"]["id"]
@@ -613,7 +569,7 @@ class Watcher:
                 more = graphql(query, id=pr["id"], before=cursor)["node"][name]
                 notes["nodes"] = more["nodes"] + notes["nodes"]
                 notes["pageInfo"] = more["pageInfo"]
-        return pr, asked
+        return pr
 
     def landing(self, pr: Json) -> str:
         """The branch the PR finally lands in, as the module docstring defines it."""
@@ -770,7 +726,6 @@ class Watcher:
         pr: Json,
         checks: dict[str, Json],
         gating: set[str],
-        asked: list[str],
         stable: bool,
     ) -> tuple[list[tuple[str, str]], list[str]]:
         """Why the head cannot merge now: (key, line) actions the agent must
@@ -835,7 +790,6 @@ class Watcher:
             waits.append(
                 f"E2E gate ({len(gated)} checks): runs once approved or labelled {GATE_LABEL}"
             )
-        waits += [f"on Ainesh: ask {ask}" for ask in asked]
         if pr["isDraft"]:
             waits.append("draft")
         decision = pr["reviewDecision"]
@@ -877,7 +831,7 @@ class Watcher:
 
     def poll(self) -> None:
         self.events = []
-        pr, asked = self.fetch()
+        pr = self.fetch()
         head = pr["headRefOid"]
         if pr["state"] == "MERGED":
             self.finish("MERGED", pr["url"], 0)
@@ -895,7 +849,7 @@ class Watcher:
         ]
         if self.once:
             self.feedback(pr)
-            actions, waits = self.evaluate(pr, checks, gating, asked, stable=True)
+            actions, waits = self.evaluate(pr, checks, gating, stable=True)
             self.events += actions
             verdict, code = (
                 ("ACTION", 1) if self.events else ("WAIT", 3) if waits else ("READY", 0)
@@ -915,7 +869,7 @@ class Watcher:
         self.feedback(pr)
         for key, line in optional:
             self.emit(key, line)
-        actions, waits = self.evaluate(pr, checks, gating, asked, stable)
+        actions, waits = self.evaluate(pr, checks, gating, stable)
         for key, line in actions:
             self.emit(key, line)
         if self.events:

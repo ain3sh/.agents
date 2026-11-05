@@ -184,48 +184,6 @@ CHECKS_28805 = [
         "targetUrl": "https://vercel.com/factory/delegation-router-dev",
     },
 ]
-# Ainesh's ask as agents/asks.json held it when scheduling merged #30918 anyway.
-URL_30918 = "https://github.com/Factory-AI/factory-mono/pull/30918"
-ASK_30918 = {
-    "id": "firestore-org-test",
-    "kind": "decision",
-    "question": "Eric approved the automations missed-run watchdog fix, but its live test for orgs that still keep automations in Firestore can't run, because every org the agents can reach keeps them in Prem; how should the agent get one?",
-    "options": [
-        {
-            "id": "send-key",
-            "label": "You send a dev key",
-            "cost": "A dev API key for a CMEK org, or one with automation_prem_write_switch off, if you have one; the agent runs the test right away.",
-        },
-        {
-            "id": "gate-override",
-            "label": "OK a one-org override",
-            "cost": "An agent adds a development-only rule to Eric's automation_prem_write_switch gate that turns it off for one throwaway dev org, and removes it after the test.",
-        },
-        {
-            "id": "skip",
-            "label": "Merge without it",
-            "cost": "The PR body states that the Firestore half was not tested live, and it merges on Eric's approval.",
-        },
-    ],
-    "recommendation": "gate-override",
-    "why": "The only dev key the agents hold belongs to a Prem-stored org, and a development-only rule for one throwaway org touches no real user.",
-    "since": "2026-11-04T23:17:19Z",
-    "evidence": URL_30918,
-    "from": "scheduling",
-    "prs": [URL_30918],
-}
-# A reply as cockpit/functions/core/asks.ts defines it: no prs, holding nothing.
-# One like it made every pr-watch fail on 2026-11-05 from 03:02Z.
-REPLY = {
-    "kind": "reply",
-    "id": "reply-test",
-    "question": "Do replies reach the board?",
-    "answer": "Yes: this one did, within one collect interval.",
-    "since": "2026-11-05T03:01:00Z",
-    "from": "orchestrator",
-}
-
-
 def pr_node(
     head: str, base: str, head_repo: str | None = REPO_ID, base_repo: str = REPO_ID
 ) -> dict[str, Any]:
@@ -321,21 +279,14 @@ class OnceVerdictTest(unittest.TestCase):
     def once(
         self,
         pr: dict[str, Any],
-        asks: Any = (),
         notes: dict[str, list[str]] | None = None,
         **refs: Any,
     ) -> tuple[int, list[str]]:
-        """Run `pr-watch --once` against pr, with asks as agents/asks.json's
-        list (None: no file; a str: the file's text), notes as each check
-        run's annotation titles by id, and refs answering the stack query for
-        each qualified ref name; return its exit code and stdout lines."""
+        """Run `pr-watch --once` against pr, with notes as each check run's
+        annotation titles by id, and refs answering the stack query for each
+        qualified ref name; return its exit code and stdout lines."""
         out = io.StringIO()
-        if asks is None:
-            blob = None
-        else:
-            text = asks if isinstance(asks, str) else json.dumps({"asks": list(asks)})
-            blob = {"text": text}
-        data = {"repository": {"pullRequest": pr}, "asks": {"object": blob}}
+        data = {"repository": {"pullRequest": pr}}
 
         def answer(query: str, **variables: Any) -> Any:
             if query == pr_watch.QUERY:
@@ -633,48 +584,13 @@ class OnceVerdictTest(unittest.TestCase):
             ),
         )
 
-    def test_a_pr_an_open_ask_names_waits_on_ainesh(self) -> None:
-        pr = pull_request("CLEAN")
-        pr["url"] = URL_30918
-        verdict = f"{REPO}#{NUMBER} @ {HEAD}"
-        for asks, expected in (
-            (
-                [ASK_30918],
-                (3, ["waiting: on Ainesh: ask firestore-org-test", f"WAIT {verdict}"]),
-            ),
-            (
-                [REPLY, ASK_30918, {**REPLY, "id": "reply-2"}],
-                (3, ["waiting: on Ainesh: ask firestore-org-test", f"WAIT {verdict}"]),
-            ),
-            ([{**ASK_30918, "prs": []}], (0, [f"READY {verdict}"])),
-            ([REPLY, {**ASK_30918, "prs": []}], (0, [f"READY {verdict}"])),
-            ([], (0, [f"READY {verdict}"])),
-            (None, (0, [f"READY {verdict}"])),
-        ):
-            with self.subTest(asks=asks):
-                self.assertEqual(self.once(pr, asks), expected)
-
-    def test_an_unreadable_asks_file_is_an_error_not_no_asks(self) -> None:
-        for text in (
-            "{not json",
-            "[]",
-            '{"asks": {}}',
-            '{"asks": ""}',
-            '{"asks": [{"id": "x"}]}',
-            '{"asks": [{"id": "x", "prs": {}}]}',
-            json.dumps(
-                {"asks": [REPLY, {k: v for k, v in ASK_30918.items() if k != "prs"}]}
-            ),
-            json.dumps({"asks": [{**ASK_30918, "kind": "review", "prs": None}]}),
-            json.dumps({"asks": [REPLY, "reply"]}),
-        ):
-            with self.subTest(text=text):
-                code, lines = self.once(pull_request("CLEAN"), text)
-                self.assertEqual(code, 2)
-                self.assertTrue(
-                    lines[-1].startswith(f"ERROR {REPO}#{NUMBER} GitHub failed: "),
-                    lines,
-                )
+    def test_every_query_reads_only_the_target_repository(self) -> None:
+        # A token that can read the target PR is the only access a poll needs.
+        for query in (pr_watch.QUERY, pr_watch.STACK, pr_watch.MORE_CONTEXTS, pr_watch.MORE_FEEDBACK):
+            self.assertEqual(
+                set(re.findall(r"repository\(([^)]*)\)", query)) - {"owner: $owner, name: $name"},
+                set(),
+            )
 
     def test_a_stack_that_loops_is_an_error(self) -> None:
         pr = pull_request("CLEAN")
@@ -704,15 +620,12 @@ class OnceVerdictTest(unittest.TestCase):
         )
 
     def watch(
-        self, watcher: Any, pr: dict[str, Any], asks: list[Any], **refs: Any
+        self, watcher: Any, pr: dict[str, Any], **refs: Any
     ) -> tuple[Any, list[str]]:
         """One watch-mode poll of pr, with refs as in once: its exit code (None
         while it keeps waiting) and stdout lines."""
         out = io.StringIO()
-        data = {
-            "repository": {"pullRequest": pr},
-            "asks": {"object": {"text": json.dumps({"asks": asks})}},
-        }
+        data = {"repository": {"pullRequest": pr}}
 
         def answer(query: str, **variables: Any) -> Any:
             return data if query == pr_watch.QUERY else refs[variables["ref"]]
@@ -729,23 +642,21 @@ class OnceVerdictTest(unittest.TestCase):
                 code = exit.code
         return code, out.getvalue().splitlines()
 
-    def test_watching_a_stacked_pr_an_ask_names(self) -> None:
-        # The Vercel failure wakes the watcher once, as optional; the ask then
-        # holds it, poll after poll, until the ask leaves the file.
+    def test_watching_a_stacked_pr_wakes_once_on_its_optional_failure(self) -> None:
+        # The Vercel failure wakes the watcher once, as optional; a restart
+        # remembers it, settles, and reads READY.
         pr = pull_request("UNSTABLE", checks=list(CHECKS_28805))
-        pr["url"] = URL_30918
         pr["baseRefName"] = STACK_28805[0]
         pr["baseRef"], refs = stacked(STACK_28805)
         watcher = pr_watch.Watcher(REPO, NUMBER, 30, once=False)
         self.assertEqual(
-            self.watch(watcher, pr, [ASK_30918], **refs),
+            self.watch(watcher, pr, **refs),
             (1, [VERCEL_FAILED, f"ACTION {REPO}#{NUMBER} @ {HEAD}"]),
         )
         watcher = pr_watch.Watcher(REPO, NUMBER, 30, once=False)
-        for _ in range(3):
-            self.assertEqual(self.watch(watcher, pr, [ASK_30918], **refs), (None, []))
+        self.assertEqual(self.watch(watcher, pr, **refs), (None, []))
         self.assertEqual(
-            self.watch(watcher, pr, [], **refs),
+            self.watch(watcher, pr, **refs),
             (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"]),
         )
 
