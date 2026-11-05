@@ -17,11 +17,10 @@ the head sha that the verdict line ends with.
 
 Stdout carries event lines, then one verdict line; progress goes to stderr.
 
-  READY   exit 0  approved; every check finished and every gating check passed
-                  (required checks, or all checks when the base requires none);
-                  no unresolved review thread; no pending review; and GitHub
-                  reports it mergeable (CLEAN, HAS_HOOKS, or UNSTABLE), however
-                  far the base moved
+  READY   exit 0  approved; every check finished and every gating check passed;
+                  no unresolved review thread; no pending review; no open ask
+                  names it; and GitHub reports it mergeable (CLEAN, HAS_HOOKS,
+                  or UNSTABLE), however far the base moved
   MERGED  exit 0
   ACTION  exit 1  the event lines say what needs doing
   CLOSED  exit 1
@@ -57,6 +56,18 @@ Events
   blocked       otherwise ready, but GitHub still reports BLOCKED
   incomplete    the PR has more than 100 review threads, so READY is
                 impossible to prove; check them by hand
+
+Gating checks are the required checks of the branch the PR finally lands in:
+its base, or for a stacked PR the base of the bottom PR of its stack (each
+open PR whose head is the base below it, followed down). A stacked PR gates
+only on the ones reporting on its head, since workflows into the landing
+branch often filter on it and run only once GitHub retargets the PR there. A
+landing branch that requires none makes every check gate.
+
+An open ask is one in ASKS (Ainesh's agents/asks.json at main) whose prs
+names the PR: the PR waits on his answer whatever its checks and reviews say,
+and the waiting line names the ask. The file is read with the PR on every
+poll; an unreadable one fails the poll rather than read as no asks.
 
 Feedback events describe what is open on GitHub now, not what changed since a
 run. The agent's words are exactly the comments, reviews, and thread replies
@@ -174,6 +185,18 @@ RATE_LIMITED = re.compile(r"rate limit|abuse detection|HTTP 429", re.IGNORECASE)
 # gh ends its last stderr line with the status; a rate-limit 403 never gets here.
 DENIED = re.compile(r"\(HTTP 40[34]\)$")
 DENIED_TTL = 24 * 3600
+# The PR query follows a stack this many PRs down; each further STACK_DEPTH
+# PRs cost one more query.
+STACK_DEPTH = 4
+# Ainesh's open asks; the file is absent until someone writes one.
+ASKS = ("factory-ain3sh", "software-factory", "main:agents/asks.json")
+
+
+def stack(depth: int) -> str:
+    """The open PR whose head is a ref, and the same for its base, depth PRs down."""
+    below = f" baseRef {{ {stack(depth - 1)} }}" if depth > 1 else ""
+    return f"associatedPullRequests(states: OPEN, first: 1) {{ nodes {{ baseRefName{below} }} }}"
+
 
 CONTEXTS = """
 contexts(first: 100, after: $after) {
@@ -210,7 +233,7 @@ query($owner: String!, $name: String!, $number: Int!, $after: String, $before: S
   repository(owner: $owner, name: $name) {{
     pullRequest(number: $number) {{
       id url state isDraft headRefOid baseRefName mergeStateStatus reviewDecision
-      baseRef {{ target {{ oid }} }}
+      baseRef {{ target {{ oid }} {stack(STACK_DEPTH)} }}
       commits(last: 1) {{ nodes {{ commit {{ id statusCheckRollup {{ {CONTEXTS} }} }} }} }}
       latestOpinionatedReviews(first: 100) {{ nodes {{ state }} }}
       labels(first: 100) {{ nodes {{ name }} }}
@@ -222,6 +245,14 @@ query($owner: String!, $name: String!, $number: Int!, $after: String, $before: S
       }} }}
     }}
   }}
+  asks: repository(owner: "{ASKS[0]}", name: "{ASKS[1]}") {{
+    object(expression: "{ASKS[2]}") {{ ... on Blob {{ text }} }}
+  }}
+}}
+"""
+STACK = f"""
+query($owner: String!, $name: String!, $ref: String!) {{
+  repository(owner: $owner, name: $name) {{ ref(qualifiedName: $ref) {{ {stack(STACK_DEPTH)} }} }}
 }}
 """
 MORE_CONTEXTS = f"""
@@ -423,6 +454,31 @@ def bucket(node: Json, gates: set[str]) -> str:
     )
 
 
+def asking(data: Json, url: str) -> list[str]:
+    """Ids of the open asks naming the PR at url, from the PR query's answer."""
+    if data["asks"] is None:
+        raise GhError(f"cannot read {ASKS[0]}/{ASKS[1]}")
+    blob = data["asks"]["object"]
+    if blob is None:
+        return []
+    try:
+        asks = json.loads(blob["text"])["asks"]
+    except (ValueError, KeyError, TypeError) as error:
+        raise GhError(f"{ASKS[2]} in {ASKS[1]} is unreadable: {error!r}") from error
+    if not (
+        isinstance(asks, list)
+        and all(
+            isinstance(a, dict)
+            and isinstance(a.get("id"), str)
+            and isinstance(a.get("prs"), list)
+            and all(isinstance(u, str) for u in a["prs"])
+            for a in asks
+        )
+    ):
+        raise GhError(f"{ASKS[2]} in {ASKS[1]} is not asks with an id and prs each")
+    return [a["id"] for a in asks if url in a["prs"]]
+
+
 def contexts(pr: Json) -> Json:
     commits = pr["commits"]["nodes"]
     rollup = commits[0]["commit"]["statusCheckRollup"] if commits else None
@@ -503,11 +559,13 @@ class Watcher:
         if key not in self.reported:
             self.events.append((key, line))
 
-    def fetch(self) -> Json:
+    def fetch(self) -> tuple[Json, list[str]]:
+        """The PR, and the ids of the open asks naming it."""
         data = graphql(QUERY, owner=self.owner, name=self.name, number=self.number)
         pr = data["repository"]["pullRequest"]
         if pr is None:
             fail(f"{self.repo}#{self.number} does not exist")
+        asked = asking(data, pr["url"])
         checks = contexts(pr)
         while checks.get("pageInfo", {}).get("hasNextPage"):
             commit = pr["commits"]["nodes"][0]["commit"]["id"]
@@ -529,7 +587,36 @@ class Watcher:
                 more = graphql(query, id=pr["id"], before=cursor)["node"][name]
                 notes["nodes"] = more["nodes"] + notes["nodes"]
                 notes["pageInfo"] = more["pageInfo"]
-        return pr
+        return pr, asked
+
+    def landing(self, pr: Json) -> str:
+        """The branch the PR finally lands in, as the module docstring defines it."""
+        branch, ref, seen = pr["baseRefName"], pr["baseRef"], {pr["baseRefName"]}
+        while ref is not None:
+            above = ref["associatedPullRequests"]["nodes"]
+            if not above:
+                return branch
+            if above[0]["baseRefName"] in seen:
+                raise GhError(
+                    f"the stack under {pr['baseRefName']} loops back to {above[0]['baseRefName']}"
+                )
+            branch = above[0]["baseRefName"]
+            seen.add(branch)
+            if "baseRef" in above[0]:
+                ref = above[0]["baseRef"]
+            else:
+                ref = graphql(
+                    STACK, owner=self.owner, name=self.name, ref=f"refs/heads/{branch}"
+                )["repository"]["ref"]
+        return branch
+
+    def gating(self, pr: Json, checks: dict[str, Json]) -> set[str]:
+        """The checks that gate, as the module docstring defines them."""
+        landing = self.landing(pr)
+        required = self.required_checks(landing)
+        if not required:
+            return set(checks)
+        return required if landing == pr["baseRefName"] else required & set(checks)
 
     def gates(self, pr: Json) -> set[str]:
         """Failed head runs that are the E2E approval gate still waiting. Asked
@@ -600,7 +687,7 @@ class Watcher:
             tmp.replace(path)
             self.required[base] = names
             log(
-                f"gating checks on {base}: "
+                f"required checks on {base}: "
                 + (", ".join(sorted(names)) or "none required, so every check gates")
             )
         return self.required[base]
@@ -638,14 +725,17 @@ class Watcher:
             )
 
     def evaluate(
-        self, pr: Json, checks: dict[str, Json], stable: bool
+        self,
+        pr: Json,
+        checks: dict[str, Json],
+        gating: set[str],
+        asked: list[str],
+        stable: bool,
     ) -> tuple[list[tuple[str, str]], list[str]]:
         """Why the head cannot merge now: (key, line) actions the agent must
         handle, and wait lines for states that resolve without it."""
         head, base, state = pr["headRefOid"], pr["baseRefName"], pr["mergeStateStatus"]
         base_oid = ((pr["baseRef"] or {}).get("target") or {}).get("oid", "")
-        required = self.required_checks(base)
-        gating = required or set(checks)
         actions: list[tuple[str, str]] = []
         waits: list[str] = []
 
@@ -704,6 +794,7 @@ class Watcher:
             waits.append(
                 f"E2E gate ({len(gated)} checks): runs once approved or labelled {GATE_LABEL}"
             )
+        waits += [f"on Ainesh: ask {ask}" for ask in asked]
         if pr["isDraft"]:
             waits.append("draft")
         decision = pr["reviewDecision"]
@@ -745,16 +836,17 @@ class Watcher:
 
     def poll(self) -> None:
         self.events = []
-        pr = self.fetch()
+        pr, asked = self.fetch()
         head = pr["headRefOid"]
         if pr["state"] == "MERGED":
             self.finish("MERGED", pr["url"], 0)
         if pr["state"] == "CLOSED":
             self.finish("CLOSED", pr["url"], 1)
         checks = collapse_checks(pr, self.gates(pr))
+        gating = self.gating(pr, checks)
         if self.once:
             self.feedback(pr)
-            actions, waits = self.evaluate(pr, checks, stable=True)
+            actions, waits = self.evaluate(pr, checks, gating, asked, stable=True)
             self.events += actions
             verdict, code = (
                 ("ACTION", 1) if self.events else ("WAIT", 3) if waits else ("READY", 0)
@@ -772,14 +864,13 @@ class Watcher:
         stable, self.previous = snapshot == self.previous, snapshot
 
         self.feedback(pr)
-        gating = self.required_checks(pr["baseRefName"]) or set(checks)
         for name, entry in sorted(checks.items()):
             if entry["bucket"] == "fail" and name not in gating:
                 self.emit(
                     f"fail:{head}:{name}:{entry['url']}",
                     f"check-failed {name} (optional) {entry['url']}",
                 )
-        actions, waits = self.evaluate(pr, checks, stable)
+        actions, waits = self.evaluate(pr, checks, gating, asked, stable)
         for key, line in actions:
             self.emit(key, line)
         if self.events:
