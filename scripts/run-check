@@ -30,7 +30,7 @@ EXCLUSIVE_LOCK_PATHS = tuple(
 _ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _SLUG_RE = re.compile(r"[^a-z0-9._-]+")
 _TEST_FILE_RE = re.compile(r"\.(?:test|spec)\.[cm]?[jt]sx?$")
-_FAST_LINTERS = frozenset({"oxlint", "oxfmt"})
+_FAST_FORMATTERS = frozenset({"oxfmt"})
 _MAX_LIGHT_TEST_FILES = 4
 
 
@@ -185,9 +185,11 @@ def _create_log(log_dir: Path, label: str) -> tuple[Path, object]:
 
 
 def _is_light(command: list[str]) -> bool:
-    """A few named vitest files or a Rust linter skip the host's heavy-check slots.
+    """A few named vitest files or a formatter skip the host's heavy-check slots.
 
-    Anything unrecognized stays heavy: type-aware lint holds ~5.5 GB, package
+    Anything unrecognized stays heavy: Oxlint runs tsgolint under a type-aware
+    config, which holds 2 GB on two files and outgrows a 6.5 GB cgroup on a
+    whole package, package
     scripts and turbo runs can fan out to whole suites or builds, and benches
     and E2E runs need a quiet host. The file cap bounds vitest
     workers (one per file) so concurrent light checks cannot exhaust RAM.
@@ -195,7 +197,7 @@ def _is_light(command: list[str]) -> bool:
     if any(word in token for token in command for word in ("bench", "e2e", "typecheck")):
         return False
     names = {Path(token).name for token in command}
-    if names & _FAST_LINTERS:
+    if names & _FAST_FORMATTERS:
         return True
     test_files = sum(1 for token in command if _TEST_FILE_RE.search(token))
     return "vitest" in names and 0 < test_files <= _MAX_LIGHT_TEST_FILES
@@ -374,7 +376,7 @@ def _run(options: Options) -> int:
     lock: BinaryIO | None = None
     try:
         if options.exclusive and _is_light(options.command):
-            emit("[run-check] exclusive: skipped (targeted tests or fast linter)\n")
+            emit("[run-check] exclusive: skipped (targeted tests or formatter)\n")
         elif options.exclusive:
             lock = _acquire_exclusive(options, emit)
         command, node_version = _node_command(

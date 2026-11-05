@@ -87,18 +87,33 @@ and serial test workers at a time. A single exclusive Turbo invocation can
 still launch multiple compiler processes. Read the package script first;
 names such as `lint:es` can delegate to a full multi-engine `lint` task.
 
-Factory's root `lint:es` script hardcodes `--concurrency=2` and supplies Go/Node
-memory settings. Turbo rejects a second concurrency flag, so invoke that
-canonical script once per affected workspace, in separate attached calls:
+Factory's root `lint:es` script runs each package's whole `lint` task under
+Turbo, and `--filter` narrows only the package, not the files. For
+`@factory/cli` that task is type-aware `oxlint .` (`tsgolint` loads the
+package's full project graph), then ESLint over every file. Never run it as a
+diff check: inside factoryd's tools leaf (`memory.max` = unit max − daemon
+reserve) the uncached run gets `tsgolint` OOM-killed at 3.9 GB, with Node at
+3 GB beside it; it passes only uncapped. Scope each engine the package's
+`lint` script chains to the changed files, from the package directory so its
+config resolves, plus the root config pass from the repo root:
 
 ```bash
-~/.agents/scripts/run-check lint-backend --exclusive -- npm run lint:es -- --filter=backend
-~/.agents/scripts/run-check lint-cli --exclusive -- npm run lint:es -- --filter=@factory/cli
+~/.agents/scripts/run-check lint-cli-ox --exclusive --cwd apps/cli -- npx oxlint --threads=1 <package-relative paths>
+~/.agents/scripts/run-check lint-cli-es --cwd apps/cli -- npx eslint <package-relative paths>
+~/.agents/scripts/run-check lint-root-ox -- npx oxlint -c .oxlintrc.root.json --threads=1 <repo-relative paths>
 ```
 
-Typecheck the same way. Factory packages' `typecheck` scripts run `bun check`,
-which passes on an 8 GB host where `tsc --noEmit -p <pkg>` runs out of memory.
-The root `typecheck` script already hardcodes `--concurrency=1`:
+Measured in the tools leaf on two cli files: type-aware Oxlint peaks at
+2.06 GB (`tsgolint` still loads the package project), so it takes a heavy
+slot; ESLint peaks at 250 MB and the root pass finishes in under a second, so
+neither does. Other workspaces take the same shape:
+read the package's `lint` script and scope each engine it runs.
+
+Typecheck through the owning script, not raw `tsc`. Factory packages'
+`typecheck` scripts run `bun check`, which passes on an 8 GB host where
+`tsc --noEmit -p <pkg>` runs out of memory. The root `typecheck` script
+already hardcodes `--concurrency=1`, and Turbo rejects a second concurrency
+flag, so pass only the filter:
 
 ```bash
 ~/.agents/scripts/run-check typecheck-frontend --exclusive -- npm run typecheck -- --filter=@factory/frontend

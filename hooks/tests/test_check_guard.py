@@ -213,6 +213,16 @@ class RunCheckTest(unittest.TestCase):
         environ.start()
         cls.addClassCleanup(environ.stop)
 
+    def test_oxlint_keeps_exclusive_and_oxfmt_skips_it(self) -> None:
+        run_check = _load_run_check()
+
+        self.assertFalse(
+            run_check._is_light(["npx", "oxlint", "--threads=1", "src/index.ts"])
+        )
+        self.assertTrue(
+            run_check._is_light(["npx", "oxfmt", "--check", "src/index.ts"])
+        )
+
     def test_exclusive_queue_cancellation_and_failure_release_across_worktrees(
         self,
     ) -> None:
