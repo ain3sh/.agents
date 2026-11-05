@@ -68,8 +68,10 @@ gate.
 
 An open ask is one in ASKS (Ainesh's agents/asks.json at main) whose prs
 names the PR: the PR waits on his answer whatever its checks and reviews say,
-and the waiting line names the ask. The file is read with the PR on every
-poll; an unreadable one fails the poll rather than read as no asks.
+and the waiting line names the ask. A reply, the orchestrator's answer to
+something he asked, names no PRs and holds nothing, so it is skipped. The file
+is read with the PR on every poll; an unreadable one, or any other ask without
+an id and prs, fails the poll rather than read as no asks.
 
 Feedback events describe what is open on GitHub now, not what changed since a
 run. The agent's words are exactly the comments, reviews, and thread replies
@@ -477,18 +479,23 @@ def asking(data: Json, url: str) -> list[str]:
         asks = json.loads(blob["text"])["asks"]
     except (ValueError, KeyError, TypeError) as error:
         raise GhError(f"{ASKS[2]} in {ASKS[1]} is unreadable: {error!r}") from error
-    if not (
-        isinstance(asks, list)
-        and all(
+    if not isinstance(asks, list):
+        raise GhError(f"{ASKS[2]} in {ASKS[1]} is not a list of asks")
+    holding = []
+    for i, a in enumerate(asks):
+        if isinstance(a, dict) and a.get("kind") == "reply":
+            continue
+        if not (
             isinstance(a, dict)
             and isinstance(a.get("id"), str)
             and isinstance(a.get("prs"), list)
             and all(isinstance(u, str) for u in a["prs"])
-            for a in asks
-        )
-    ):
-        raise GhError(f"{ASKS[2]} in {ASKS[1]} is not asks with an id and prs each")
-    return [a["id"] for a in asks if url in a["prs"]]
+        ):
+            raise GhError(
+                f"{ASKS[2]} in {ASKS[1]}: asks[{i}] is no reply and lacks an id or prs"
+            )
+        holding.append(a)
+    return [a["id"] for a in holding if url in a["prs"]]
 
 
 def contexts(pr: Json) -> Json:

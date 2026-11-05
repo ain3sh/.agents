@@ -212,6 +212,16 @@ ASK_30918 = {
     "from": "scheduling",
     "prs": [URL_30918],
 }
+# A reply as cockpit/functions/core/asks.ts defines it: no prs, holding nothing.
+# One like it made every pr-watch fail on 2026-11-05 from 03:02Z.
+REPLY = {
+    "kind": "reply",
+    "id": "reply-test",
+    "question": "Do replies reach the board?",
+    "answer": "Yes: this one did, within one collect interval.",
+    "since": "2026-11-05T03:01:00Z",
+    "from": "orchestrator",
+}
 
 
 def pr_node(
@@ -519,7 +529,12 @@ class OnceVerdictTest(unittest.TestCase):
                 [ASK_30918],
                 (3, ["waiting: on Ainesh: ask firestore-org-test", f"WAIT {verdict}"]),
             ),
+            (
+                [REPLY, ASK_30918, {**REPLY, "id": "reply-2"}],
+                (3, ["waiting: on Ainesh: ask firestore-org-test", f"WAIT {verdict}"]),
+            ),
             ([{**ASK_30918, "prs": []}], (0, [f"READY {verdict}"])),
+            ([REPLY, {**ASK_30918, "prs": []}], (0, [f"READY {verdict}"])),
             ([], (0, [f"READY {verdict}"])),
             (None, (0, [f"READY {verdict}"])),
         ):
@@ -534,6 +549,11 @@ class OnceVerdictTest(unittest.TestCase):
             '{"asks": ""}',
             '{"asks": [{"id": "x"}]}',
             '{"asks": [{"id": "x", "prs": {}}]}',
+            json.dumps(
+                {"asks": [REPLY, {k: v for k, v in ASK_30918.items() if k != "prs"}]}
+            ),
+            json.dumps({"asks": [{**ASK_30918, "kind": "review", "prs": None}]}),
+            json.dumps({"asks": [REPLY, "reply"]}),
         ):
             with self.subTest(text=text):
                 code, lines = self.once(pull_request("CLEAN"), text)
