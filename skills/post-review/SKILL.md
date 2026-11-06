@@ -179,7 +179,7 @@ REVIEW_ID=$(gh api "repos/$REPO/pulls/<number>/reviews" \
 
 Verify with `publish.md`'s round-trip command, reading `repos/$REPO/pulls/<number>/reviews/$REVIEW_ID`; on any difference, fix it with `PUT` on that review and the same `-F body=@…`. `REVIEW_ID` feeds §6.
 
-The event is the verdict approved at the `/review-pr` gate -- don't recompute it here. Default to `COMMENT` when blockers gate or `APPROVE` otherwise; the number of blockers never changes the event. Use `REQUEST_CHANGES` only when the user explicitly requested that verdict type; never infer it from blocking findings. `APPROVE` with non-gating line comments (`opinion`/`suggestion`/`nit`) is legitimate per review-pr's `references/workflows/first-pass.md` §6.
+The event is the verdict approved at the `/review-pr` gate -- don't recompute it here. Default to `COMMENT` when blockers gate or `APPROVE` otherwise; the number of blockers never changes the event. Use `REQUEST_CHANGES` only when the user explicitly requested that verdict type; never infer it from blocking findings. `APPROVE` with non-gating line comments (`suggestion`/`nit`) is legitimate per review-pr's `references/workflows/first-pass.md` §6.
 
 ## 6. Close the Ledger
 

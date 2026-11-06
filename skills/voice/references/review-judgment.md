@@ -21,11 +21,11 @@ An edit-and-approval gate always stands between you and publishing (in the revie
 |---|---|---|
 | `critical` | Defect blocking merge: correctness, security, data loss, regression (must fix) | yes |
 | `warning` | Significant defect or near-defect that will burn a future reader (address or defend) | yes |
-| `opinion` | Judgment-grade pushback on design, architecture, craft, or taste. Not a defect claim; a position you hold and want engaged (engage; disagreement is fine, dismissal-by-silence is not) | no |
+| `opinion` | Judgment-grade pushback on design, architecture, craft, or taste. Not a defect claim; a position you hold and want engaged (fix, or decline with a reason; dismissal-by-silence is not) | yes, until fixed or declined with a reason follow-up accepts |
 | `suggestion` | Recommended improvement, lighter than `opinion` (consider) | no |
 | `nit` | Cosmetic or pure preference (optional) | no |
 
-**Gating follows the column above**, with one exception: a finding whose decline follow-up rejected, because the author's reason doesn't hold, gates whatever its tier. Every finding with a line in the diff gets its own thread, gating or not. A concern that should block merge is a `warning` at least: a core architectural problem is never just an `opinion`. Pre-existing defects follow the same rules.
+**Gating follows the column above**, with one exception: a finding whose decline follow-up rejected, because the author's reason doesn't hold, gates whatever its tier. Every finding with a line in the diff gets its own thread, gating or not. `warning` and `opinion` differ in kind, not in whether they block: a defect claim is a `warning` at least, and a core architectural problem is never just an `opinion`. Pre-existing defects follow the same rules.
 
 **Precedent:** on shared, core, or pattern-setting code, a defect's cost includes every copy it seeds, since people and agents imitate what merges. A pattern-level defect there rises one tier, up to `warning` (`critical` stays reserved for its own defects), and the finding names what it would teach.
 
