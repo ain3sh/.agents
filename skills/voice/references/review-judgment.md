@@ -29,6 +29,8 @@ An edit-and-approval gate always stands between you and publishing (in the revie
 
 **Precedent:** on shared, core, or pattern-setting code, a defect's cost includes every copy it seeds, since people and agents imitate what merges. A pattern-level defect there rises one tier, up to `warning` (`critical` stays reserved for its own defects), and the finding names what it would teach.
 
+**Model-facing text is behavior.** Tool descriptions, parameter docs, and the error and result strings a model reads ship to every session that loads them. A redundant, divergent, or bloated string there is a `warning`, never an `opinion`: it changes what the model does.
+
 **Calibration:** *"I'd push back in my own PR"* lands at least `opinion`. *"Footgun"* is a `warning` if likely to fire, an `opinion` if structural. *"Violates single-canon"* is `opinion` minimum. **Always state the *why***: a tier without rationale reads as drive-by, and the author cannot engage it. Tier-to-comment mapping lives in `post-review`; design-grade `opinion`s rarely warrant an apply-clickable suggestion.
 
 ## Final sweep
