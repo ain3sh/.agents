@@ -19,19 +19,13 @@ By default it uses `GH_TOKEN`; `--user <account>` uses that logged-in gh
 account's token instead, which may carry scopes `GH_TOKEN` lacks (uploads need
 `repo`, and a scopeless token gets 404).
 
-Delegated and cloud sessions hold a GitHub App token, which the upload
-endpoint rejects (404 or `unsupported authentication type`); the cookie
-fallback `gh-attach` suggests is a dead end there. Push the files under
-`.attachments/` on an `attachments/<repo>/<slug>` branch instead; the repo's
-workflow uploads them and logs the URLs (factory-mono:
-`.github/workflows/upload-attachments.yml`, recipe in its `AGENTS.md`,
-"Screenshots and videos").
+If `gh-attach` fails, push the files under `.attachments/` on an
+`attachments/<repo>/<slug>` branch; the repo's `upload-attachments.yml` uploads
+them and logs the URLs (recipe: factory-mono `AGENTS.md`, "Screenshots and videos").
 
 Each view is one opaque PNG ([show-me Image](../../show-me/references/surfaces.md#image));
 embed it as `<img alt="<takeaway>" src="<url>" />` with alt text that states
-its takeaway, not its topic. Locally without a browser-authenticated GitHub
-session, use `--session-file`; don't expose session material. Keep
-machine/auth details out of public PR prose.
+its takeaway, not its topic. Keep machine/auth details out of public PR prose.
 
 ## Placement
 
