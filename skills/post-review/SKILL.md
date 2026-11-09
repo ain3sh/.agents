@@ -167,7 +167,7 @@ Reopen with `unresolveReviewThread` in the same mutation shape. Read back `isRes
 
 ### Submit the verdict
 
-Upload each view's PNG first (`gh-attach --repo "$REPO" --url <png>`, per `pr-description/references/artifacts.md`) and embed it as `<img alt="<takeaway>" src="<url>" />` beside the asks it carries. Write the verdict to `/tmp/verdict-<number>.md` with a file tool and pass it with `-F body=@…`, as `pr-description/references/publish.md` does; a body typed inline in a quoted argument expands backticks and `$`.
+Upload each view's PNG first through `pr-description/references/artifacts.md`, which owns the upload path per session type, and embed it as `<img alt="<takeaway>" src="<url>" />` beside the asks it carries. Write the verdict to `/tmp/verdict-<number>.md` with a file tool and pass it with `-F body=@…`, as `pr-description/references/publish.md` does; a body typed inline in a quoted argument expands backticks and `$`.
 
 ```bash
 REVIEW_ID=$(gh api "repos/$REPO/pulls/<number>/reviews" \

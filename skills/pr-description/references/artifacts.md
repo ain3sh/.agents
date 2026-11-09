@@ -7,8 +7,8 @@ proof of a visual change. This file owns their PR upload and placement.
 ## Upload
 
 Upload only as part of an authorized PR publish/update request. **Use
-`gh-attach`** for GitHub user attachments; never commit images/videos to the
-repo or use `raw.githubusercontent.com`. Exclude secrets, tokens, and
+`gh-attach`** for GitHub user attachments; never commit images/videos to a PR
+branch or use `raw.githubusercontent.com`. Exclude secrets, tokens, and
 machine-specific paths from the artifact and its caption.
 
 ```bash
@@ -19,10 +19,18 @@ By default it uses `GH_TOKEN`; `--user <account>` uses that logged-in gh
 account's token instead, which may carry scopes `GH_TOKEN` lacks (uploads need
 `repo`, and a scopeless token gets 404).
 
+Delegated and cloud sessions hold a GitHub App token, which the upload
+endpoint rejects (404 or `unsupported authentication type`); the cookie
+fallback `gh-attach` suggests is a dead end there. Push the files under
+`.attachments/` on an `attachments/<repo>/<slug>` branch instead; the repo's
+workflow uploads them and logs the URLs (factory-mono:
+`.github/workflows/upload-attachments.yml`, recipe in its `AGENTS.md`,
+"Screenshots and videos").
+
 Each view is one opaque PNG ([show-me Image](../../show-me/references/surfaces.md#image));
 embed it as `<img alt="<takeaway>" src="<url>" />` with alt text that states
-its takeaway, not its topic. If the local machine lacks a browser-authenticated GitHub session, use a
-trusted machine or `--session-file`; don't expose session material. Keep
+its takeaway, not its topic. Locally without a browser-authenticated GitHub
+session, use `--session-file`; don't expose session material. Keep
 machine/auth details out of public PR prose.
 
 ## Placement
