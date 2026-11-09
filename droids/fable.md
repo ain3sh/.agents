@@ -1,7 +1,7 @@
 ---
 name: fable
-description: Fable 5.1 for approach design, coherent implementation, UI/UX, and structural review.
-model: claude-fable-5.1
+description: Fable 5.2 for approach design, coherent implementation, UI/UX, and structural review.
+model: claude-fable-5.2
 reasoningEffort: high
 ---
 
