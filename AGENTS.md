@@ -35,6 +35,7 @@
 | Two or more candidate fixes or designs on the table | patch-coherence |
 | Races, async, ordering, state machines | step-through |
 | An agent, hook, or skill misbehaving, yourself included | harness-optimization |
+| Before editing a skill, hook, or AGENTS.md | update-skill |
 | Waiting on a PR's CI, reviews, or merge, even as a side errand | babysit (pr-watch, never sleep and poll) |
 | A plan or design worth stress-testing | grill-me |
 | Before calling a change done | retrospect |

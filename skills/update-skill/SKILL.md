@@ -6,69 +6,54 @@ argument-hint: "<skill-name> [context about what was learned]"
 
 # Update Skill
 
-Goal: a future agent with **no prior context** acts correctly at minimum tokens read.
+Goal: an agent with no prior context acts correctly after reading the fewest tokens.
 
 ## 0. Load
 
-Load **harness-optimization** first, every time: it finds the layer that made the wrong choice look right, which may not be this skill at all. Then load each skill below whose moment applies, unless it is already active this session:
+Load before drafting any edit. **harness-optimization** always: the layer at fault may not be this skill. Then each that applies, unless already active:
 
 | Moment | Load |
 |---|---|
-| The update answers a bug or misbehavior whose cause isn't named yet | **root-cause-analysis** |
-| You haven't mapped the skill or the skills it composes with | **zoom-out** |
-| The edit touches something other files rely on: a command, flag, config key, or a rule another skill points to | **single-canon** |
-| Two or more candidate edits or layers compete (this skill, another skill, AGENTS.md, a hook) | **patch-coherence** |
+| Cause of the misbehavior not yet named | **root-cause-analysis** |
+| Skill or its neighbors not yet mapped | **zoom-out** |
+| Edit touches a command, flag, config key, or rule other files rely on | **single-canon** |
+| Candidate edits or layers compete (this skill, another skill, AGENTS.md, a hook) | **patch-coherence** |
 
 ## 1. Reflect
 
-Review the session's work (or `$ARGUMENTS`). Identify:
+From the session (or `$ARGUMENTS`), list what worked, what failed and why, what the skill lacked, and non-obvious insights.
 
-- **Correct pathways**: approaches/commands/patterns that ultimately worked.
-- **Dead ends**: what looked promising but failed, and why.
-- **Missing info**: what the skill should have covered but didn't.
-- **Key insights**: non-obvious learnings that save future agents significant time.
+## 2. Read whole
 
-## 2. Read whole, in aggregate
-
-Read **every** file of the skill -- `SKILL.md`, `references/**`, `scripts/**`,
-`templates/**` -- fully, before any edit. Surgical patches without the aggregate
-view leave incoherence: a command renamed in one section stays stale in another.
-Verify behavior claims against the current scripts/tools they describe, not
-against memory or the old prose.
+Read every file of the skill (`SKILL.md`, `references/**`, `scripts/**`, `templates/**`) before editing; a partial view leaves stale copies elsewhere. Verify behavior claims against the current scripts and tools, not memory or old prose.
 
 ## 3. Update
 
-- Fix incorrect or outdated instructions.
-- Add the correct pathways from step 1; explicitly mark dead ends with warnings.
-- Fill coverage gaps; remove misleading content.
-- No filler: every sentence must change what an agent does or prevents a mistake.
+- Fix wrong or stale instructions; delete misleading ones.
+- Write each fix as the shortest linear instruction: do X; if it fails, do Y.
+- Name a dead end only if an agent would otherwise take it.
+- Every sentence must change what an agent does.
 
-## 4. Structure for action
+## 4. Structure
 
-`SKILL.md` is a lean, action-first entrypoint. Target shape, in order:
+`SKILL.md` is a lean, action-first entrypoint, in order:
 
-1. One framing sentence -- the mental model.
-2. **Act**: goal → command table. Commands before explanations, always.
-3. **Detect**: when/where the skill applies, as a runnable check.
-4. **Rules**: numbered, few, each one violation-shaped ("never X -- consequence").
-5. **Failure map**: symptom → action table; every row resolves in one command or one reference hop.
-6. **References**: explicit `references/<file>.md` pointers with one-line scopes, prefixed "load on demand; do not reabsorb into this file".
+1. One framing sentence: the mental model.
+2. **Act**: goal → command table, commands before explanations.
+3. **Detect**: when the skill applies, as a runnable check.
+4. **Rules**: few, each violation-shaped ("never X: consequence").
+5. **Failure map**: symptom → action; each row resolves in one command or one reference hop.
+6. **References**: `references/<file>.md` pointers with one-line scopes, prefixed "load on demand; do not reabsorb into this file".
 
-Push depth down: per-command internals, env-var tables, safety rationale, and
-multi-step edge-case walkthroughs live in `references/*.md`, loaded only when
-needed. Split when `SKILL.md` mixes action with explanation or grows past ~80
-lines; don't manufacture references for a skill that fits lean in one file.
+Move internals, env-var tables, rationale, and edge-case walkthroughs to `references/*.md`. Split when `SKILL.md` mixes action with explanation or passes ~80 lines; a skill that fits lean in one file stays one file.
 
-Restructure invariants:
+Invariants:
 
-- **Zero content dropped**: every fragment of the old skill maps to exactly one new home. Diff old against new to prove it.
-- **Frontmatter `description` is the trigger**: byte-identical unless the trigger itself is what changed. When it is: descriptions load into **every** session, so each word is a global tax -- name the triggering moments verb-first, far fewer words.
-- **One owner per fact**: state each warning/mechanism once, point to it elsewhere. Duplication is where staleness breeds.
+- **Zero content dropped** on a restructure: diff old against new; every fragment has exactly one new home.
+- **Frontmatter `description` is the trigger**: byte-identical unless the trigger changed. It loads into every session, so name the triggering moments verb-first, in few words.
+- **One owner per fact**: state it once, point to it elsewhere.
 
-## 5. Critique & refine
+## 5. Cut before committing
 
-**Round 1**: Read the result as a fresh agent. Clear? Complete? Would you succeed following only this? Fix.
-
-**Round 2**: Check redundancy, ambiguity, missing edge cases, inconsistent formatting, ordering, and that the section shapes of step 4 held. Fix.
-
-**Final round**: Critique holistically, x2 -- each pass must convey the same information *more effectively*, in *action-oriented language*, with *far fewer words* -- until you are happy with and proud of the work you've done <3
+1. Read the result as a fresh agent: could you succeed with only this? Fix gaps, ambiguity, and drift from step 4's shape.
+2. Read the diff. Delete every added line that doesn't change what an agent does; shorten the rest. Repeat until nothing is left to remove.
