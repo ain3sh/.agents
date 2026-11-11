@@ -10,13 +10,21 @@ the first poll that needs a decision, so the job's exit is the wake-up. Restart
 it after acting: it remembers what it already reported.
 
 Every agent's watchers spend one account's rate limits, which Ainesh's cockpit
-needs too, so each poll reads GitHub by REST as conditional requests: an
-unchanged resource answers 304, which no limit counts. GraphQL is read only for
-review threads' resolution, which REST lacks, and only when the PR's review
-comments changed. --interval (default and minimum 300) is the fastest cadence:
-polls slow fourfold, skipping the thread read, while the account has under 20%
-of its core or GraphQL budget left, and sleep to the reset under 5% of core. A
-watcher re-executes itself when its file changes on disk.
+needs too, so a watcher is paced so that it cannot spend them. A poll reads the
+PR's head by `git ls-remote`, which spends no API budget, and everything else
+by REST as conditional requests: an unchanged resource answers 304, which no
+limit counts. The PR itself (`pulls/<n>`, and the open-PR list a stack is
+followed down by) never answers 304, since it embeds the repository's
+pushed_at, so it is read only on the first poll, when the head moved or its
+branch is gone, when feedback changed, when the checks changed and none is
+still running, and every FULL_EVERY polls. GraphQL is read only for review
+threads' resolution, which REST lacks, and only when the PR's review comments
+changed. Every response's rate-limit headers pace the next sleep: the calls a
+poll counts (averaged over the last FULL_EVERY polls), times WATCHERS watchers,
+times the polls left before the bucket resets, stays under half of what that
+bucket has left; when one poll of every watcher would already cross that line,
+the watcher sleeps to the reset. --interval (default and minimum 300) is the
+fastest cadence. A watcher re-executes itself when its file changes on disk.
 
 A droid daemon restart kills every background job without an exit notice, so
 a watcher can vanish silently. --check lists this machine's watchers: alive,
@@ -225,10 +233,15 @@ query($owner: String!, $name: String!, $number: Int!) {
   } }
 }
 """
-# Under this share of either budget left, polls slow fourfold and skip the
-# thread read; under FLOOR of core, the watcher sleeps to its reset.
-LOW, FLOOR, SLOWER = 0.20, 0.05, 4
+# Under this share of GraphQL left, the thread read is skipped.
+LOW = 0.20
 MIN_INTERVAL = 300
+# Pacing assumes this many watchers share the account, and leaves them half of
+# what each bucket has left before its reset.
+WATCHERS, SHARE = 200, 0.5
+# The PR itself is re-read at least every this many polls: its merge state can
+# change with nothing on the PR changing, when its base moves.
+FULL_EVERY = 6
 
 
 class GhError(Exception):
@@ -244,14 +257,72 @@ def fail(message: str) -> NoReturn:
     sys.exit(2)
 
 
-def budget() -> Json:
-    """The account's core and GraphQL buckets: /rate_limit counts against neither."""
-    resources = json.loads(gh("api", "rate_limit"))["resources"]
-    return {name: resources[name] for name in ("core", "graphql")}
+def header(head: str, name: str) -> str | None:
+    found = re.search(rf"^{name}: *(.+?)\s*$", head, re.IGNORECASE | re.MULTILINE)
+    return found and found[1]
 
 
-def low(bucket: Json, share: float = LOW) -> bool:
-    return bucket["remaining"] < share * bucket["limit"]
+class Budget:
+    """The rate-limit buckets as the latest responses report them, and the
+    calls they counted. GitHub answers one resource from buckets with different
+    resets, so each (resource, reset) is a bucket of its own."""
+
+    def __init__(self) -> None:
+        self.buckets: dict[str, Json] = {}
+        self.calls = 0
+
+    def record(self, out: str) -> tuple[int, str, str]:
+        """A `gh api --include` answer's status, headers, and body. Every
+        status but 304 counts against its bucket."""
+        head, _, body = out.partition("\r\n\r\n") if "\r\n\r\n" in out else out.partition("\n\n")
+        status = re.match(r"HTTP/\S+ (\d+)", head)
+        values = [header(head, f"x-ratelimit-{k}") for k in ("resource", "remaining", "limit", "reset")]
+        if all(values):
+            resource, remaining, limit, reset = values
+            self.buckets[f"{resource}@{reset}"] = {
+                "resource": resource, "remaining": int(remaining), "limit": int(limit), "reset": int(reset),
+            }
+        code = int(status[1]) if status else 0
+        if code != 304:
+            self.calls += 1
+        return code, head, body
+
+    def take(self) -> int:
+        """The calls counted since the last take."""
+        calls, self.calls = self.calls, 0
+        return calls
+
+    def low(self, resource: str) -> bool:
+        return any(
+            b["resource"] == resource and b["remaining"] < LOW * b["limit"] for b in self.buckets.values()
+        )
+
+    def pace(self, interval: int, calls: float, now: float) -> int:
+        """Seconds until the next poll: at least interval, and long enough that
+        calls a poll from WATCHERS watchers, until each bucket resets, spend at
+        most SHARE of what it has left. A bucket that one round of every
+        watcher would overspend is slept out to its reset."""
+        delay = interval
+        for key, b in list(self.buckets.items()):
+            window = b["reset"] - now
+            if window <= 0:
+                del self.buckets[key]
+                continue
+            spend, allowed = calls * WATCHERS, SHARE * b["remaining"]
+            if spend > allowed:
+                delay = max(delay, math.ceil(window) + 5)
+            elif spend:
+                delay = max(delay, math.ceil(window * spend / allowed))
+        return min(delay, 3605)
+
+    def tightest(self) -> str:
+        if not self.buckets:
+            return "no budget read yet"
+        b = min(self.buckets.values(), key=lambda b: b["remaining"])
+        return f"{b['resource']} {b['remaining']}/{b['limit']} until {datetime.fromtimestamp(b['reset'], UTC):%H:%M:%SZ}"
+
+
+BUDGET = Budget()
 
 
 def wait_for_rate_limit() -> None:
@@ -270,22 +341,16 @@ def wait_for_rate_limit() -> None:
     time.sleep(delay)
 
 
-def pace(interval: int, rate: Json, now: float) -> int:
-    """Seconds until the next poll, from the budget read after the last poll."""
-    if low(rate["core"], FLOOR):
-        return min(max(math.ceil(rate["core"]["reset"] - now), 0) + 5, 3600)
-    return interval * (SLOWER if low(rate["core"]) or low(rate["graphql"]) else 1)
-
-
-def gh(*args: str, ride: bool = True) -> str:
+def gh(*args: str, ride: bool = True, unchanged: bool = False) -> str:
     """Run gh, riding out rate limits (unless ride is False: the caller skips
-    the read instead) and retrying transient failures with backoff."""
+    the read instead) and retrying transient failures with backoff. With
+    unchanged, a 304 answers like a success: gh exits 1 on it."""
     delay = 2
     for attempt in range(5):
         proc = subprocess.run(
             ["gh", *args], check=False, capture_output=True, text=True
         )
-        if proc.returncode == 0:
+        if proc.returncode == 0 or (unchanged and "HTTP 304" in proc.stderr):
             return proc.stdout
         message = (
             proc.stderr.strip().splitlines() or [f"gh exited {proc.returncode}"]
@@ -302,10 +367,10 @@ def gh(*args: str, ride: bool = True) -> str:
 
 
 def graphql(query: str, ride: bool = True, **variables: str | int) -> Json:
-    args = ["api", "graphql", "-f", f"query={query}"]
+    args = ["api", "graphql", "--include", "-f", f"query={query}"]
     for key, value in variables.items():
         args += ["-F" if isinstance(value, int) else "-f", f"{key}={value}"]
-    out = gh(*args, ride=ride)
+    _, _, out = BUDGET.record(gh(*args, ride=ride))
     try:
         data = json.loads(out)["data"]
     except (ValueError, KeyError, TypeError) as error:
@@ -327,32 +392,30 @@ class Rest:
         except (OSError, ValueError):
             self.cache = {}
         self.read: Json = {}
+        self.changed = 0
 
-    def get(self, url: str) -> tuple[Any, str | None]:
-        """The body at url and the URL of its next page, if any."""
+    def get(self, url: str, fresh: bool = True) -> tuple[Any, str | None]:
+        """The body at url and the URL of its next page, if any. Unless fresh,
+        a kept body stands in with no request."""
         entry = self.cache.get(url, {})
-        header = ["-H", f"If-None-Match: {entry['etag']}"] if "etag" in entry else []
-        try:
-            out = gh("api", "--include", *header, url)
-        except GhError as error:
-            if "HTTP 304" not in str(error) or "body" not in entry:
-                raise
-        else:
-            head, body = re.split(r"\r?\n\r?\n", out, maxsplit=1)
-            tag = re.search(r"^etag: *(\S+)", head, re.IGNORECASE | re.MULTILINE)
-            link = re.search(r"^link: *(.+)$", head, re.IGNORECASE | re.MULTILINE)
-            entry = {"body": json.loads(body), "next": (m := link and NEXT.search(link[1])) and m[1]}
-            if tag:
-                entry["etag"] = tag[1]
+        if fresh or "body" not in entry:
+            tag = ["-H", f"If-None-Match: {entry['etag']}"] if "etag" in entry and "body" in entry else []
+            status, head, body = BUDGET.record(gh("api", "--include", *tag, url, unchanged=bool(tag)))
+            if status != 304:
+                link = header(head, "link")
+                entry = {"body": json.loads(body), "next": (m := link and NEXT.search(link)) and m[1]}
+                if etag := header(head, "etag"):
+                    entry["etag"] = etag
+                self.changed += 1
         self.read[url] = entry
         return entry["body"], entry["next"]
 
-    def all(self, url: str, key: str | None = None) -> list[Json]:
+    def all(self, url: str, key: str | None = None, fresh: bool = True) -> list[Json]:
         """Every page's items: the list each page is, or its key's list."""
         items: list[Json] = []
         next_url: str | None = url
         while next_url:
-            body, next_url = self.get(next_url)
+            body, next_url = self.get(next_url, fresh)
             items += body[key] if key else body
         return items
 
@@ -369,18 +432,16 @@ def revalidate(source: str, entry: Json, parse: Callable[[Any], list[str]]) -> J
     or {denied} when it 404s or 403s. Only the 200 needs --include, for its
     ETag; gh exits 1 on a 304, which only this conditional request receives."""
     etag = entry.get("etag")
-    header = ["-H", f"If-None-Match: {etag}"] if etag else []
+    tag = ["-H", f"If-None-Match: {etag}"] if etag else []
     try:
-        out = gh("api", "--include", *header, source)
+        status, head, body = BUDGET.record(gh("api", "--include", *tag, source, unchanged=bool(etag)))
     except GhError as error:
-        if "HTTP 304" in str(error):
-            return entry
         if not DENIED.search(str(error)):
             raise
         return {"denied": time.time()}
-    head, body = re.split(r"\r?\n\r?\n", out, maxsplit=1)
-    tag = re.search(r"^etag: *(\S+)", head, re.IGNORECASE | re.MULTILINE)
-    return {"etag": tag and tag[1], "names": parse(json.loads(body))}
+    if status == 304:
+        return entry
+    return {"etag": header(head, "etag"), "names": parse(json.loads(body))}
 
 
 def snippet(body: str, limit: int = 160) -> str:
@@ -526,7 +587,9 @@ class Watcher:
         self.required: dict[str, set[str]] = {}
         self.previous: Any = None
         self.status = ""
-        self.rate: Json | None = None
+        self.costs: list[int] = []
+        self.polls = 0
+        self.fresh = True
         self.delay = interval
         self.rest = Rest(STATE_DIR / f"{slug}.rest.json")
         self.threads: Json = {}
@@ -597,15 +660,30 @@ class Watcher:
         }
 
     def fetch(self) -> Json:
-        """The PR, its head's checks, and its feedback, all by REST."""
+        """The PR, its head's checks, and its feedback: the head by git, the
+        rest by REST, and the PR itself only when the module docstring says."""
         repo, n = f"repos/{self.repo}", self.number
-        p, _ = self.rest.get(f"{repo}/pulls/{n}")
-        head = p["head"]["sha"]
+        url = f"{repo}/pulls/{n}"
+        kept = self.rest.cache.get(url, {}).get("body")
+        head = None if self.once or kept is None else self.remote_head(kept)
+        self.fresh = head is None
+        if self.fresh:
+            p, _ = self.rest.get(url)
+            head = p["head"]["sha"]
+        before = self.rest.changed
         runs = self.rest.all(f"{repo}/commits/{head}/check-runs?per_page={PAGE}", "check_runs")
         statuses = self.rest.all(f"{repo}/commits/{head}/status?per_page={PAGE}", "statuses")
+        settled = self.rest.changed > before and all(r["status"] == "completed" for r in runs)
+        before = self.rest.changed
         comments = self.rest.all(f"{repo}/issues/{n}/comments?per_page={PAGE}")
         reviewed = self.rest.all(f"{repo}/pulls/{n}/reviews?per_page={PAGE}")
         notes = self.rest.all(f"{repo}/pulls/{n}/comments?per_page={PAGE}")
+        if not self.fresh:
+            self.fresh = (
+                head != kept["head"]["sha"] or settled or self.rest.changed > before or self.polls % FULL_EVERY == 0
+            )
+            p, _ = self.rest.get(url, self.fresh)
+        self.polls += 1
         pending = {r["id"] for r in reviewed if r["state"] == "PENDING"}
         latest: dict[str, str] = {}
         for r in reviewed:
@@ -657,6 +735,29 @@ class Watcher:
             ]},
         }
 
+    def remote_head(self, pr: Json) -> str | None:
+        """The PR's head by `git ls-remote`, which spends no API budget; None
+        once its head branch in this repository is gone (merged, or closed and
+        deleted), so that the PR itself is read."""
+        refs = [f"refs/pull/{self.number}/head"]
+        own = (pr["head"]["repo"] or {}).get("full_name") == self.repo
+        if own:
+            refs.append(f"refs/heads/{pr['head']['ref']}")
+        try:
+            proc = subprocess.run(
+                ["git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
+                 "ls-remote", f"https://github.com/{self.repo}.git", *refs],
+                check=False, capture_output=True, text=True, timeout=120,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise GhError("git ls-remote timed out") from error
+        if proc.returncode:
+            raise GhError(f"git ls-remote: {(proc.stderr.strip().splitlines() or ['failed'])[-1]}")
+        found = {ref: sha for sha, ref in (line.split("\t") for line in proc.stdout.splitlines())}
+        if own and refs[1] not in found:
+            return None
+        return found.get(refs[0])
+
     def resolution(self, notes: list[Json]) -> dict[str, bool]:
         """Each thread's resolution by its first comment's id, read by GraphQL
         only when the review comments changed since the last read and the
@@ -664,7 +765,7 @@ class Watcher:
         it never saw counts as unresolved."""
         version = hashlib.sha1(json.dumps(sorted((c["id"], c["updated_at"]) for c in notes)).encode()).hexdigest()
         kept = self.rest.cache.get("threads") or {}
-        if not notes or kept.get("version") == version or (self.rate and low(self.rate["graphql"])):
+        if not notes or kept.get("version") == version or BUDGET.low("graphql"):
             self.threads = kept
             return kept.get("resolved", {})
         try:
@@ -683,7 +784,8 @@ class Watcher:
         branch, seen = pr["baseRefName"], {pr["baseRefName"]}
         while True:
             heads = self.rest.all(
-                f"repos/{self.repo}/pulls?state=open&per_page={PAGE}&head={quote(f'{self.owner}:{branch}', safe=':')}"
+                f"repos/{self.repo}/pulls?state=open&per_page={PAGE}&head={quote(f'{self.owner}:{branch}', safe=':')}",
+                fresh=self.fresh,
             )
             above = [
                 h["base"]["ref"]
@@ -987,14 +1089,14 @@ class Watcher:
             self.sleep()
 
     def sleep(self) -> None:
-        self.rate = budget()
-        delay = pace(self.interval, self.rate, time.time())
+        self.costs = [*self.costs, BUDGET.take()][-FULL_EVERY:]
+        calls = sum(self.costs) / len(self.costs)
+        delay = BUDGET.pace(self.interval, calls, time.time())
         if delay != self.delay:
             self.delay = delay
-            core, graphql_ = self.rate["core"], self.rate["graphql"]
             log(
-                f"budget core {core['remaining']}/{core['limit']}, GraphQL "
-                f"{graphql_['remaining']}/{graphql_['limit']}; polling every {delay}s"
+                f"{calls:.2f} counted calls a poll (last {len(self.costs)}: {self.costs}); "
+                f"tightest budget {BUDGET.tightest()}; polling every {delay}s"
             )
         time.sleep(delay)
         # agents-pull fast-forwards ~/.agents every 15 minutes: run what it
