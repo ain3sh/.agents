@@ -51,7 +51,8 @@ It is a check, not a required message template.
 4. Compare the draft with the conversation. Does it answer first, match the
    register, remain easy to follow, and engage each substantive concern?
    Rewrite structure and wording; do not make the user catch the tone miss.
-5. Run [anti-slop](anti-slop.md), then repeat the preservation check. Trim
+5. Reread once with the [craft](craft.md) tests, opening [anti-slop](anti-slop.md)
+   only for a sentence that fails one, then repeat the preservation check. Trim
    ceremony and duplication, not reasoning. More words are correct when they
    make the same complete answer easier to understand.
 

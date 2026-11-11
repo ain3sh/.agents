@@ -1,25 +1,24 @@
 # Anti-Slop Catalog
 
-The phrase and structure catalog for editing technical prose. Load [craft](craft.md) for the governing test and [external replies](external-replies.md) for conversation and completeness checks. These are editing signals, not a word-count target: never remove a meaningful distinction, caveat, or expression of uncertainty to satisfy a pattern.
+A lookup for prose that fails a [craft](craft.md) test. Each family names its shapes, the fix, and when a shape is earned. Load [external replies](external-replies.md) for conversation and completeness checks. These are editing signals, not a word-count target: never remove a meaningful distinction, caveat, or expression of uncertainty to satisfy a pattern.
 
-## Quick checks (run before delivering prose)
+## Find the family
 
-- Empty intensifier or hedge (really, just, simply, genuinely, basically)? Cut it.
-- Passive voice? Name the actor and put it in front.
-- Inanimate thing doing a human verb ("the decision emerges", "the data tells us")? Name the person or code path.
-- Sentence starts with a Wh- word ("What makes this hard is...")? Restructure to lead with the subject.
-- Throat-clearing opener ("Here's the thing", "It's worth noting")? Cut to the point.
-- Binary contrast ("Not X, but Y")? State Y directly.
-- Vague declarative ("the implications are significant")? Name the specific implication.
-- Lazy extreme (every, always, never, everyone, nobody)? Use the specific scope.
-- Em dash anywhere? Replace with a comma, parentheses, or two sentences.
-- Three consecutive sentences of the same length? Break one.
-- Reviewer reply opens with an acknowledgement ("Good catch", "You're right", "Agreed.", "Fair")? Apply the load-bearing test: did the catch take unusual work, or are you owning a position you held? Keep one beat when earned; cut when reflexive.
-- Reviewer reply paraphrases the comment back before answering? Cut the recap (the reviewer wrote it) unless you're anchoring a specific thread or line.
-- Reply contains "I'm going to fix..." / "I'll address..." without the change-shape? Drop the wrapper and lead with the diff shape. Keep future tense only when the work is genuinely future and scoped.
-- Reply ends with a status footer ("Waiting for your confirmation", "Will run tests then push")? Cut, unless it's a substantive proposal that asks the reviewer to choose a path ("Should the retry cap apply to the auth path too, or only to uploads?").
+Do not walk this file sentence by sentence. Reread the draft once with the craft tests, and when a sentence fails one, open its family:
 
-## Phrases to cut
+| The sentence | Failed test | Family |
+|---|---|---|
+| makes the reader feel a finding arrive | Say the thing | [Staging](#staging) |
+| sounds settled without showing why | Show what makes it true | [Flat certainty](#flat-certainty) |
+| is shorter than the reader can parse | Every word earns its slot | [Compression](#compression) |
+| stages nothing and runs on habit | Every word earns its slot | [Defaults](#defaults) |
+| wraps a reply in ceremony | Every word earns its slot | [Reply ceremony](#reply-ceremony) |
+
+Before cutting a shape, check its "earned when" and [the shapes that carry claims](craft.md#shapes-that-carry-claims). The families borrow from oaustegard's [declauding](https://github.com/oaustegard/claude-skills/tree/main/declauding) register; look there for more specimens before adding an entry here.
+
+## Staging
+
+The sentence withholds, contrasts, or labels its own importance. The fix is the same throughout: put the real subject in the subject slot, say what it did, and stop.
 
 ### Throat-clearing openers
 State the content directly. "Here's the thing", "Here's what/why X", "The uncomfortable truth is", "It turns out", "Let me be clear", "The truth is", "I'll be honest". Any "here's what/this/that" is throat-clearing before the point.
@@ -27,51 +26,11 @@ State the content directly. "Here's the thing", "Here's what/why X", "The uncomf
 ### Emphasis crutches
 They add no meaning. "Full stop.", "Period.", "Let that sink in.", "Make no mistake", "This matters because", "Here's why that matters".
 
-### Empty intensifiers and hedges
-Cut these when empty: really, just, literally, genuinely, honestly, simply, actually, basically, deeply, truly, fundamentally, inherently, inevitably, interestingly, importantly, crucially. Plus filler: "At its core", "It's worth noting", "At the end of the day", "When it comes to", "The reality is".
-
-Keep adverbs that carry technical meaning: *explicitly*, *idempotently*, *atomically*, *synchronously*, and uncertainty that reflects the evidence ("likely", "not yet verified"). The test is whether deleting the word loses information.
-
-### Business jargon
-
-| Avoid | Use |
-|---|---|
-| navigate (challenges) | handle, address |
-| unpack | explain, examine |
-| lean into | accept, commit to |
-| landscape | situation, field |
-| deep dive | analysis |
-| take a step back | reconsider |
-| circle back | revisit |
-| moving forward | next, from now on |
-
 ### Meta-commentary
 The prose should move, not announce its own structure. "Let me walk you through...", "In this section we'll...", "As we'll see...", "Plot twist:", "Spoiler:", "But that's another story", "X is a feature, not a bug".
 
 ### Vague declaratives
 A sentence that announces importance without naming the thing. "The reasons are structural", "The implications are significant", "This is the deepest problem", "The stakes are high". Replace with the specific reason, implication, or stake.
-
-### Reviewer-reply sycophancy
-The warm-up before the actual reply. *Reflexive* warmth, when every reply opens with one ("Good catch", "Great point", "Great call", "Nice catch", "Fair", "Fair point", "You're right", "You're absolutely right", "Right,", "Yeah,", "Yep,", "Agreed.", "Apologies for the oversight", "Thanks for catching this"), is filler; cut on sight if the next sentence is just "I'll fix it." The fix is the agreement.
-
-*Load-bearing* warmth is the same word doing work. "Yeah, missed this; the inflight guard from v1 didn't survive the rewrite" owns the regression, names the mechanism, and lets the reviewer trust the fix in one sentence. "Good catch, the second-tenant case slipped me" works when the catch was non-trivial. The test: does the reviewer learn something from the warm-up? If yes, keep it. If they could delete it and read the rest unchanged, cut it. Opening with "Fair" on a position you're about to dismantle three sentences later is worse than slop; it's dishonest.
-
-### Reviewer-reply preamble
-Restating the reviewer's comment back to them. "The e2e smoke covers X, but this unit test doesn't bind Y, so it would not fail on Z..." (when the reviewer just said exactly that). They wrote it; they remember it. Lead with the answer.
-
-*Anchoring* is different: a one-fragment pointer ("On the `repoRoot()` thread:", "Re: the L47 null check:") disambiguates which thread or line you're answering when context could read either way. Anchor when needed; never recap.
-
-### Performative future tense
-"I'm going to fix the test with a `process.cwd()` spy" wraps the actual content (`process.cwd()` spy) in commitment ceremony. Drop the wrapper. "Replacing `process.chdir()` with a `process.cwd()` spy" carries the same information without the preamble.
-
-*Real* future tense earns its slot when the work is genuinely future and scoped: "The soak suite takes 20 minutes; posting its result on this thread when it finishes." Deferring a real issue to a later PR is not future tense, it is a dropped fix: fix it here or name the decision. The test: is the future-tense clause describing work that lives outside this turn, or disguising "I'm about to type the fix" as commitment?
-
-### Status footers
-Status belongs in the agent loop, not in the reply body. "Waiting for your confirmation before I patch, run checks, push, reply, and...", "Let me know if you'd like me to proceed", "Will run tests and push once you confirm", "Standing by for your go-ahead". If the user wants a confirmation gate, it's a turn boundary; the reply carries technical content.
-
-*Substantive proposals* aren't footers, even when they ask a question: "Should the retry cap apply to the auth path too, or only to uploads?", "Should I scope this to the auth path only, or land it everywhere?" That's content. The difference: a footer announces what the agent will do; a proposal asks the reviewer to choose between concrete paths.
-
-## Structures to break
 
 ### Binary contrasts
 Cut false drama through telegraphed reversal. State the point directly. Preserve real technical contrasts, such as tested versus inspected or local versus remote; rephrase them without erasing the distinction.
@@ -94,6 +53,31 @@ Fragments-for-emphasis read as manufactured profundity. "[Noun]. That's it. That
 ### Rhetorical setups
 They announce insight instead of delivering it. "What if [reframe]?", "Here's what I mean:", "Think about it:", "And that's okay." Make the point; let the reader draw the conclusion.
 
+### Labels, suspense, and closers
+
+| Shape | Looks like | Fix | Earned when |
+|---|---|---|---|
+| Significance label | "the real fix", "the part that matters", "here's the catch", "that's the whole point", "that's why X mattered" | Delete the label and state the content | The rank is real over a named set: "the only one of the six runs that finished" |
+| Deferred noun | "Five of those six rows are one cluster. The sixth is not." | Name it with its number: "fit-17g passes 62 and exhausts 21." | Never; the noun was available |
+| Announcement | "One note, not fixed:", "Two things I did not do." | Start with the content | The count introduces a list the reader will scan |
+| Suspense | A paragraph that ends on a colon before the culprit; "But here's where it gets interesting."; a lone line such as "It isn't." | State the finding where you have it; put the line back in its paragraph | The colon introduces a list, definition, or code block; the lone line is a real pivot (new actor, time jump) |
+| Straw reader | "'It thinks twice as long' is the obvious reading, and it is wrong." | Give the correction directly | The thread or the draft proposed that reading |
+| Aphoristic closer | "It is the kind of number that looks like evidence and is not." | Delete it; if the paragraph needs a landing, land on a fact | The line states a fact or consequence the paragraph has not: "Default retries are back to 3." |
+| Welded maxim | "Entries the caller lacks are dropped, so a child never carries a grant its parent lacks." | Keep the clause that says what happens | Both clauses carry distinct facts the reader can act on |
+| Stranded reversal | "The tool died; the data didn't." | Say what the second half claims: "The rows already written are still in the bucket." | Both halves are measured: "reads passed on all 12 shards, writes on none" |
+| Self-grading | "earned, not asserted", "that is what the data shows", "this is rigorous because" | Make the point and stop | Never |
+| Dressed metaphor | "information loss wearing the costume of a style fix", "the seam where", "rabbit hole", "under the hood" | Name the mechanism: "the edit removes content while looking like it removed only style" | The metaphor is the clearest description available and no plain noun fits |
+
+### Section headers
+
+A section header is navigation. Read it alone, as a table-of-contents entry: does it say what the section contains?
+
+| Shape | Looks like | Fix | Earned when |
+|---|---|---|---|
+| Verdict or coy header | "The default was wrong", "What the data actually shows", "Why it matters", "X is dead" | Label the content with a concrete noun phrase: "The 2.876-bit gap" | The owning format asks for the claim there: a PR title, a finding card, a design-doc headline |
+| Abstract-noun header | "Spawn availability", "GitHub authorship in a sourced child" | Name the concrete thing or the reader's question: "When create_session fails" | The noun is a term the document defines |
+| Contents-list opener | "The parameter surface, plus the behavior the schema leaves out." | Say what the page contains, or drop the subtitle | Never |
+
 ### False agency
 Inanimate things don't perform human actions. AI reaches for this because it dodges naming the actor.
 
@@ -104,17 +88,101 @@ Inanimate things don't perform human actions. AI reaches for this because it dod
 | "the data tells us" | "the logs show" |
 | "the test guarantees X" | "the test asserts X" |
 | "the abstraction wants to..." | name what the code does |
+| "the docstring promises they're skipped" | "according to the docstring, they're skipped" |
 
-If no specific person fits, use "you" or name the code path.
+If no specific person fits, use "you" or name the code path. A pairing the field already uses is earned: "the function expects an int".
 
 ### Passive voice
-Passive hides the actor and drains energy: "X was created" becomes "the migration creates X"; "it is believed that" becomes "we assume"; "mistakes were made" becomes "we missed X". Find the actor; lead with it.
+Passive hides the actor and drains energy: "X was created" becomes "the migration creates X"; "it is believed that" becomes "we assume"; "mistakes were made" becomes "we missed X". Find the actor; lead with it. A fragment with no subject hides the actor the same way: "Results are preserved automatically" becomes "the runner writes results to `out/` when the job exits".
+
+## Flat certainty
+
+Nothing is staged. An adverb, compound, or absolute asserts that the matter is closed, and the evidence that would close it is missing.
+
+| Shape | Looks like | Fix | Earned when |
+|---|---|---|---|
+| Certainty adverb | "provably safe", "quietly dropped", "plainly", "genuinely", "outright" | Delete it, or replace it with what makes it true: "The retry is idempotent: the handler keys on the request id." | It names a contrast the reader can check: "silently" against a version that logs |
+| Courtroom verb | "The guard refuses any caller without standing", "ruling", "carve-out", "honors" | Name the mechanism and its exit: "The guard returns 403 when the token has no `write` scope." | It is the system's own documented word: a policy engine whose API says `deny` |
+| Verification compound | "byte-identical", "mutation-checked", "root-caused", "re-verified", "re-derived" | Say what ran and what came back: "`diff` reports no change. The mutation run killed 14 of 15." | The command or number sits beside it |
+| Coined absence | "unguarded", "unwired", "vacuous", "inert" | Say what is missing and where: "Three paths have no length check before the index." | It is the field's own term: "unsatisfiable" |
+| Absolute | "nothing in it does X", "no path reaches", "never", "nobody", "every", "always", "everyone" | State the scope you checked: "The fit has one parameter per cluster and none per week." | The set is bounded and named: "none of the 46 chunks", "the enum has three members and the switch covers all three" |
+| Verdict adjective | "aggressive", "surprising", "brutal", "collapse" for a 15-point drop | Let the number be the adjective | Never |
+
+## Compression
+
+The sentence saves words and spends the reader's parse effort. The fix makes it longer.
+
+| Shape | Looks like | Fix | Earned when |
+|---|---|---|---|
+| Noun stack | "dry-run write prevention", "Policy 1's class-time shutdown requirement" | Unstack with prepositions or a clause: "check that a dry run writes nothing" | An established term ("foreign key constraint"), or a name the document defines once |
+| Verbed noun | "footnote it", "ticket that" | Use a plain verb with the noun as its object: "move it to a footnote" | The conversion is standard in the field: scope, gate, shard |
+| Dropped *that* | "the others check behaviour the old code never reached" | Put *that* back when the clause is long or its subject is new | A short clause after a common verb: "I think the build is broken" |
+| Distant verb | "All five expression shapes (attribute access, subscript, calls, nested calls, string literals) leave `current` on `b`" | Give the verb early and move the list after the main clause | The list is two or three short items |
+
+## Defaults
+
+Nothing is staged or compressed. The writer took the first available phrase.
+
+### Empty intensifiers and hedges
+Cut these when empty: really, just, literally, genuinely, honestly, simply, actually, basically, deeply, truly, fundamentally, inherently, inevitably, interestingly, importantly, crucially. Plus filler: "At its core", "It's worth noting", "At the end of the day", "When it comes to", "The reality is".
+
+Keep adverbs that carry technical meaning: *explicitly*, *idempotently*, *atomically*, *synchronously*, and uncertainty that reflects the evidence ("likely", "not yet verified"). The test is whether deleting the word loses information. One hedge tied to its condition carries all the uncertainty that three stacked hedges do.
+
+### Business jargon
+
+| Avoid | Use |
+|---|---|
+| navigate (challenges) | handle, address |
+| unpack | explain, examine |
+| lean into | accept, commit to |
+| landscape | situation, field |
+| deep dive | analysis |
+| take a step back | reconsider |
+| circle back | revisit |
+| moving forward | next, from now on |
+
+The stock model vocabulary fails the same way: delve, tapestry, testament to, robust, seamless, leverage, utilize, crucial, pivotal, myriad, unlock, harness. Use the specific word.
 
 ### Sentence starters
 Wh- openers become a crutch: "What makes this hard is..." becomes "The constraint is..." or, better, the named constraint. Drop leading "So," and "Look,".
 
 ### Rhythm
-Vary sentence length. Avoid em dashes. Don't stack staccato fragments. Use as many items as the distinct points need rather than forcing a stock triad. Don't end every paragraph on a punchy one-liner.
+Vary sentence length; break up three consecutive sentences of the same length. Avoid em dashes. Don't stack staccato fragments. Use as many items as the distinct points need rather than forcing a stock triad. Don't end every paragraph on a punchy one-liner.
+
+### Stock constructions
+
+| Shape | Looks like | Fix | Earned when |
+|---|---|---|---|
+| Ceremonial verb | "serves as", "stands as", "boasts", "features" | Use "is" or "has" | The verb states a real purpose or role |
+| Participle tail | "..., highlighting the team's commitment", "..., ensuring consistency" | Cut the tail | The tail holds a real claim; promote it to its own sentence |
+| Renamed referent | "the model", "the system", "the network" for one thing | Pick the noun and repeat it | The second term names a different thing |
+| False range | "from startups to enterprises" | List the items, or give the real endpoints | The scale exists: "from 2 to 8 bits" |
+| Bold-label bullet | "- **Performance:** Performance has been improved" | Write the sentence, or drop the label | The label is a real index: a term, a flag, a case name |
+| Scattered typography | Bold on phrases that are not terms, Title Case Headings, emoji as bullets | Bold a term on first use; sentence case | The destination's house style sets it |
+| Doc written from the diff | "this function was added to replace", "we now use", "no longer" | Describe current behavior | The document is scoped to a version: changelog, release notes, migration guide |
+| Chat wrapper in an artifact | "Certainly", "Here is an overview of", "I hope this helps" | Delete it | Never |
+
+## Reply ceremony
+
+### Reviewer-reply sycophancy
+The warm-up before the actual reply. *Reflexive* warmth, when every reply opens with one ("Good catch", "Great point", "Great call", "Nice catch", "Fair", "Fair point", "You're right", "You're absolutely right", "Right,", "Yeah,", "Yep,", "Agreed.", "Apologies for the oversight", "Thanks for catching this"), is filler; cut on sight if the next sentence is just "I'll fix it." The fix is the agreement.
+
+*Load-bearing* warmth is the same word doing work. "Yeah, missed this; the inflight guard from v1 didn't survive the rewrite" owns the regression, names the mechanism, and lets the reviewer trust the fix in one sentence. "Good catch, the second-tenant case slipped me" works when the catch was non-trivial. The test: does the reviewer learn something from the warm-up? If yes, keep it. If they could delete it and read the rest unchanged, cut it. Opening with "Fair" on a position you're about to dismantle three sentences later is worse than slop; it's dishonest.
+
+### Reviewer-reply preamble
+Restating the reviewer's comment back to them. "The e2e smoke covers X, but this unit test doesn't bind Y, so it would not fail on Z..." (when the reviewer just said exactly that). They wrote it; they remember it. Lead with the answer.
+
+*Anchoring* is different: a one-fragment pointer ("On the `repoRoot()` thread:", "Re: the L47 null check:") disambiguates which thread or line you're answering when context could read either way. Anchor when needed; never recap.
+
+### Performative future tense
+"I'm going to fix the test with a `process.cwd()` spy" wraps the actual content (`process.cwd()` spy) in commitment ceremony. Drop the wrapper. "Replacing `process.chdir()` with a `process.cwd()` spy" carries the same information without the preamble.
+
+*Real* future tense earns its slot when the work is genuinely future and scoped: "The soak suite takes 20 minutes; posting its result on this thread when it finishes." Deferring a real issue to a later PR is not future tense, it is a dropped fix: fix it here or name the decision. The test: is the future-tense clause describing work that lives outside this turn, or disguising "I'm about to type the fix" as commitment?
+
+### Status footers
+Status belongs in the agent loop, not in the reply body. "Waiting for your confirmation before I patch, run checks, push, reply, and...", "Let me know if you'd like me to proceed", "Will run tests and push once you confirm", "Standing by for your go-ahead". If the user wants a confirmation gate, it's a turn boundary; the reply carries technical content.
+
+*Substantive proposals* aren't footers, even when they ask a question: "Should the retry cap apply to the auth path too, or only to uploads?", "Should I scope this to the auth path only, or land it everywhere?" That's content. The difference: a footer announces what the agent will do; a proposal asks the reviewer to choose between concrete paths.
 
 ## Before / after (our world)
 

@@ -12,10 +12,10 @@ and complete enough for the reader to judge or act.
 
 | Goal | Load and do |
 |---|---|
-| Author or assess prose | Load [craft](references/craft.md); identify what the reader needs before editing. |
+| Author or assess prose | Load [craft](references/craft.md); identify what the reader needs, then draft with its four tests. |
 | Reply or post externally | Also load [external replies](references/external-replies.md) before drafting or editing, including after an investigation. Apply it across GitHub, Slack, tickets, email, support, and other human-facing conversations. |
 | Review someone else's work | Also load [review judgment](references/review-judgment.md); surface warranted opinions with its canonical severity taxonomy. |
-| Edit or finalize prose | Load [anti-slop](references/anti-slop.md); remove filler, then re-check that no material information disappeared. |
+| Edit or finalize prose | Reread once with the craft tests; open [anti-slop](references/anti-slop.md) at the family of a sentence that fails one, then re-check that no material information disappeared. |
 
 ## Detect
 
@@ -35,6 +35,10 @@ review judgment when it makes a finding about someone else's work.
    sounding relaxed does not justify a stronger conclusion.
 4. Never publish by virtue of loading this skill. Authorization and posting
    belong to the owning workflow; voice owns craft and judgment only.
+5. Never write or edit against a checklist. Matching each sentence to a
+   pattern list yields flat, timid prose and cannot see a draft that has no
+   point. Draft with the craft tests; the catalog is a lookup for a sentence
+   that fails one.
 
 ## Failure map
 
@@ -44,17 +48,23 @@ review judgment when it makes a finding about someone else's work.
 | Shorter draft loses a mechanism, caveat, or answer | Restore it with the preservation check in [external replies](references/external-replies.md#preserve-substance-before-sending). |
 | Warmth or uncertainty was stripped as filler | Apply the load-bearing test in [craft](references/craft.md). |
 | Review withholds architectural or design pushback | Apply [review judgment](references/review-judgment.md); state the concrete reason and calibrated severity. |
-| Prose has formulaic openings or status footers | Run [anti-slop](references/anti-slop.md), then check completeness again. |
+| Prose has formulaic openings or status footers | Find the family in [anti-slop](references/anti-slop.md), then check completeness again. |
+| Every sentence is fine and the draft says little | Write the point in one sentence and rebuild from it: [craft](references/craft.md#start-from-the-point). |
+| Draft sounds settled ("plainly", "byte-identical", "nothing") without the evidence | Say what ran and what came back: [craft](references/craft.md#show-what-makes-it-true). |
+| Rewrite is shorter but harder to parse, or flat and timid | Restore the words and the judgment: [craft](references/craft.md#every-word-earns-its-slot) and its [shapes that carry claims](references/craft.md#shapes-that-carry-claims). |
 
 ## References
 
 Load on demand; do not reabsorb into this file:
 
-- [references/craft.md](references/craft.md): specificity, load-bearing humanity,
-  information-preserving edits, and scope boundaries.
+- [references/craft.md](references/craft.md): the four drafting tests,
+  load-bearing humanity, shapes that carry claims, information-preserving
+  edits, and scope boundaries.
 - [references/external-replies.md](references/external-replies.md): audience,
   conversation context, reviewer replies, preservation checks, and examples.
 - [references/review-judgment.md](references/review-judgment.md): opinion license,
   finding coverage, canonical severity taxonomy, and final review sweep.
-- [references/anti-slop.md](references/anti-slop.md): phrase and structure catalog,
-  editing checks, and before/after examples.
+- [references/anti-slop.md](references/anti-slop.md): pattern families with fixes
+  and earned exceptions, reply ceremony, and before/after examples.
+- [references/replay.md](references/replay.md): scenarios, fixture, and grading
+  to rerun after editing this skill.
