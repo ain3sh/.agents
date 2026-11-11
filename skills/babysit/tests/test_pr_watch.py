@@ -156,11 +156,18 @@ class GitHub:
         if args[1] == "graphql":
             assert f"query={pr_watch.THREADS}" in args and not ride, args
             assert "owner=o" in args and "name=r" in args and "number=7" in args, args
+            # GitHub answers at most 100 threads a page; the cursor is the index after the page.
+            start = int(next((a.removeprefix("after=") for a in args if a.startswith("after=")), "0"))
+            roots = list(self.resolved.items())[start:start + 100]
+            end = start + len(roots)
             return response(
-                {"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": [
-                    {"isResolved": resolved, "comments": {"nodes": [{"databaseId": root}]}}
-                    for root, resolved in self.resolved.items()
-                ]}}}}},
+                {"data": {"repository": {"pullRequest": {"reviewThreads": {
+                    "pageInfo": {"hasNextPage": end < len(self.resolved), "endCursor": str(end) if roots else None},
+                    "nodes": [
+                        {"isResolved": resolved, "comments": {"nodes": [{"databaseId": root}]}}
+                        for root, resolved in roots
+                    ],
+                }}}}},
                 resource="graphql",
             )
         url, _, page = args[-1].removeprefix("https://api.github.com/").partition("&page=")
@@ -514,6 +521,18 @@ class OnceVerdictTest(unittest.TestCase):
         self.assertEqual(self.poll(github, watcher)[0], 1)
         github.notes[0]["line"] = None
         self.assertEqual(self.poll(github, pr_watch.Watcher(REPO, NUMBER, 300, once=False)), (None, []))
+
+    def test_every_threads_resolution_is_read_past_the_first_page(self) -> None:
+        # factory-mono#27387 has 179 threads, all resolved; a one-page read left
+        # 79 of them unresolved and woke the owner on each.
+        github = GitHub("CLEAN")
+        github.notes = [{
+            **comment("someone", "User", f"Nit {i}.", id=i, at="2026-01-02T00:00:00Z"),
+            "html_url": f"https://github.com/{REPO}/pull/{NUMBER}#discussion_{i}",
+            "path": "a.ts", "line": i, "original_line": i,
+        } for i in range(1, 180)]
+        github.resolved = dict.fromkeys(range(1, 180), True)
+        self.assertEqual(self.poll(github), (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"]))
 
     def test_later_runs_revalidate_required_checks_for_free(self) -> None:
         github = GitHub("CLEAN", checks=[check("lint")])

@@ -88,8 +88,6 @@ Events
   (BLOCKED)     otherwise ready, but GitHub still reports BLOCKED: a wait, since
                 REST has no review decision and an approval branch protection
                 does not count yet (a code owner's is missing) looks the same
-  incomplete    the PR has more than 100 review threads, so READY is
-                impossible to prove; check them by hand
 
 Gating checks are the required checks of the branch the PR finally lands in:
 its base, or for a stacked PR the base of the bottom PR of its stack (each
@@ -215,9 +213,6 @@ PLAN_JOB = "plan"
 # concurrency group cancels the duplicate push or pull_request run of a job.
 RANK = {"fail": 3, "pending": 2, "gate": 2, "pass": 1, "cancelled": 0}
 MERGEABLE = {"CLEAN", "UNSTABLE", "HAS_HOOKS"}
-# Review threads come in one page of at most 100; READY never rests on a
-# partial view of them. Checks are paginated, since monorepos report hundreds.
-THREAD_PAGE = 100
 MAX_FAILED_POLLS = 10
 TRANSIENT = re.compile(
     r"HTTP 5\d\d|timed? ?out|connection (reset|refused)|EOF|temporar|"
@@ -237,11 +232,15 @@ DENIED_TTL = 24 * 3600
 PAGE = 100
 NEXT = re.compile(r'<([^>]+)>;\s*rel="next"')
 # REST exposes no review thread's resolution, so this is the one GraphQL read: a
-# few points, made when the PR's review comments changed or the PR is read.
+# few points a page of 100 threads, made when the PR's review comments changed or
+# the PR is read.
 THREADS = """
-query($owner: String!, $name: String!, $number: Int!) {
+query($owner: String!, $name: String!, $number: Int!, $after: String) {
   repository(owner: $owner, name: $name) { pullRequest(number: $number) {
-    reviewThreads(first: 100) { nodes { isResolved comments(first: 1) { nodes { databaseId } } } }
+    reviewThreads(first: 100, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      nodes { isResolved comments(first: 1) { nodes { databaseId } } }
+    }
   } }
 }
 """
@@ -750,7 +749,7 @@ class Watcher:
                           comments={"totalCount": sum(c.get("pull_request_review_id") == r["id"] for c in notes)})
                 for r in reviewed
             ]},
-            "reviewThreads": {"totalCount": len(threads), "nodes": [
+            "reviewThreads": {"nodes": [
                 {
                     "isResolved": resolved.get(str(root), False),
                     "path": t[0]["path"],
@@ -797,13 +796,20 @@ class Watcher:
         if not notes or (kept.get("version") == version and not self.fresh) or BUDGET.low("graphql"):
             self.threads = kept
             return kept.get("resolved", {})
+        nodes: list[Json] = []
+        after: dict[str, str] = {}
         try:
-            data = graphql(THREADS, ride=False, owner=self.owner, name=self.name, number=self.number)
+            while True:
+                page = graphql(THREADS, ride=False, owner=self.owner, name=self.name, number=self.number, **after)
+                threads = page["repository"]["pullRequest"]["reviewThreads"]
+                nodes += threads["nodes"]
+                if not threads["pageInfo"]["hasNextPage"]:
+                    break
+                after = {"after": threads["pageInfo"]["endCursor"]}
         except GhError as error:
             log(f"thread resolution unread: {error}")
             self.threads = kept
             return kept.get("resolved", {})
-        nodes = data["repository"]["pullRequest"]["reviewThreads"]["nodes"]
         resolved = {str(t["comments"]["nodes"][0]["databaseId"]): t["isResolved"] for t in nodes if t["comments"]["nodes"]}
         self.threads = {"version": version, "resolved": resolved}
         return resolved
@@ -957,13 +963,6 @@ class Watcher:
         actions: list[tuple[str, str]] = []
         waits: list[str] = []
 
-        if pr["reviewThreads"]["totalCount"] > THREAD_PAGE:
-            actions.append(
-                (
-                    f"incomplete:{head}",
-                    f"incomplete: more than {THREAD_PAGE} review threads, so check them by hand before merging",
-                )
-            )
         # Only the viewer's own pending review is visible, and GitHub allows
         # one per account per PR.
         for r in pr["reviews"]["nodes"]:
