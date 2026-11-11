@@ -18,8 +18,8 @@ followed down by) never answers 304, since it embeds the repository's
 pushed_at, so it is read only on the first poll, when the head moved or its
 branch is gone, when feedback changed, when the checks changed and none is
 still running, and every FULL_EVERY polls. GraphQL is read only for review
-threads' resolution, which REST lacks, and only when the PR's review comments
-changed. Every response's rate-limit headers pace the next sleep: the calls a
+threads' resolution, which REST lacks, when the PR's review comments changed
+or the PR itself is read. Every response's rate-limit headers pace the next sleep: the calls a
 poll counts (averaged over the last FULL_EVERY polls), times WATCHERS watchers,
 times the polls left before the bucket resets, stays under half of what that
 bucket has left; when one poll of every watcher would already cross that line,
@@ -225,7 +225,7 @@ DENIED_TTL = 24 * 3600
 PAGE = 100
 NEXT = re.compile(r'<([^>]+)>;\s*rel="next"')
 # REST exposes no review thread's resolution, so this is the one GraphQL read: a
-# few points, made only when the PR's review comments changed since the last.
+# few points, made when the PR's review comments changed or the PR is read.
 THREADS = """
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) { pullRequest(number: $number) {
@@ -760,12 +760,12 @@ class Watcher:
 
     def resolution(self, notes: list[Json]) -> dict[str, bool]:
         """Each thread's resolution by its first comment's id, read by GraphQL
-        only when the review comments changed since the last read and the
-        GraphQL budget is not low; otherwise the last read stands, and a thread
-        it never saw counts as unresolved."""
+        when the review comments changed or the PR itself was read this poll,
+        and the GraphQL budget is not low: resolving or reopening a thread
+        edits no comment. Unread threads count as unresolved."""
         version = hashlib.sha1(json.dumps(sorted((c["id"], c["updated_at"]) for c in notes)).encode()).hexdigest()
         kept = self.rest.cache.get("threads") or {}
-        if not notes or kept.get("version") == version or BUDGET.low("graphql"):
+        if not notes or (kept.get("version") == version and not self.fresh) or BUDGET.low("graphql"):
             self.threads = kept
             return kept.get("resolved", {})
         try:

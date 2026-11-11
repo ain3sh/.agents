@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib.machinery
 import importlib.util
+import io
 import json
 import subprocess
 import tempfile
@@ -63,17 +65,67 @@ class BudgetTest(unittest.TestCase):
     def test_a_past_reset_is_forgotten(self) -> None:
         self.assertEqual(self.pace(10, 5, now=RESET + 1), 300)
 
+    def test_the_watcher_sleeps_from_counted_responses_over_its_rolling_window(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as state,
+            mock.patch.object(pr_watch, "STATE_DIR", Path(state)),
+            mock.patch.object(pr_watch, "BUDGET", pr_watch.Budget()),
+            mock.patch.object(pr_watch.time, "time", return_value=RESET - 3600),
+            mock.patch.object(pr_watch.time, "sleep") as sleep,
+            contextlib.redirect_stderr(io.StringIO()) as err,
+        ):
+            watcher = pr_watch.Watcher("o/r", 7, 300, once=False)
+            watcher.sleep()
+            for _ in range(4):
+                pr_watch.BUDGET.record(answer(200, {}, remaining=1000))
+            watcher.sleep()
+            for _ in range(pr_watch.FULL_EVERY):
+                pr_watch.BUDGET.record(answer(304, remaining=1000))
+                watcher.sleep()
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [300, 2880, 1920, 1440, 1152, 960, 960, 300])
+        self.assertIn("core 1000/15000", err.getvalue())
+
+
+class RateLimitSleepTest(unittest.TestCase):
+    def sleep_for(self, core: dict[str, int] | None, now: int = 1000) -> int:
+        proc = subprocess.CompletedProcess(
+            ["gh", "api", "rate_limit"], 1 if core is None else 0,
+            "" if core is None else json.dumps({"resources": {"core": core}}), "",
+        )
+        with (
+            mock.patch.object(pr_watch.subprocess, "run", return_value=proc) as run,
+            mock.patch.object(pr_watch.time, "time", return_value=now),
+            mock.patch.object(pr_watch.time, "sleep") as sleep,
+            mock.patch.object(pr_watch.random, "randint", return_value=60),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            pr_watch.wait_for_rate_limit()
+        run.assert_called_once_with(["gh", "api", "rate_limit"], check=False, capture_output=True, text=True)
+        return sleep.call_args.args[0]
+
+    def test_spent_primary_limit_sleeps_until_reset_with_a_one_hour_cap(self) -> None:
+        for reset, expected in ((1300, 305), (9000, 3600), (900, 5)):
+            with self.subTest(reset=reset):
+                self.assertEqual(self.sleep_for({"remaining": 0, "reset": reset}), expected)
+
+    def test_secondary_limit_or_failed_budget_read_sleeps_about_a_minute(self) -> None:
+        for core in ({"remaining": 7974, "reset": 4490}, None):
+            with self.subTest(core=core):
+                self.assertEqual(self.sleep_for(core), 60)
+
 
 class LoopTest(unittest.TestCase):
     def setUp(self) -> None:
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        patcher = mock.patch.object(pr_watch, "STATE_DIR", Path(tmp.name))
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        for patcher in (
+            mock.patch.object(pr_watch, "STATE_DIR", Path(tmp.name)),
+            mock.patch.object(pr_watch, "BUDGET", pr_watch.Budget()),
+        ):
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.head = "a" * 40
         self.calls: list[str] = []
-        self.etags: dict[str, str] = {}
 
     def body(self, url: str) -> Any:
         if url.endswith("/pulls/7"):
