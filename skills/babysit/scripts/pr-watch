@@ -2,6 +2,7 @@
 """pr-watch: block until a GitHub PR needs the agent, then say why and exit.
 
     pr-watch <pr> [--repo owner/name] [--interval 300] [--once]
+    pr-watch --check
 
 <pr> is a PR number or URL; the repo comes from the URL, --repo, or the
 current checkout. Run one background job per PR. It polls quietly and exits on
@@ -16,6 +17,10 @@ comments changed. --interval (default and minimum 300) is the fastest cadence:
 polls slow fourfold, skipping the thread read, while the account has under 20%
 of its core or GraphQL budget left, and sleep to the reset under 5% of core. A
 watcher re-executes itself when its file changes on disk.
+
+A droid daemon restart kills every background job without an exit notice, so
+a watcher can vanish silently. --check lists this machine's watchers: alive,
+or dead without a verdict with the command that restarts it (exit 1 if any).
 
 --once evaluates the PR a single time and reports everything open now, without
 waiting: ACTION when any line needs the agent, WAIT when only waiting lines
@@ -556,6 +561,10 @@ class Watcher:
             print(line, flush=True)
             self.reported.add(key)
         print(f"{verdict} {self.repo}#{self.number} {detail}".rstrip(), flush=True)
+        # A lock file outlives only a watcher that died without a verdict, which
+        # is what --check looks for.
+        if not self.once:
+            self.lock_path.unlink(missing_ok=True)
         if verdict in ("MERGED", "CLOSED"):
             self.state_path.unlink(missing_ok=True)
         elif self.events and not self.once:
@@ -969,7 +978,7 @@ class Watcher:
                 self.poll()
                 self.rest.save({"threads": self.threads})
                 failures = 0
-            except GhError as error:
+            except (GhError, KeyError, TypeError, ValueError) as error:
                 failures += 1
                 log(f"poll failed ({failures}/{MAX_FAILED_POLLS}): {error}")
                 if self.once or failures >= MAX_FAILED_POLLS:
@@ -995,11 +1004,33 @@ class Watcher:
             os.execv(sys.executable, [sys.executable, str(SELF), *sys.argv[1:]])
 
 
+def check() -> NoReturn:
+    """List each watcher on this machine: alive, or dead without a verdict (a
+    droid daemon restart kills its background jobs with no exit notice), with
+    the command that restarts it. Exit 1 when any is dead."""
+    dead = 0
+    for path in sorted(STATE_DIR.glob("*.lock")):
+        owner, name, number = path.stem.rsplit("__", 2)
+        url = f"https://github.com/{owner}/{name}/pull/{number}"
+        with open(path, "a+") as handle:
+            try:
+                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                handle.seek(0)
+                print(f"alive {url} pid {handle.read().strip()}")
+                continue
+        dead += 1
+        print(f"dead {url}: restart with {SELF} {url}")
+    sys.exit(1 if dead else 0)
+
+
 def main() -> None:
+    if sys.argv[1:] == ["--check"]:
+        check()
     parser = argparse.ArgumentParser(
         prog="pr-watch", description="Block until a GitHub PR needs the agent."
     )
-    parser.add_argument("pr", help="PR number or URL")
+    parser.add_argument("pr", help="PR number or URL (or --check alone: list this machine's watchers, alive or dead)")
     parser.add_argument(
         "--repo", help="owner/name (default: from the URL or the current checkout)"
     )
