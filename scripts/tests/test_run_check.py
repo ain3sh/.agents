@@ -1,0 +1,62 @@
+import importlib.machinery
+import importlib.util
+import sys
+import unittest
+from pathlib import Path
+from unittest import mock
+
+RUN_CHECK = Path(__file__).resolve().parents[1] / "run-check"
+loader = importlib.machinery.SourceFileLoader("run_check", str(RUN_CHECK))
+spec = importlib.util.spec_from_loader("run_check", loader)
+run_check = importlib.util.module_from_spec(spec)
+sys.modules["run_check"] = run_check
+loader.exec_module(run_check)
+
+GIB = run_check.GIB
+HOST = 8 * GIB
+
+
+class CheckMemoryTest(unittest.TestCase):
+    def memory(self, limits: dict[str, str]) -> int:
+        def read_text(path: Path) -> str:
+            if str(path) not in limits:
+                raise FileNotFoundError(path)
+            return limits[str(path)] + "\n"
+
+        sysconf = {"SC_PAGE_SIZE": 4096, "SC_PHYS_PAGES": HOST // 4096}
+        with (
+            mock.patch.object(run_check.os, "sysconf", sysconf.__getitem__),
+            mock.patch.object(Path, "read_text", read_text),
+        ):
+            return run_check._check_memory()
+
+    def test_host_memory_without_a_cgroup(self) -> None:
+        self.assertEqual(self.memory({}), HOST)
+
+    def test_an_unset_cgroup_limit_leaves_host_memory(self) -> None:
+        v1 = str(2**63 - 4096)
+        self.assertEqual(self.memory({"/sys/fs/cgroup/memory.max": "max"}), HOST)
+        self.assertEqual(
+            self.memory({"/sys/fs/cgroup/memory/memory.limit_in_bytes": v1}), HOST
+        )
+
+    def test_a_cgroup_limit_binds(self) -> None:
+        limit = str(4 * GIB)
+        self.assertEqual(self.memory({"/sys/fs/cgroup/memory.max": limit}), 4 * GIB)
+
+
+class ExclusiveSlotsTest(unittest.TestCase):
+    def test_one_heavy_check_under_12_gib(self) -> None:
+        self.assertEqual(run_check._exclusive_slots(8 * GIB), 1)
+        self.assertEqual(run_check._exclusive_slots(12 * GIB - 1), 1)
+
+    def test_two_heavy_checks_from_12_gib(self) -> None:
+        self.assertEqual(run_check._exclusive_slots(12 * GIB), 2)
+        self.assertEqual(run_check._exclusive_slots(64 * GIB), 2)
+
+    def test_one_lock_path_per_slot(self) -> None:
+        self.assertEqual(len(run_check.EXCLUSIVE_LOCK_PATHS), run_check.EXCLUSIVE_SLOTS)
+
+
+if __name__ == "__main__":
+    unittest.main()

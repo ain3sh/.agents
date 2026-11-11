@@ -20,7 +20,33 @@ MAX_LOG_FILES = 50
 READ_SIZE = 64 * 1024
 TERMINATION_GRACE_SECONDS = 1.0
 LOCK_POLL_SECONDS = 2.0
-EXCLUSIVE_SLOTS = 2
+GIB = 1024**3
+CGROUP_MEMORY_LIMITS = (
+    Path("/sys/fs/cgroup/memory.max"),
+    Path("/sys/fs/cgroup/memory/memory.limit_in_bytes"),
+)
+
+
+def _check_memory() -> int:
+    """Bytes the checks share: the cgroup's limit when one is set, else the host's."""
+    total = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+    for path in CGROUP_MEMORY_LIMITS:
+        try:
+            limit = path.read_text().strip()
+        except OSError:
+            continue
+        # cgroup v2 writes "max" when unset; v1 writes a number past any host.
+        if limit.isdigit():
+            return min(int(limit), total)
+    return total
+
+
+def _exclusive_slots(memory: int) -> int:
+    # A type-aware lint of one package alone can take 5-6 GiB.
+    return 1 if memory < 12 * GIB else 2
+
+
+EXCLUSIVE_SLOTS = _exclusive_slots(_check_memory())
 _EXCLUSIVE_LOCK_BASE = os.environ.get(
     "DROID_CHECK_LOCK_PATH", f"/tmp/droid-checks-{os.getuid()}.exclusive.lock"
 )
