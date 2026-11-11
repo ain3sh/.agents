@@ -26,6 +26,7 @@ NUMBER = 7
 HEAD = "a" * 40
 BASE_OID = "b" * 40
 REQUIRED = ("lint", "test")
+RATE = {"limit": 5000, "remaining": 4000, "resetAt": "1970-01-01T01:00:00Z", "cost": 1}
 
 
 def check(name: str, conclusion: str = "SUCCESS") -> dict[str, Any]:
@@ -286,7 +287,7 @@ class OnceVerdictTest(unittest.TestCase):
         annotation titles by id, and refs answering the stack query for each
         qualified ref name; return its exit code and stdout lines."""
         out = io.StringIO()
-        data = {"repository": {"pullRequest": pr}}
+        data = {"rateLimit": RATE, "repository": {"pullRequest": pr}}
 
         def answer(query: str, **variables: Any) -> Any:
             if query == pr_watch.QUERY:
@@ -625,7 +626,7 @@ class OnceVerdictTest(unittest.TestCase):
         """One watch-mode poll of pr, with refs as in once: its exit code (None
         while it keeps waiting) and stdout lines."""
         out = io.StringIO()
-        data = {"repository": {"pullRequest": pr}}
+        data = {"rateLimit": RATE, "repository": {"pullRequest": pr}}
 
         def answer(query: str, **variables: Any) -> Any:
             return data if query == pr_watch.QUERY else refs[variables["ref"]]
@@ -726,6 +727,48 @@ class RequiredChecksErrorTest(unittest.TestCase):
         for answer in ("[[7974, 4490], [4999, 4490]]", "", "not json"):
             with self.subTest(answer=answer):
                 self.assertIn(self.rate_limit_sleep(answer), range(50, 71))
+
+
+class PaceTest(unittest.TestCase):
+    """The reset is 3600s after the epoch; every pace below is read at 0."""
+
+    def pace(self, remaining: int, cost: int = 1, now: float = 0) -> int:
+        rate = {**RATE, "remaining": remaining, "cost": cost}
+        return pr_watch.pace(120, rate, now)
+
+    def test_a_full_budget_polls_at_the_interval(self) -> None:
+        self.assertEqual(self.pace(4000), 120)
+
+    def test_a_poll_never_outruns_what_is_left_until_the_reset(self) -> None:
+        # 2000 points at 100 a poll last 20 polls: one every 180s.
+        self.assertEqual(self.pace(2000, cost=100), 180)
+
+    def test_under_30_percent_left_the_interval_doubles(self) -> None:
+        self.assertEqual(self.pace(1499), 240)
+        self.assertEqual(self.pace(1500), 120)
+
+    def test_under_5_percent_left_it_sleeps_until_the_reset(self) -> None:
+        self.assertEqual(self.pace(249, now=600), 3005)
+        self.assertEqual(self.pace(0, now=3599.5), 6)
+
+    def test_a_reset_in_the_past_never_waits_on_it(self) -> None:
+        self.assertEqual(self.pace(4000, cost=10, now=7200), 120)
+
+    def test_the_watcher_sleeps_by_the_budget_its_own_poll_read(self) -> None:
+        watcher = pr_watch.Watcher(REPO, NUMBER, 120, once=False)
+        with (
+            mock.patch.object(pr_watch.time, "time", return_value=0),
+            mock.patch.object(pr_watch.time, "sleep") as sleep,
+            contextlib.redirect_stderr(io.StringIO()) as err,
+        ):
+            watcher.sleep()
+            watcher.rate = {**RATE, "remaining": 1000}
+            watcher.sleep()
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [120, 240])
+        self.assertIn("GraphQL budget 1000/5000", err.getvalue())
+
+    def test_the_poll_query_reads_its_own_budget(self) -> None:
+        self.assertIn("rateLimit { limit remaining resetAt cost }", pr_watch.QUERY)
 
 
 if __name__ == "__main__":

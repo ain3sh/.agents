@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 """pr-watch: block until a GitHub PR needs the agent, then say why and exit.
 
-    pr-watch <pr> [--repo owner/name] [--interval 30] [--once]
+    pr-watch <pr> [--repo owner/name] [--interval 120] [--once]
 
 <pr> is a PR number or URL; the repo comes from the URL, --repo, or the
 current checkout. Run one background job per PR. It polls quietly and exits on
 the first poll that needs a decision, so the job's exit is the wake-up. Restart
 it after acting: it remembers what it already reported.
+
+Every agent's watchers spend one account's GraphQL budget, so --interval is
+the fastest cadence, not a fixed one. Each poll reads the budget left with its
+own query and waits at least as long as that budget lasts at this poll's cost
+until it resets; twice --interval once under 30% is left; and until the reset
+under 5%.
 
 --once evaluates the PR a single time and reports everything open now, without
 waiting: ACTION when any line needs the agent, WAIT when only waiting lines
@@ -124,6 +130,7 @@ import argparse
 import fcntl
 import html
 import json
+import math
 import os
 import random
 import re
@@ -237,6 +244,7 @@ FEEDBACK = {
 }
 QUERY = f"""
 query($owner: String!, $name: String!, $number: Int!, $after: String, $before: String) {{
+  rateLimit {{ limit remaining resetAt cost }}
   repository(owner: $owner, name: $name) {{
     pullRequest(number: $number) {{
       id url state isDraft headRefOid baseRefName mergeStateStatus reviewDecision
@@ -313,6 +321,16 @@ def wait_for_rate_limit() -> None:
         delay = random.randint(50, 70)
         log(f"GitHub secondary rate limit; sleeping {delay}s")
     time.sleep(delay)
+
+
+def pace(interval: int, rate: Json, now: float) -> int:
+    """Seconds until the next poll, from the budget the last poll read."""
+    left = max(datetime.fromisoformat(rate["resetAt"]).timestamp() - now, 0)
+    share = rate["remaining"] / rate["limit"]
+    if share < 0.05:
+        return min(math.ceil(left) + 5, 3600)
+    lasting = math.ceil(rate["cost"] * left / rate["remaining"])
+    return max(interval * (2 if share < 0.30 else 1), lasting)
 
 
 def gh(*args: str) -> str:
@@ -515,6 +533,8 @@ class Watcher:
         self.required: dict[str, set[str]] = {}
         self.previous: Any = None
         self.status = ""
+        self.rate: Json | None = None
+        self.delay = interval
 
     def lock(self) -> Any:
         STATE_DIR.mkdir(parents=True, exist_ok=True)
@@ -558,6 +578,7 @@ class Watcher:
 
     def fetch(self) -> Json:
         data = graphql(QUERY, owner=self.owner, name=self.name, number=self.number)
+        self.rate = data["rateLimit"]
         pr = data["repository"]["pullRequest"]
         if pr is None:
             fail(f"{self.repo}#{self.number} does not exist")
@@ -908,7 +929,19 @@ class Watcher:
                 if self.once or failures >= MAX_FAILED_POLLS:
                     self.events = []
                     self.finish("ERROR", f"GitHub failed: {error}", 2)
-            time.sleep(self.interval)
+            self.sleep()
+
+    def sleep(self) -> None:
+        delay = (
+            pace(self.interval, self.rate, time.time()) if self.rate else self.interval
+        )
+        if delay != self.delay:
+            self.delay = delay
+            log(
+                f"GraphQL budget {self.rate['remaining']}/{self.rate['limit']} until "
+                f"{self.rate['resetAt']}; polling every {delay}s"
+            )
+        time.sleep(delay)
 
 
 def main() -> None:
@@ -922,8 +955,8 @@ def main() -> None:
     parser.add_argument(
         "--interval",
         type=int,
-        default=30,
-        help="seconds between polls (default 30, min 10)",
+        default=120,
+        help="fastest seconds between polls; a draining GraphQL budget slows them (default 120, min 10)",
     )
     parser.add_argument(
         "--once", action="store_true", help="evaluate the merge gate once and exit"
