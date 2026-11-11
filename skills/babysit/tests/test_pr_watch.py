@@ -483,6 +483,38 @@ class OnceVerdictTest(unittest.TestCase):
             f"ACTION {REPO}#{NUMBER} @ {HEAD}",
         ]))
 
+    def test_a_late_submitted_review_drafted_on_an_older_commit_is_feedback(self) -> None:
+        # A pending review's comments keep their drafting time and are outdated
+        # the moment it is submitted (factory-mono#27809: drafted Oct 22 on an
+        # older commit, submitted with an approval Nov 11, after the agent's reply).
+        github = GitHub("BLOCKED")
+        github.comments = [comment("me", "User", f"Pushed.\n\n{pr_watch.AGENT_MARK}", id=3, at="2026-01-02T00:00:00Z")]
+        github.notes = [{
+            **comment("jerry", "User", "Guard this.", id=5, at="2025-10-22T00:00:00Z"),
+            "updated_at": "2026-01-03T00:00:00Z",
+            "html_url": f"https://github.com/{REPO}/pull/{NUMBER}#discussion_5",
+            "pull_request_review_id": 200, "path": "a.ts", "line": None, "original_line": 9,
+        }]
+        github.resolved = {5: False}
+        self.assertEqual(self.poll(github), (1, [
+            f"thread from jerry on a.ts:9: Guard this. https://github.com/{REPO}/pull/{NUMBER}#discussion_5",
+            f"unresolved review threads (1): https://github.com/{REPO}/pull/{NUMBER}#discussion_5",
+            f"ACTION {REPO}#{NUMBER} @ {HEAD}",
+        ]))
+
+    def test_a_reported_thread_outdated_by_a_push_does_not_wake_again(self) -> None:
+        github = GitHub("BLOCKED")
+        github.notes = [{
+            **comment("someone", "User", "Rename this.", id=5, at="2026-01-02T00:00:00Z"),
+            "html_url": f"https://github.com/{REPO}/pull/{NUMBER}#discussion_5",
+            "path": "a.ts", "line": 9, "original_line": 9,
+        }]
+        github.resolved = {5: False}
+        watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=False)
+        self.assertEqual(self.poll(github, watcher)[0], 1)
+        github.notes[0]["line"] = None
+        self.assertEqual(self.poll(github, pr_watch.Watcher(REPO, NUMBER, 300, once=False)), (None, []))
+
     def test_later_runs_revalidate_required_checks_for_free(self) -> None:
         github = GitHub("CLEAN", checks=[check("lint")])
         etag = pr_watch.header(response(github.body(RULES)).split("\r\n\r\n")[0], "etag")

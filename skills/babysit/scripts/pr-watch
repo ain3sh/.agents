@@ -71,8 +71,9 @@ Events
                 verdict and first points, once per head and verdict, however
                 often its comment is rewritten. Its waiting and running
                 notices, and a score of an older head, are status
-  thread        a review thread that is unresolved, not outdated, and whose
-                last submitted comment is not the agent's
+  thread        a review thread that is unresolved and whose last submitted
+                comment is not the agent's, outdated or not: a review drafted
+                on an older commit is outdated the moment it is submitted
   pending-review
                 the viewer's review is unsubmitted. GraphQL review mutations
                 file the account's comments and thread replies into it, where
@@ -752,7 +753,6 @@ class Watcher:
             "reviewThreads": {"totalCount": len(threads), "nodes": [
                 {
                     "isResolved": resolved.get(str(root), False),
-                    "isOutdated": t[0].get("line") is None,
                     "path": t[0]["path"],
                     "line": t[0].get("line") or t[0].get("original_line"),
                     "comments": {"nodes": [
@@ -934,7 +934,7 @@ class Watcher:
                 )
         for t in pr["reviewThreads"]["nodes"]:
             nodes = replies(t)
-            if t["isResolved"] or t["isOutdated"] or not nodes or marked(nodes[-1]):
+            if t["isResolved"] or not nodes or marked(nodes[-1]):
                 continue
             last = nodes[-1]
             where = f"{t['path']}:{t['line']}" if t["line"] else t["path"]

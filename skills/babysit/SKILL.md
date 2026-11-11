@@ -46,8 +46,9 @@ What wakes you depends on where you run:
 
 What it reports:
 
-- Feedback events are what is open on GitHub now: a thread that is unresolved,
-  not outdated, and whose last comment is not your marked reply, or a
+- Feedback events are what is open on GitHub now: a thread that is unresolved
+  and whose last comment is not your marked reply, outdated or not (a review
+  drafted on an older commit arrives outdated), or a
   top-level comment or review posted, or edited by a human, after your latest
   marked reply. Bots and `factory-service-*` accounts rewrite status reports
   in place, so their edits never reopen anything. Comments from CI and
@@ -57,8 +58,8 @@ What it reports:
   ends every reply with it); pushes, unmarked comments from your account, and
   replies still sitting in your pending review, which nobody else can read,
   never settle anything.
-- Answered and outdated threads never wake you as feedback, but while
-  unresolved they block `READY` through `unresolved`.
+- Answered threads never wake you as feedback, but while unresolved they
+  block `READY` through `unresolved`.
 - `--once` reports everything open without reading or saving what it
   reported, though `MERGED` or `CLOSED` still deletes the watcher's state. It
   lists each failed optional check beside whatever verdict it gives. Run it
