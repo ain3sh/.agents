@@ -293,27 +293,31 @@ def fail(message: str) -> NoReturn:
     sys.exit(2)
 
 
+# /rate_limit's body can report a GraphQL bucket the API does not enforce: it
+# showed 9,930 points left while every query failed as spent. The limit headers
+# of a request to each bucket are what GitHub enforces.
+LIMIT_PROBES = (("rate_limit",), ("graphql", "-f", "query={rateLimit{remaining}}"))
+LIMIT_HEADER = re.compile(
+    r"^x-ratelimit-(remaining|reset): (\d+)\r?$", re.IGNORECASE | re.MULTILINE
+)
+
+
 def wait_for_rate_limit() -> None:
-    """Sleep out a rate limit. A primary limit is spent only when a resource has
+    """Sleep out a rate limit. A primary limit is spent only when a bucket has
     0 remaining: sleep until its reset. Any other match is GitHub's secondary
-    limit, which /rate_limit never reports and which lifts within about a
-    minute, so sleeping to a primary reset would blind the watcher for an hour."""
-    out = subprocess.run(
-        [
-            "gh",
-            "api",
-            "rate_limit",
-            "--jq",
-            "[.resources.graphql, .resources.core] | map([.remaining, .reset])",
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-    ).stdout
-    try:
-        resets = [reset for remaining, reset in json.loads(out) if remaining == 0]
-    except (ValueError, TypeError):
-        resets = []
+    limit, which no bucket reports and which lifts within about a minute, so
+    sleeping to a primary reset would blind the watcher for an hour."""
+    resets = []
+    for probe in LIMIT_PROBES:
+        out = subprocess.run(
+            ["gh", "api", "--include", *probe],
+            check=False,
+            capture_output=True,
+            text=True,
+        ).stdout
+        limit = {name.lower(): int(value) for name, value in LIMIT_HEADER.findall(out)}
+        if limit.get("remaining") == 0 and "reset" in limit:
+            resets.append(limit["reset"])
     if resets:
         delay = min(max(max(resets) - int(time.time()), 0) + 5, 3600)
         log(f"GitHub rate limit spent; sleeping {delay}s until it resets")

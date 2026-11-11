@@ -708,10 +708,18 @@ class RequiredChecksErrorTest(unittest.TestCase):
             )
         )
 
-    def rate_limit_sleep(self, answer: str, now: int = 1_000) -> int:
-        proc = mock.Mock(stdout=answer)
+    @staticmethod
+    def limit_reply(remaining: int, reset: int, body: str = "{}") -> str:
+        return (
+            "HTTP/2.0 200 OK\r\nContent-Type: application/json\r\n"
+            f"X-Ratelimit-Remaining: {remaining}\r\nX-Ratelimit-Reset: {reset}\r\n"
+            f"\r\n{body}"
+        )
+
+    def rate_limit_sleep(self, core: str, graphql: str, now: int = 1_000) -> int:
+        replies = [mock.Mock(stdout=core), mock.Mock(stdout=graphql)]
         with (
-            mock.patch.object(pr_watch.subprocess, "run", return_value=proc),
+            mock.patch.object(pr_watch.subprocess, "run", side_effect=replies),
             mock.patch.object(pr_watch.time, "time", return_value=now),
             mock.patch.object(pr_watch.time, "sleep") as sleep,
             contextlib.redirect_stderr(io.StringIO()),
@@ -720,13 +728,24 @@ class RequiredChecksErrorTest(unittest.TestCase):
         return sleep.call_args.args[0]
 
     def test_spent_primary_limit_sleeps_until_its_reset(self) -> None:
-        self.assertEqual(self.rate_limit_sleep("[[0, 1300], [4000, 2900]]"), 305)
-        self.assertEqual(self.rate_limit_sleep("[[0, 9000], [0, 1100]]"), 3600)
+        reply = self.limit_reply
+        self.assertEqual(self.rate_limit_sleep(reply(4000, 2900), reply(0, 1300)), 305)
+        self.assertEqual(self.rate_limit_sleep(reply(0, 1100), reply(0, 9000)), 3600)
+
+    def test_headers_outrank_the_rate_limit_body(self) -> None:
+        body = '{"resources": {"graphql": {"remaining": 9930, "reset": 4600}}}'
+        core = self.limit_reply(7726, 1900, body)
+        graphql = self.limit_reply(0, 1300, '{"errors": [{"type": "RATE_LIMIT"}]}')
+        self.assertEqual(self.rate_limit_sleep(core, graphql), 305)
 
     def test_secondary_limit_sleeps_about_a_minute(self) -> None:
-        for answer in ("[[7974, 4490], [4999, 4490]]", "", "not json"):
-            with self.subTest(answer=answer):
-                self.assertIn(self.rate_limit_sleep(answer), range(50, 71))
+        for core, graphql in (
+            (self.limit_reply(7974, 4490), self.limit_reply(4999, 4490)),
+            ("", ""),
+            ("not http", "X-Ratelimit-Remaining: 0\r\n"),
+        ):
+            with self.subTest(core=core, graphql=graphql):
+                self.assertIn(self.rate_limit_sleep(core, graphql), range(50, 71))
 
 
 class PaceTest(unittest.TestCase):
