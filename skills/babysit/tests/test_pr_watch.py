@@ -402,6 +402,30 @@ class OnceVerdictTest(unittest.TestCase):
         github.resolved[1] = False
         self.assertEqual(self.poll(github), unresolved)
 
+    def test_an_answered_thread_left_unresolved_blocks_a_stamped_green_pr(self) -> None:
+        # dev requires every conversation resolved, so GitHub reports BLOCKED;
+        # the open thread is the agent's to resolve, not a wait.
+        github = replied_pr(submitted=True, resolved=False)
+        github.pr["mergeable_state"] = "blocked"
+        self.assertEqual(self.poll(github), (1, [
+            f"unresolved review threads (1): https://github.com/{REPO}/pull/{NUMBER}#discussion_1",
+            f"ACTION {REPO}#{NUMBER} @ {HEAD}",
+        ]))
+
+    def test_a_review_bots_new_thread_is_feedback(self) -> None:
+        github = GitHub("BLOCKED")
+        github.notes = [{
+            **comment("factory-droid", "Bot", "**P2** Buffer too small.", id=5, at="2026-01-02T00:00:00Z"),
+            "html_url": f"https://github.com/{REPO}/pull/{NUMBER}#discussion_5",
+            "pull_request_review_id": 200, "path": "a.ts", "line": 9, "original_line": 9,
+        }]
+        github.resolved = {5: False}
+        self.assertEqual(self.poll(github), (1, [
+            f"thread from factory-droid on a.ts:9: **P2** Buffer too small. https://github.com/{REPO}/pull/{NUMBER}#discussion_5",
+            f"unresolved review threads (1): https://github.com/{REPO}/pull/{NUMBER}#discussion_5",
+            f"ACTION {REPO}#{NUMBER} @ {HEAD}",
+        ]))
+
     def test_later_runs_revalidate_required_checks_for_free(self) -> None:
         github = GitHub("CLEAN", checks=[check("lint")])
         etag = pr_watch.header(response(github.body(RULES)).split("\r\n\r\n")[0], "etag")
