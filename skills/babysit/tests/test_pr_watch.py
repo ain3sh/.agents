@@ -707,6 +707,26 @@ class RequiredChecksErrorTest(unittest.TestCase):
             )
         )
 
+    def rate_limit_sleep(self, answer: str, now: int = 1_000) -> int:
+        proc = mock.Mock(stdout=answer)
+        with (
+            mock.patch.object(pr_watch.subprocess, "run", return_value=proc),
+            mock.patch.object(pr_watch.time, "time", return_value=now),
+            mock.patch.object(pr_watch.time, "sleep") as sleep,
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            pr_watch.wait_for_rate_limit()
+        return sleep.call_args.args[0]
+
+    def test_spent_primary_limit_sleeps_until_its_reset(self) -> None:
+        self.assertEqual(self.rate_limit_sleep("[[0, 1300], [4000, 2900]]"), 305)
+        self.assertEqual(self.rate_limit_sleep("[[0, 9000], [0, 1100]]"), 3600)
+
+    def test_secondary_limit_sleeps_about_a_minute(self) -> None:
+        for answer in ("[[7974, 4490], [4999, 4490]]", "", "not json"):
+            with self.subTest(answer=answer):
+                self.assertIn(self.rate_limit_sleep(answer), range(50, 71))
+
 
 if __name__ == "__main__":
     unittest.main()
