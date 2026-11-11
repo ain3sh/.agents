@@ -35,14 +35,73 @@ class CheckMemoryTest(unittest.TestCase):
 
     def test_an_unset_cgroup_limit_leaves_host_memory(self) -> None:
         v1 = str(2**63 - 4096)
-        self.assertEqual(self.memory({"/sys/fs/cgroup/memory.max": "max"}), HOST)
         self.assertEqual(
-            self.memory({"/sys/fs/cgroup/memory/memory.limit_in_bytes": v1}), HOST
+            self.memory(
+                {
+                    "/proc/self/cgroup": "0::/system.slice/tools",
+                    "/sys/fs/cgroup/system.slice/tools/memory.max": "max",
+                    "/sys/fs/cgroup/system.slice/memory.max": "max",
+                }
+            ),
+            HOST,
+        )
+        self.assertEqual(
+            self.memory(
+                {
+                    "/proc/self/cgroup": "4:memory:/",
+                    "/sys/fs/cgroup/memory/memory.limit_in_bytes": v1,
+                }
+            ),
+            HOST,
         )
 
-    def test_a_cgroup_limit_binds(self) -> None:
+    def test_the_root_cgroup_limit_binds(self) -> None:
         limit = str(4 * GIB)
-        self.assertEqual(self.memory({"/sys/fs/cgroup/memory.max": limit}), 4 * GIB)
+        self.assertEqual(
+            self.memory(
+                {"/proc/self/cgroup": "0::/", "/sys/fs/cgroup/memory.max": limit}
+            ),
+            4 * GIB,
+        )
+
+    def test_the_nested_cgroup_of_this_process_binds(self) -> None:
+        tools = str(6_554_804_224)
+        self.assertEqual(
+            self.memory(
+                {
+                    "/proc/self/cgroup": "0::/system.slice/factoryd.service/tools",
+                    "/sys/fs/cgroup/system.slice/factoryd.service/tools/memory.max": tools,
+                    "/sys/fs/cgroup/system.slice/factoryd.service/memory.max": "max",
+                    "/sys/fs/cgroup/memory.max": "max",
+                }
+            ),
+            int(tools),
+        )
+
+    def test_the_tightest_ancestor_binds(self) -> None:
+        self.assertEqual(
+            self.memory(
+                {
+                    "/proc/self/cgroup": "0::/a/b",
+                    "/sys/fs/cgroup/a/b/memory.max": str(6 * GIB),
+                    "/sys/fs/cgroup/a/memory.max": str(3 * GIB),
+                }
+            ),
+            3 * GIB,
+        )
+
+    def test_a_v1_memory_hierarchy_binds(self) -> None:
+        self.assertEqual(
+            self.memory(
+                {
+                    "/proc/self/cgroup": "5:cpu,cpuacct:/x\n4:memory:/docker/abc",
+                    "/sys/fs/cgroup/memory/docker/abc/memory.limit_in_bytes": str(
+                        2 * GIB
+                    ),
+                }
+            ),
+            2 * GIB,
+        )
 
 
 class ExclusiveSlotsTest(unittest.TestCase):

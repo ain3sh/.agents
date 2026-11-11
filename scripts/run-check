@@ -21,24 +21,45 @@ READ_SIZE = 64 * 1024
 TERMINATION_GRACE_SECONDS = 1.0
 LOCK_POLL_SECONDS = 2.0
 GIB = 1024**3
-CGROUP_MEMORY_LIMITS = (
-    Path("/sys/fs/cgroup/memory.max"),
-    Path("/sys/fs/cgroup/memory/memory.limit_in_bytes"),
-)
+CGROUP_ROOT = Path("/sys/fs/cgroup")
+
+
+def _cgroup_limit_files() -> list[Path]:
+    """The memory limit file of this process's cgroup and of each ancestor.
+
+    The kernel kills at the tightest of them, which is usually not the root's:
+    Droid runs commands in a nested tools cgroup below the machine's memory.
+    """
+    try:
+        entries = Path("/proc/self/cgroup").read_text().splitlines()
+    except OSError:
+        return []
+    files: list[Path] = []
+    for entry in entries:
+        _hierarchy, controllers, path = entry.split(":", 2)
+        if not controllers:
+            base, name = CGROUP_ROOT, "memory.max"
+        elif "memory" in controllers.split(","):
+            base, name = CGROUP_ROOT / "memory", "memory.limit_in_bytes"
+        else:
+            continue
+        leaf = base / path.lstrip("/")
+        files += [d / name for d in (leaf, *leaf.parents) if d.is_relative_to(base)]
+    return files
 
 
 def _check_memory() -> int:
-    """Bytes the checks share: the cgroup's limit when one is set, else the host's."""
-    total = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
-    for path in CGROUP_MEMORY_LIMITS:
+    """Bytes the checks share: the tightest cgroup limit over this process, else the host's."""
+    limits = [os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")]
+    for path in _cgroup_limit_files():
         try:
             limit = path.read_text().strip()
         except OSError:
             continue
         # cgroup v2 writes "max" when unset; v1 writes a number past any host.
         if limit.isdigit():
-            return min(int(limit), total)
-    return total
+            limits.append(int(limit))
+    return min(limits)
 
 
 def _exclusive_slots(memory: int) -> int:
