@@ -47,6 +47,7 @@ Before styling, look for repo canon: `rg --files -g 'DESIGN.md' -g '*brand*'`. I
 8. **One finding is the honest limit** (`.finding.limit`, `.panel.limit`, `.callout.limit`). A wall of wins reads as marketing and costs you the other cards.
 9. **Never ship without a full sweep.** The hero viewport hides failures in charts, tables, and the collapsed log; `screenshot.js` opens every `<details>` for that reason.
 10. **Never publish unasked**, and never move a draft from secret gist to conjure (org-visible) without the user's go-ahead.
+11. **Never build a fixed-width component:** everything but prose reflows with the space it gets (auto-fit grids, container queries, `clamp()`), from a phone to an ultrawide, or the page sits in one corner of a wide screen.
 
 ## Failure map
 
