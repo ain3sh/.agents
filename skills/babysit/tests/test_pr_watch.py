@@ -230,6 +230,33 @@ LINKBACK = (
     'acme/issue/ENG-1/x">ENG-1 x</a></summary>\n</details>'
 )
 
+RISK_MARK = "<!-- factory-pr-risk -->"
+
+
+def risk_notice(state: str) -> str:
+    return (
+        f"{RISK_MARK}\n<!-- factory-pr-risk-state: {state.lower()} {HEAD} -->\n"
+        f"## Risk Assessment: {state}\n\nAssessing head `{HEAD[:12]}`."
+    )
+
+
+def risk_assessment(scored: str, verdict: str, *, at: str = "2026-01-01T00:00:00Z") -> dict[str, Any]:
+    """factory-mono's sticky risk comment, as github-actions rewrites it on each push."""
+    body = (
+        f"{RISK_MARK}\n## Risk Assessment: {verdict}\n\n**`skill-v4`**\n\n"
+        f"Scored head `{scored}`; trusted base `{BASE_OID[:12]}`.\n\n| Score | Value |\n| --- | --- |\n\n"
+        "- Human review is required: `a.ts:12` changes teardown.\n"
+        "- No concrete regression was established.\n"
+        "- A third point stays in the comment.\n\n<details><summary>Why</summary>\n\n- Rubric detail.\n</details>"
+    )
+    return {**comment("github-actions", "Bot", body, id=9, at="2026-01-01T00:00:00Z"), "updated_at": at}
+
+
+RISK_LINE = (
+    f"risk-assessment Human review needed at {HEAD[:12]}: Human review is required: `a.ts:12` changes "
+    f"teardown. No concrete regression was established. https://github.com/{REPO}/pull/{NUMBER}#issuecomment-9"
+)
+
 # factory-mono#28805: dev's base-filtered test never reports on the stack,
 # while an optional Vercel status fails and duplicate Validate PR runs cancel.
 STACK_28805 = (
@@ -352,6 +379,36 @@ class OnceVerdictTest(unittest.TestCase):
                 github.comments = [{**qa, "updated_at": edited}, reply, status]
                 self.assertEqual(self.poll(github), expected)
 
+    def test_once_lists_the_heads_risk_assessment_without_setting_the_verdict(self) -> None:
+        scored = risk_assessment(HEAD[:12], "Human review needed")
+        for body, listed in (
+            (scored["body"], [RISK_LINE]),
+            (risk_notice("Waiting"), []),
+            (risk_notice("Running"), []),
+            (risk_assessment("c" * 12, "Human review needed")["body"], []),
+        ):
+            with self.subTest(body=body[:60]):
+                github = GitHub("CLEAN")
+                github.comments = [{**scored, "body": body}, comment("github-actions", "Bot", "Deployed", id=3)]
+                self.assertEqual(self.poll(github), (0, [*listed, f"READY {REPO}#{NUMBER} @ {HEAD}"]))
+
+    def test_a_watcher_wakes_once_per_scored_head_and_verdict_of_the_rewritten_assessment(self) -> None:
+        github = GitHub("CLEAN")
+        github.comments = [{**risk_assessment(HEAD[:12], "Human review needed"), "body": risk_notice("Waiting")}]
+        watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=False)
+        self.assertEqual(self.poll(github, watcher), (None, []))
+        # The same comment, rewritten in place once the head is scored.
+        github.comments = [risk_assessment(HEAD[:12], "Human review needed", at="2026-01-02T00:00:00Z")]
+        self.assertEqual(self.poll(github, watcher), (1, [RISK_LINE, f"ACTION {REPO}#{NUMBER} @ {HEAD}"]))
+        # A restarted watcher holds it, though the agent never replied on the PR.
+        watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=False)
+        self.assertEqual(self.poll(github, watcher), (None, []))
+        self.assertEqual(self.poll(github, watcher), (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"]))
+        github.comments = [risk_assessment(HEAD[:12], "Approve", at="2026-01-03T00:00:00Z")]
+        watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=False)
+        code, lines = self.poll(github, watcher)
+        self.assertEqual(code, 1)
+        self.assertTrue(lines[0].startswith(f"risk-assessment Approve at {HEAD[:12]}: "), lines)
     def test_the_e2e_gate_waits_whether_its_status_runs_fail_or_skip(self) -> None:
         # New heads annotate plan and skip unrendered job names; old heads
         # fail each status run with the same approval-gate annotation.

@@ -32,9 +32,9 @@ or dead without a verdict with the command that restarts it (exit 1 if any).
 
 --once evaluates the PR a single time and reports everything open now, without
 waiting: ACTION when any line needs the agent, WAIT when only waiting lines
-remain, READY otherwise. Each failed optional check is listed whatever the
-verdict, and never sets it, since whether one is real is the agent's call. It
-neither reads nor saves reported keys, though a
+remain, READY otherwise. Each failed optional check, and the risk assessment of
+the head, is listed whatever the verdict and never sets it, since what either
+means is the agent's call. It neither reads nor saves reported keys, though a
 MERGED or CLOSED verdict still deletes the PR's state. Run it whenever you
 need the PR's current state and immediately before merging; pin the merge to
 the head sha that the verdict line ends with.
@@ -66,6 +66,11 @@ Events
                 deploy bots and factory-service-* accounts are skipped, since
                 checks carry that news, as is Linear's linkback comment to the
                 issue
+  risk-assessment
+                the repository's risk assessment scored the PR's head: its
+                verdict and first points, once per head and verdict, however
+                often its comment is rewritten. Its waiting and running
+                notices, and a score of an older head, are status
   thread        a review thread that is unresolved, not outdated, and whose
                 last submitted comment is not the agent's
   pending-review
@@ -189,6 +194,12 @@ STATUS_BOTS = (
 # marker: a link, not feedback. Its other comments still count.
 LINEAR_BOT = "linear-code"
 LINKBACK = "<!-- linear-linkback -->"
+# The repository's risk assessment is one github-actions comment opening with
+# this marker, rewritten in place on every push: "Waiting" and "Running" until
+# it scores the head, then its verdict and the head it scored.
+RISK_MARK = "<!-- factory-pr-risk -->"
+RISK_VERDICT = re.compile(r"^## Risk Assessment: (.+)$", re.MULTILINE)
+RISK_HEAD = re.compile(r"Scored head `([0-9a-f]{7,40})`")
 PASSED = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 # The E2E workflow waits by design until the PR has an approving review or this
 # label. It used to fail its status jobs, annotating each with GATE_TITLE; since
@@ -475,6 +486,24 @@ def noise(node: Json) -> bool:
     return not human(node) and (
         any(b in login(node) for b in STATUS_BOTS)
         or (login(node) == LINEAR_BOT and node["body"].startswith(LINKBACK))
+    )
+
+
+def assessment(node: Json, head: str) -> tuple[str, str] | None:
+    """The risk assessment's verdict on this head as an event, keyed by head
+    and verdict so its in-place rewrites wake once each; None for any other
+    comment, a notice that is still waiting or running, or another head's score."""
+    body = node["body"]
+    if human(node) or not body.startswith(RISK_MARK):
+        return None
+    verdict, scored = RISK_VERDICT.search(body), RISK_HEAD.search(body)
+    if not (verdict and scored and head.startswith(scored[1])):
+        return None
+    summary = body.split("<details>", 1)[0]
+    bullets = [line[2:] for line in summary.splitlines() if line.startswith("- ")][:2]
+    return (
+        f"risk:{head}:{verdict[1]}",
+        f"risk-assessment {verdict[1]} at {head[:12]}: {snippet(' '.join(bullets), 240)} {node['url']}",
     )
 
 
@@ -1032,11 +1061,14 @@ class Watcher:
         gating = self.gating(pr, checks)
         if waiting:
             checks |= {n: {"bucket": "gate", "url": ""} for n in gating - set(checks)}
-        optional = [
+        # What only the agent can judge: a watcher wakes once on each, and
+        # --once lists them without letting them set its verdict.
+        advisory = [
             (f"fail:{head}:{name}:{entry['url']}", f"check-failed {name} (optional) {entry['url']}")
             for name, entry in sorted(checks.items())
             if entry["bucket"] == "fail" and name not in gating
         ]
+        advisory += filter(None, (assessment(c, head) for c in pr["comments"]["nodes"]))
         if self.once:
             self.feedback(pr)
             actions, waits = self.evaluate(pr, checks, gating, stable=True)
@@ -1044,7 +1076,7 @@ class Watcher:
             verdict, code = (
                 ("ACTION", 1) if self.events else ("WAIT", 3) if waits else ("READY", 0)
             )
-            self.events += optional + [("", f"waiting: {w}") for w in waits]
+            self.events += advisory + [("", f"waiting: {w}") for w in waits]
             self.finish(verdict, f"@ {head}", code)
 
         # Checks register a few seconds after a push; two identical polls in a
@@ -1057,7 +1089,7 @@ class Watcher:
         stable, self.previous = snapshot == self.previous, snapshot
 
         self.feedback(pr)
-        for key, line in optional:
+        for key, line in advisory:
             self.emit(key, line)
         actions, waits = self.evaluate(pr, checks, gating, stable)
         for key, line in actions:
