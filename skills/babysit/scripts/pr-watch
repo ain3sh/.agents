@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """pr-watch: block until a GitHub PR needs the agent, then say why and exit.
 
-    pr-watch <pr> [--repo owner/name] [--interval 120] [--once]
+    pr-watch <pr> [--repo owner/name] [--interval 300] [--once]
 
 <pr> is a PR number or URL; the repo comes from the URL, --repo, or the
 current checkout. Run one background job per PR. It polls quietly and exits on
 the first poll that needs a decision, so the job's exit is the wake-up. Restart
 it after acting: it remembers what it already reported.
 
-Every agent's watchers spend one account's GraphQL budget, so --interval is
-the fastest cadence, not a fixed one. Each poll reads the budget left with its
-own query and waits at least as long as that budget lasts at this poll's cost
-until it resets; twice --interval once under 30% is left; and until the reset
-under 5%.
+Every agent's watchers spend one account's rate limits, which Ainesh's cockpit
+needs too, so each poll reads GitHub by REST as conditional requests: an
+unchanged resource answers 304, which no limit counts. GraphQL is read only for
+review threads' resolution, which REST lacks, and only when the PR's review
+comments changed. --interval (default and minimum 300) is the fastest cadence:
+polls slow fourfold, skipping the thread read, while the account has under 20%
+of its core or GraphQL budget left, and sleep to the reset under 5% of core. A
+watcher re-executes itself when its file changes on disk.
 
 --once evaluates the PR a single time and reports everything open now, without
 waiting: ACTION when any line needs the agent, WAIT when only waiting lines
@@ -63,7 +66,9 @@ Events
                 stays mergeable
   unresolved    otherwise ready, but review threads are unresolved, answered
                 and outdated ones included: they still block merging
-  blocked       otherwise ready, but GitHub still reports BLOCKED
+  (BLOCKED)     otherwise ready, but GitHub still reports BLOCKED: a wait, since
+                REST has no review decision and an approval branch protection
+                does not count yet (a code owner's is missing) looks the same
   incomplete    the PR has more than 100 review threads, so READY is
                 impossible to prove; check them by hand
 
@@ -128,6 +133,7 @@ from __future__ import annotations
 
 import argparse
 import fcntl
+import hashlib
 import html
 import json
 import math
@@ -144,6 +150,7 @@ from typing import Any, NoReturn
 from urllib.parse import quote
 
 Json = dict[str, Any]
+SELF = Path(__file__).resolve()
 
 STATE_DIR = (
     Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
@@ -201,83 +208,22 @@ DENIED = re.compile(r"\(HTTP 40[34]\)$")
 DENIED_TTL = 24 * 3600
 
 
-# The open PRs whose head is a ref. They include forks' PRs that pull the
-# branch into the fork's own copy of it (trycua/cua main had 3), so the stack
-# above a branch is the one from this repository into this repository
-# (Watcher.landing). Each branch of a stack costs one query: widening the
-# list at every level of one nested query costs 11 points at 10 a level.
-HEADS = """associatedPullRequests(states: OPEN, first: 100) {
-  totalCount
-  nodes { headRefName baseRefName headRepository { id } baseRepository { id } }
-}"""
-
-
-CONTEXTS = """
-contexts(first: 100, after: $after) {
-  pageInfo { hasNextPage endCursor }
-  nodes {
-    __typename
-    ... on CheckRun { id name status conclusion detailsUrl }
-    ... on StatusContext { context state targetUrl }
-  }
+# REST pages hold at most 100 items; the next page's URL comes in the Link header.
+PAGE = 100
+NEXT = re.compile(r'<([^>]+)>;\s*rel="next"')
+# REST exposes no review thread's resolution, so this is the one GraphQL read: a
+# few points, made only when the PR's review comments changed since the last.
+THREADS = """
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) { pullRequest(number: $number) {
+    reviewThreads(first: 100) { nodes { isResolved comments(first: 1) { nodes { databaseId } } } }
+  } }
 }
 """
-NOTE = "id url body createdAt lastEditedAt author { login __typename }"
-# Comments page oldest-ward until their update time reaches the agent's latest
-# response, so every comment posted or edited since arrives. Reviews can only
-# order by creation, so they page to the oldest: an edit to any review surfaces,
-# and a PR rarely has more than one page of them.
-FEEDBACK = {
-    "comments": (
-        "updatedAt",
-        f"""comments(last: 100, before: $before, orderBy: {{field: UPDATED_AT, direction: ASC}}) {{
-          pageInfo {{ hasPreviousPage startCursor }} nodes {{ updatedAt {NOTE} }}
-        }}""",
-    ),
-    "reviews": (
-        None,
-        f"""reviews(last: 100, before: $before) {{
-          pageInfo {{ hasPreviousPage startCursor }}
-          nodes {{ state submittedAt comments {{ totalCount }} {NOTE} }}
-        }}""",
-    ),
-}
-QUERY = f"""
-query($owner: String!, $name: String!, $number: Int!, $after: String, $before: String) {{
-  rateLimit {{ limit remaining resetAt cost }}
-  repository(owner: $owner, name: $name) {{
-    pullRequest(number: $number) {{
-      id url state isDraft headRefOid baseRefName mergeStateStatus reviewDecision
-      baseRepository {{ id }}
-      baseRef {{ target {{ oid }} {HEADS} }}
-      commits(last: 1) {{ nodes {{ commit {{ id statusCheckRollup {{ {CONTEXTS} }} }} }} }}
-      latestOpinionatedReviews(first: 100) {{ nodes {{ state }} }}
-      labels(first: 100) {{ nodes {{ name }} }}
-      {FEEDBACK["comments"][1]}
-      {FEEDBACK["reviews"][1]}
-      reviewThreads(last: 100) {{ totalCount nodes {{
-        isResolved isOutdated path line
-        comments(last: 100) {{ nodes {{ state {NOTE} }} }}
-      }} }}
-    }}
-  }}
-}}
-"""
-STACK = f"""
-query($owner: String!, $name: String!, $ref: String!) {{
-  repository(owner: $owner, name: $name) {{ ref(qualifiedName: $ref) {{ {HEADS} }} }}
-}}
-"""
-MORE_CONTEXTS = f"""
-query($id: ID!, $after: String) {{
-  node(id: $id) {{ ... on Commit {{ statusCheckRollup {{ {CONTEXTS} }} }} }}
-}}
-"""
-MORE_FEEDBACK = """
-query($id: ID!, $before: String) {{
-  node(id: $id) {{ ... on PullRequest {{ {connection} }} }}
-}}
-"""
+# Under this share of either budget left, polls slow fourfold and skip the
+# thread read; under FLOOR of core, the watcher sleeps to its reset.
+LOW, FLOOR, SLOWER = 0.20, 0.05, 4
+MIN_INTERVAL = 300
 
 
 class GhError(Exception):
@@ -293,33 +239,25 @@ def fail(message: str) -> NoReturn:
     sys.exit(2)
 
 
-# /rate_limit's body can report a GraphQL bucket the API does not enforce: it
-# showed 9,930 points left while every query failed as spent. The limit headers
-# of a request to each bucket are what GitHub enforces.
-LIMIT_PROBES = (("rate_limit",), ("graphql", "-f", "query={rateLimit{remaining}}"))
-LIMIT_HEADER = re.compile(
-    r"^x-ratelimit-(remaining|reset): (\d+)\r?$", re.IGNORECASE | re.MULTILINE
-)
+def budget() -> Json:
+    """The account's core and GraphQL buckets: /rate_limit counts against neither."""
+    resources = json.loads(gh("api", "rate_limit"))["resources"]
+    return {name: resources[name] for name in ("core", "graphql")}
+
+
+def low(bucket: Json, share: float = LOW) -> bool:
+    return bucket["remaining"] < share * bucket["limit"]
 
 
 def wait_for_rate_limit() -> None:
-    """Sleep out a rate limit. A primary limit is spent only when a bucket has
-    0 remaining: sleep until its reset. Any other match is GitHub's secondary
+    """Sleep out a rate limit. A primary limit is spent only when core has 0
+    remaining: sleep until its reset. Any other match is GitHub's secondary
     limit, which no bucket reports and which lifts within about a minute, so
     sleeping to a primary reset would blind the watcher for an hour."""
-    resets = []
-    for probe in LIMIT_PROBES:
-        out = subprocess.run(
-            ["gh", "api", "--include", *probe],
-            check=False,
-            capture_output=True,
-            text=True,
-        ).stdout
-        limit = {name.lower(): int(value) for name, value in LIMIT_HEADER.findall(out)}
-        if limit.get("remaining") == 0 and "reset" in limit:
-            resets.append(limit["reset"])
-    if resets:
-        delay = min(max(max(resets) - int(time.time()), 0) + 5, 3600)
+    proc = subprocess.run(["gh", "api", "rate_limit"], check=False, capture_output=True, text=True)
+    core = json.loads(proc.stdout)["resources"]["core"] if proc.returncode == 0 else {}
+    if core.get("remaining") == 0:
+        delay = min(max(core["reset"] - int(time.time()), 0) + 5, 3600)
         log(f"GitHub rate limit spent; sleeping {delay}s until it resets")
     else:
         delay = random.randint(50, 70)
@@ -328,17 +266,15 @@ def wait_for_rate_limit() -> None:
 
 
 def pace(interval: int, rate: Json, now: float) -> int:
-    """Seconds until the next poll, from the budget the last poll read."""
-    left = max(datetime.fromisoformat(rate["resetAt"]).timestamp() - now, 0)
-    share = rate["remaining"] / rate["limit"]
-    if share < 0.05:
-        return min(math.ceil(left) + 5, 3600)
-    lasting = math.ceil(rate["cost"] * left / rate["remaining"])
-    return max(interval * (2 if share < 0.30 else 1), lasting)
+    """Seconds until the next poll, from the budget read after the last poll."""
+    if low(rate["core"], FLOOR):
+        return min(max(math.ceil(rate["core"]["reset"] - now), 0) + 5, 3600)
+    return interval * (SLOWER if low(rate["core"]) or low(rate["graphql"]) else 1)
 
 
-def gh(*args: str) -> str:
-    """Run gh, riding out rate limits and retrying transient failures with backoff."""
+def gh(*args: str, ride: bool = True) -> str:
+    """Run gh, riding out rate limits (unless ride is False: the caller skips
+    the read instead) and retrying transient failures with backoff."""
     delay = 2
     for attempt in range(5):
         proc = subprocess.run(
@@ -349,7 +285,7 @@ def gh(*args: str) -> str:
         message = (
             proc.stderr.strip().splitlines() or [f"gh exited {proc.returncode}"]
         )[-1]
-        if RATE_LIMITED.search(proc.stderr):
+        if RATE_LIMITED.search(proc.stderr) and ride:
             wait_for_rate_limit()
         elif TRANSIENT.search(proc.stderr) and attempt < 4:
             log(f"gh {' '.join(args[:2])}: {message}; retrying in {delay}s")
@@ -360,11 +296,11 @@ def gh(*args: str) -> str:
     raise GhError("gh kept failing")
 
 
-def graphql(query: str, **variables: str | int) -> Json:
+def graphql(query: str, ride: bool = True, **variables: str | int) -> Json:
     args = ["api", "graphql", "-f", f"query={query}"]
     for key, value in variables.items():
         args += ["-F" if isinstance(value, int) else "-f", f"{key}={value}"]
-    out = gh(*args)
+    out = gh(*args, ride=ride)
     try:
         data = json.loads(out)["data"]
     except (ValueError, KeyError, TypeError) as error:
@@ -372,6 +308,55 @@ def graphql(query: str, **variables: str | int) -> Json:
     if data is None:
         raise GhError(f"GitHub answered no GraphQL data: {snippet(out)}")
     return data
+
+
+class Rest:
+    """GETs by REST as conditional requests. Each URL's ETag and body are kept
+    in a file per PR, so restarts reuse them: an unchanged resource answers
+    304, which no rate limit counts, and its kept body stands in."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        try:
+            self.cache: Json = json.loads(path.read_text())
+        except (OSError, ValueError):
+            self.cache = {}
+        self.read: Json = {}
+
+    def get(self, url: str) -> tuple[Any, str | None]:
+        """The body at url and the URL of its next page, if any."""
+        entry = self.cache.get(url, {})
+        header = ["-H", f"If-None-Match: {entry['etag']}"] if "etag" in entry else []
+        try:
+            out = gh("api", "--include", *header, url)
+        except GhError as error:
+            if "HTTP 304" not in str(error) or "body" not in entry:
+                raise
+        else:
+            head, body = re.split(r"\r?\n\r?\n", out, maxsplit=1)
+            tag = re.search(r"^etag: *(\S+)", head, re.IGNORECASE | re.MULTILINE)
+            link = re.search(r"^link: *(.+)$", head, re.IGNORECASE | re.MULTILINE)
+            entry = {"body": json.loads(body), "next": (m := link and NEXT.search(link[1])) and m[1]}
+            if tag:
+                entry["etag"] = tag[1]
+        self.read[url] = entry
+        return entry["body"], entry["next"]
+
+    def all(self, url: str, key: str | None = None) -> list[Json]:
+        """Every page's items: the list each page is, or its key's list."""
+        items: list[Json] = []
+        next_url: str | None = url
+        while next_url:
+            body, next_url = self.get(next_url)
+            items += body[key] if key else body
+        return items
+
+    def save(self, extra: Json) -> None:
+        """Keep only what this poll read, so a moved head's checks drop out."""
+        tmp = self.path.with_suffix(f".{os.getpid()}.tmp")
+        tmp.write_text(json.dumps(self.read | extra))
+        tmp.replace(self.path)
+        self.cache, self.read = self.read | extra, {}
 
 
 def revalidate(source: str, entry: Json, parse: Callable[[Any], list[str]]) -> Json:
@@ -471,14 +456,13 @@ def parse_target(raw: str, repo: str | None) -> tuple[str, int]:
     pr = int((url or number).group(2 if url else 1))
     repo = repo or (url.group(1) if url else None)
     if not repo:
-        try:
-            repo = gh(
-                "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"
-            ).strip()
-        except GhError as error:
-            fail(
-                f"no --repo given and the current directory has no GitHub repo ({error})"
-            )
+        remote = subprocess.run(
+            ["git", "remote", "get-url", "origin"], check=False, capture_output=True, text=True
+        ).stdout.strip()
+        found = re.search(r"github\.com[:/]([^/\s]+/[^/\s]+?)(?:\.git)?$", remote)
+        if not found:
+            fail("no --repo given and the current directory has no GitHub origin remote")
+        repo = found[1]
     if not re.fullmatch(r"[^/\s]+/[^/\s]+", repo):
         fail(f"'{repo}' is not an owner/name repo")
     return repo, pr
@@ -539,6 +523,9 @@ class Watcher:
         self.status = ""
         self.rate: Json | None = None
         self.delay = interval
+        self.rest = Rest(STATE_DIR / f"{slug}.rest.json")
+        self.threads: Json = {}
+        self.started = SELF.stat().st_mtime
 
     def lock(self) -> Any:
         STATE_DIR.mkdir(parents=True, exist_ok=True)
@@ -564,6 +551,7 @@ class Watcher:
         tmp.replace(self.state_path)
 
     def finish(self, verdict: str, detail: str, code: int) -> NoReturn:
+        self.rest.save({"threads": self.threads})
         for key, line in self.events:
             print(line, flush=True)
             self.reported.add(key)
@@ -580,51 +568,120 @@ class Watcher:
         if key not in self.reported:
             self.events.append((key, line))
 
+    def note(self, node: Json, **fields: Any) -> Json:
+        """A REST comment or review in the shape the evaluation reads. REST
+        names bots `<app>[bot]`; the bare login matches STATUS_BOTS and LINEAR_BOT."""
+        user = node.get("user") or {}
+        updated = node.get("updated_at")
+        return {
+            "id": node["node_id"],
+            "url": node["html_url"],
+            "body": node.get("body") or "",
+            "createdAt": node.get("created_at") or node.get("submitted_at"),
+            "lastEditedAt": updated if updated and updated != node.get("created_at") else None,
+            "author": user
+            and {
+                "login": user["login"].removesuffix("[bot]"),
+                "__typename": "Bot" if user["type"] == "Bot" else "User",
+            },
+            **fields,
+        }
+
     def fetch(self) -> Json:
-        data = graphql(QUERY, owner=self.owner, name=self.name, number=self.number)
-        self.rate = data["rateLimit"]
-        pr = data["repository"]["pullRequest"]
-        if pr is None:
-            fail(f"{self.repo}#{self.number} does not exist")
-        checks = contexts(pr)
-        while checks.get("pageInfo", {}).get("hasNextPage"):
-            commit = pr["commits"]["nodes"][0]["commit"]["id"]
-            cursor = checks["pageInfo"]["endCursor"]
-            page = graphql(MORE_CONTEXTS, id=commit, after=cursor)["node"]
-            if not (page and page["statusCheckRollup"]):
-                raise GhError("the head moved while paging its checks")
-            more = page["statusCheckRollup"]["contexts"]
-            checks["nodes"] += more["nodes"]
-            checks["pageInfo"] = more["pageInfo"]
-        for name, (order, connection) in FEEDBACK.items():
-            notes = pr[name]
-            while notes["pageInfo"]["hasPreviousPage"] and (
-                order is None
-                or datetime.fromisoformat(notes["nodes"][0][order]) > responded(pr)
-            ):
-                query = MORE_FEEDBACK.format(connection=connection)
-                cursor = notes["pageInfo"]["startCursor"]
-                more = graphql(query, id=pr["id"], before=cursor)["node"][name]
-                notes["nodes"] = more["nodes"] + notes["nodes"]
-                notes["pageInfo"] = more["pageInfo"]
-        return pr
+        """The PR, its head's checks, and its feedback, all by REST."""
+        repo, n = f"repos/{self.repo}", self.number
+        p, _ = self.rest.get(f"{repo}/pulls/{n}")
+        head = p["head"]["sha"]
+        runs = self.rest.all(f"{repo}/commits/{head}/check-runs?per_page={PAGE}", "check_runs")
+        statuses = self.rest.all(f"{repo}/commits/{head}/status?per_page={PAGE}", "statuses")
+        comments = self.rest.all(f"{repo}/issues/{n}/comments?per_page={PAGE}")
+        reviewed = self.rest.all(f"{repo}/pulls/{n}/reviews?per_page={PAGE}")
+        notes = self.rest.all(f"{repo}/pulls/{n}/comments?per_page={PAGE}")
+        pending = {r["id"] for r in reviewed if r["state"] == "PENDING"}
+        latest: dict[str, str] = {}
+        for r in reviewed:
+            if r["state"] in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED") and r["user"]:
+                latest[r["user"]["login"]] = r["state"]
+        threads: dict[int, list[Json]] = {}
+        for c in sorted(notes, key=lambda c: c["created_at"]):
+            threads.setdefault(c.get("in_reply_to_id") or c["id"], []).append(c)
+        resolved = self.resolution(notes)
+        return {
+            "url": p["html_url"],
+            "state": "MERGED" if p["merged_at"] else p["state"].upper(),
+            "isDraft": p["draft"],
+            "headRefOid": head,
+            "baseRefName": p["base"]["ref"],
+            "baseRef": {"target": {"oid": p["base"]["sha"]}},
+            "mergeStateStatus": (p.get("mergeable_state") or "unknown").upper(),
+            "reviewDecision": None,
+            "labels": {"nodes": p["labels"]},
+            "latestOpinionatedReviews": {"nodes": [{"state": s} for s in latest.values() if s != "DISMISSED"]},
+            "commits": {"nodes": [{"commit": {"statusCheckRollup": {"contexts": {"nodes": [
+                *({"__typename": "CheckRun", "id": r["id"], "name": r["name"], "status": r["status"].upper(),
+                   "conclusion": (r["conclusion"] or "").upper() or None, "detailsUrl": r["html_url"] or r["details_url"]}
+                  for r in runs),
+                *({"__typename": "StatusContext", "context": s["context"], "state": s["state"].upper(),
+                   "targetUrl": s["target_url"]} for s in statuses),
+            ]}}}}]},
+            "comments": {"nodes": [self.note(c) for c in comments]},
+            # A review's body can be edited with no REST timestamp, so its id
+            # carries the body's digest: an edit is a new version.
+            "reviews": {"nodes": [
+                self.note(r, id=f"{r['node_id']}:{hashlib.sha1((r.get('body') or '').encode()).hexdigest()[:8]}",
+                          state=r["state"], submittedAt=r.get("submitted_at"),
+                          comments={"totalCount": sum(c.get("pull_request_review_id") == r["id"] for c in notes)})
+                for r in reviewed
+            ]},
+            "reviewThreads": {"totalCount": len(threads), "nodes": [
+                {
+                    "isResolved": resolved.get(str(root), False),
+                    "isOutdated": t[0].get("line") is None,
+                    "path": t[0]["path"],
+                    "line": t[0].get("line") or t[0].get("original_line"),
+                    "comments": {"nodes": [
+                        self.note(c, state="PENDING" if c.get("pull_request_review_id") in pending else "SUBMITTED")
+                        for c in t
+                    ]},
+                }
+                for root, t in threads.items()
+            ]},
+        }
+
+    def resolution(self, notes: list[Json]) -> dict[str, bool]:
+        """Each thread's resolution by its first comment's id, read by GraphQL
+        only when the review comments changed since the last read and the
+        GraphQL budget is not low; otherwise the last read stands, and a thread
+        it never saw counts as unresolved."""
+        version = hashlib.sha1(json.dumps(sorted((c["id"], c["updated_at"]) for c in notes)).encode()).hexdigest()
+        kept = self.rest.cache.get("threads") or {}
+        if not notes or kept.get("version") == version or (self.rate and low(self.rate["graphql"])):
+            self.threads = kept
+            return kept.get("resolved", {})
+        try:
+            data = graphql(THREADS, ride=False, owner=self.owner, name=self.name, number=self.number)
+        except GhError as error:
+            log(f"thread resolution unread: {error}")
+            self.threads = kept
+            return kept.get("resolved", {})
+        nodes = data["repository"]["pullRequest"]["reviewThreads"]["nodes"]
+        resolved = {str(t["comments"]["nodes"][0]["databaseId"]): t["isResolved"] for t in nodes if t["comments"]["nodes"]}
+        self.threads = {"version": version, "resolved": resolved}
+        return resolved
 
     def landing(self, pr: Json) -> str:
         """The branch the PR finally lands in, as the module docstring defines it."""
-        repo = pr["baseRepository"]["id"]
-        branch, ref, seen = pr["baseRefName"], pr["baseRef"], {pr["baseRefName"]}
-        while ref is not None:
-            heads = ref["associatedPullRequests"]
-            if heads["totalCount"] > len(heads["nodes"]):
-                raise GhError(
-                    f"{branch} heads {heads['totalCount']} open PRs, more than one query reads"
-                )
+        branch, seen = pr["baseRefName"], {pr["baseRefName"]}
+        while True:
+            heads = self.rest.all(
+                f"repos/{self.repo}/pulls?state=open&per_page={PAGE}&head={quote(f'{self.owner}:{branch}', safe=':')}"
+            )
             above = [
-                n["baseRefName"]
-                for n in heads["nodes"]
-                if n["headRefName"] == branch
-                and n["baseRepository"]["id"] == repo
-                and (n["headRepository"] or {}).get("id") == repo
+                h["base"]["ref"]
+                for h in heads
+                if h["head"]["ref"] == branch
+                and h["base"]["repo"]["full_name"] == self.repo
+                and (h["head"]["repo"] or {}).get("full_name") == self.repo
             ]
             if not above:
                 return branch
@@ -634,10 +691,6 @@ class Watcher:
                 )
             branch = above[0]
             seen.add(branch)
-            ref = graphql(
-                STACK, owner=self.owner, name=self.name, ref=f"refs/heads/{branch}"
-            )["repository"]["ref"]
-        return branch
 
     def gating(self, pr: Json, checks: dict[str, Json]) -> set[str]:
         """The checks that gate, as the module docstring defines them."""
@@ -650,8 +703,8 @@ class Watcher:
     def gates(self, pr: Json) -> tuple[set[str], bool]:
         """Whether the E2E approval gate is waiting (GATE_TITLE on a failed or
         plan run of the head), and its failed runs. Asked only while the PR has
-        neither an approval nor the label, in one batch per poll: a run can be
-        rerequested or updated and gain annotations."""
+        neither an approval nor the label, each run's conditionally on every poll:
+        a run can be rerequested or updated and gain annotations."""
         if any(
             r["state"] == "APPROVED" for r in pr["latestOpinionatedReviews"]["nodes"]
         ) or any(label["name"] == GATE_LABEL for label in pr["labels"]["nodes"]):
@@ -664,21 +717,12 @@ class Watcher:
         }
         if not runs:
             return set(), False
-        data = graphql(
-            "query {"
-            + " ".join(
-                f"r{i}: node(id: {json.dumps(run)}) {{ ... on CheckRun {{ annotations(first: 5) {{ nodes {{ title }} }} }} }}"
-                for i, run in enumerate(runs)
-            )
-            + "}"
-        )
         annotated = {
             run
-            for i, run in enumerate(runs)
+            for run in runs
             if any(
-                n["title"] == GATE_TITLE
-                for n in ((data[f"r{i}"] or {}).get("annotations") or {}).get("nodes")
-                or []
+                a["title"] == GATE_TITLE
+                for a in self.rest.all(f"repos/{self.repo}/check-runs/{run}/annotations?per_page={PAGE}")
             )
         }
         return {run for run in annotated if runs[run]}, bool(annotated)
@@ -856,13 +900,10 @@ class Watcher:
                     f"unresolved review threads ({len(unresolved)}): {' '.join(unresolved)}",
                 )
             ], []
+        # REST has no review decision: an approval that leaves the PR BLOCKED is
+        # one branch protection does not count yet (a code owner's is missing).
         if state == "BLOCKED":
-            return [
-                (
-                    f"blocked:{head}:{base_oid}",
-                    "blocked: every gate here passes but GitHub reports BLOCKED (rulesets, required reviewers, merge queue)",
-                )
-            ], []
+            return [], ["blocked: GitHub reports BLOCKED, so a required review (code owner or count), ruleset or merge queue is unmet"]
         if state not in MERGEABLE:
             return [], [f"merge state {state}"]
         return [], []
@@ -926,6 +967,7 @@ class Watcher:
         while True:
             try:
                 self.poll()
+                self.rest.save({"threads": self.threads})
                 failures = 0
             except GhError as error:
                 failures += 1
@@ -936,16 +978,21 @@ class Watcher:
             self.sleep()
 
     def sleep(self) -> None:
-        delay = (
-            pace(self.interval, self.rate, time.time()) if self.rate else self.interval
-        )
+        self.rate = budget()
+        delay = pace(self.interval, self.rate, time.time())
         if delay != self.delay:
             self.delay = delay
+            core, graphql_ = self.rate["core"], self.rate["graphql"]
             log(
-                f"GraphQL budget {self.rate['remaining']}/{self.rate['limit']} until "
-                f"{self.rate['resetAt']}; polling every {delay}s"
+                f"budget core {core['remaining']}/{core['limit']}, GraphQL "
+                f"{graphql_['remaining']}/{graphql_['limit']}; polling every {delay}s"
             )
         time.sleep(delay)
+        # agents-pull fast-forwards ~/.agents every 15 minutes: run what it
+        # brought. The lock fd closes on exec, and the new process takes it.
+        if SELF.stat().st_mtime != self.started:
+            log("pr-watch changed on disk; restarting into it")
+            os.execv(sys.executable, [sys.executable, str(SELF), *sys.argv[1:]])
 
 
 def main() -> None:
@@ -959,15 +1006,15 @@ def main() -> None:
     parser.add_argument(
         "--interval",
         type=int,
-        default=120,
-        help="fastest seconds between polls; a draining GraphQL budget slows them (default 120, min 10)",
+        default=MIN_INTERVAL,
+        help=f"fastest seconds between polls; a low budget slows them (default and minimum {MIN_INTERVAL})",
     )
     parser.add_argument(
         "--once", action="store_true", help="evaluate the merge gate once and exit"
     )
     args = parser.parse_args()
     repo, number = parse_target(args.pr, args.repo)
-    watcher = Watcher(repo, number, max(args.interval, 10), args.once)
+    watcher = Watcher(repo, number, max(args.interval, MIN_INTERVAL), args.once)
     _lock = None if args.once else watcher.lock()
     watcher.run()
 

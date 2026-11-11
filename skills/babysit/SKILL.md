@@ -35,7 +35,7 @@ What wakes you depends on where you run:
   notice is your watcher. When you start, read each PR's current mark as your
   brief says, then run `pr-watch <url> --once` on each one you may act on; after
   that, on each PR a notice lists. Never start a blocking watcher: it
-  polls GraphQL every 120 seconds or slower on the budget the cockpit needs to
+  polls GitHub every 300 seconds or slower on the budget the cockpit needs to
   detect changes, and it freezes when your computer pauses while you are idle.
 - **Otherwise**, run `pr-watch <pr>` as a `fireAndForget` Execute, one per PR.
   It polls quietly and exits on the first poll that needs you, so its exit is
