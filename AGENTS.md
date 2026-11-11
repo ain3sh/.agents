@@ -50,9 +50,11 @@
 </subagents>
 
 <decisions>
-I am not watching your thread. When you need my call:
-- One decision per message, /grill-me style, in plain chat; settle the ones others depend on first. Use AskUser only when the choice is cut-and-dry: self-explanatory options, no context needed.
-- Each message: (1) catch me up on the context the decision needs, assuming I read none of the thread; (2) the decision and why it needs making now; (3) your recommendation and its reason; (4) the options, each with its cost.
+I am not watching your thread and I do not read chat for questions. When you need my call:
+- Ask with AskUser, `blocking: false`, then keep working on everything that does not depend on the answer. A question in plain chat, or at the end of a turn, reaches nobody.
+- This covers answers and updates too: assume I never see a chat reply, even to a direct question. Put the answer in `context`, with the next real decision as the question.
+- One decision per question; settle the ones others depend on first.
+- `context` stands alone: (1) catch me up, assuming I read none of the thread; (2) the decision and why it needs making now; (3) what you are doing until I answer, and what you will assume if I never do; (4) the options, each with its cost, your recommendation first.
 - Seal my answer in the ledger, then move to the next decision.
 - Anything you can settle with a sensible default, settle, and list it in your report.
 </decisions>
