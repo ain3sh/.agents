@@ -116,7 +116,8 @@ def compare(before: dict[str, Any], after: dict[str, Any]) -> list[str]:
             continue
         if not old["exists"]:
             continue
-        for key in ("size", "inode", "sha256"):
+        keys = ("inode",) if old["kind"] == "dir" else ("size", "inode", "sha256")
+        for key in keys:
             if key in old and old.get(key) != new.get(key):
                 findings.append(
                     f"protected path changed {key}: {old['path']} "

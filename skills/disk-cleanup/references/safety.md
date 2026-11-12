@@ -80,6 +80,8 @@ authorize deleting a worktree; select scope through `targets.md`.
 `--hash-protected` it hashes explicitly named files. Protecting a directory does
 **not** hash or enumerate its descendants. Name individual irreplaceable files
 when claiming content integrity, and distinguish that from directory survival.
+Directory size is not an integrity signal: active sessions add entries. Compare
+directory identity and retained session names; keep size and hash checks for files.
 
 ## Permission failures
 
@@ -93,5 +95,5 @@ owner or an explicitly reviewed elevated command.
 Run the isolated CLI protection suite; it never targets the real `/tmp` root:
 
 ```bash
-~/.agents/scripts/run-check test --cwd "$HOME/.agents" -- python3 -m unittest discover -s skills/disk-cleanup/tests -p 'test_clean_*.py' -v
+~/.agents/scripts/run-check test --cwd "$HOME/.agents" -- python3 -m unittest discover -s skills/disk-cleanup/tests -p 'test_*.py' -v
 ```
