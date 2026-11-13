@@ -12,7 +12,7 @@ Make the merge case legible from the title and first screen; later sections prov
 | Goal | Action |
 |---|---|
 | Analyze and draft | Load `references/workflow.md`; use three-dot diff analysis, change-plus-payoff title selection, `What / Why / How`, and the first-screen skim gate. |
-| Large diff (roughly 1k+ lines or 20+ files) | Run `scripts/diff-composition.py BASE HEAD --core <behavior files> --tooling <prefixes>`; put the composition table and core table under **What** (template in `references/conditional-sections.md`). |
+| Large diff (roughly 1k+ lines or 20+ files) | Run `scripts/diff-composition.py BASE HEAD --core <behavior files> --tooling <prefixes>`; put the composition table and core table under **What**: grammar from `show-me` (Breakdown), template and placement in `references/conditional-sections.md`. |
 | One rule changed across three or more surfaces, or three or more behaviors changed at once | Open **What** with the rule's before and after, then the per-surface Before → After table: grammar from `show-me` (Policy before/after table), placement in `references/conditional-sections.md`; later sections point at it instead of restating it. |
 | Add conditional sections | Load `references/conditional-sections.md` only when a catalog trigger fires. |
 | Show the change (every PR) | Load `show-me` with the verified diff and GitHub destination; place one or more views under **Architecture** as uploaded dark-themed images, never text blocks; only verbatim source stays text (`references/workflow.md`, Architecture). Upload through `references/artifacts.md`. |
