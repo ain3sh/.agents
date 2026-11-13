@@ -203,15 +203,16 @@ def _render_names(names: list[str]) -> str:
     return ", ".join(shown)
 
 
-def _env_dirs(env: dict[str, str]) -> tuple[Path, ...]:
-    """Factory's environment directories that exist, for a child given `env`.
+def _env_dirs(env: dict[str, str], cwd: str | None) -> tuple[Path, ...]:
+    """Factory's environment directories that exist, for a child given `env` in `cwd`.
 
     The SCM directory is covered under run-check's home, where the real file is,
-    and under the child's HOME, which its login shell reads.
+    and under the child's HOME, which its login shell reads. A relative HOME is the
+    child's, so it resolves against `cwd`, where the child starts.
     """
     if sys.platform != "linux":
         return ()
-    homes = (Path.home(), Path(env.get("HOME", Path.home())))
+    homes = (Path.home(), Path(cwd or ".").absolute() / env.get("HOME", Path.home()))
     candidates = (*_FACTORY_DIRS, *(home / _SCM_DIR for home in homes))
     return tuple(dict.fromkeys(path for path in candidates if path.is_dir()))
 
@@ -567,7 +568,7 @@ def _run(options: Options, env: dict[str, str], stripped: list[str]) -> int:
         )
         if node_version is not None:
             emit(f"[run-check] node: {node_version}\n")
-        hidden = _env_dirs(env)
+        hidden = _env_dirs(env, options.cwd)
         if hidden:
             emit(f"[run-check] env: hidden {', '.join(map(str, hidden))}\n")
         child = subprocess.Popen(

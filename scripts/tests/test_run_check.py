@@ -289,11 +289,42 @@ class HideTest(unittest.TestCase):
                 Path, "home", return_value=own
             ):
                 self.assertEqual(
-                    run_check._env_dirs({"HOME": str(child)}),
+                    run_check._env_dirs({"HOME": str(child)}, None),
                     (droid, own / run_check._SCM_DIR, child / run_check._SCM_DIR),
                 )
-                self.assertEqual(run_check._env_dirs({}), (droid, own / run_check._SCM_DIR))
-                self.assertEqual(run_check._env_dirs({"HOME": str(root / "bare")}), (droid, own / run_check._SCM_DIR))
+                self.assertEqual(run_check._env_dirs({}, None), (droid, own / run_check._SCM_DIR))
+                self.assertEqual(
+                    run_check._env_dirs({"HOME": str(root / "bare")}, None), (droid, own / run_check._SCM_DIR)
+                )
+
+    def test_a_relative_home_is_resolved_where_the_child_starts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            work = Path(temp_dir) / "work"
+            scm = work / "home" / run_check._SCM_DIR
+            scm.mkdir(parents=True)
+            (scm / "environment").write_text("GH_TOKEN=FAKESENTINEL\n")
+            completed = subprocess.run(
+                [
+                    str(RUN_CHECK),
+                    "test",
+                    "--cwd",
+                    str(work),
+                    "--env",
+                    "HOME=home",
+                    "--",
+                    "sh",
+                    "-c",
+                    f"ls -A home/{run_check._SCM_DIR.as_posix()} | wc -l",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                env={**os.environ, "DROID_CHECK_LOG_DIR": str(Path(temp_dir) / "logs")},
+                check=False,
+            )
+            self.assertIn(str(work / "home" / run_check._SCM_DIR), completed.stdout)
+            self.assertIn("\n0\n", completed.stdout)
+
 
 class ExclusiveSlotsTest(unittest.TestCase):
     def test_one_heavy_check_under_12_gib(self) -> None:
