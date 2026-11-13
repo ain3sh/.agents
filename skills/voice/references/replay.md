@@ -1,9 +1,8 @@
 # Behavioral replay
 
-Run after editing this skill. Give fresh subagents a copy of the skill at the
-old and the new revision under neutral paths, tell them to read it by path
-(not through the Skill tool), and give both the same brief. Grade the prose
-and the process log they return, not the skill's wording.
+Run after editing this skill, as **update-skill** step 6 describes, with the
+old revision as the control. Grade the prose and the process log the runs
+return, not the skill's wording.
 
 ## Scenarios
 
