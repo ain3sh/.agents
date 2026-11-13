@@ -5,7 +5,8 @@ Accepted shape:
 
     ~/.agents/scripts/run-check <label> \
       [--cwd <directory>] [--env KEY=VALUE]... [--env-file <path>]... \
-      [--unset-prefix <prefix>]... [--exclusive] -- <validator argv...>
+      [--unset-prefix <prefix>]... [--keep-env <NAME>]... [--exclusive] \
+      -- <validator argv...>
 
 The hook tokenizes with Python's standard shell lexer. It does not interpret,
 repair, or reconstruct arbitrary shell. A check command either speaks the
@@ -43,7 +44,8 @@ RUNNER = "~/.agents/scripts/run-check"
 RUNNER_PATH = Path.home() / ".agents" / "scripts" / "run-check"
 CANONICAL = (
     f"{RUNNER} <label> [--cwd <directory>] [--env KEY=VALUE]... "
-    "[--env-file <path>]... [--unset-prefix <prefix>]... [--exclusive] "
+    "[--env-file <path>]... [--unset-prefix <prefix>]... [--keep-env <NAME>]... "
+    "[--exclusive] "
     "-- <same scoped validator argv...>"
 )
 
@@ -63,6 +65,9 @@ _RUNNERS = (
     r"|cargo\s+(?:test|clippy|check)\b"
     r"|make\s+\S*(?:test|check|lint)s?(?:[-_][\w]+)*(?=\s|$))"
 )
+
+
+_ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
 def _validator_re(tools: list[str]) -> re.Pattern[str]:
@@ -132,6 +137,14 @@ def _valid_run_check(tokens: list[str]) -> bool:
             if (
                 index + 1 >= len(tokens)
                 or ASSIGNMENT_RE.fullmatch(tokens[index + 1]) is None
+            ):
+                return False
+            index += 2
+            continue
+        if token == "--keep-env":
+            if (
+                index + 1 >= len(tokens)
+                or _ENV_NAME_RE.fullmatch(tokens[index + 1]) is None
             ):
                 return False
             index += 2

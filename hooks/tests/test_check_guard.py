@@ -145,6 +145,11 @@ class CheckGuardTest(unittest.TestCase):
 
         self.assertIsNone(self.analyze(command))
 
+    def test_allows_keep_env(self) -> None:
+        command = "~/.agents/scripts/run-check gh --keep-env GH_TOKEN -- gh api user"
+
+        self.assertIsNone(self.analyze(command))
+
     def test_rejects_malformed_run_check_arguments(self) -> None:
         cases = (
             "~/.agents/scripts/run-check test pytest",
@@ -154,6 +159,8 @@ class CheckGuardTest(unittest.TestCase):
             "~/.agents/scripts/run-check test --env-file -- pytest",
             "~/.agents/scripts/run-check test --unset-prefix -- pytest",
             "~/.agents/scripts/run-check test --unset-prefix --exclusive -- pytest",
+            "~/.agents/scripts/run-check test --keep-env -- pytest",
+            "~/.agents/scripts/run-check test --keep-env GH-TOKEN -- gh api user",
         )
 
         for command in cases:
@@ -212,6 +219,10 @@ class RunCheckTest(unittest.TestCase):
         )
         environ.start()
         cls.addClassCleanup(environ.stop)
+        # Output assertions read run-check's own lines; the host's credentials would add one.
+        is_credential = _load_run_check()._is_credential
+        for name in [name for name in os.environ if is_credential(name)]:
+            del os.environ[name]
 
     def test_oxlint_keeps_exclusive_and_oxfmt_skips_it(self) -> None:
         run_check = _load_run_check()
@@ -449,6 +460,45 @@ class RunCheckTest(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stdout)
             # Inherited DROP_ME_* is removed; a file entry with the same prefix is applied after.
             self.assertIn("plain quoted json unset from-file\n", completed.stdout)
+
+    def test_strips_inherited_credentials_and_names_them(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            child = (
+                "import os; "
+                "print(*(os.environ.get(n, 'unset') for n in "
+                "('GH_TOKEN', 'CONJURE_TOKEN', 'JFROG_PASSWORD', 'PLAIN_PROBE')), flush=True)"
+            )
+            completed = subprocess.run(
+                [
+                    str(RUN_CHECK),
+                    "test",
+                    "--",
+                    sys.executable,
+                    "-c",
+                    child,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                env={
+                    **os.environ,
+                    "DROID_CHECK_LOG_DIR": str(Path(temp_dir) / "logs"),
+                    "GH_TOKEN": "gh-value",
+                    "CONJURE_TOKEN": "conjure-value",
+                    "JFROG_PASSWORD": "jfrog-value",
+                    "PLAIN_PROBE": "plain",
+                },
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stdout)
+            self.assertIn("unset unset unset plain\n", completed.stdout)
+            self.assertIn(
+                "[run-check] env: not passed: CONJURE_TOKEN, GH_TOKEN, JFROG_PASSWORD\n",
+                completed.stdout,
+            )
+            for value in ("gh-value", "conjure-value", "jfrog-value"):
+                self.assertNotIn(value, completed.stdout)
 
     def test_uses_the_nearest_nvmrc_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
