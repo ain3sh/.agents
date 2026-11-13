@@ -104,6 +104,57 @@ class CheckMemoryTest(unittest.TestCase):
         )
 
 
+class ChildEnvTest(unittest.TestCase):
+    INHERITED = {
+        "GH_TOKEN": "gh",
+        "CONJURE_SERVER": "conjure",
+        "JFROG_USERNAME": "jfrog",
+        "OPENAI_API_KEY": "key",
+        "aws_secret": "secret",
+        "DB_PASSWORD": "password",
+        "PATH": "/bin",
+        "FACTORY_ENV": "prod",
+    }
+
+    def child_env(self, *flags: str) -> tuple[dict[str, str], list[str]]:
+        options = run_check._parse(["test", *flags, "--", "true"])
+        return run_check._child_env(options, dict(self.INHERITED))
+
+    def test_strips_every_inherited_credential_by_default(self) -> None:
+        env, stripped = self.child_env()
+        self.assertEqual(env, {"PATH": "/bin", "FACTORY_ENV": "prod"})
+        self.assertEqual(
+            stripped,
+            [
+                "CONJURE_SERVER",
+                "DB_PASSWORD",
+                "GH_TOKEN",
+                "JFROG_USERNAME",
+                "OPENAI_API_KEY",
+                "aws_secret",
+            ],
+        )
+
+    def test_keep_env_keeps_one_inherited_credential(self) -> None:
+        env, stripped = self.child_env("--keep-env", "GH_TOKEN")
+        self.assertEqual(env["GH_TOKEN"], "gh")
+        self.assertNotIn("GH_TOKEN", stripped)
+
+    def test_explicit_env_applies_after_the_strip(self) -> None:
+        env, stripped = self.child_env("--env", "OPENAI_API_KEY=mock")
+        self.assertEqual(env["OPENAI_API_KEY"], "mock")
+        self.assertIn("OPENAI_API_KEY", stripped)
+
+    def test_unset_prefix_still_drops_its_names(self) -> None:
+        env, _stripped = self.child_env("--unset-prefix", "FACTORY_")
+        self.assertNotIn("FACTORY_ENV", env)
+
+    def test_keep_env_refuses_a_name_that_is_never_stripped(self) -> None:
+        with mock.patch.object(sys, "stderr"), self.assertRaises(SystemExit) as exit_:
+            run_check._parse(["test", "--keep-env", "PATH", "--", "true"])
+        self.assertEqual(exit_.exception.code, 64)
+
+
 class ExclusiveSlotsTest(unittest.TestCase):
     def test_one_heavy_check_under_12_gib(self) -> None:
         self.assertEqual(run_check._exclusive_slots(8 * GIB), 1)

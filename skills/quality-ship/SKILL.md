@@ -14,7 +14,7 @@ react-doctor, or anything in a monorepo.
 ## Act: run checks through one primitive
 
 ```bash
-~/.agents/scripts/run-check <label> [--cwd <dir>] [--env KEY=VALUE]... [--env-file <path>]... [--unset-prefix <prefix>]... [--exclusive] -- <scoped-validator-argv>
+~/.agents/scripts/run-check <label> [--cwd <dir>] [--env KEY=VALUE]... [--env-file <path>]... [--unset-prefix <prefix>]... [--keep-env <NAME>]... [--exclusive] -- <scoped-validator-argv>
 ```
 
 Examples:
@@ -38,7 +38,12 @@ without `.nvmrc`; an `.nvmrc` remains the canonical Node selector when present.
 Secrets never go on the command line: `--env-file <path>` loads a JSON object
 or dotenv file into the child's environment, and `--unset-prefix <prefix>`
 drops inherited variables first (for example `--unset-prefix FACTORY_
---env-file ~/factory/dev-env.json` for a live-recording run).
+--env-file ~/factory/dev-env.json` for a live-recording run). Inherited
+credentials (`CONJURE_*`, `JFROG_*`, and names ending `_TOKEN`, `_KEY`,
+`_SECRET` or `_PASSWORD`) never reach the check: `run-check` drops them and
+prints their names, never their values. A check that needs one keeps it with
+`--keep-env <NAME>` or loads it with `--env-file`. Factory machines' `gh`
+wrapper reloads its token from `/etc/droid/environment` itself and needs neither.
 
 Use `--exclusive` for compiler-backed lint, typechecks, builds, and pooled/E2E
 tests. It queues heavy checks across sessions/worktrees on this host while
