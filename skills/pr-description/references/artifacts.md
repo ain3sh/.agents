@@ -32,8 +32,9 @@ its takeaway, not its topic. Keep machine/auth details out of public PR prose.
 - Explanatory views go under `## Architecture` as uploaded images; only
   verbatim source the reader copies stays Markdown text. Return to
   `references/publish.md` for the body write.
-- The demo video goes in **What**; live screenshots and other recordings go
-  under `## Visual Evidence`, per `references/visual-evidence.md`.
+- The demo video and the artifact diff go in **What**; live screenshots and
+  other recordings go under `## Visual Evidence`, per
+  `references/visual-evidence.md`.
 - Carry over show-me's caption and selectable code companion; don't add a
   prose transcription or a second rendering of the same view.
 - An editable Excalidraw link is optional and needs authorization to upload

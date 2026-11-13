@@ -17,6 +17,7 @@ Make the merge case legible from the title and first screen; later sections prov
 | Add conditional sections | Load `references/conditional-sections.md` only when a catalog trigger fires. |
 | Show the change (every PR) | Load `show-me` with the verified diff and GitHub destination; place one or more views under **Architecture** as uploaded dark-themed images, never text blocks; only verbatim source stays text (`references/workflow.md`, Architecture). Upload through `references/artifacts.md`. |
 | Show a visual change | Open the PR first, then load `references/visual-evidence.md` and capture live proof; the demo video goes in **What**. |
+| Show a data change | When someone who opens an artifact the code already writes or sends (session file, row, payload, log, command output) would find it shorter, moved, or reshaped: put a `show-me` artifact diff of one real sample in **What** (`references/workflow.md`, skim gate). Never for a new field or artifact, text the diff itself edits (prompt, tool description, golden), or data touched in passing. |
 | Refresh an existing PR | Load `references/refresh.md`; explicit title/body audits bypass the no-diff throttle. |
 | Publish or PATCH | Load `references/publish.md`; compose with a file tool and use GitHub REST. |
 
@@ -85,6 +86,7 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 | **What** opens with an example or consequence ("`JSON.parse` now works") instead of the rule | Rewrite the first sentence as the rule's before → after; the example becomes the second paragraph (`workflow.md`, skim gate). |
 | Many surfaces change and the reviewer must assemble the picture from prose | Add the Before → After table directly under **What** (`conditional-sections.md`). |
 | Risk & Impact or a removed-safeguards list restates the Before → After table | Cut it to what the table cannot carry (Rule 11). |
+| A reader asks what happened to their data and the body answers with a table or a flow | Add the artifact diff in **What** (Act, Show a data change). |
 | Composition table leads with its biggest bucket, or one churn number hides that most of the diff is deletion | Core logic first, + and − in separate columns (`conditional-sections.md`, Diff composition). |
 | Core breakdown is freeform bullets or one churn total per group | Rebuild it as the core table: New / Deleted / Swapped / Reshaped rows, per-file +/−, one thing to check (`conditional-sections.md`, Diff composition). |
 | A commit table lists test titles | Name the invariants each commit's tests pin, with the file (`workflow.md`, Reviewer Guide). |

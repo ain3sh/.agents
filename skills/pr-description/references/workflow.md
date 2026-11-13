@@ -19,6 +19,7 @@ pr-description checklist:
 - [ ] Six required sections present; conditional catalog walked row by row
 - [ ] Architecture: one or more show-me views, each answering its own question, accepted for GitHub
 - [ ] Concrete visual change? Demo video in What, stills under Visual Evidence (visual-evidence.md)
+- [ ] "Show a data change" fires (SKILL.md, Act)? Artifact diff in What
 - [ ] Verification outcome-first; CI compressed to one line
 - [ ] Body length scales with complexity, not effort
 - [ ] Body composed with a file tool, passed `scripts/finalize-body.py`, applied through REST (publish.md)
@@ -108,7 +109,8 @@ Use two to four short sentences plus one compact table or list when that scans
 faster. The opening stands alone without the ticket. A demo video, when the
 change has one, sits on its own line right after the **What** paragraph that
 states the change and its proof, before any table (`visual-evidence.md`,
-Placement). For a large structural PR,
+Placement). An artifact diff (`SKILL.md`, Show a data change) takes the same
+slot, after the video when both exist. For a large structural PR,
 the order is **What** (outcome + decisive number) → composition table → core
 table → **Why** → **How** → one-line **Net effect for users**.
 

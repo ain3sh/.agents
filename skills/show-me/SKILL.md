@@ -97,6 +97,11 @@ type JobState =
 run(job: QueuedJob): Promise<DoneJob>
 ```
 
+**What does the stored or sent data look like now?** Artifact diff: one real
+sample of the file, row, payload, log, or output, captured before and after
+the change, with the untouched records kept around the delta
+(`references/representations.md`).
+
 **What happens to each surface now?** Policy before/after table: one row per
 surface, old mechanism and limit, new limit and pointer, owning commit; the
 surprise row marked (`references/representations.md`).

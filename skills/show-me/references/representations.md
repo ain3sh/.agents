@@ -22,6 +22,7 @@ be omitted is settled in `SKILL.md` (Check before sending).
 | What does the algorithm do? | Typed code or labelled pseudocode | decisions, mutations, return shape |
 | What shape should the code have? | Types and signatures | minimal types, function boundaries, ownership |
 | What structurally changed? | Before/after of real structure | unchanged context plus the delta |
+| What does the stored or sent data look like now? | Artifact diff | one real sample captured on both sides; the untouched records around the delta |
 | What happens to each surface or behavior now? | Policy before/after table | one row per surface; old mechanism and limit, new limit and pointer, owning commit or module; the surprise row marked |
 | Which work depends on which? | Dependency graph | nodes, directed edges, independent branches |
 | Which path produced the failure? | Causal flow | expected path, first wrong edge, downstream symptom |
@@ -159,6 +160,34 @@ unchanged actors in corresponding positions, mute unchanged structure, and
 highlight the changed edge or boundary. The panels must expose the delta, not
 repeat two inventories. Use the caller's existing contrast classes rather than
 inventing another theme.
+
+### Artifact diff
+
+For a change to what the code stores or sends (a session file, database row,
+wire payload, log, generated file, command output), when the reader asks what
+it looks like now and what is left alone. Text the diff itself edits (a
+prompt, a tool description, a golden) needs no capture: quote its hunk.
+
+```diff
+--- session.jsonl   dev      187,692 B, 26 rows
++++ session.jsonl   PR #123   69,281 B, 26 rows
+@@ rows 6-8 of 26 @@
+ 6   {"role":"assistant","content":[{"type":"tool_use","name":"Read", …}]}
+-7   {"role":"user","content":[{"type":"tool_result","content":"{\"type\":\"image\", … 64 KiB of base64 …}"}]}   65,908 B
++7   {"role":"user","content":[{"type":"tool_result","content":"Read /ws/shot.png: image/jpeg"}]}                   450 B
+ 8   {"role":"user","content":[{"type":"tool_result","content":[ … ]}]}
+```
+
+- Capture both sides by running the same input on the base and on the change;
+  label a side composed from the code instead `illustrative`.
+- Keep the untouched records around the delta: they show what is left alone,
+  which the changed record alone can only assert.
+- Put totals (records, bytes) in the header and sizes beside changed records
+  only when the question is loss or size.
+- Cut within a record and never drop one from the range shown. Label each cut
+  with what it stood for, and name under the view the fields left out because
+  they differ between runs (ids, timestamps).
+- Several artifacts share one diff, a header pair per file.
 
 ### Policy before/after table
 
