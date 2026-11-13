@@ -19,7 +19,7 @@ pr-description checklist:
 - [ ] Six required sections present; conditional catalog walked row by row
 - [ ] Architecture: one or more show-me views, each answering its own question, accepted for GitHub
 - [ ] Concrete visual change? Demo video in What, stills under Visual Evidence (visual-evidence.md)
-- [ ] Existing stored or sent data gets shorter, moves, or changes shape? Artifact diff in What (SKILL.md, Show a data change)
+- [ ] "Show a data change" fires (SKILL.md, Act)? Artifact diff in What
 - [ ] Verification outcome-first; CI compressed to one line
 - [ ] Body length scales with complexity, not effort
 - [ ] Body composed with a file tool, passed `scripts/finalize-body.py`, applied through REST (publish.md)
