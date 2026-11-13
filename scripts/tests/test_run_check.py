@@ -1,6 +1,8 @@
 import importlib.machinery
 import importlib.util
 import io
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -198,6 +200,37 @@ class EnvFileErrorTest(unittest.TestCase):
                     run_check._read_env_file(str(path))
                 self.assertNotIn("FAKESENTINEL", str(error.exception))
                 self.assertRegex(str(error.exception), r"(line|entry) 2")
+
+@unittest.skipUnless(sys.platform == "linux", "user and mount namespaces are Linux's")
+class HideTest(unittest.TestCase):
+    def run_hidden(self, path: Path, script: str) -> str:
+        return subprocess.run(
+            ["sh", "-c", script],
+            preexec_fn=run_check._hide((path,)),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            check=True,
+        ).stdout
+
+    def test_the_child_reads_an_empty_file_as_itself(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "environment"
+            path.write_text("GH_TOKEN=FAKESENTINEL\n")
+            out = self.run_hidden(path, f"wc -c < {path}; id -u; id -g")
+            self.assertEqual(out.split(), ["0", str(os.getuid()), str(os.getgid())])
+            self.assertEqual(path.read_text(), "GH_TOKEN=FAKESENTINEL\n")
+
+    def test_the_child_cannot_read_its_parents_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "environment"
+            path.write_text("")
+            out = self.run_hidden(path, "cat /proc/$PPID/environ >/dev/null 2>&1 && echo read || echo refused")
+            self.assertEqual(out, "refused\n")
+
+    def test_nothing_to_hide_adds_no_step(self) -> None:
+        self.assertIsNone(run_check._hide(()))
+
 
 class ExclusiveSlotsTest(unittest.TestCase):
     def test_one_heavy_check_under_12_gib(self) -> None:

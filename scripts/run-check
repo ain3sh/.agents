@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ctypes
 import fcntl
 import json
 import os
@@ -80,6 +81,13 @@ _ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 # Matched on the upper-cased name only; a secret inside another value, such as
 # a password in DATABASE_URL, passes.
 _CREDENTIAL_RE = re.compile(r"^(?:CONJURE|JFROG)_|(?:TOKEN|SECRET|PASSWORD|PASSWD)$|_KEY$")
+# Factory's environment files. A login shell (/etc/profile.d/droid-env.sh) and the
+# gh wrapper re-export them, which would undo the strip above.
+_ENV_FILES = (
+    Path("/etc/droid/environment"),
+    Path.home() / ".config" / "factory" / "scm" / "environment",
+)
+_MS_BIND, _MS_REC, _MS_PRIVATE = 0x1000, 0x4000, 0x40000
 _SLUG_RE = re.compile(r"[^a-z0-9._-]+")
 _TEST_FILE_RE = re.compile(r"\.(?:test|spec)\.[cm]?[jt]sx?$")
 _FAST_FORMATTERS = frozenset({"oxfmt"})
@@ -175,6 +183,41 @@ def _render_names(names: list[str]) -> str:
     if hidden:
         shown.append(f"and {hidden} name{'s' if hidden > 1 else ''} that are not shell identifiers")
     return ", ".join(shown)
+
+
+def _env_files() -> tuple[Path, ...]:
+    if sys.platform != "linux":
+        return ()
+    return tuple(path for path in _ENV_FILES if path.exists())
+
+
+def _hide(paths: tuple[Path, ...]) -> Callable[[], None] | None:
+    """A pre-exec step that covers `paths` with /dev/null for the child alone.
+
+    The child gets its own user namespace, which maps only the caller's uid and
+    gid, and its own mount namespace. It stays unprivileged, nobody else's view
+    changes, and it cannot read run-check's /proc/<pid>/environ either.
+    """
+    if not paths:
+        return None
+    uid, gid = os.getuid(), os.getgid()
+    libc = ctypes.CDLL(None, use_errno=True)
+
+    def hide() -> None:
+        os.unshare(os.CLONE_NEWUSER | os.CLONE_NEWNS)
+        for name, value in (
+            ("setgroups", "deny"),
+            ("uid_map", f"{uid} {uid} 1"),
+            ("gid_map", f"{gid} {gid} 1"),
+        ):
+            Path("/proc/self", name).write_text(value)
+        mounts = [(None, b"/", _MS_REC | _MS_PRIVATE)]
+        mounts += [(b"/dev/null", os.fsencode(path), _MS_BIND) for path in paths]
+        for source, target, flags in mounts:
+            if libc.mount(source, target, None, flags, None) != 0:
+                raise OSError(ctypes.get_errno(), os.fsdecode(target))
+
+    return hide
 
 
 def _error_status(exc: OSError) -> int:
@@ -496,6 +539,9 @@ def _run(options: Options, env: dict[str, str], stripped: list[str]) -> int:
         )
         if node_version is not None:
             emit(f"[run-check] node: {node_version}\n")
+        hidden = _env_files()
+        if hidden:
+            emit(f"[run-check] env: hidden {', '.join(map(str, hidden))}\n")
         child = subprocess.Popen(
             command,
             cwd=options.cwd,
@@ -503,6 +549,7 @@ def _run(options: Options, env: dict[str, str], stripped: list[str]) -> int:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             start_new_session=True,
+            preexec_fn=_hide(hidden),
         )
         assert child.stdout is not None
         while chunk := os.read(child.stdout.fileno(), READ_SIZE):
@@ -520,6 +567,13 @@ def _run(options: Options, env: dict[str, str], stripped: list[str]) -> int:
     except OSError as exc:
         emit(f"[run-check] error: {exc}\n")
         status = _error_status(exc)
+    except subprocess.SubprocessError:
+        # Popen reports a failed pre-exec step without its reason.
+        emit(
+            "[run-check] error: the check did not start: covering "
+            f"{', '.join(map(str, hidden))} in a new user and mount namespace failed\n"
+        )
+        status = 1
     finally:
         if child is not None:
             if child.stdout is not None:

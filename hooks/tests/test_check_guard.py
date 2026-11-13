@@ -33,6 +33,18 @@ def _load_run_check():
     return module
 
 
+def _readline(stream) -> str:
+    """The next line run-check or its child wrote, past the env-files notice.
+
+    Whether that notice prints depends on the host's files, not on the test.
+    """
+    while True:
+        line = stream.readline()
+        line = line.decode() if isinstance(line, bytes) else line
+        if not line.startswith("[run-check] env: hidden "):
+            return line
+
+
 class CheckGuardTest(unittest.TestCase):
     def analyze(self, command: str, *, background: bool = False):
         return _violation(
@@ -274,7 +286,7 @@ class RunCheckTest(unittest.TestCase):
 
             def line(process):
                 self.assertTrue(select.select([process.stdout], [], [], 5)[0])
-                result = process.stdout.readline().decode()
+                result = _readline(process.stdout)
                 self.assertTrue(result, "runner exited before the expected transition")
                 return result
 
@@ -392,9 +404,9 @@ class RunCheckTest(unittest.TestCase):
             assert process.stdout is not None
             assert process.stdin is not None
 
-            log_line = process.stdout.readline()
-            first = process.stdout.readline()
-            second = process.stdout.readline()
+            log_line = _readline(process.stdout)
+            first = _readline(process.stdout)
+            second = _readline(process.stdout)
 
             self.assertRegex(log_line, r"^\[run-check\] log: .+\.log$")
             self.assertEqual(first, f"{cwd}\n")
@@ -413,8 +425,13 @@ class RunCheckTest(unittest.TestCase):
             self.assertIn("[run-check] exit: 7\n", remaining)
 
             log_path = Path(log_line.removeprefix("[run-check] log: ").strip())
+            logged = [
+                line
+                for line in log_path.read_text().splitlines(keepends=True)
+                if not line.startswith("[run-check] env: hidden ")
+            ]
             self.assertEqual(
-                log_path.read_text(),
+                "".join(logged),
                 f"{log_line}{cwd}\nstderr-live\nfinished\n[run-check] exit: 7\n",
             )
 
@@ -499,6 +516,32 @@ class RunCheckTest(unittest.TestCase):
             )
             for value in ("gh-value", "conjure-value", "jfrog-value"):
                 self.assertNotIn(value, completed.stdout)
+
+    @unittest.skipUnless(
+        Path("/etc/droid/environment").exists(), "needs Factory's environment file"
+    )
+    def test_a_login_shell_gets_nothing_back_from_the_environment_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            completed = subprocess.run(
+                [
+                    str(RUN_CHECK),
+                    "test",
+                    "--unset-prefix",
+                    "FACTORY_",
+                    "--",
+                    "bash",
+                    "-lc",
+                    "env | grep -c '^FACTORY_'; wc -c < /etc/droid/environment; id -u",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                env={**os.environ, "DROID_CHECK_LOG_DIR": str(Path(temp_dir) / "logs")},
+                check=False,
+            )
+
+            self.assertIn("[run-check] env: hidden /etc/droid/environment\n", completed.stdout)
+            self.assertIn(f"\n0\n0\n{os.getuid()}\n", completed.stdout)
 
     def test_uses_the_nearest_nvmrc_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -611,9 +654,9 @@ class RunCheckTest(unittest.TestCase):
         )
         assert process.stdout is not None
 
-        process.stdout.readline()
-        self.assertIn("exclusive: acquired", process.stdout.readline())
-        child_pid = int(process.stdout.readline())
+        _readline(process.stdout)
+        self.assertIn("exclusive: acquired", _readline(process.stdout))
+        child_pid = int(_readline(process.stdout))
         process.terminate()
         try:
             remaining = process.communicate(timeout=5)[0]
