@@ -531,7 +531,7 @@ class RunCheckTest(unittest.TestCase):
                     "--",
                     "bash",
                     "-lc",
-                    "env | grep -c '^FACTORY_'; wc -c < /etc/droid/environment; id -u",
+                    "env | grep -c '^FACTORY_'; ls -A /etc/droid | wc -l; id -u",
                 ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -540,7 +540,7 @@ class RunCheckTest(unittest.TestCase):
                 check=False,
             )
 
-            self.assertRegex(completed.stdout, r"\[run-check\] env: hidden /etc/droid/environment(, |\n)")
+            self.assertRegex(completed.stdout, r"\[run-check\] env: hidden /etc/droid(, |\n)")
             self.assertIn(f"\n0\n0\n{os.getuid()}\n", completed.stdout)
 
     def test_uses_the_nearest_nvmrc_runtime(self) -> None:

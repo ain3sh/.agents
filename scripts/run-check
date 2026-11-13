@@ -81,15 +81,16 @@ _ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 # Matched on the upper-cased name only; a secret inside another value, such as
 # a password in DATABASE_URL, passes.
 _CREDENTIAL_RE = re.compile(r"^(?:CONJURE|JFROG)_|(?:TOKEN|SECRET|PASSWORD|PASSWD)$|_KEY$")
-# Factory's environment files. A login shell (/etc/profile.d/droid-env.sh) and the
-# gh wrapper re-export them, which would undo the strip above. The machine's
-# environment refresh leaves world-readable copies beside the first, named
-# environment.factory-refresh-<id>.tmp.
-_ENV_FILE_GLOBS = (
-    (Path("/etc/droid"), "environment*"),
-    (Path.home() / ".config" / "factory" / "scm", "environment"),
-)
-_MS_BIND, _MS_REC, _MS_PRIVATE = 0x1000, 0x4000, 0x40000
+# Factory's environment directories. A login shell (/etc/profile.d/droid-env.sh)
+# and the gh wrapper source the files in them, which would undo the strip above.
+# A check sees each one as an empty directory, never a cover over its files: the
+# machine's refresh replaces /etc/droid/environment by rename, which detaches a
+# mount over the file, and writes new copies beside it while a check runs.
+_FACTORY_DIRS = (Path("/etc/droid"),)
+_SCM_DIR = Path(".config", "factory", "scm")
+_MS_RDONLY, _MS_NOSUID, _MS_NODEV, _MS_NOEXEC = 0x1, 0x2, 0x4, 0x8
+_MS_REC, _MS_PRIVATE = 0x4000, 0x40000
+_EMPTY_FLAGS = _MS_RDONLY | _MS_NOSUID | _MS_NODEV | _MS_NOEXEC
 _SLUG_RE = re.compile(r"[^a-z0-9._-]+")
 _TEST_FILE_RE = re.compile(r"\.(?:test|spec)\.[cm]?[jt]sx?$")
 _FAST_FORMATTERS = frozenset({"oxfmt"})
@@ -202,19 +203,21 @@ def _render_names(names: list[str]) -> str:
     return ", ".join(shown)
 
 
-def _env_files() -> tuple[Path, ...]:
+def _env_dirs(env: dict[str, str]) -> tuple[Path, ...]:
+    """Factory's environment directories that exist, for a child given `env`.
+
+    The SCM directory is covered under run-check's home, where the real file is,
+    and under the child's HOME, which its login shell reads.
+    """
     if sys.platform != "linux":
         return ()
-    return tuple(
-        path
-        for directory, pattern in _ENV_FILE_GLOBS
-        for path in sorted(directory.glob(pattern))
-        if path.is_file()
-    )
+    homes = (Path.home(), Path(env.get("HOME", Path.home())))
+    candidates = (*_FACTORY_DIRS, *(home / _SCM_DIR for home in homes))
+    return tuple(dict.fromkeys(path for path in candidates if path.is_dir()))
 
 
 def _hide(paths: tuple[Path, ...]) -> Callable[[], None] | None:
-    """A pre-exec step that covers `paths` with /dev/null for the child alone.
+    """A pre-exec step that shows the child alone each of `paths` as an empty, read-only tmpfs.
 
     The child gets its own user namespace, which maps only the caller's uid and
     gid, and its own mount namespace. It stays unprivileged, nobody else's view
@@ -233,10 +236,13 @@ def _hide(paths: tuple[Path, ...]) -> Callable[[], None] | None:
             ("gid_map", f"{gid} {gid} 1"),
         ):
             Path("/proc/self", name).write_text(value)
-        mounts = [(None, b"/", _MS_REC | _MS_PRIVATE)]
-        mounts += [(b"/dev/null", os.fsencode(path), _MS_BIND) for path in paths]
-        for source, target, flags in mounts:
-            if libc.mount(source, target, None, flags, None) != 0:
+        mounts = [(None, b"/", None, _MS_REC | _MS_PRIVATE, None)]
+        mounts += [
+            (b"tmpfs", os.fsencode(path), b"tmpfs", _EMPTY_FLAGS, b"mode=0555")
+            for path in paths
+        ]
+        for source, target, fstype, flags, data in mounts:
+            if libc.mount(source, target, fstype, flags, data) != 0:
                 raise OSError(ctypes.get_errno(), os.fsdecode(target))
 
     return hide
@@ -561,7 +567,7 @@ def _run(options: Options, env: dict[str, str], stripped: list[str]) -> int:
         )
         if node_version is not None:
             emit(f"[run-check] node: {node_version}\n")
-        hidden = _env_files()
+        hidden = _env_dirs(env)
         if hidden:
             emit(f"[run-check] env: hidden {', '.join(map(str, hidden))}\n")
         child = subprocess.Popen(

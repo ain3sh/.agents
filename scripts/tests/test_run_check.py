@@ -223,46 +223,77 @@ class EnvFileErrorTest(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == "linux", "user and mount namespaces are Linux's")
 class HideTest(unittest.TestCase):
-    def run_hidden(self, path: Path, script: str) -> str:
+    FILES = ("environment", "environment.factory-refresh-1.tmp", "scm-cli-proxy.env")
+
+    def directory(self, temp_dir: str) -> Path:
+        directory = Path(temp_dir) / "droid"
+        directory.mkdir()
+        for name in self.FILES:
+            (directory / name).write_text("GH_TOKEN=FAKESENTINEL\n")
+        return directory
+
+    def run_hidden(self, directory: Path, script: str) -> str:
         return subprocess.run(
             ["sh", "-c", script],
-            preexec_fn=run_check._hide((path,)),
+            preexec_fn=run_check._hide((directory,)),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             check=True,
         ).stdout
 
-    def test_the_child_reads_an_empty_file_as_itself(self) -> None:
+    def test_the_child_sees_an_empty_directory_as_itself(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "environment"
-            path.write_text("GH_TOKEN=FAKESENTINEL\n")
-            out = self.run_hidden(path, f"wc -c < {path}; id -u; id -g")
-            self.assertEqual(out.split(), ["0", str(os.getuid()), str(os.getgid())])
-            self.assertEqual(path.read_text(), "GH_TOKEN=FAKESENTINEL\n")
+            directory = self.directory(temp_dir)
+            out = self.run_hidden(
+                directory, f"ls -A {directory} | wc -l; touch {directory}/x 2>/dev/null || echo read-only; id -u; id -g"
+            )
+            self.assertEqual(out.split(), ["0", "read-only", str(os.getuid()), str(os.getgid())])
+            self.assertEqual(sorted(path.name for path in directory.iterdir()), sorted(self.FILES))
+
+    def test_a_rename_over_and_a_new_copy_during_the_check_stay_hidden(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = self.directory(temp_dir)
+            child = subprocess.Popen(
+                ["sh", "-c", f"ls -A {directory} | wc -l; read _; ls -A {directory} | wc -l; cat {directory}/* 2>/dev/null | wc -c"],
+                preexec_fn=run_check._hide((directory,)),
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+            assert child.stdin is not None and child.stdout is not None
+            self.assertEqual(child.stdout.readline(), "0\n")
+            (directory / "staged").write_text("GH_TOKEN=FAKESENTINEL\n")
+            (directory / "staged").rename(directory / "environment")
+            (directory / "environment.factory-refresh-2.tmp").write_text("GH_TOKEN=FAKESENTINEL\n")
+            out, _ = child.communicate("go\n", timeout=10)
+            self.assertEqual(out.split(), ["0", "0"])
 
     def test_the_child_cannot_read_its_parents_environment(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "environment"
-            path.write_text("")
-            out = self.run_hidden(path, "cat /proc/$PPID/environ >/dev/null 2>&1 && echo read || echo refused")
+            out = self.run_hidden(
+                self.directory(temp_dir), "cat /proc/$PPID/environ >/dev/null 2>&1 && echo read || echo refused"
+            )
             self.assertEqual(out, "refused\n")
 
     def test_nothing_to_hide_adds_no_step(self) -> None:
         self.assertIsNone(run_check._hide(()))
 
-    def test_hides_the_file_and_the_copies_beside_it(self) -> None:
+    def test_covers_the_scm_directory_under_both_homes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            directory = Path(temp_dir)
-            for name in ("environment", "environment.factory-refresh-1.tmp", "scm-cli-proxy.env"):
-                (directory / name).write_text("")
-            (directory / "environment.d").mkdir()
-            with mock.patch.object(run_check, "_ENV_FILE_GLOBS", ((directory, "environment*"),)):
+            root = Path(temp_dir)
+            droid, own, child = root / "droid", root / "own", root / "child"
+            for path in (droid, own / run_check._SCM_DIR, child / run_check._SCM_DIR):
+                path.mkdir(parents=True)
+            with mock.patch.object(run_check, "_FACTORY_DIRS", (droid, root / "absent")), mock.patch.object(
+                Path, "home", return_value=own
+            ):
                 self.assertEqual(
-                    run_check._env_files(),
-                    (directory / "environment", directory / "environment.factory-refresh-1.tmp"),
+                    run_check._env_dirs({"HOME": str(child)}),
+                    (droid, own / run_check._SCM_DIR, child / run_check._SCM_DIR),
                 )
-
+                self.assertEqual(run_check._env_dirs({}), (droid, own / run_check._SCM_DIR))
+                self.assertEqual(run_check._env_dirs({"HOME": str(root / "bare")}), (droid, own / run_check._SCM_DIR))
 
 class ExclusiveSlotsTest(unittest.TestCase):
     def test_one_heavy_check_under_12_gib(self) -> None:
