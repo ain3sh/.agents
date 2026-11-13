@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ctypes
 import fcntl
 import json
 import os
@@ -80,6 +81,16 @@ _ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 # Matched on the upper-cased name only; a secret inside another value, such as
 # a password in DATABASE_URL, passes.
 _CREDENTIAL_RE = re.compile(r"^(?:CONJURE|JFROG)_|(?:TOKEN|SECRET|PASSWORD|PASSWD)$|_KEY$")
+# Factory's environment directories. A login shell (/etc/profile.d/droid-env.sh)
+# and the gh wrapper source the files in them, which would undo the strip above.
+# A check sees each one as an empty directory, never a cover over its files: the
+# machine's refresh replaces /etc/droid/environment by rename, which detaches a
+# mount over the file, and writes new copies beside it while a check runs.
+_FACTORY_DIRS = (Path("/etc/droid"),)
+_SCM_DIR = Path(".config", "factory", "scm")
+_MS_RDONLY, _MS_NOSUID, _MS_NODEV, _MS_NOEXEC = 0x1, 0x2, 0x4, 0x8
+_MS_REC, _MS_PRIVATE = 0x4000, 0x40000
+_EMPTY_FLAGS = _MS_RDONLY | _MS_NOSUID | _MS_NODEV | _MS_NOEXEC
 _SLUG_RE = re.compile(r"[^a-z0-9._-]+")
 _TEST_FILE_RE = re.compile(r"\.(?:test|spec)\.[cm]?[jt]sx?$")
 _FAST_FORMATTERS = frozenset({"oxfmt"})
@@ -117,7 +128,7 @@ def _read_env_file(path: str) -> dict[str, str]:
         for number, (name, value) in enumerate(entries.items(), 1):
             if not isinstance(value, str) or _ENV_NAME_RE.fullmatch(name) is None:
                 raise OSError(f"{path}: entry {number} is not a string environment entry")
-            loaded[name] = value
+            loaded[name] = _env_value(value, f"{path}: entry {number}")
         return loaded
     for number, line in enumerate(text.splitlines(), 1):
         line = line.strip()
@@ -132,12 +143,23 @@ def _read_env_file(path: str) -> dict[str, str]:
             raise OSError(f"{path}: line {number}: invalid environment name")
         if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
             value = value[1:-1]
-        loaded[name] = value
+        loaded[name] = _env_value(value, f"{path}: line {number}")
     return loaded
 
 
+def _env_value(value: str, where: str) -> str:
+    """A value the child's environment can hold; otherwise Popen fails with a bare traceback."""
+    try:
+        encoded = os.fsencode(value)
+    except UnicodeEncodeError:
+        raise OSError(f"{where}: value is not encodable text") from None
+    if b"\0" in encoded:
+        raise OSError(f"{where}: value holds a NUL byte")
+    return value
+
+
 def _is_credential(name: str) -> bool:
-    return _CREDENTIAL_RE.search(name.upper()) is not None
+    return _CREDENTIAL_RE.search(name.upper().rstrip("_")) is not None
 
 
 def _child_env(
@@ -173,8 +195,58 @@ def _render_names(names: list[str]) -> str:
     shown = [name for name in names if _ENV_NAME_RE.fullmatch(name)]
     hidden = len(names) - len(shown)
     if hidden:
-        shown.append(f"and {hidden} name{'s' if hidden > 1 else ''} that are not shell identifiers")
+        shown.append(
+            "and 1 name that is not a shell identifier"
+            if hidden == 1
+            else f"and {hidden} names that are not shell identifiers"
+        )
     return ", ".join(shown)
+
+
+def _env_dirs(env: dict[str, str], cwd: str | None) -> tuple[Path, ...]:
+    """Factory's environment directories that exist, for a child given `env` in `cwd`.
+
+    The SCM directory is covered under run-check's home, where the real file is,
+    and under the child's HOME, which its login shell reads. A relative HOME is the
+    child's, so it resolves against `cwd`, where the child starts.
+    """
+    if sys.platform != "linux":
+        return ()
+    homes = (Path.home(), Path(cwd or ".").absolute() / env.get("HOME", Path.home()))
+    candidates = (*_FACTORY_DIRS, *(home / _SCM_DIR for home in homes))
+    return tuple(dict.fromkeys(path for path in candidates if path.is_dir()))
+
+
+def _hide(paths: tuple[Path, ...]) -> Callable[[], None] | None:
+    """A pre-exec step that shows the child alone each of `paths` as an empty, read-only tmpfs.
+
+    The child gets its own user namespace, which maps only the caller's uid and
+    gid, and its own mount namespace. It stays unprivileged, nobody else's view
+    changes, and it cannot read run-check's /proc/<pid>/environ either.
+    """
+    if not paths:
+        return None
+    uid, gid = os.getuid(), os.getgid()
+    libc = ctypes.CDLL(None, use_errno=True)
+
+    def hide() -> None:
+        os.unshare(os.CLONE_NEWUSER | os.CLONE_NEWNS)
+        for name, value in (
+            ("setgroups", "deny"),
+            ("uid_map", f"{uid} {uid} 1"),
+            ("gid_map", f"{gid} {gid} 1"),
+        ):
+            Path("/proc/self", name).write_text(value)
+        mounts = [(None, b"/", None, _MS_REC | _MS_PRIVATE, None)]
+        mounts += [
+            (b"tmpfs", os.fsencode(path), b"tmpfs", _EMPTY_FLAGS, b"mode=0555")
+            for path in paths
+        ]
+        for source, target, fstype, flags, data in mounts:
+            if libc.mount(source, target, fstype, flags, data) != 0:
+                raise OSError(ctypes.get_errno(), os.fsdecode(target))
+
+    return hide
 
 
 def _error_status(exc: OSError) -> int:
@@ -496,6 +568,9 @@ def _run(options: Options, env: dict[str, str], stripped: list[str]) -> int:
         )
         if node_version is not None:
             emit(f"[run-check] node: {node_version}\n")
+        hidden = _env_dirs(env, options.cwd)
+        if hidden:
+            emit(f"[run-check] env: hidden {', '.join(map(str, hidden))}\n")
         child = subprocess.Popen(
             command,
             cwd=options.cwd,
@@ -503,6 +578,7 @@ def _run(options: Options, env: dict[str, str], stripped: list[str]) -> int:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             start_new_session=True,
+            preexec_fn=_hide(hidden),
         )
         assert child.stdout is not None
         while chunk := os.read(child.stdout.fileno(), READ_SIZE):
@@ -520,6 +596,13 @@ def _run(options: Options, env: dict[str, str], stripped: list[str]) -> int:
     except OSError as exc:
         emit(f"[run-check] error: {exc}\n")
         status = _error_status(exc)
+    except subprocess.SubprocessError:
+        # Popen reports a failed pre-exec step without its reason.
+        emit(
+            "[run-check] error: the check did not start: covering "
+            f"{', '.join(map(str, hidden))} in a new user and mount namespace failed\n"
+        )
+        status = 1
     finally:
         if child is not None:
             if child.stdout is not None:

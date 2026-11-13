@@ -43,10 +43,15 @@ variables named like credentials (`CONJURE_*`, `JFROG_*`, names ending `TOKEN`,
 `SECRET`, `PASSWORD`, `PASSWD` or `_KEY`, any case) never reach the check:
 `run-check` drops them and prints their names, never their values. A check that
 needs one keeps it with `--keep-env <NAME>` or loads it with `--env-file`.
-This is not a secret boundary: a secret inside another value (a password in
-`DATABASE_URL`) passes, and a child that reads `/etc/droid/environment` or
-starts a login shell gets the values back. Factory machines' `gh` wrapper
-reloads its token from that file itself and needs neither flag.
+On Linux, the check also runs in its own user and mount namespace in which
+Factory's environment directories, `/etc/droid` (the environment file, the
+refresh's copies, `scm-cli-proxy.env` with the proxy credential) and
+`~/.config/factory/scm` under both homes, are empty and read-only, so a login
+shell or the `gh` wrapper inside it gets nothing back, and it cannot read
+`run-check`'s own `/proc/<pid>/environ`. So the `gh` wrapper has no token
+inside a check; `--keep-env GH_TOKEN` with `/usr/local/lib/factory/scm-cli/gh`
+has one. `sudo` does not work there, and `~/.git-credentials` and a secret
+inside another value (a password in `DATABASE_URL`) still pass.
 
 Use `--exclusive` for compiler-backed lint, typechecks, builds, and pooled/E2E
 tests. It queues heavy checks across sessions/worktrees on this host while

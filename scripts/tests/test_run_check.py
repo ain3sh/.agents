@@ -1,6 +1,8 @@
 import importlib.machinery
 import importlib.util
 import io
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -119,6 +121,7 @@ class ChildEnvTest(unittest.TestCase):
         "MONKEY": "not a credential",
         "PATH": "/bin",
         "FACTORY_ENV": "prod",
+        "__ORIGINAL_FACTORY_API_KEY__": "original",
     }
 
     def child_env(self, *flags: str) -> tuple[dict[str, str], list[str]]:
@@ -144,6 +147,7 @@ class ChildEnvTest(unittest.TestCase):
                 "JFROG_USERNAME",
                 "OPENAI_API_KEY",
                 "PGPASSWORD",
+                "__ORIGINAL_FACTORY_API_KEY__",
                 "aws_secret",
                 "npm_config__authToken",
             ],
@@ -181,6 +185,10 @@ class ChildEnvTest(unittest.TestCase):
             run_check._render_names(["GH_TOKEN", "CONJURE_\n[run-check] exit: 0", "ODD\udcff_TOKEN"]),
             "GH_TOKEN, and 2 names that are not shell identifiers",
         )
+        self.assertEqual(
+            run_check._render_names(["GH_TOKEN", "ODD\udcff_TOKEN"]),
+            "GH_TOKEN, and 1 name that is not a shell identifier",
+        )
 
 
 class EnvFileErrorTest(unittest.TestCase):
@@ -198,6 +206,125 @@ class EnvFileErrorTest(unittest.TestCase):
                     run_check._read_env_file(str(path))
                 self.assertNotIn("FAKESENTINEL", str(error.exception))
                 self.assertRegex(str(error.exception), r"(line|entry) 2")
+
+    def test_a_value_the_environment_cannot_hold_names_its_line(self) -> None:
+        for text, reason in (
+            ("A=1\nB=FAKESENTINEL\0tail\n", "line 2: value holds a NUL byte"),
+            ('{"A": "1", "B": "FAKESENTINEL\\u0000"}', "entry 2: value holds a NUL byte"),
+            ('{"A": "1", "B": "FAKESENTINEL\\ud800"}', "entry 2: value is not encodable text"),
+        ):
+            with self.subTest(text=text), tempfile.TemporaryDirectory() as temp_dir:
+                path = Path(temp_dir) / "probe.env"
+                path.write_text(text)
+                with self.assertRaises(OSError) as error:
+                    run_check._read_env_file(str(path))
+                self.assertIn(reason, str(error.exception))
+                self.assertNotIn("FAKESENTINEL", str(error.exception))
+
+@unittest.skipUnless(sys.platform == "linux", "user and mount namespaces are Linux's")
+class HideTest(unittest.TestCase):
+    FILES = ("environment", "environment.factory-refresh-1.tmp", "scm-cli-proxy.env")
+
+    def directory(self, temp_dir: str) -> Path:
+        directory = Path(temp_dir) / "droid"
+        directory.mkdir()
+        for name in self.FILES:
+            (directory / name).write_text("GH_TOKEN=FAKESENTINEL\n")
+        return directory
+
+    def run_hidden(self, directory: Path, script: str) -> str:
+        return subprocess.run(
+            ["sh", "-c", script],
+            preexec_fn=run_check._hide((directory,)),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            check=True,
+        ).stdout
+
+    def test_the_child_sees_an_empty_directory_as_itself(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = self.directory(temp_dir)
+            out = self.run_hidden(
+                directory, f"ls -A {directory} | wc -l; touch {directory}/x 2>/dev/null || echo read-only; id -u; id -g"
+            )
+            self.assertEqual(out.split(), ["0", "read-only", str(os.getuid()), str(os.getgid())])
+            self.assertEqual(sorted(path.name for path in directory.iterdir()), sorted(self.FILES))
+
+    def test_a_rename_over_and_a_new_copy_during_the_check_stay_hidden(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = self.directory(temp_dir)
+            child = subprocess.Popen(
+                ["sh", "-c", f"ls -A {directory} | wc -l; read _; ls -A {directory} | wc -l; cat {directory}/* 2>/dev/null | wc -c"],
+                preexec_fn=run_check._hide((directory,)),
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+            assert child.stdin is not None and child.stdout is not None
+            self.assertEqual(child.stdout.readline(), "0\n")
+            (directory / "staged").write_text("GH_TOKEN=FAKESENTINEL\n")
+            (directory / "staged").rename(directory / "environment")
+            (directory / "environment.factory-refresh-2.tmp").write_text("GH_TOKEN=FAKESENTINEL\n")
+            out, _ = child.communicate("go\n", timeout=10)
+            self.assertEqual(out.split(), ["0", "0"])
+
+    def test_the_child_cannot_read_its_parents_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            out = self.run_hidden(
+                self.directory(temp_dir), "cat /proc/$PPID/environ >/dev/null 2>&1 && echo read || echo refused"
+            )
+            self.assertEqual(out, "refused\n")
+
+    def test_nothing_to_hide_adds_no_step(self) -> None:
+        self.assertIsNone(run_check._hide(()))
+
+    def test_covers_the_scm_directory_under_both_homes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            droid, own, child = root / "droid", root / "own", root / "child"
+            for path in (droid, own / run_check._SCM_DIR, child / run_check._SCM_DIR):
+                path.mkdir(parents=True)
+            with mock.patch.object(run_check, "_FACTORY_DIRS", (droid, root / "absent")), mock.patch.object(
+                Path, "home", return_value=own
+            ):
+                self.assertEqual(
+                    run_check._env_dirs({"HOME": str(child)}, None),
+                    (droid, own / run_check._SCM_DIR, child / run_check._SCM_DIR),
+                )
+                self.assertEqual(run_check._env_dirs({}, None), (droid, own / run_check._SCM_DIR))
+                self.assertEqual(
+                    run_check._env_dirs({"HOME": str(root / "bare")}, None), (droid, own / run_check._SCM_DIR)
+                )
+
+    def test_a_relative_home_is_resolved_where_the_child_starts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            work = Path(temp_dir) / "work"
+            scm = work / "home" / run_check._SCM_DIR
+            scm.mkdir(parents=True)
+            (scm / "environment").write_text("GH_TOKEN=FAKESENTINEL\n")
+            completed = subprocess.run(
+                [
+                    str(RUN_CHECK),
+                    "test",
+                    "--cwd",
+                    str(work),
+                    "--env",
+                    "HOME=home",
+                    "--",
+                    "sh",
+                    "-c",
+                    f"ls -A home/{run_check._SCM_DIR.as_posix()} | wc -l",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                env={**os.environ, "DROID_CHECK_LOG_DIR": str(Path(temp_dir) / "logs")},
+                check=False,
+            )
+            self.assertIn(str(work / "home" / run_check._SCM_DIR), completed.stdout)
+            self.assertIn("\n0\n", completed.stdout)
+
 
 class ExclusiveSlotsTest(unittest.TestCase):
     def test_one_heavy_check_under_12_gib(self) -> None:
