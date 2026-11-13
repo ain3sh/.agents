@@ -125,7 +125,7 @@ def _read_env_file(path: str) -> dict[str, str]:
         for number, (name, value) in enumerate(entries.items(), 1):
             if not isinstance(value, str) or _ENV_NAME_RE.fullmatch(name) is None:
                 raise OSError(f"{path}: entry {number} is not a string environment entry")
-            loaded[name] = value
+            loaded[name] = _env_value(value, f"{path}: entry {number}")
         return loaded
     for number, line in enumerate(text.splitlines(), 1):
         line = line.strip()
@@ -140,12 +140,23 @@ def _read_env_file(path: str) -> dict[str, str]:
             raise OSError(f"{path}: line {number}: invalid environment name")
         if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
             value = value[1:-1]
-        loaded[name] = value
+        loaded[name] = _env_value(value, f"{path}: line {number}")
     return loaded
 
 
+def _env_value(value: str, where: str) -> str:
+    """A value the child's environment can hold; otherwise Popen fails with a bare traceback."""
+    try:
+        encoded = os.fsencode(value)
+    except UnicodeEncodeError:
+        raise OSError(f"{where}: value is not encodable text") from None
+    if b"\0" in encoded:
+        raise OSError(f"{where}: value holds a NUL byte")
+    return value
+
+
 def _is_credential(name: str) -> bool:
-    return _CREDENTIAL_RE.search(name.upper()) is not None
+    return _CREDENTIAL_RE.search(name.upper().rstrip("_")) is not None
 
 
 def _child_env(
@@ -181,7 +192,11 @@ def _render_names(names: list[str]) -> str:
     shown = [name for name in names if _ENV_NAME_RE.fullmatch(name)]
     hidden = len(names) - len(shown)
     if hidden:
-        shown.append(f"and {hidden} name{'s' if hidden > 1 else ''} that are not shell identifiers")
+        shown.append(
+            "and 1 name that is not a shell identifier"
+            if hidden == 1
+            else f"and {hidden} names that are not shell identifiers"
+        )
     return ", ".join(shown)
 
 

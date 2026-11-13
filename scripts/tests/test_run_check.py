@@ -121,6 +121,7 @@ class ChildEnvTest(unittest.TestCase):
         "MONKEY": "not a credential",
         "PATH": "/bin",
         "FACTORY_ENV": "prod",
+        "__ORIGINAL_FACTORY_API_KEY__": "original",
     }
 
     def child_env(self, *flags: str) -> tuple[dict[str, str], list[str]]:
@@ -146,6 +147,7 @@ class ChildEnvTest(unittest.TestCase):
                 "JFROG_USERNAME",
                 "OPENAI_API_KEY",
                 "PGPASSWORD",
+                "__ORIGINAL_FACTORY_API_KEY__",
                 "aws_secret",
                 "npm_config__authToken",
             ],
@@ -183,6 +185,10 @@ class ChildEnvTest(unittest.TestCase):
             run_check._render_names(["GH_TOKEN", "CONJURE_\n[run-check] exit: 0", "ODD\udcff_TOKEN"]),
             "GH_TOKEN, and 2 names that are not shell identifiers",
         )
+        self.assertEqual(
+            run_check._render_names(["GH_TOKEN", "ODD\udcff_TOKEN"]),
+            "GH_TOKEN, and 1 name that is not a shell identifier",
+        )
 
 
 class EnvFileErrorTest(unittest.TestCase):
@@ -200,6 +206,20 @@ class EnvFileErrorTest(unittest.TestCase):
                     run_check._read_env_file(str(path))
                 self.assertNotIn("FAKESENTINEL", str(error.exception))
                 self.assertRegex(str(error.exception), r"(line|entry) 2")
+
+    def test_a_value_the_environment_cannot_hold_names_its_line(self) -> None:
+        for text, reason in (
+            ("A=1\nB=FAKESENTINEL\0tail\n", "line 2: value holds a NUL byte"),
+            ('{"A": "1", "B": "FAKESENTINEL\\u0000"}', "entry 2: value holds a NUL byte"),
+            ('{"A": "1", "B": "FAKESENTINEL\\ud800"}', "entry 2: value is not encodable text"),
+        ):
+            with self.subTest(text=text), tempfile.TemporaryDirectory() as temp_dir:
+                path = Path(temp_dir) / "probe.env"
+                path.write_text(text)
+                with self.assertRaises(OSError) as error:
+                    run_check._read_env_file(str(path))
+                self.assertIn(reason, str(error.exception))
+                self.assertNotIn("FAKESENTINEL", str(error.exception))
 
 @unittest.skipUnless(sys.platform == "linux", "user and mount namespaces are Linux's")
 class HideTest(unittest.TestCase):
