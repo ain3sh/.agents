@@ -164,10 +164,8 @@ inventing another theme.
 ### Artifact diff
 
 For a change to what the code stores or sends (a session file, database row,
-wire payload, log, generated file, command output), when the reader's question
-is about the data: "what does it look like now, and what is left alone?" The
-same change asked about as code ("what writes this row?") keeps its call tree
-or sequence.
+wire payload, log, generated file, command output), when the reader asks what
+it looks like now and what is left alone.
 
 ```diff
 --- session.jsonl   dev      187,692 B, 26 rows
@@ -179,24 +177,16 @@ or sequence.
  8   {"role":"user","content":[{"type":"tool_result","content":[ … ]}]}
 ```
 
-- Capture both sides by running the same input on the base and on the change.
-  A side composed from the code instead (a proposal, a path you cannot run) is
-  labelled `illustrative`.
-- Keep the untouched records on both sides of the delta: they show what is
-  left alone, which the changed record alone can only assert.
-- When the question is loss or size ("is anything removed?", "how much
-  smaller?"), put the totals (records, bytes) in the header and each changed
-  record's size beside it.
-- Inside the range shown, cut within a record and never drop one. Label each
-  cut with what it stood for (`… 64 KiB of base64 …`), and name under the view
-  the fields left out because they differ between any two runs (ids,
-  timestamps).
-- A change to several artifacts gets one diff with a header pair per file; a
-  reply about one of them shows that file alone.
-- Uncut, it is verbatim output and stays a `diff` fence wherever the
-  destination keeps one legible (`surfaces.md`). Cuts make it a drawing:
-  GitHub and Slack get an image styled as a diff (`surfaces.md`, Image), and
-  the exact new value a reader will search for stays text beside it.
+- Capture both sides by running the same input on the base and on the change;
+  label a side composed from the code instead `illustrative`.
+- Keep the untouched records around the delta: they show what is left alone,
+  which the changed record alone can only assert.
+- Put totals (records, bytes) in the header and sizes beside changed records
+  only when the question is loss or size.
+- Cut within a record and never drop one from the range shown. Label each cut
+  with what it stood for, and name under the view the fields left out because
+  they differ between runs (ids, timestamps).
+- Several artifacts share one diff, a header pair per file.
 
 ### Policy before/after table
 

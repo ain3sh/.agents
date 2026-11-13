@@ -176,7 +176,6 @@ no relation earns a view, say so and let the owning workflow omit its section.
 |---|---|
 | Reply is a wall of prose about several actors, with a view as an afterthought | Lead with the view; keep the one sentence it cannot carry. |
 | View is a decorated paragraph, or a list dressed as a tree or diff | Name the relation the reader must hold and draw that with real symbols; if there is none, drop the view unless the caller requires one (Check before sending). |
-| Reader asks what happens to data they store or receive, and the view is a call tree, a policy table, or the changed record alone | Draw the artifact diff with its untouched neighbors (`references/representations.md`). |
 | Visual and prose say the same thing | Delete the prose; keep one implication sentence if needed. |
 | Two views answer the same question | Keep the clearer one; a companion fills a detail, it does not repeat the view. |
 | Inline output too dense | Reduce scope, not font size; move to a browser HTML view only when the detail is essential. |

@@ -32,9 +32,9 @@ not a second diagram policy.
   line above. Anything the reviewer should open gets a permalink pinned to a
   sha, never a branch:
   `https://github.com/<owner>/<repo>/blob/<sha>/<path>#L<n>-L<m>`.
-- `diff` fences hold real hunks only (source, or uncut captured output),
-  never summary bullets ("Layout must encode a relation" in
-  `representations.md`); a structural before/after is an image.
+- `diff` fences hold real source hunks only, never summary bullets ("Layout
+  must encode a relation" in `representations.md`); a structural before/after
+  is an image.
 - Every other view ships as one polished [image](#image): call and file
   trees, pseudocode, diagrams, sequences, state and dependency graphs,
   before/after panels, charts, and tables that carry badges, color, or grouped
