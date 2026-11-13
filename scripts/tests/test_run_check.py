@@ -251,6 +251,18 @@ class HideTest(unittest.TestCase):
     def test_nothing_to_hide_adds_no_step(self) -> None:
         self.assertIsNone(run_check._hide(()))
 
+    def test_hides_the_file_and_the_copies_beside_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            for name in ("environment", "environment.factory-refresh-1.tmp", "scm-cli-proxy.env"):
+                (directory / name).write_text("")
+            (directory / "environment.d").mkdir()
+            with mock.patch.object(run_check, "_ENV_FILE_GLOBS", ((directory, "environment*"),)):
+                self.assertEqual(
+                    run_check._env_files(),
+                    (directory / "environment", directory / "environment.factory-refresh-1.tmp"),
+                )
+
 
 class ExclusiveSlotsTest(unittest.TestCase):
     def test_one_heavy_check_under_12_gib(self) -> None:

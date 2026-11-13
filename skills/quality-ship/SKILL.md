@@ -44,8 +44,8 @@ variables named like credentials (`CONJURE_*`, `JFROG_*`, names ending `TOKEN`,
 `run-check` drops them and prints their names, never their values. A check that
 needs one keeps it with `--keep-env <NAME>` or loads it with `--env-file`.
 On Linux, the check also runs in its own user and mount namespace with
-Factory's environment files (`/etc/droid/environment`,
-`~/.config/factory/scm/environment`) covered by an empty file, so a login shell
+Factory's environment files (`/etc/droid/environment`, the refresh's copies
+beside it, `~/.config/factory/scm/environment`) covered by an empty file, so a login shell
 or the `gh` wrapper inside it gets nothing back, and it cannot read
 `run-check`'s own `/proc/<pid>/environ`. So `gh` has no token inside a check.
 A secret inside another value (a password in `DATABASE_URL`) still passes.

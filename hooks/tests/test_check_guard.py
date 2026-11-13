@@ -540,7 +540,7 @@ class RunCheckTest(unittest.TestCase):
                 check=False,
             )
 
-            self.assertIn("[run-check] env: hidden /etc/droid/environment\n", completed.stdout)
+            self.assertRegex(completed.stdout, r"\[run-check\] env: hidden /etc/droid/environment(, |\n)")
             self.assertIn(f"\n0\n0\n{os.getuid()}\n", completed.stdout)
 
     def test_uses_the_nearest_nvmrc_runtime(self) -> None:

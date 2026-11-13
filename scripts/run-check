@@ -82,10 +82,12 @@ _ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 # a password in DATABASE_URL, passes.
 _CREDENTIAL_RE = re.compile(r"^(?:CONJURE|JFROG)_|(?:TOKEN|SECRET|PASSWORD|PASSWD)$|_KEY$")
 # Factory's environment files. A login shell (/etc/profile.d/droid-env.sh) and the
-# gh wrapper re-export them, which would undo the strip above.
-_ENV_FILES = (
-    Path("/etc/droid/environment"),
-    Path.home() / ".config" / "factory" / "scm" / "environment",
+# gh wrapper re-export them, which would undo the strip above. The machine's
+# environment refresh leaves world-readable copies beside the first, named
+# environment.factory-refresh-<id>.tmp.
+_ENV_FILE_GLOBS = (
+    (Path("/etc/droid"), "environment*"),
+    (Path.home() / ".config" / "factory" / "scm", "environment"),
 )
 _MS_BIND, _MS_REC, _MS_PRIVATE = 0x1000, 0x4000, 0x40000
 _SLUG_RE = re.compile(r"[^a-z0-9._-]+")
@@ -203,7 +205,12 @@ def _render_names(names: list[str]) -> str:
 def _env_files() -> tuple[Path, ...]:
     if sys.platform != "linux":
         return ()
-    return tuple(path for path in _ENV_FILES if path.exists())
+    return tuple(
+        path
+        for directory, pattern in _ENV_FILE_GLOBS
+        for path in sorted(directory.glob(pattern))
+        if path.is_file()
+    )
 
 
 def _hide(paths: tuple[Path, ...]) -> Callable[[], None] | None:
