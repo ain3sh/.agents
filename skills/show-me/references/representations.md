@@ -22,7 +22,7 @@ be omitted is settled in `SKILL.md` (Check before sending).
 | What does the algorithm do? | Typed code or labelled pseudocode | decisions, mutations, return shape |
 | What shape should the code have? | Types and signatures | minimal types, function boundaries, ownership |
 | What structurally changed? | Before/after of real structure | unchanged context plus the delta |
-| What does the stored or sent data look like now? | Artifact diff | one real sample captured on both sides; the untouched records around the delta; totals |
+| What does the stored or sent data look like now? | Artifact diff | one real sample captured on both sides; the untouched records around the delta |
 | What happens to each surface or behavior now? | Policy before/after table | one row per surface; old mechanism and limit, new limit and pointer, owning commit or module; the surprise row marked |
 | Which work depends on which? | Dependency graph | nodes, directed edges, independent branches |
 | Which path produced the failure? | Causal flow | expected path, first wrong edge, downstream symptom |
@@ -165,7 +165,9 @@ inventing another theme.
 
 For a change to what the code stores or sends (a session file, database row,
 wire payload, log, generated file, command output), when the reader's question
-is "what does it look like now, and what is left alone?".
+is about the data: "what does it look like now, and what is left alone?" The
+same change asked about as code ("what writes this row?") keeps its call tree
+or sequence.
 
 ```diff
 --- session.jsonl   dev      187,692 B, 26 rows
@@ -177,21 +179,24 @@ is "what does it look like now, and what is left alone?".
  8   {"role":"user","content":[{"type":"tool_result","content":[ … ]}]}
 ```
 
-- Capture both sides by running the same input on the base and on the change;
-  never compose a side from the code diff or a test fixture.
-- Keep the untouched records on both sides of the delta and put the totals
-  (records, bytes) in the header: they answer "is anything removed?", which
-  the changed record alone cannot.
+- Capture both sides by running the same input on the base and on the change.
+  A side composed from the code instead (a proposal, a path you cannot run) is
+  labelled `illustrative`.
+- Keep the untouched records on both sides of the delta: they show what is
+  left alone, which the changed record alone can only assert.
+- When the question is loss or size ("is anything removed?", "how much
+  smaller?"), put the totals (records, bytes) in the header and each changed
+  record's size beside it.
 - Inside the range shown, cut within a record and never drop one. Label each
   cut with what it stood for (`… 64 KiB of base64 …`), and name under the view
   the fields left out because they differ between any two runs (ids,
   timestamps).
-- Put each changed record's size beside it when size is the point.
 - A change to several artifacts gets one diff with a header pair per file; a
   reply about one of them shows that file alone.
-- Elisions make it no longer verbatim source, so GitHub and Slack get an image
-  styled as a diff (`surfaces.md`, Image); the exact new value a reader will
-  search for stays text beside it.
+- Uncut, it is verbatim output and stays a `diff` fence wherever the
+  destination keeps one legible (`surfaces.md`). Cuts make it a drawing:
+  GitHub and Slack get an image styled as a diff (`surfaces.md`, Image), and
+  the exact new value a reader will search for stays text beside it.
 
 ### Policy before/after table
 

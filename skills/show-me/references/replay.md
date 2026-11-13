@@ -21,6 +21,7 @@ skill's wording. A scenario passes only when every grading row holds.
 | 11 | PR body for a one-line config default change (or a README typo fix), view required | GitHub body | One small view placing the change on the path that reads it (key → reader call tree, or file → surface that renders it), with real symbols; no "nothing to draw", no one-sentence exit, no repeat of the hunk. |
 | 12 | Review verdict `APPROVE` on a small right-layer fix whose body already has a verified Architecture view | GitHub review body | No view unless one carries a relation the ruling turns on that the body's view omits; never a redraw of the body's view, a line comment, or the hunk. A verdict with no view is complete. |
 | 13 | "/show-me what this PR does to the session file" in a thread where a teammate asks whether rows are being removed, on a diff that changes what one persisted row holds | Slack | An artifact diff image built from a real sample captured on the base and on the change: untouched rows kept around the delta, row and byte totals in the header, cuts labelled. Never a call tree, a policy table, or the changed row alone. |
+| 14 | "/show-me how the new value gets into that row" on scenario 13's diff | Terminal | A call tree or numbered sequence with real symbols from the diff, the changed edge marked. No artifact diff: the change alters stored data, but the question is about the code path. |
 ## Grading
 
 | Check | Pass |

@@ -19,6 +19,7 @@ pr-description checklist:
 - [ ] Six required sections present; conditional catalog walked row by row
 - [ ] Architecture: one or more show-me views, each answering its own question, accepted for GitHub
 - [ ] Concrete visual change? Demo video in What, stills under Visual Evidence (visual-evidence.md)
+- [ ] Existing stored or sent data gets shorter, moves, or changes shape? Artifact diff in What (SKILL.md, Show a data change)
 - [ ] Verification outcome-first; CI compressed to one line
 - [ ] Body length scales with complexity, not effort
 - [ ] Body composed with a file tool, passed `scripts/finalize-body.py`, applied through REST (publish.md)
@@ -108,10 +109,9 @@ Use two to four short sentences plus one compact table or list when that scans
 faster. The opening stands alone without the ticket. A demo video, when the
 change has one, sits on its own line right after the **What** paragraph that
 states the change and its proof, before any table (`visual-evidence.md`,
-Placement). The artifact diff of a change to stored or sent data
-(Architecture table, last row) comes next: after the video when there is one,
-otherwise right after that paragraph, and before any table, the Before → After
-table included. For a large structural PR,
+Placement). An artifact diff, when the change has one (`SKILL.md`, Show a data
+change), takes the same slot, after the video when both exist. For a large
+structural PR,
 the order is **What** (outcome + decisive number) → composition table → core
 table → **Why** → **How** → one-line **Net effect for users**.
 
@@ -139,7 +139,7 @@ Description.
 
 | # | Section | Fires when |
 |---|---|---|
-| 1 | Description | always; inline Before → After table (multi-surface), diff composition (large diff), anti-goals, scope map, design link, or RCA as needed |
+| 1 | Description | always; inline artifact diff (data change), Before → After table (multi-surface), diff composition (large diff), anti-goals, scope map, design link, or RCA as needed |
 | 2 | Visual Evidence | concrete UI/TUI/CLI/rendered-media change; its demo video sits in **What** |
 | 3 | Repro Recipe | new feature or fixed bug with a manual surface |
 | 4 | Architecture | always; one `show-me` view per reader question |
@@ -226,7 +226,6 @@ copies stays Markdown text (`show-me` surfaces, GitHub).
 | Feature | What calls the new code, or how can its state change? |
 | Refactor | Where does each responsibility live now? |
 | Contract, schema | What shape do consumers see now? |
-| Any of the above that changes stored or sent data (a persisted file or row, wire payload, log, output) | Also, for an artifact diff in **What** (First-screen skim gate): what does one real sample look like before and after, and what is left alone? |
 | Config, flags, CI, dependency bump | What reads the changed key or version, and what does each reader do with it now? |
 | Docs, skills, policy | Which file owns each rule now, and who reads it? Without a Before → After table under **What**: what does each reader or surface do now? |
 | No behavior change (typo, comment, rename) | Where does the touched text or symbol sit, and what reads it? |
@@ -235,10 +234,10 @@ copies stays Markdown text (`show-me` surfaces, GitHub).
   answers. A one-line change gets a call tree placing it on its path, or
   pseudocode of the enclosing decision with the changed branch marked, never
   the hunk itself.
-- Each view answers its own question: never repeat the Before → After table
-  under **What**, the Repro Recipe, the RCA trace, or a hunk the Files tab
-  already shows. **How** names the invariant in a sentence; the view carries
-  the flow.
+- Each view answers its own question: never repeat the artifact diff or the
+  Before → After table under **What**, the Repro Recipe, the RCA trace, or a
+  hunk the Files tab already shows. **How** names the invariant in a
+  sentence; the view carries the flow.
 - Upload any files `show-me` returns through `references/artifacts.md` in the
   authorized publish step.
 - Bodies this skill writes require the section; an author's body in a

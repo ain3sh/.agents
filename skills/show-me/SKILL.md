@@ -1,6 +1,6 @@
 ---
 name: show-me
-description: "Use for /show-me, when the user asks to see rather than read, or when a reply about 3+ actors or states, or about a change to stored or sent data, turns into prose: diagram from verified evidence."
+description: "Use for /show-me, when the user asks to see rather than read, or when a reply about 3+ actors or states turns into prose: diagram from verified evidence."
 argument-hint: "[target] [as <form>]"
 user-invocable: true
 ---
@@ -127,8 +127,7 @@ and boundary the question needs and nothing it does not.
 
 Draw when prose is juggling more than two actors, transitions, modules,
 dependencies, or surfaces; when order, topology, ownership, state, or a
-before/after delta carries the point; when a change alters what is stored or
-sent; or when the reader needs code shape
+before/after delta carries the point; or when the reader needs code shape
 (types, signatures, control structure) before implementing or reviewing.
 Uncertainty, rationale, trade-offs, and evidence quality stay prose.
 
@@ -177,7 +176,7 @@ no relation earns a view, say so and let the owning workflow omit its section.
 |---|---|
 | Reply is a wall of prose about several actors, with a view as an afterthought | Lead with the view; keep the one sentence it cannot carry. |
 | View is a decorated paragraph, or a list dressed as a tree or diff | Name the relation the reader must hold and draw that with real symbols; if there is none, drop the view unless the caller requires one (Check before sending). |
-| A change to stored or sent data is shown as a call tree, a policy table, or the changed record alone | Draw the artifact diff with its untouched neighbors (`references/representations.md`). |
+| Reader asks what happens to data they store or receive, and the view is a call tree, a policy table, or the changed record alone | Draw the artifact diff with its untouched neighbors (`references/representations.md`). |
 | Visual and prose say the same thing | Delete the prose; keep one implication sentence if needed. |
 | Two views answer the same question | Keep the clearer one; a companion fills a detail, it does not repeat the view. |
 | Inline output too dense | Reduce scope, not font size; move to a browser HTML view only when the detail is essential. |

@@ -15,8 +15,9 @@ Make the merge case legible from the title and first screen; later sections prov
 | Large diff (roughly 1k+ lines or 20+ files) | Run `scripts/diff-composition.py BASE HEAD --core <behavior files> --tooling <prefixes>`; put the composition table and core table under **What** (template in `references/conditional-sections.md`). |
 | One rule changed across three or more surfaces, or three or more behaviors changed at once | Open **What** with the rule's before and after, then the per-surface Before → After table: grammar from `show-me` (Policy before/after table), placement in `references/conditional-sections.md`; later sections point at it instead of restating it. |
 | Add conditional sections | Load `references/conditional-sections.md` only when a catalog trigger fires. |
-| Show the change (every PR) | Load `show-me` with the verified diff and GitHub destination; place one or more views under **Architecture** as uploaded dark-themed images, never text blocks; only verbatim source stays text (`references/workflow.md`, Architecture). A change to stored or sent data also gets an artifact diff in **What**. Upload through `references/artifacts.md`. |
+| Show the change (every PR) | Load `show-me` with the verified diff and GitHub destination; place one or more views under **Architecture** as uploaded dark-themed images, never text blocks; only verbatim source stays text (`references/workflow.md`, Architecture). Upload through `references/artifacts.md`. |
 | Show a visual change | Open the PR first, then load `references/visual-evidence.md` and capture live proof; the demo video goes in **What**. |
+| Show a data change | Fires when the change alters data that already exists and something reads: a session file, row, payload, log, or output gets shorter, moves, or changes shape, so its reader's first question is what they lose and what is left alone. Load `show-me` for an artifact diff of one real sample; it goes in **What** (`references/workflow.md`, First-screen skim gate). A new field or a new artifact is a contract change (Architecture), and data the diff touches in passing earns no artifact diff. |
 | Refresh an existing PR | Load `references/refresh.md`; explicit title/body audits bypass the no-diff throttle. |
 | Publish or PATCH | Load `references/publish.md`; compose with a file tool and use GitHub REST. |
 
@@ -85,7 +86,7 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 | **What** opens with an example or consequence ("`JSON.parse` now works") instead of the rule | Rewrite the first sentence as the rule's before → after; the example becomes the second paragraph (`workflow.md`, skim gate). |
 | Many surfaces change and the reviewer must assemble the picture from prose | Add the Before → After table directly under **What** (`conditional-sections.md`). |
 | Risk & Impact or a removed-safeguards list restates the Before → After table | Cut it to what the table cannot carry (Rule 11). |
-| The diff changes stored or sent data and the body shows only flow or policy views | Add the artifact diff in **What** (`workflow.md`, Architecture). |
+| A reader asks what happens to their data ("are rows removed?", "what does the payload look like now?") and the body answers with a table or a flow | Add the artifact diff in **What** (`workflow.md`, First-screen skim gate). |
 | Composition table leads with its biggest bucket, or one churn number hides that most of the diff is deletion | Core logic first, + and − in separate columns (`conditional-sections.md`, Diff composition). |
 | Core breakdown is freeform bullets or one churn total per group | Rebuild it as the core table: New / Deleted / Swapped / Reshaped rows, per-file +/−, one thing to check (`conditional-sections.md`, Diff composition). |
 | A commit table lists test titles | Name the invariants each commit's tests pin, with the file (`workflow.md`, Reviewer Guide). |
