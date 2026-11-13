@@ -6,26 +6,48 @@ proof of a visual change. This file owns their PR upload and placement.
 
 ## Upload
 
-Upload only as part of an authorized PR publish/update request. **Use
-`gh-attach`** for GitHub user attachments; never commit images/videos to a PR
-branch or use `raw.githubusercontent.com`. Exclude secrets, tokens, and
-machine-specific paths from the artifact and its caption.
+Upload only as part of an authorized PR publish/update request. Never commit
+images/videos to a PR branch or use `raw.githubusercontent.com`. Exclude
+secrets, tokens, and machine-specific paths from the artifact and its caption.
 
-```bash
-gh-attach --repo owner/repo --url /absolute/path/diagram.png
-```
+1. Upload with `gh-attach`:
 
-By default it uses `GH_TOKEN`; `--user <account>` uses that logged-in gh
-account's token instead, which may carry scopes `GH_TOKEN` lacks (uploads need
-`repo`, and a scopeless token gets 404).
+   ```bash
+   gh-attach --repo owner/repo --url /absolute/path/diagram.png
+   ```
 
-If `gh-attach` fails, push the files under `.attachments/` on an
-`attachments/<repo>/<slug>` branch; the repo's `upload-attachments.yml` uploads
-them and logs the URLs (recipe: factory-mono `AGENTS.md`, "Screenshots and videos").
+   It uploads with `GH_TOKEN`, and the upload needs a classic PAT (`ghp_`) or
+   OAuth token (`gho_`) with `repo` scope: a scopeless token or a GitHub App
+   token (`ghu_`, `ghs_`) gets 404. `--user <account>` uploads with a
+   logged-in gh account's token instead, when `gh auth status` lists one.
+
+2. If that fails, the route depends on where the PR is:
+   - A Factory-AI repository: upload for that repository. An attachment
+     uploaded for a private repository renders only there.
+   - A public repository elsewhere: upload for `factory-plugins`. It is
+     public, so its attachments render in any PR body, logged-out readers
+     included, and anyone can open the file. Check that it shows nothing
+     private first.
+   - A private repository elsewhere: stop and ask the user to log in a gh
+     account that can upload to it (for `--user`), or to send the uploaded
+     URLs. An upload for a public repository would publish the file.
+
+   Both uploads go through `upload-attachments.yml` in
+   **Factory-AI/factory-mono**, which uploads with its own token for the
+   Factory-AI repository `<repo>` named in the branch; nothing has to exist in
+   the PR's repository. From a factory-mono checkout, run the recipe in its
+   `AGENTS.md`, "Screenshots and videos": it pushes the files under
+   `.attachments/` on an `attachments/<repo>/<slug>` branch and reads each URL
+   from the workflow run's log. The recipe's note that an attachment renders
+   only in the repository it was uploaded for applies to private repositories.
+
+3. If that fails too, stop and report the failing command and its error. Never
+   publish a text stand-in for a required image or a "could not attach" line.
 
 Each view is one opaque PNG ([show-me Image](../../show-me/references/surfaces.md#image));
-embed it as `<img alt="<takeaway>" src="<url>" />` with alt text that states
-its takeaway, not its topic. Keep machine/auth details out of public PR prose.
+embed it, and every screenshot, as `<img alt="<takeaway>" src="<url>" />` with
+alt text that states its takeaway, not its topic. Keep machine/auth details out
+of public PR prose.
 
 ## Placement
 
