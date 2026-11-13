@@ -13,11 +13,11 @@ Finish this sentence before proposing anything: **"This costs ___ because the in
 
 | Step | Do | Done when |
 |---|---|---|
-| 1. Use it | Pick the task a user came to do. Do it in the running product: once cleanly, then once for each ordinary [slip](references/method.md#slips). Record every run. If a person's gut fired, the task is what they were doing; ask what they were doing, never why it felt off. | You hold a recording and an input-by-input trace of every run. |
-| 2. Count | Tally every run in the seven costs below, with how often a user pays each. | One table: cost, where, count, frequency. |
+| 1. Use it | Pick the task a user came to do; when the ask names a whole surface, take the path the product advertises first. Do it in the running product: once cleanly, then once for each ordinary [slip](references/method.md#slips). Record every run. If a person's gut fired, the task is what they were doing; ask what they were doing, never why it felt off. | You hold a recording and an input-by-input trace of every run. |
+| 2. Count | Tally every run in the seven costs below: one row per cost found, with where it is paid, the count, and how often a user pays it. | One table, kept through the loop. |
 | 3. Name | Rank the rows, take the top one, and finish the sentence. Read the [cases](references/cases.md) nearest yours first; when the second blank will not come, run the [probes](references/method.md#probes). | The assumption is something the interface does, and its negation is buildable. |
 | 4. Build | Build the smallest version where that one assumption is false, in the real product. | One assumption relaxed, nothing else changed. |
-| 5. Compare | Redo step 1's task and slips on both versions, by the shortest path each allows. Recount. Put the recordings side by side. | The top row dropped and no row rose by more. Otherwise delete the build, write down what the assumption was protecting, and return to step 3. |
+| 5. Compare | Redo step 1's task and slips on both versions, by the shortest path each allows, and add a count column per version. Compare a row only with itself. Put the recordings side by side. | The row you took dropped and no row of its rank or higher rose. Otherwise delete the build, keep its diff, write down why it died, and return to step 3. |
 | 6. Write back | Record each build, kept or deleted, in [cases](references/cases.md) through **update-skill**. The verdict comes from the person who picks between the versions. | One row per build. |
 
 ## The seven costs

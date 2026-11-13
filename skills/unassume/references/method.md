@@ -8,9 +8,12 @@ The clean path shows what a task costs when nothing goes wrong. Losses, guesses,
 |---|---|
 | Overshoot | goes one past the target and has to come back. |
 | Wrong key | hits the neighbouring key or the habit from another tool. |
+| Own words | names the thing in their words instead of the product's. |
 | Change of mind | starts, then wants out with nothing changed. |
 | Typing ahead | acts on the screen they expect instead of the one that is showing. |
 | Return | looks away mid-task and comes back needing to know where they are. |
+
+Drive a slip at the speed a person makes it, 50 to 300 ms between inputs. A failure that only appears with no gap is a race: record it, and rank it by whether key repeat or a paste could produce it.
 
 ## Counting
 
@@ -27,10 +30,10 @@ Script each run as one input per line. For every version, script the same task a
 | reorient | Frames where the focused element, or the text being read, moved without the user moving it. |
 
 - Frequency: with no usage data, estimate from the product's own cues (a bound key, a default path, an onboarding hint) and write the estimate in the table, so a reader can dispute the number.
-- Focus and selection often live in styling. A plain-text snapshot drops it; capture a styled frame when a row depends on where focus is.
+- Focus and selection often live in styling, which a plain-text snapshot drops. When a row depends on where focus is, read it from a styled frame (in a terminal, `tuistory snapshot --bold` returns only the bold text).
 - For motion, replay at a fifth of the speed or step frame by frame: a wait or a reorient that lasts 80 ms is invisible at full speed and still felt.
 
-Report the count as a table with one row per cost and one column per version, deleted builds included. A change with no differing cell is not an improvement you can claim.
+Keep one table through the loop. Step 2 fills a row per cost found; step 5 adds a count column per version, deleted builds included. Compare a row only with itself: the same task and the same slip on each version. A change with no differing cell is not an improvement you can claim.
 
 ## Probes
 
@@ -50,4 +53,4 @@ An assumption worth naming is a default the interface inherited: from the medium
 
 A well-formed assumption passes three checks: the interface does it (not the user), its negation can be built this week, and the negation removes the cost you ranked first, not a neighbouring one.
 
-When a build dies at step 5, the assumption it relaxed was protecting something. Name what, in the dead build's row: that protection is a constraint on the next build.
+A build dies at step 5 for one of two reasons, and its row says which. Either a row of equal or higher rank rose, so the assumption was protecting something: name it, because it constrains the next build. Or the row you took did not move, so the assumption was not the one causing it.
