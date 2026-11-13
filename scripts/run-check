@@ -77,7 +77,9 @@ EXCLUSIVE_LOCK_PATHS = tuple(
 _ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 # Inherited credentials never reach a check: a test that prints its environment
 # (an assertion diff, a snapshot) would otherwise put them in its transcript.
-_CREDENTIAL_RE = re.compile(r"^(?:CONJURE|JFROG)_|_(?:TOKEN|KEY|SECRET|PASSWORD)$")
+# Matched on the upper-cased name only; a secret inside another value, such as
+# a password in DATABASE_URL, passes.
+_CREDENTIAL_RE = re.compile(r"^(?:CONJURE|JFROG)_|(?:TOKEN|SECRET|PASSWORD|PASSWD)$|_KEY$")
 _SLUG_RE = re.compile(r"[^a-z0-9._-]+")
 _TEST_FILE_RE = re.compile(r"\.(?:test|spec)\.[cm]?[jt]sx?$")
 _FAST_FORMATTERS = frozenset({"oxfmt"})
@@ -96,7 +98,11 @@ class Options:
 
 
 def _read_env_file(path: str) -> dict[str, str]:
-    """Load KEY=VALUE pairs from a JSON object or dotenv file without echoing them."""
+    """Load KEY=VALUE pairs from a JSON object or dotenv file.
+
+    Errors name the file, the line or entry, and the reason, never the text: a
+    malformed line is as likely to be a pasted secret as a name.
+    """
     try:
         text = Path(path).expanduser().read_text()
     except UnicodeDecodeError as exc:
@@ -108,22 +114,22 @@ def _read_env_file(path: str) -> dict[str, str]:
             entries = json.loads(stripped)
         except ValueError as exc:
             raise OSError(f"{path}: invalid JSON ({exc})") from exc
-        for name, value in entries.items():
+        for number, (name, value) in enumerate(entries.items(), 1):
             if not isinstance(value, str) or _ENV_NAME_RE.fullmatch(name) is None:
-                raise OSError(f"{path}: {name!r} is not a string environment entry")
+                raise OSError(f"{path}: entry {number} is not a string environment entry")
             loaded[name] = value
         return loaded
-    for line in text.splitlines():
+    for number, line in enumerate(text.splitlines(), 1):
         line = line.strip()
         if not line or line.startswith("#"):
             continue
         if line.startswith("export "):
             line = line[len("export ") :]
         if "=" not in line:
-            raise OSError(f"{path}: expected KEY=VALUE, found {line.split()[0]!r}")
+            raise OSError(f"{path}: line {number}: expected KEY=VALUE")
         name, value = line.split("=", 1)
         if _ENV_NAME_RE.fullmatch(name) is None:
-            raise OSError(f"{path}: invalid environment name {name!r}")
+            raise OSError(f"{path}: line {number}: invalid environment name")
         if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
             value = value[1:-1]
         loaded[name] = value
@@ -137,26 +143,47 @@ def _is_credential(name: str) -> bool:
 def _child_env(
     options: Options, inherited: dict[str, str]
 ) -> tuple[dict[str, str], list[str]]:
-    """The check's environment, and the inherited credential names it drops.
+    """The check's environment, and the inherited credentials it does not receive.
 
     Explicit `--env` and `--env-file` entries apply last, so a check that needs a
-    credential names it there or keeps the inherited one with `--keep-env`.
+    credential names it there or keeps the inherited one with `--keep-env`. A
+    keep that would keep nothing is refused with ValueError.
     """
+    for name in sorted(options.keep):
+        if name not in inherited:
+            raise ValueError(f"--keep-env {name}: not in the inherited environment")
+        if name.startswith(options.unset_prefixes):
+            raise ValueError(f"--keep-env {name}: an --unset-prefix also drops it")
     env: dict[str, str] = {}
     stripped: list[str] = []
     for name, value in inherited.items():
         if name.startswith(options.unset_prefixes):
             continue
         if _is_credential(name) and name not in options.keep:
-            stripped.append(name)
+            if name not in options.env:
+                stripped.append(name)
             continue
         env[name] = value
     env.update(options.env)
     return env, sorted(stripped)
 
 
+def _render_names(names: list[str]) -> str:
+    """Names safe to print: a newline or a non-UTF-8 byte in a name is counted, not shown."""
+    shown = [name for name in names if _ENV_NAME_RE.fullmatch(name)]
+    hidden = len(names) - len(shown)
+    if hidden:
+        shown.append(f"and {hidden} name{'s' if hidden > 1 else ''} that are not shell identifiers")
+    return ", ".join(shown)
+
+
 def _error_status(exc: OSError) -> int:
     return 127 if isinstance(exc, FileNotFoundError) else 1
+
+
+def _refuse(message: str) -> None:
+    print(f"[run-check] error: {message}", file=sys.stderr)
+    raise SystemExit(64)
 
 
 def _usage() -> None:
@@ -207,8 +234,10 @@ def _parse(argv: list[str]) -> Options:
             index += 2
             continue
         if token == "--keep-env":
-            if index + 1 >= len(argv) or not _is_credential(argv[index + 1]):
-                _usage()
+            if index + 1 >= len(argv) or _ENV_NAME_RE.fullmatch(argv[index + 1]) is None:
+                _refuse("--keep-env takes one variable name")
+            if not _is_credential(argv[index + 1]):
+                _refuse(f"--keep-env {argv[index + 1]}: run-check never strips this name")
             keep.add(argv[index + 1])
             index += 2
             continue
@@ -429,7 +458,7 @@ def _node_command(
     ], f"{selector} ({nvmrc})"
 
 
-def _run(options: Options) -> int:
+def _run(options: Options, env: dict[str, str], stripped: list[str]) -> int:
     log_dir = _log_dir()
     log_path, log = _create_log(log_dir, options.label)
     stdout = sys.stdout.buffer
@@ -439,9 +468,8 @@ def _run(options: Options) -> int:
 
     emit(f"[run-check] log: {log_path}\n")
 
-    env, stripped = _child_env(options, dict(os.environ))
     if stripped:
-        emit(f"[run-check] env: stripped {', '.join(stripped)}\n")
+        emit(f"[run-check] env: not passed: {_render_names(stripped)}\n")
     child: subprocess.Popen[bytes] | None = None
     received_signal: int | None = None
 
@@ -508,7 +536,12 @@ def _run(options: Options) -> int:
 
 
 def main() -> int:
-    return _run(_parse(sys.argv[1:]))
+    options = _parse(sys.argv[1:])
+    try:
+        env, stripped = _child_env(options, dict(os.environ))
+    except ValueError as exc:
+        _refuse(str(exc))
+    return _run(options, env, stripped)
 
 
 if __name__ == "__main__":

@@ -472,8 +472,6 @@ class RunCheckTest(unittest.TestCase):
                 [
                     str(RUN_CHECK),
                     "test",
-                    "--keep-env",
-                    "GH_TOKEN",
                     "--",
                     sys.executable,
                     "-c",
@@ -494,17 +492,13 @@ class RunCheckTest(unittest.TestCase):
             )
 
             self.assertEqual(completed.returncode, 0, completed.stdout)
-            self.assertIn("gh-value unset unset plain\n", completed.stdout)
-            stripped = next(
-                line
-                for line in completed.stdout.splitlines()
-                if line.startswith("[run-check] env: stripped ")
+            self.assertIn("unset unset unset plain\n", completed.stdout)
+            self.assertIn(
+                "[run-check] env: not passed: CONJURE_TOKEN, GH_TOKEN, JFROG_PASSWORD\n",
+                completed.stdout,
             )
-            self.assertIn("CONJURE_TOKEN", stripped)
-            self.assertIn("JFROG_PASSWORD", stripped)
-            self.assertNotIn("GH_TOKEN", stripped)
-            self.assertNotIn("conjure-value", completed.stdout)
-            self.assertNotIn("jfrog-value", completed.stdout)
+            for value in ("gh-value", "conjure-value", "jfrog-value"):
+                self.assertNotIn(value, completed.stdout)
 
     def test_uses_the_nearest_nvmrc_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

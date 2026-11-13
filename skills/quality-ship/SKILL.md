@@ -39,11 +39,14 @@ Secrets never go on the command line: `--env-file <path>` loads a JSON object
 or dotenv file into the child's environment, and `--unset-prefix <prefix>`
 drops inherited variables first (for example `--unset-prefix FACTORY_
 --env-file ~/factory/dev-env.json` for a live-recording run). Inherited
-credentials (`CONJURE_*`, `JFROG_*`, and names ending `_TOKEN`, `_KEY`,
-`_SECRET` or `_PASSWORD`) never reach the check: `run-check` drops them and
-prints their names, never their values. A check that needs one keeps it with
-`--keep-env <NAME>` or loads it with `--env-file`. Factory machines' `gh`
-wrapper reloads its token from `/etc/droid/environment` itself and needs neither.
+variables named like credentials (`CONJURE_*`, `JFROG_*`, names ending `TOKEN`,
+`SECRET`, `PASSWORD`, `PASSWD` or `_KEY`, any case) never reach the check:
+`run-check` drops them and prints their names, never their values. A check that
+needs one keeps it with `--keep-env <NAME>` or loads it with `--env-file`.
+This is not a secret boundary: a secret inside another value (a password in
+`DATABASE_URL`) passes, and a child that reads `/etc/droid/environment` or
+starts a login shell gets the values back. Factory machines' `gh` wrapper
+reloads its token from that file itself and needs neither flag.
 
 Use `--exclusive` for compiler-backed lint, typechecks, builds, and pooled/E2E
 tests. It queues heavy checks across sessions/worktrees on this host while

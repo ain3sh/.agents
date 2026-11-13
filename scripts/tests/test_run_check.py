@@ -1,6 +1,8 @@
 import importlib.machinery
 import importlib.util
+import io
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -112,6 +114,9 @@ class ChildEnvTest(unittest.TestCase):
         "OPENAI_API_KEY": "key",
         "aws_secret": "secret",
         "DB_PASSWORD": "password",
+        "PGPASSWORD": "pg",
+        "npm_config__authToken": "npm",
+        "MONKEY": "not a credential",
         "PATH": "/bin",
         "FACTORY_ENV": "prod",
     }
@@ -120,9 +125,16 @@ class ChildEnvTest(unittest.TestCase):
         options = run_check._parse(["test", *flags, "--", "true"])
         return run_check._child_env(options, dict(self.INHERITED))
 
+    def refusal(self, *flags: str) -> str:
+        stderr = io.StringIO()
+        with mock.patch.object(sys, "stderr", stderr), self.assertRaises(SystemExit) as exit_:
+            run_check._parse(["test", *flags, "--", "true"])
+        self.assertEqual(exit_.exception.code, 64)
+        return stderr.getvalue()
+
     def test_strips_every_inherited_credential_by_default(self) -> None:
         env, stripped = self.child_env()
-        self.assertEqual(env, {"PATH": "/bin", "FACTORY_ENV": "prod"})
+        self.assertEqual(env, {"MONKEY": "not a credential", "PATH": "/bin", "FACTORY_ENV": "prod"})
         self.assertEqual(
             stripped,
             [
@@ -131,7 +143,9 @@ class ChildEnvTest(unittest.TestCase):
                 "GH_TOKEN",
                 "JFROG_USERNAME",
                 "OPENAI_API_KEY",
+                "PGPASSWORD",
                 "aws_secret",
+                "npm_config__authToken",
             ],
         )
 
@@ -140,20 +154,50 @@ class ChildEnvTest(unittest.TestCase):
         self.assertEqual(env["GH_TOKEN"], "gh")
         self.assertNotIn("GH_TOKEN", stripped)
 
-    def test_explicit_env_applies_after_the_strip(self) -> None:
+    def test_explicit_env_replaces_the_inherited_value_and_is_not_listed(self) -> None:
         env, stripped = self.child_env("--env", "OPENAI_API_KEY=mock")
         self.assertEqual(env["OPENAI_API_KEY"], "mock")
-        self.assertIn("OPENAI_API_KEY", stripped)
+        self.assertNotIn("OPENAI_API_KEY", stripped)
 
     def test_unset_prefix_still_drops_its_names(self) -> None:
         env, _stripped = self.child_env("--unset-prefix", "FACTORY_")
         self.assertNotIn("FACTORY_ENV", env)
 
-    def test_keep_env_refuses_a_name_that_is_never_stripped(self) -> None:
-        with mock.patch.object(sys, "stderr"), self.assertRaises(SystemExit) as exit_:
-            run_check._parse(["test", "--keep-env", "PATH", "--", "true"])
-        self.assertEqual(exit_.exception.code, 64)
+    def test_keep_env_refuses_a_keep_that_keeps_nothing(self) -> None:
+        for flags, reason in (
+            (("--keep-env", "gh_token"), "not in the inherited environment"),
+            (("--keep-env", "NPM_TOKEN"), "not in the inherited environment"),
+            (("--unset-prefix", "GH_", "--keep-env", "GH_TOKEN"), "--unset-prefix also drops it"),
+        ):
+            with self.subTest(flags=flags), self.assertRaisesRegex(ValueError, reason):
+                self.child_env(*flags)
 
+    def test_keep_env_names_what_it_refuses(self) -> None:
+        self.assertIn("--keep-env PATH: run-check never strips this name", self.refusal("--keep-env", "PATH"))
+        self.assertIn("--keep-env takes one variable name", self.refusal("--keep-env", "BAD-NAME_TOKEN"))
+
+    def test_names_that_are_not_identifiers_are_counted_not_printed(self) -> None:
+        self.assertEqual(
+            run_check._render_names(["GH_TOKEN", "CONJURE_\n[run-check] exit: 0", "ODD\udcff_TOKEN"]),
+            "GH_TOKEN, and 2 names that are not shell identifiers",
+        )
+
+
+class EnvFileErrorTest(unittest.TestCase):
+    def test_errors_name_the_line_not_its_text(self) -> None:
+        cases = (
+            "A=1\nghp_FAKESENTINEL trailing\n",
+            "A=1\nghp-FAKESENTINEL=value\n",
+            '{"A": "1", "ghp-FAKESENTINEL": "value"}',
+        )
+        for text in cases:
+            with self.subTest(text=text), tempfile.TemporaryDirectory() as temp_dir:
+                path = Path(temp_dir) / "probe.env"
+                path.write_text(text)
+                with self.assertRaises(OSError) as error:
+                    run_check._read_env_file(str(path))
+                self.assertNotIn("FAKESENTINEL", str(error.exception))
+                self.assertRegex(str(error.exception), r"(line|entry) 2")
 
 class ExclusiveSlotsTest(unittest.TestCase):
     def test_one_heavy_check_under_12_gib(self) -> None:
