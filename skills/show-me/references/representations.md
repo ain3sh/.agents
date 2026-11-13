@@ -27,7 +27,7 @@ be omitted is settled in `SKILL.md` (Check before sending).
 | Which work depends on which? | Dependency graph | nodes, directed edges, independent branches |
 | Which path produced the failure? | Causal flow | expected path, first wrong edge, downstream symptom |
 | How much changed, under what conditions? | Quantitative comparison | units, scale, baseline, measurement frame, delta |
-| How big is it, and what is it made of? | Breakdown | the counted whole at a pinned revision, the counting rule, parts that sum to it, the figure the reader already holds reconciled |
+| How big is it, and where does the size sit? | Breakdown | the counted whole at a pinned revision, the counting rule, parts that sum to it, the figure the reader already holds reconciled |
 
 ## Code companion
 
@@ -277,7 +277,7 @@ Core, by symbol            +     −
 render(text, static)      48    11   log-update.js
 blankRows(count)          30     0   log-update.js
 render.commit             17     0   log-update.js
-onResize                  15    20   ink.js
+renderInteractiveFrame    15    20   ink.js
 LogUpdate.commit           1     0   log-update.d.ts
 ```
 
