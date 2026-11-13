@@ -33,6 +33,7 @@ allows model invocation except `/explain-diff`, which is human-only
 | `/zoom-out` | broader module and caller context in the project's vocabulary; self-loaded before changing, reviewing, or diagnosing unmapped code (`/implement`, `/review-pr`, root-cause-analysis) | `/zoom-out` |
 | `/implement` | spec-first exploration + planning, with the approach built by review-pr's crux lens (pure solution, then layers of reality); waits for approval before coding | `/implement FAC-789` or `/implement "<description>"` |
 | `/retrospect` | stranger-review your own diff for entropy (dead weight / junk / perf / drift / scope) | `/retrospect` |
+| `/unassume` | taste as a loop for a UI that feels off or an open "make it better": use the running product (clean path plus slips) → count seven costs → name the assumption behind the top row → build the smallest version without it → the recount on both versions decides → the case is written back; visual direction stays with **frontend-design**, motion values with **motion-polish** | `/unassume the model picker` |
 | `/update-skill` | load harness-optimization (+ RCA/zoom-out/single-canon/patch-coherence as needed) → reflect → read whole → update → cut the diff | `/update-skill linear-cli` |
 | `/split-pr` | split long branch into stacked or independent PRs via cherry-pick | `/split-pr feat/big-branch` |
 
