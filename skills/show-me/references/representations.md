@@ -165,7 +165,8 @@ inventing another theme.
 
 For a change to what the code stores or sends (a session file, database row,
 wire payload, log, generated file, command output), when the reader asks what
-it looks like now and what is left alone.
+it looks like now and what is left alone. Text the diff itself edits (a
+prompt, a tool description, a golden) needs no capture: quote its hunk.
 
 ```diff
 --- session.jsonl   dev      187,692 B, 26 rows
