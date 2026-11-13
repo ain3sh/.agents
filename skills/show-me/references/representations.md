@@ -27,6 +27,7 @@ be omitted is settled in `SKILL.md` (Check before sending).
 | Which work depends on which? | Dependency graph | nodes, directed edges, independent branches |
 | Which path produced the failure? | Causal flow | expected path, first wrong edge, downstream symptom |
 | How much changed, under what conditions? | Quantitative comparison | units, scale, baseline, measurement frame, delta |
+| How big is it, and what is it made of? | Breakdown | the counted whole at a pinned revision, the counting rule, parts that sum to it, the figure the reader already holds reconciled |
 
 ## Code companion
 
@@ -255,6 +256,49 @@ metric (such as ROC-AUC from 0.5 to 1.0) only when its baseline is explicit in
 both axis and caption. Comparisons share a scale. Different benchmark frames
 need separate groups and a clear non-comparability note, not proximity that
 implies a head-to-head result. Use real grid lines, not gradients.
+
+### Breakdown
+
+For one measured whole split into parts (a diff's lines by kind, a bundle's
+bytes by module, a run's time by stage), when the reader asks how big it is,
+how much of it they must read, or where the size sits. Two measurements set
+against each other are a quantitative comparison.
+
+```text
+PR #123 at 9f2c1ab, `git diff --numstat main...HEAD`; core = lines that change what runs
+
+Part         +     −
+Core       111    31   counted as built; by symbol below
+Tests      506    20
+Docs        98    13
+Whole      715    64   host shows +762 −95; the gap is the patch file's headers and context
+
+Core, by symbol            +     −
+render(text, static)      48    11   log-update.js
+blankRows(count)          30     0   log-update.js
+render.commit             17     0   log-update.js
+onResize                  15    20   ink.js
+LogUpdate.commit           1     0   log-update.d.ts
+```
+
+- Every number comes from a command the view names, run at the revision the
+  view pins. For a git diff, start from
+  `../../pr-description/scripts/diff-composition.py`. Hand estimates drift (a
+  57-file, 3.9k-line "tests" guess was 52 files and 3,771 lines when measured).
+- Count what the reader means, not what the tool counts: a patch file is a
+  diff of a diff, a move counts each line twice, a lockfile or snapshot is
+  generated. When that leaves the view's figure different from one the reader
+  already holds (the host's diff stat, a dashboard total), show both and
+  account for the gap in the view's unit.
+- State the rule behind each split (what makes a line core, what counts as a
+  comment). Parts are disjoint and every level sums to its total row; add
+  them up before sending.
+- Keep opposite quantities in separate columns (+ and −), never one churn
+  total or percentage. A deletion-heavy PR priced by churn looks like a heavy
+  read: "876 lines of core" was +174 to read and −702 to check.
+- Order parts by what the reader does with them, the part the question names
+  first, not by size. The lowest rows are things the reader can open: a file
+  or a symbol.
 
 ## Fidelity check
 

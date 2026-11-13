@@ -55,11 +55,9 @@ python3 ~/.agents/skills/pr-description/scripts/diff-composition.py \
 | **Swapped:** <change> | 1,661 | 93 | … | … | … |
 ```
 
-Rules for this block:
+Counting and grammar rules: `show-me` `references/representations.md`, Breakdown. This file owns the buckets, the reviewer actions, and placement:
 
-- Every number comes from the script. Hand estimates drift (a 57-file, 3.9k-line "tests" guess was 52 files and 3,771 lines when measured).
-- Show + and − in separate columns; never one churn total or a churn percentage. A deletion-heavy PR priced by churn looks like a heavy read: "876 lines of core" was +174 to read and −702 to check.
-- Order rows by what the reviewer does, not by size: Core logic first with its + in bold, then tests, mechanical, and the skip-only buckets (generated, tooling, docs) last.
+- Core logic first with its + in bold, then tests, mechanical, and the skip-only buckets (generated, tooling, docs) last.
 - Every row ends in a reviewer action: Skip / Skim / Spot-check / Read / This is the review.
 - The `--core` list is the honesty check: any file in "mechanical" that changes behavior (a fail-closed branch, a policy seal) moves to core, even at 235 lines.
 - The core table replaces any freeform list: one row per change, labeled **New**, **Deleted**, **Swapped**, or **Reshaped** (same behavior, restructured), so the reviewer knows whether to read closely or check for over-reach. Name each row's files with their own +/−, marking whole-file adds and deletes (the script flags them) and reshapes with their hunk count. Close with one sentence of behavior and one concrete thing to check. Four rows is typical; more than six means the PR needs `split-pr`.

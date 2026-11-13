@@ -106,6 +106,10 @@ the change, with the untouched records kept around the delta
 surface, old mechanism and limit, new limit and pointer, owning commit; the
 surprise row marked (`references/representations.md`).
 
+**How big is it, and what is it made of?** Breakdown: one counted whole split
+into parts that sum to it, with the counting rule stated and any figure the
+reader already holds reconciled (`references/representations.md`).
+
 **Needs layout, color, or emphasis, or headed for GitHub or Slack?** One
 focused HTML view (diagram, table, panels, mockup) in the product's colors and
 type with real labels: opened in a browser, or captured as the image GitHub and
