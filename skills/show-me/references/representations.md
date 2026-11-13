@@ -22,6 +22,7 @@ be omitted is settled in `SKILL.md` (Check before sending).
 | What does the algorithm do? | Typed code or labelled pseudocode | decisions, mutations, return shape |
 | What shape should the code have? | Types and signatures | minimal types, function boundaries, ownership |
 | What structurally changed? | Before/after of real structure | unchanged context plus the delta |
+| What does the stored or sent data look like now? | Artifact diff | one real sample captured on both sides; the untouched records around the delta; totals |
 | What happens to each surface or behavior now? | Policy before/after table | one row per surface; old mechanism and limit, new limit and pointer, owning commit or module; the surprise row marked |
 | Which work depends on which? | Dependency graph | nodes, directed edges, independent branches |
 | Which path produced the failure? | Causal flow | expected path, first wrong edge, downstream symptom |
@@ -159,6 +160,38 @@ unchanged actors in corresponding positions, mute unchanged structure, and
 highlight the changed edge or boundary. The panels must expose the delta, not
 repeat two inventories. Use the caller's existing contrast classes rather than
 inventing another theme.
+
+### Artifact diff
+
+For a change to what the code stores or sends (a session file, database row,
+wire payload, log, generated file, command output), when the reader's question
+is "what does it look like now, and what is left alone?".
+
+```diff
+--- session.jsonl   dev      187,692 B, 26 rows
++++ session.jsonl   PR #123   69,281 B, 26 rows
+@@ rows 6-8 of 26 @@
+ 6   {"role":"assistant","content":[{"type":"tool_use","name":"Read", …}]}
+-7   {"role":"user","content":[{"type":"tool_result","content":"{\"type\":\"image\", … 64 KiB of base64 …}"}]}   65,908 B
++7   {"role":"user","content":[{"type":"tool_result","content":"Read /ws/shot.png: image/jpeg"}]}                   450 B
+ 8   {"role":"user","content":[{"type":"tool_result","content":[ … ]}]}
+```
+
+- Capture both sides by running the same input on the base and on the change;
+  never compose a side from the code diff or a test fixture.
+- Keep the untouched records on both sides of the delta and put the totals
+  (records, bytes) in the header: they answer "is anything removed?", which
+  the changed record alone cannot.
+- Inside the range shown, cut within a record and never drop one. Label each
+  cut with what it stood for (`… 64 KiB of base64 …`), and name under the view
+  the fields left out because they differ between any two runs (ids,
+  timestamps).
+- Put each changed record's size beside it when size is the point.
+- A change to several artifacts gets one diff with a header pair per file; a
+  reply about one of them shows that file alone.
+- Elisions make it no longer verbatim source, so GitHub and Slack get an image
+  styled as a diff (`surfaces.md`, Image); the exact new value a reader will
+  search for stays text beside it.
 
 ### Policy before/after table
 

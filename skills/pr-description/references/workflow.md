@@ -108,7 +108,10 @@ Use two to four short sentences plus one compact table or list when that scans
 faster. The opening stands alone without the ticket. A demo video, when the
 change has one, sits on its own line right after the **What** paragraph that
 states the change and its proof, before any table (`visual-evidence.md`,
-Placement). For a large structural PR,
+Placement). The artifact diff of a change to stored or sent data
+(Architecture table, last row) comes next: after the video when there is one,
+otherwise right after that paragraph, and before any table, the Before → After
+table included. For a large structural PR,
 the order is **What** (outcome + decisive number) → composition table → core
 table → **Why** → **How** → one-line **Net effect for users**.
 
@@ -223,6 +226,7 @@ copies stays Markdown text (`show-me` surfaces, GitHub).
 | Feature | What calls the new code, or how can its state change? |
 | Refactor | Where does each responsibility live now? |
 | Contract, schema | What shape do consumers see now? |
+| Any of the above that changes stored or sent data (a persisted file or row, wire payload, log, output) | Also, for an artifact diff in **What** (First-screen skim gate): what does one real sample look like before and after, and what is left alone? |
 | Config, flags, CI, dependency bump | What reads the changed key or version, and what does each reader do with it now? |
 | Docs, skills, policy | Which file owns each rule now, and who reads it? Without a Before → After table under **What**: what does each reader or surface do now? |
 | No behavior change (typo, comment, rename) | Where does the touched text or symbol sit, and what reads it? |

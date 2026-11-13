@@ -29,9 +29,10 @@ its takeaway, not its topic. Keep machine/auth details out of public PR prose.
 
 ## Placement
 
-- Explanatory views go under `## Architecture` as uploaded images; only
-  verbatim source the reader copies stays Markdown text. Return to
-  `references/publish.md` for the body write.
+- Explanatory views go under `## Architecture` as uploaded images, except the
+  artifact diff, which goes in **What** (`workflow.md`, First-screen skim
+  gate); only verbatim source the reader copies stays Markdown text.
+  Return to `references/publish.md` for the body write.
 - The demo video goes in **What**; live screenshots and other recordings go
   under `## Visual Evidence`, per `references/visual-evidence.md`.
 - Carry over show-me's caption and selectable code companion; don't add a
