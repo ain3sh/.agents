@@ -18,6 +18,7 @@ A row records a build and its test, not what any product ships today; check the 
 | Scanning a toolbar's tooltips is tedious | wait, once per tooltip | Every hover is a first hover. | After one tooltip opens, the adjacent ones open at once (motion-polish). | picked |
 | A model-cycle key in a terminal agent: "the first press does nothing" | step: one extra input on every switch | The picker opens with the model you already have selected. | The press that opens the picker counts as the first step of the cycle. | unjudged |
 | The same picker: "what I typed disappeared" | loss: every character typed while the picker shows (11 of 11), then repair: Esc and retype, 12 inputs | The picker owns every key while it is shown. | A typed character closes the picker with no switch, and the same press lands in the prompt. | unjudged |
+| The same picker and symptom, a rival move | the same loss (17 of 17 characters) | The picker owns every key while it is shown. | A typed character switches to the highlighted model, and the same press lands in the prompt. Price: a change of mind followed by typing now switches the model (guess, 1). | unjudged |
 | A command menu: typing your own word for a command and pressing Enter runs an unrelated one | guess on Enter or Tab, then 10 to 17 inputs of repair and a lost query | Commands that matched only by description are ordered by menu group before match strength. | Order description-only matches by match strength first; leave name matches alone. | unjudged |
 
 ## Deleted builds
@@ -33,4 +34,4 @@ A build the recount killed. `lesson` says why: what the assumption was protectin
 
 A person's pick, or a recount, that the words cannot express means a cost is missing. Name it in one word, add it to the table in `SKILL.md` with its unit, and re-file any earlier row it explains better. Two words no case distinguishes collapse into one.
 
-`loss` entered this way. The first trial counted typed keys that vanished and a conversation that could not be restored, and filed both under `repair`, which they are not: nothing the user does afterwards buys them back.
+`loss` entered this way: typed keys that vanished and a conversation that could not be restored had been filed under `repair`, which they are not, because nothing the user does afterwards buys them back.

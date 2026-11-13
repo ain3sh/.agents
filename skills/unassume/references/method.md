@@ -17,7 +17,7 @@ Drive a slip at the speed a person makes it, 50 to 300 ms between inputs. A fail
 
 ## Counting
 
-Script each run as one input per line. For every version, script the same task and the same slips by the shortest path that version allows. Mechanics for driving and recording live in **droid-control**; this is what to read off the recording.
+Script each run as one input per line, and start every run from the same state. For every version, script the same task and the same slips by the shortest path that version allows. Mechanics for driving and recording live in **droid-control**; this is what to read off the recording.
 
 | Cost | Read it off the recording as |
 |---|---|
@@ -30,7 +30,7 @@ Script each run as one input per line. For every version, script the same task a
 | reorient | Frames where the focused element, or the text being read, moved without the user moving it. |
 
 - Frequency: with no usage data, estimate from the product's own cues (a bound key, a default path, an onboarding hint) and write the estimate in the table, so a reader can dispute the number.
-- Focus and selection often live in styling, which a plain-text snapshot drops. When a row depends on where focus is, read it from a styled frame (in a terminal, `tuistory snapshot --bold` returns only the bold text).
+- Focus and selection often live in styling, which a plain-text snapshot drops. When a row depends on where focus is, read it from a styled frame (in a terminal, `tuistory -s <session> snapshot --bold` returns only the bold text).
 - For motion, replay at a fifth of the speed or step frame by frame: a wait or a reorient that lasts 80 ms is invisible at full speed and still felt.
 
 Keep one table through the loop. Step 2 fills a row per cost found; step 5 adds a count column per version, deleted builds included. Compare a row only with itself: the same task and the same slip on each version. A change with no differing cell is not an improvement you can claim.

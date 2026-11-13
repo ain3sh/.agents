@@ -17,8 +17,10 @@ Finish this sentence before proposing anything: **"This costs ___ because the in
 | 2. Count | Tally every run in the seven costs below: one row per cost found, with where it is paid, the count, and how often a user pays it. | One table, kept through the loop. |
 | 3. Name | Rank the rows, take the top one, and finish the sentence. Read the [cases](references/cases.md) nearest yours first; when the second blank will not come, run the [probes](references/method.md#probes). | The assumption is something the interface does, and its negation is buildable. |
 | 4. Build | Build the smallest version where that one assumption is false, in the real product. | One assumption relaxed, nothing else changed. |
-| 5. Compare | Redo step 1's task and slips on both versions, by the shortest path each allows, and add a count column per version. Compare a row only with itself. Put the recordings side by side. | The row you took dropped and no row of its rank or higher rose. Otherwise delete the build, keep its diff, write down why it died, and return to step 3. |
+| 5. Compare | Redo step 1's task and slips on both versions, by the shortest path each allows, and add a count column per version. Compare a row only with itself. Put the recordings side by side. | The row you took dropped and no row of its rank or higher rose. A lower row that rose is the build's price: report it. Otherwise delete the build, keep its diff, write down why it died, and return to step 3. |
 | 6. Write back | Record each build, kept or deleted, in [cases](references/cases.md) through **update-skill**. The verdict comes from the person who picks between the versions. | One row per build. |
+
+One pass removes one assumption. While the top row still stands and time remains, start again at step 3 with the same table.
 
 ## The seven costs
 
@@ -32,7 +34,7 @@ Finish this sentence before proposing anything: **"This costs ___ because the in
 | recall | supply from memory what the screen could have shown | items |
 | reorient | find their place again after the screen changed | occurrences |
 
-Rank by what the user can do about the cost. A loss comes first, because they cannot get it back. A guess and the repair it forces come next, because they are paid by surprise. Step, wait, recall, and reorient are paid knowingly on the clean path and come last, unless one is paid hundreds of times a day. Removing a loss or a guess changes the interaction; removing a step only shortens it.
+Rank by what the user can do about the cost. A loss comes first, because they cannot get it back. A guess and the repair it forces come next, because they are paid by surprise. Step, wait, recall, and reorient are paid knowingly on the clean path and come last, unless one is paid hundreds of times a day.
 
 ## Detect
 
@@ -62,7 +64,7 @@ Not this skill: setting visual direction is **frontend-design**; choosing an eas
 | The second blank will not come | Replay the costly moment one input at a time, then run the [probes](references/method.md#probes). |
 | The cost belongs to the task itself (the user must choose something) | Leave it; take the next row. |
 | The build touches more than the moment the cost is paid | You are redesigning. Cut back to that moment. |
-| Two builds have died on the same row | The assumption is load-bearing. Stop building; deliver the counts, both builds, and what each was protecting. |
+| Two builds have died on the same row | Stop building. Deliver the counts, both builds, and why each died. |
 | Counts tie and one version still feels better | Show both to the person; record their pick and their words. |
 | No person is available to pick | Deliver the recount and both recordings as the claim; file the case as `unjudged`. |
 | A cached rule contradicts the recount | Check the rule's reason against this case's frequency; follow the recount and say which rule lost. |

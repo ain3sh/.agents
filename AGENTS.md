@@ -38,6 +38,7 @@
 | Before editing a skill, hook, or AGENTS.md | update-skill |
 | Waiting on a PR's CI, reviews, or merge, even as a side errand | babysit (pr-watch, never sleep and poll) |
 | A plan or design worth stress-testing | grill-me |
+| A UI or UX that feels off, or an open ask to improve one | unassume |
 | Before calling a change done | retrospect |
 | More than one independent track of work | orchestrate |
 </skills>
