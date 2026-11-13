@@ -76,3 +76,4 @@ Load on demand; do not reabsorb into this file.
 
 - [references/method.md](references/method.md): the slips to run at step 1, how to count the seven costs from a recording, and the probes that expose an inherited assumption.
 - [references/cases.md](references/cases.md): the casebook of kept and deleted builds, and the rule for when a case changes the seven words.
+- [references/replay.md](references/replay.md): scenarios, grading, and baseline to rerun after editing this skill.
