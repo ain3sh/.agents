@@ -6,7 +6,7 @@ argument-hint: "<skill-name> [context about what was learned]"
 
 # Update Skill
 
-Goal: an agent with no prior context acts correctly after reading the fewest tokens.
+Goal: an agent with no prior context acts correctly after reading the fewest tokens. Spend on each step what the edit is worth: a one-line steer gets a one-line change.
 
 ## 0. Load
 
@@ -30,7 +30,8 @@ Read every file of the skill (`SKILL.md`, `references/**`, `scripts/**`, `templa
 ## 3. Update
 
 - Fix wrong or stale instructions; delete misleading ones.
-- Write each fix as the shortest linear instruction: do X; if it fails, do Y.
+- Write to the agent as **orchestrate**'s Prompting section briefs one: the facts and commands it should not rediscover, the goal instead of the how, a hard constraint where a miss is costly, a checkable done. Keep an ordered procedure only where the order is the point.
+- Answer a misread with the goal it missed. A case table or a step list added per incident grows with every incident and removes the judgment that would have handled the next one.
 - Name a dead end only if an agent would otherwise take it.
 - Every sentence must change what an agent does.
 
@@ -60,15 +61,16 @@ Invariants:
 
 ## 6. Replay
 
-A reread shows the text is clear, not that an agent acts on it. Run the skill when the edit changes a decision (a rule, a step, a ranking, the trigger); until it has run, report the edit as unproven. Wording that changes none needs no run.
+A reread shows the text is clear, not that an agent acts on it. A replay answers one question: did the edit change what an agent does? It is worth asking when the edit changes a decision (a rule, a step, a ranking, the trigger). The user never waits on it: an edit that has not run yet ships reported as unproven.
 
-- Give fresh subagents one short brief and a copy of the skill, without its `replay.md`, to read by path, not through the Skill tool. Run the new text beside a control (the old revision, or no skill when it is new) with the skill as the only difference: without the control, the skill takes credit for what the model does anyway.
-- Name nothing after its arm. A path, branch, or task description that says `control` or `old` tells the run which arm it is.
-- Have each run that reads the skill list where it was unclear, wrong, or in the way, quoting the line. Edit from those lines.
-- Grade what the runs did (the diff, the decisions in the log) against the control, never their reports or the skill's wording. A run that did what the control did means the edit changed nothing: return to step 3.
-- When a run's result was written into the skill, rerun without it before crediting the edit: otherwise the skill is reading its own answer.
-- Before saying the skill works beyond the task it was tuned on, run one it was not.
-- Keep the skill's `references/replay.md` current: Scenarios (prompt and expected result), Grading (check and pass), Baseline (what each arm did, and what was not run). Report the same per arm.
+What makes a run evidence:
+
+- **A control.** The old revision, or no skill when it is new, on the same brief with the skill as the only difference. Without it the skill takes credit for what the model does anyway, and a run that matches it means the edit changed nothing.
+- **A blind run.** A fresh subagent reads a copy of the skill by path, not through the Skill tool, without its `replay.md` and without any result the skill has since absorbed. A path, branch, or description that says `control` or `old` tells it which arm it is.
+- **Actions, not reports.** Grade the diff and the decisions in the log. Have the run quote the lines that were unclear, wrong, or in its way: those are the next edit.
+- **A task it was not tuned on,** before saying the skill works beyond the one it was.
+
+Done when the skill's `references/replay.md` holds Scenarios (prompt and expected result), Grading (check and pass), and Baseline (what each arm did, and what was not run), and the report says the same per arm.
 
 ## References
 
