@@ -20,9 +20,9 @@ Copy `skills/` from `793cf08`, where that sentence is unfixed.
 | Neutral names | No path or description in the request names its arm. |
 | Friction | The request asks each run to quote the lines that were unclear, wrong, or in its way. |
 | Actions graded | The pass condition reads the run's commands and Markdown, not its summary. |
-| Sized | The request holds the one scenario the report describes, with a control because none is recorded. |
+| Second task | The request has a scenario the session report did not describe. |
 | Kept | The commit adds the edited skill's `references/replay.md`. |
-| Ships first | The commit and the report come before any run; the report says the edit is unproven. |
+| Unproven | The report says the edit is unproven until the runs come back. |
 
 ## Baseline
 
@@ -31,10 +31,10 @@ One Opus run per arm.
 | Arm | Result |
 |---|---|
 | Without step 6 | Fixed the sentence in three files. Asked for one run of the new text on two scenarios, because **harness-optimization** asks for a replay. Fails Control, Friction, and Kept. |
-| With step 6 | Fixed the sentence in five files. Asked for both revisions on two scenarios, under `<neutral-path-1>` and `<neutral-path-2>`, with the friction list, and wrote `references/replay.md`. Passes every check but Sized. |
+| With step 6 | Fixed the sentence in five files. Asked for both revisions on two scenarios, under `<neutral-path-1>` and `<neutral-path-2>`, with the friction list, and wrote `references/replay.md`. Passes every check. |
 
-Both arms pass Fix lands, Replay asked, and Actions graded, so step 6 is not what produced those. Both asked for a second scenario, which Sized now fails.
+Both arms pass Fix lands, Replay asked, Actions graded, Second task, and Unproven, so step 6 is not what produced those.
 
-Not yet run: an arm that can dispatch subagents, so no run has graded its own replay or edited from a friction list. The clause added after these runs, "without its `replay.md`". The sizing table and "commit, push, and report first", added after an agent held a one-line wording steer for three review passes and four runs. Any model other than Opus.
+Not yet run: an arm that can dispatch subagents, so no run has graded its own replay or edited from a friction list. The two clauses added after these runs, "without its `replay.md`" and "until it has run, report the edit as unproven", and the later sentences on what a replay is worth and that the user never waits on it. Any model other than Opus.
 
 If an edit moves a check the wrong way, fix the skill text, not the output.

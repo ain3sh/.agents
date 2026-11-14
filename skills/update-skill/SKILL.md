@@ -60,21 +60,14 @@ Invariants:
 
 ## 6. Replay
 
-A reread shows the text is clear, not that an agent acts on it. Commit, push, and report first, calling the edit unproven: a replay never holds the reply. Then size the run to the edit:
+A reread shows the text is clear, not that an agent acts on it. A replay answers one question: did the edit change what an agent does? It is worth asking when the edit changes a decision (a rule, a step, a ranking, the trigger), and worth only what the edit is worth. The user never waits on it: an edit that has not run yet ships reported as unproven.
 
-| The edit | Run |
-|---|---|
-| Rewords, moves, or cuts text and changes no decision | Nothing. |
-| Changes a decision (a rule, a step, a ranking, the trigger) | One run of the scenario it was written from. The control is the Baseline in the skill's `replay.md`; run one only when none is recorded. |
-| Adds a skill, or claims it works beyond that scenario | A control, and a scenario it was not tuned on. |
-
-Run more only when the user asks or a run contradicts the Baseline.
-
-- Give fresh subagents one short brief and a copy of the skill, without its `replay.md`, to read by path, not through the Skill tool. A control (the old revision, or no skill when it is new) differs only in the skill: without one, the skill takes credit for what the model does anyway.
+- Give fresh subagents one short brief and a copy of the skill, without its `replay.md`, to read by path, not through the Skill tool. Run the new text beside a control (the old revision, or no skill when it is new) with the skill as the only difference: without the control, the skill takes credit for what the model does anyway.
 - Name nothing after its arm. A path, branch, or task description that says `control` or `old` tells the run which arm it is.
 - Have each run that reads the skill list where it was unclear, wrong, or in the way, quoting the line. Edit from those lines.
 - Grade what the runs did (the diff, the decisions in the log) against the control, never their reports or the skill's wording. A run that did what the control did means the edit changed nothing: return to step 3.
 - When a run's result was written into the skill, rerun without it before crediting the edit: otherwise the skill is reading its own answer.
+- Before saying the skill works beyond the task it was tuned on, run one it was not.
 - Keep the skill's `references/replay.md` current: Scenarios (prompt and expected result), Grading (check and pass), Baseline (what each arm did, and what was not run). Report the same per arm.
 
 ## References
