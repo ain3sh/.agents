@@ -31,7 +31,7 @@ One Opus run per arm.
 | Arm | Result |
 |---|---|
 | Without step 6 | Fixed the sentence in three files. Asked for one run of the new text on two scenarios, because **harness-optimization** asks for a replay. Fails Control, Friction, and Kept. |
-| With step 6 | Fixed the sentence in five files. Asked for both revisions on two scenarios, under `<neutral-path-1>` and `<neutral-path-2>`, with the friction list, and wrote `references/replay.md`. Passes every check. |
+| With step 6 | Fixed the sentence in five files. Asked for both revisions on two scenarios, under `<neutral-path-1>` and `<neutral-path-2>`, with the friction list, and wrote `references/replay.md`. Passes every check but Sized. |
 
 Both arms pass Fix lands, Replay asked, and Actions graded, so step 6 is not what produced those. Both asked for a second scenario, which Sized now fails.
 
