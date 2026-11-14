@@ -12,6 +12,9 @@ backticks, and shell-significant characters survive untouched. Never
 
 ## Resolve the PR
 
+Run every command below from the PR's checkout: `gh` and finalize read the
+repository, the PR, and HEAD from it.
+
 ```bash
 REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
 PR_NUM=$(gh pr view --json number --jq '.number')
@@ -43,8 +46,8 @@ lost content: fix the write, never the comparison.
    draft. Use a file tool; `gh api -F body=@file` reads the finished file.
 2. Never weaken or placeholder-substitute body content to satisfy a command
    scanner. Change the write mechanism.
-3. Never commit screenshots, recordings, or diagrams. Upload through
-   `gh-attach` per `artifacts.md`.
+3. Never commit screenshots, recordings, or diagrams to the PR branch. Upload
+   them per `artifacts.md`, Upload.
 4. Never publish a body `finalize-body.py` has not just passed. It is the only
    marker stamp, and refresh (`refresh.md`) cannot resolve its base without
    the marker. Rerun it after any edit, including a regenerated `stack:links`

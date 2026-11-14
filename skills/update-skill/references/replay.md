@@ -14,7 +14,7 @@ Copy `skills/` from `793cf08`, where that sentence is unfixed.
 
 | Check | Pass |
 |---|---|
-| Fix lands | The commit names Factory-AI/factory-mono as the workflow's home and gives the branch for a PR outside the organization. |
+| Fix lands | The commit says the workflow can live outside the PR's repository and gives the route for a PR whose repository it cannot upload for. |
 | Replay asked | The report holds a request a parent could dispatch as written. |
 | Control | The request runs the previous revision on the same brief. |
 | Neutral names | No path or description in the request names its arm. |

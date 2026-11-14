@@ -6,26 +6,37 @@ proof of a visual change. This file owns their PR upload and placement.
 
 ## Upload
 
-Upload only as part of an authorized PR publish/update request. **Use
-`gh-attach`** for GitHub user attachments; never commit images/videos to a PR
-branch or use `raw.githubusercontent.com`. Exclude secrets, tokens, and
-machine-specific paths from the artifact and its caption.
+Upload only as part of an authorized PR publish/update request. Never commit
+images/videos to a PR branch or use `raw.githubusercontent.com`. Keep secrets,
+tokens, and machine-specific paths out of the artifact, its caption, and the
+PR prose.
 
-```bash
-gh-attach --repo owner/repo --url /absolute/path/diagram.png
-```
+1. Upload with `gh-attach`:
 
-By default it uses `GH_TOKEN`; `--user <account>` uses that logged-in gh
-account's token instead, which may carry scopes `GH_TOKEN` lacks (uploads need
-`repo`, and a scopeless token gets 404).
+   ```bash
+   gh-attach --repo owner/repo --url /absolute/path/diagram.png
+   ```
 
-If `gh-attach` fails, push the files under `.attachments/` on an
-`attachments/<repo>/<slug>` branch; the repo's `upload-attachments.yml` uploads
-them and logs the URLs (recipe: factory-mono `AGENTS.md`, "Screenshots and videos").
+   A 404 means the token cannot upload, not that `--repo` is wrong: GitHub
+   rejects a GitHub App token (`ghu_`, `ghs_`) and any token without `repo`
+   scope. Retry with `--user <account>` for each other account
+   `gh auth status` lists.
 
-Each view is one opaque PNG ([show-me Image](../../show-me/references/surfaces.md#image));
-embed it as `<img alt="<takeaway>" src="<url>" />` with alt text that states
-its takeaway, not its topic. Keep machine/auth details out of public PR prose.
+2. If none can upload, use an upload workflow: CI that uploads the files you
+   push with its own token and logs their URLs. It can live in any checkout,
+   not only the PR's: `rg -l -g AGENTS.md user-attachments ~` finds its
+   recipe. Upload for the PR's repository. If the workflow cannot and the
+   PR's repository is public, upload for a public repository it can, after
+   checking that the files show nothing private: a public repository's
+   attachment opens for anyone, so it renders in any PR body.
+
+3. Otherwise stop: report the failing command and its error, and ask the user
+   to log in a gh account that can upload or to send the uploaded URLs. Never
+   publish a text stand-in for a required image or a "could not attach" line.
+
+Embed every image, a [show-me Image](../../show-me/references/surfaces.md#image)
+view or a screenshot, as `<img alt="<takeaway>" src="<url>" />` with alt text
+that states its takeaway, not its topic.
 
 ## Placement
 

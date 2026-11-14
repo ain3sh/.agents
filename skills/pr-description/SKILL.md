@@ -114,6 +114,8 @@ Load on demand; do not reabsorb into this file:
   revision log, and explicit-audit bypass.
 - `references/publish.md` — GitHub REST operations, finalize, and round-trip
   verification.
+- `references/replay.md` — replay scenarios, grading, and baseline for edits
+  to this skill.
 - `scripts/finalize-body.py` — refuses a body without an Architecture view,
   then stamps the `pr-desc-sessions` and `pr-desc-base` markers.
 - `scripts/diff-composition.py` — buckets a three-dot diff by review weight
