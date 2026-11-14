@@ -71,6 +71,7 @@ What makes a run evidence:
 - **A task it was not tuned on,** before saying the skill works beyond the one it was.
 
 Done when the skill's `references/replay.md` holds Scenarios (prompt and expected result), Grading (check and pass), and Baseline (what each arm did, and what was not run), and the report says the same per arm.
+
 ## References
 
 Load on demand; do not reabsorb into this file:
