@@ -97,7 +97,6 @@ git diff --stat    "origin/$DEFAULT_BRANCH"...HEAD
 | Recording adds no reviewer signal | Follow `visual-evidence.md`; remove net-zero evidence. |
 | Demo video sits under Visual Evidence, below the fold | Move it into **What**, right after the paragraph that states the change and its proof (`visual-evidence.md`, Placement). |
 | Architecture view is a Mermaid fence or ASCII diagram | Ship it as a polished uploaded image (`show-me` surfaces, Image). |
-| `gh-attach` fails (`uploads.github.com returned 404`, `unsupported authentication type`, no auth cookies) | Continue through `artifacts.md`, Upload: the `--user` retry, then the route for the PR's repository, or a stop. Never ship a text stand-in. |
 | GitHub body differs after PATCH | Follow the byte-compare verification in `publish.md`. |
 
 ## References

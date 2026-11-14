@@ -70,9 +70,9 @@ Live capture runs the real code — it's the most honest test you'll run, and it
 
 - **Demo video → in What.** The one recording that walks the change working sits on its own line directly after the **What** paragraph that states the change and its proof, before any table, so the reviewer watches it on the first screen. That paragraph points down at the rest ("video and screenshots below"); the video's caption opens Visual Evidence ("The video above walks one session: ...").
 - **Everything else → `## Visual Evidence`**, right after Description: stills, before/after pairs, and any further clips, each captioned. Reviewers meet the proof before the diff.
-- **Upload and embed** every artifact through `references/artifacts.md`, Upload; it owns the commands, the fallback route, the image markup, and the never-commit / never-`raw.githubusercontent` / never-secrets rules.
 - **Screenshot** → pair before/after stacked or as a two-row table, each captioned.
 - **Video** → GitHub inlines an mp4/webm only when the bare `user-attachments` URL is on its own line, so paste that URL alone (markdown image syntax does **not** embed video). Keep under 5 MB (25 MB hard limit).
+- Upload mechanics, the fallback workflow, and the never-commit / never-`raw.githubusercontent` / never-secrets rules live in `references/artifacts.md` — don't re-derive.
 
 ## Verification handoff
 

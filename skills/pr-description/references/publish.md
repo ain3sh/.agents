@@ -12,6 +12,9 @@ backticks, and shell-significant characters survive untouched. Never
 
 ## Resolve the PR
 
+Run every command below from the PR's checkout: `gh` and finalize read the
+repository, the PR, and HEAD from it.
+
 ```bash
 REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
 PR_NUM=$(gh pr view --json number --jq '.number')
@@ -21,7 +24,7 @@ PR_NUM=$(gh pr view --json number --jq '.number')
 
 | Goal | Command |
 |---|---|
-| Finalize (every publish, before `gh pr create` or PATCH) | `python3 ~/.agents/skills/pr-description/scripts/finalize-body.py /tmp/pr-body.md`, run from the PR's checkout, whose HEAD it stamps: exits 1 without writing when `FACTORY_SESSION_ID` is unset or `## Architecture` holds no view; otherwise appends the session to the `pr-desc-sessions` list once, then replaces the base marker with the full HEAD sha as the final line. A refresh adds `--prior /tmp/pr-current-body.md` (`refresh.md`) |
+| Finalize (every publish, before `gh pr create` or PATCH) | `python3 ~/.agents/skills/pr-description/scripts/finalize-body.py /tmp/pr-body.md`: exits 1 without writing when `FACTORY_SESSION_ID` is unset or `## Architecture` holds no view; otherwise appends the session to the `pr-desc-sessions` list once, then replaces the base marker with the full HEAD sha as the final line. A refresh adds `--prior /tmp/pr-current-body.md` (`refresh.md`) |
 | Update body | `gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -F body=@/tmp/pr-body.md` |
 | Update title | `gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f title='<type(scope): description>'` |
 | Title and body in one call | `gh api "repos/$REPO/pulls/$PR_NUM" -X PATCH -f title='…' -F body=@/tmp/pr-body.md` |
@@ -43,8 +46,8 @@ lost content: fix the write, never the comparison.
    draft. Use a file tool; `gh api -F body=@file` reads the finished file.
 2. Never weaken or placeholder-substitute body content to satisfy a command
    scanner. Change the write mechanism.
-3. Never commit screenshots, recordings, or diagrams. Upload them per
-   `artifacts.md`, Upload.
+3. Never commit screenshots, recordings, or diagrams to the PR branch. Upload
+   them per `artifacts.md`, Upload.
 4. Never publish a body `finalize-body.py` has not just passed. It is the only
    marker stamp, and refresh (`refresh.md`) cannot resolve its base without
    the marker. Rerun it after any edit, including a regenerated `stack:links`
