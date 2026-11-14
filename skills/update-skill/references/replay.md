@@ -35,6 +35,6 @@ One Opus run per arm.
 
 Both arms pass Fix lands, Replay asked, Actions graded, Second task, and Unproven, so step 6 is not what produced those.
 
-Not yet run: an arm that can dispatch subagents, so no run has graded its own replay or edited from a friction list. The two clauses added after these runs, "without its `replay.md`" and "until it has run, report the edit as unproven", and the later sentences on what a replay is worth and that the user never waits on it. Any model other than Opus.
+Not yet run: an arm that can dispatch subagents, so no run has graded its own replay or edited from a friction list. The two clauses added after these runs, "without its `replay.md`" and "until it has run, report the edit as unproven", and the later rewrite of steps 3 and 6 to state goals instead of procedures. Any model other than Opus.
 
 If an edit moves a check the wrong way, fix the skill text, not the output.
