@@ -494,6 +494,7 @@ footer.doc code { background: none; border: 0; padding: 0; color: var(--soft2); 
   table.stack td:first-child { padding: 0 0 6px; font-size: 16px; color: var(--text); }
   table.stack td:first-child::before { content: none; }
   table.stack td.num { text-align: left; }
+  table.stack td.key { white-space: normal; } /* a stacked card has no column to hold a nowrap key open; a long one overflowed the viewport */
   table.stack td code { overflow-wrap: anywhere; }
   table.stack tr.pri { box-shadow: inset 2px 0 0 var(--accent); padding-left: 12px; }
   table.stack tr.pri td { background: none; }
