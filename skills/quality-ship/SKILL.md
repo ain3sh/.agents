@@ -43,6 +43,11 @@ variables named like credentials (`CONJURE_*`, `JFROG_*`, names ending `TOKEN`,
 `SECRET`, `PASSWORD`, `PASSWD` or `_KEY`, any case) never reach the check:
 `run-check` drops them and prints their names, never their values. A check that
 needs one keeps it with `--keep-env <NAME>` or loads it with `--env-file`.
+`npx` inside a check runs only what is already installed: every check gets
+`NPM_CONFIG_YES=false`, so a bin name the checkout lacks fails with `npx
+canceled due to missing packages` instead of installing whatever the registry
+holds under that name. A check that must fetch one says `--env
+NPM_CONFIG_YES=true`. A package already under `~/.npm/_npx` still runs.
 On Linux, the check also runs in its own user and mount namespace in which
 Factory's environment directories, `/etc/droid` (the environment file, the
 refresh's copies, `scm-cli-proxy.env` with the proxy credential) and

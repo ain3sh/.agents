@@ -81,6 +81,7 @@ _ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 # Matched on the upper-cased name only; a secret inside another value, such as
 # a password in DATABASE_URL, passes.
 _CREDENTIAL_RE = re.compile(r"^(?:CONJURE|JFROG)_|(?:TOKEN|SECRET|PASSWORD|PASSWD)$|_KEY$")
+_NPX_YES = "NPM_CONFIG_YES"
 # Factory's environment directories. A login shell (/etc/profile.d/droid-env.sh)
 # and the gh wrapper source the files in them, which would undo the strip above.
 # A check sees each one as an empty directory, never a cover over its files: the
@@ -170,6 +171,10 @@ def _child_env(
     Explicit `--env` and `--env-file` entries apply last, so a check that needs a
     credential names it there or keeps the inherited one with `--keep-env`. A
     keep that would keep nothing is refused with ValueError.
+
+    Every check gets `NPM_CONFIG_YES=false` unless it names that setting itself:
+    with no terminal to ask on, npx otherwise installs and runs whatever the
+    registry holds under a bin name the checkout does not have.
     """
     for name in sorted(options.keep):
         if name not in inherited:
@@ -186,6 +191,10 @@ def _child_env(
                 stripped.append(name)
             continue
         env[name] = value
+    # npm reads this name in any case, so an inherited spelling would compete with the default.
+    env = {name: value for name, value in env.items() if name.upper() != _NPX_YES}
+    if not any(name.upper() == _NPX_YES for name in options.env):
+        env[_NPX_YES] = "false"
     env.update(options.env)
     return env, sorted(stripped)
 
