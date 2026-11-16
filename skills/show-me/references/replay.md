@@ -26,6 +26,7 @@ skill's wording. A scenario passes only when every grading row holds.
 | 16 | "/show-me this PR" on scenario 15's PR | Terminal | The form its change earns (call tree, pseudocode, or diff of shape). No breakdown: nobody asked how big it is. |
 | 17 | "/show-me where these failures come from and what fixes them" after a triage that counted failures by observed state, proved some mechanisms, left a remainder unexplained, and ruled others out | Slack | An attribution image: the count, source, and window in the title; observed-state, mechanism, and fix columns that each sum to the count; each mechanism's proof; an unresolved part with what keeps it open; unproven fix edges dashed; ruled-out mechanisms with the counts that ruled them out. Never a mechanism-only split, the remainder folded into a mechanism, or ruled-out causes dropped. |
 | 18 | "/show-me why this request failed" on one failure with one path | Terminal | A causal flow marking the first wrong edge. No attribution: there is no counted set. |
+| 19 | "/show-me where these errors come from and what fixes them" after thin triage notes: counts by transport, one mechanism confirmed for only part of its bucket, another seen in two repros with its match count unchecked, a part with no transport recorded, and a cause dismissed by a share of users rather than a count of events | Terminal | An attribution table that sums to the total: the confirmed part apart from the rest of its bucket, the repro-only mechanism with its count marked unknown, the untagged part its own row, and the dismissed cause left open because a share of users is not a count in the same population. Never a whole bucket drawn under the mechanism confirmed for part of it, or an estimated count. |
 
 ## Grading
 
@@ -63,6 +64,17 @@ The control already drew most of an attribution unprompted; the edit changed
 the column structure (state, mechanism, fix, each summing to the count) and
 promoted ruled-out causes to their own section. The fixture spells out proof
 and ruled-out counts, so it cannot tell whether those rules matter when an
-RCA's notes are thinner. Not run: scenario 18, and a fixture with an
-uncounted part. Both arms flagged the same capture friction (viewport height),
-fixed in `surfaces.md`.
+RCA's notes are thinner; scenario 19 below closes that. Both arms flagged the
+same capture friction (viewport height), fixed in `surfaces.md`.
+
+2026-11-16, round 2, terminal destination, one blind run per arm, same setup.
+
+| Scenario | `main` (control) | Attribution edit |
+|---|---|---|
+| 18: one delivery, one path | Causal flow, first wrong edge marked | Causal flow, first wrong edge marked; no attribution |
+| 19: thin triage notes | One causal flow per transport. All 640 stdio events sit under the OOM flow, with the 428 lacking an exit code mentioned only in prose; no column sums | Attribution table summing to 1,204: 212 OOM-confirmed apart from 428 unresolved, http's match count marked unknown, 154 untagged in their own row, the proxy left open because 3% of users is not a count of events |
+
+Scenario 18 shows the edit does not pull a single failure into an attribution.
+Scenario 19 is where the rules discriminate: without them, the control folded
+428 unproven events under the confirmed mechanism. Neither arm quoted a skill
+line as unclear.
