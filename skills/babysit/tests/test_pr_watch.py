@@ -247,11 +247,18 @@ def risk_notice(state: str) -> str:
     )
 
 
-def risk_assessment(scored: str, verdict: str, *, at: str = "2026-01-01T00:00:00Z") -> dict[str, Any]:
-    """factory-mono's sticky risk comment, as github-actions rewrites it on each push."""
+def risk_assessment(
+    scored: str, verdict: str, *, at: str = "2026-01-01T00:00:00Z", marker: bool = True
+) -> dict[str, Any]:
+    """factory-mono's sticky risk comment, as it is rewritten on each push: the scored head in a hidden marker, or
+    in the visible line of a comment published before the marker."""
+    head = (
+        f"<!-- factory-pr-risk-scored-head: {scored} -->\n\n"
+        if marker
+        else f"\n**`skill-v4`**\n\nScored head `{scored}`; trusted base `{BASE_OID[:12]}`.\n\n"
+    )
     body = (
-        f"{RISK_MARK}\n## Risk Assessment: {verdict}\n\n**`skill-v4`**\n\n"
-        f"Scored head `{scored}`; trusted base `{BASE_OID[:12]}`.\n\n| Score | Value |\n| --- | --- |\n\n"
+        f"{RISK_MARK}\n## Risk Assessment: {verdict}\n{head}| Score | Value |\n| --- | --- |\n\n"
         "- Human review is required: `a.ts:12` changes teardown.\n"
         "- No concrete regression was established.\n"
         "- A third point stays in the comment.\n\n<details><summary>Why</summary>\n\n- Rubric detail.\n</details>"
@@ -390,6 +397,8 @@ class OnceVerdictTest(unittest.TestCase):
         scored = risk_assessment(HEAD[:12], "Human review needed")
         for body, listed in (
             (scored["body"], [RISK_LINE]),
+            (risk_assessment(HEAD[:12], "Human review needed", marker=False)["body"], [RISK_LINE]),
+            (risk_assessment(HEAD, "Human review needed")["body"], [RISK_LINE]),
             (risk_notice("Waiting"), []),
             (risk_notice("Running"), []),
             (risk_assessment("c" * 12, "Human review needed")["body"], []),
@@ -397,6 +406,17 @@ class OnceVerdictTest(unittest.TestCase):
             with self.subTest(body=body[:60]):
                 github = GitHub("CLEAN")
                 github.comments = [{**scored, "body": body}, comment("github-actions", "Bot", "Deployed", id=3)]
+                self.assertEqual(self.poll(github), (0, [*listed, f"READY {REPO}#{NUMBER} @ {HEAD}"]))
+
+    def test_the_assessment_is_no_comment_event_when_a_feedback_bot_posts_it(self) -> None:
+        # factory-mono posts it as factory-droid, whose other comments are feedback.
+        for body, listed in (
+            (risk_notice("Running"), []),
+            (risk_assessment(HEAD, "Human review needed")["body"], [RISK_LINE]),
+        ):
+            with self.subTest(body=body[:60]):
+                github = GitHub("CLEAN")
+                github.comments = [comment("factory-droid", "Bot", body, id=9)]
                 self.assertEqual(self.poll(github), (0, [*listed, f"READY {REPO}#{NUMBER} @ {HEAD}"]))
 
     def test_a_watcher_wakes_once_per_scored_head_and_verdict_of_the_rewritten_assessment(self) -> None:

@@ -193,12 +193,13 @@ STATUS_BOTS = (
 # marker: a link, not feedback. Its other comments still count.
 LINEAR_BOT = "linear-code"
 LINKBACK = "<!-- linear-linkback -->"
-# The repository's risk assessment is one github-actions comment opening with
+# The repository's risk assessment is one bot comment opening with
 # this marker, rewritten in place on every push: "Waiting" and "Running" until
-# it scores the head, then its verdict and the head it scored.
+# it scores the head, then its verdict and the head it scored: in a hidden
+# marker, or in the visible line of a comment published before the marker.
 RISK_MARK = "<!-- factory-pr-risk -->"
 RISK_VERDICT = re.compile(r"^## Risk Assessment: (.+)$", re.MULTILINE)
-RISK_HEAD = re.compile(r"Scored head `([0-9a-f]{7,40})`")
+RISK_HEAD = re.compile(r"(?:<!-- factory-pr-risk-scored-head: |Scored head `)([0-9a-f]{7,40})")
 PASSED = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 # The E2E workflow waits by design until the PR has an approving review or this
 # label. It used to fail its status jobs, annotating each with GATE_TITLE; since
@@ -482,9 +483,11 @@ def human(node: Json) -> bool:
 
 
 def noise(node: Json) -> bool:
-    """A bot comment that is no feedback: a status report or Linear's linkback."""
+    """A bot comment that is no feedback: a status report, the risk assessment
+    (assessment() reports its score) or Linear's linkback."""
     return not human(node) and (
         any(b in login(node) for b in STATUS_BOTS)
+        or node["body"].startswith(RISK_MARK)
         or (login(node) == LINEAR_BOT and node["body"].startswith(LINKBACK))
     )
 
