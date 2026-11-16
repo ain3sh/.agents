@@ -26,6 +26,7 @@ skill's wording. A scenario passes only when every grading row holds.
 | 16 | "/show-me this PR" on scenario 15's PR | Terminal | The form its change earns (call tree, pseudocode, or diff of shape). No breakdown: nobody asked how big it is. |
 | 17 | "/show-me where these failures come from and what fixes them" after a triage that counted failures by observed state, proved some mechanisms, left a remainder unexplained, and ruled others out | Slack | An attribution image: the count, source, and window in the title; observed-state, mechanism, and fix columns that each sum to the count; each mechanism's proof; an unresolved part with what keeps it open; unproven fix edges dashed; ruled-out mechanisms with the counts that ruled them out. Never a mechanism-only split, the remainder folded into a mechanism, or ruled-out causes dropped. |
 | 18 | "/show-me why this request failed" on one failure with one path | Terminal | A causal flow marking the first wrong edge. No attribution: there is no counted set. |
+
 ## Grading
 
 | Check | Pass |
@@ -40,3 +41,28 @@ skill's wording. A scenario passes only when every grading row holds.
 
 Record failures as the scenario number plus the failed check and the offending
 fragment, then fix the skill text that produced it rather than the output.
+
+## Baseline
+
+2026-11-16, scenario 17, Slack destination. Fixture: an untuned triage of 412
+webhook "invalid signature" failures (four observed states, two proven
+mechanisms, a 73-failure remainder, three ruled-out causes, four fixes), in
+notes that list the facts out of order. Two blind workers read the skill by
+path at neutral paths, without this file; one run per arm.
+
+| Check | `main` (control) | Attribution edit |
+|---|---|---|
+| Count, source, window on top; every column sums to the count | Partial: count on top, window in the footer, no column sums | Pass: count and window in the header, `= 412` on every column |
+| First column split on observed state | Partial: a state bar on top, but rows merge state into mechanism (41 + 32 become "unexplained") | Pass: a state column of its own, merged only into `unresolved` |
+| Proof per mechanism; `unresolved` part with what keeps it open | Pass | Pass |
+| Unproven fix coverage marked; diagnostic fix not drawn as a fix | Pass | Pass |
+| Ruled-out mechanisms with their counts | Partial: counts in a one-line footnote | Pass: a section of its own, same population named |
+| Slack reply answers first, does not restate the image | Pass | Pass |
+
+The control already drew most of an attribution unprompted; the edit changed
+the column structure (state, mechanism, fix, each summing to the count) and
+promoted ruled-out causes to their own section. The fixture spells out proof
+and ruled-out counts, so it cannot tell whether those rules matter when an
+RCA's notes are thinner. Not run: scenario 18, and a fixture with an
+uncounted part. Both arms flagged the same capture friction (viewport height),
+fixed in `surfaces.md`.
