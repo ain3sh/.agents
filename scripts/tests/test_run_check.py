@@ -339,5 +339,28 @@ class ExclusiveSlotsTest(unittest.TestCase):
         self.assertEqual(len(run_check.EXCLUSIVE_LOCK_PATHS), run_check.EXCLUSIVE_SLOTS)
 
 
+class LogRetentionTest(unittest.TestCase):
+    def test_a_log_leaves_by_age_and_never_by_count(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            log_dir = Path(raw)
+            now = 1_000_000_000.0
+            fresh = [log_dir / f"cited.{index}.log" for index in range(60)]
+            stale = log_dir / "stale.log"
+            for path in [*fresh, stale]:
+                path.write_bytes(b"evidence\n")
+            inside = now - run_check.LOG_RETENTION_SECONDS + 60
+            for path in fresh:
+                os.utime(path, (inside, inside))
+            outside = now - run_check.LOG_RETENTION_SECONDS - 60
+            os.utime(stale, (outside, outside))
+
+            with mock.patch.object(run_check.time, "time", return_value=now):
+                created, handle = run_check._create_log(log_dir, "next check")
+            handle.close()
+
+            self.assertTrue(all(path.exists() for path in fresh))
+            self.assertFalse(stale.exists())
+            self.assertTrue(created.exists())
+
 if __name__ == "__main__":
     unittest.main()
