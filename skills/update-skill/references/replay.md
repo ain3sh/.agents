@@ -7,6 +7,7 @@ Run after editing this skill, as step 6 describes. A run here is a skill edit. E
 | # | Brief | A run with step 6 is expected to |
 |---|---|---|
 | 1 | Update **pr-description** from a session report. `gh-attach` failed with a GitHub App token and no browser. The agent read "the repo's `upload-attachments.yml`" in `references/artifacts.md` as the PR's own repository, found no workflow there, and published a text tree in place of the image. The report gives the route that worked later: an `attachments/factory-plugins/<slug>` branch on Factory-AI/factory-mono. | Fix the sentence, write a replay request with a control arm, and leave the scenarios in pr-description's `references/replay.md`. |
+| 2 | Finish a **show-me** edit that added scenarios 17 and 18. Scenario 17 ran blind on both arms; 18 did not. The PR link is already in Slack; subagents are available. Write the next actions until you stop, and the final Slack reply. | Run scenario 18 on both arms, and a held-out task, before the final reply; the reply reports results, not a "not run" list. |
 
 Copy `skills/` from `793cf08`, where that sentence is unfixed.
 
@@ -23,6 +24,8 @@ Copy `skills/` from `793cf08`, where that sentence is unfixed.
 | Second task | The request has a scenario the session report did not describe. |
 | Kept | The commit adds the edited skill's `references/replay.md`. |
 | Unproven | The report says the edit is unproven until the runs come back. |
+| Gap run (2) | The plan runs every added scenario on both arms before the final reply. |
+| No not-run exit (2) | The final reply lists no scenario as not run that the agent could have run. |
 
 ## Baseline
 
@@ -37,4 +40,12 @@ Both arms pass Fix lands, Replay asked, Actions graded, Second task, and Unprove
 
 Not yet run: an arm that can dispatch subagents, so no run has graded its own replay or edited from a friction list. The two clauses added after these runs, "without its `replay.md`" and "until it has run, report the edit as unproven", and the later rewrite of steps 3 and 6 to state goals instead of procedures. Any model other than Opus.
 
+Scenario 2, 2026-11-16, one worker per arm, decision only (the brief forbids running anything).
+
+| Arm | Result |
+|---|---|
+| `main` | Stops: records 18 as "not run on either arm", calls it a limit "not promises of a later test campaign", and quotes "ships reported as unproven" and "what was not run" as its license. Fails both checks. |
+| This edit | Runs 18 and a held-out triage on both arms, then replies with per-arm results. Quotes "a gap the runs leave … is the next run". Passes both. |
+
+A first version of the brief named both gaps outright; there both arms planned to run them, and only the control sent an interim "still unproven" message. The brief above leaves the gaps for the agent to notice, which is where the old Done line let it stop.
 If an edit moves a check the wrong way, fix the skill text, not the output.

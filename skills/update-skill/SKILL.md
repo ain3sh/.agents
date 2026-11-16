@@ -61,7 +61,7 @@ Invariants:
 
 ## 6. Replay
 
-A reread shows the text is clear, not that an agent acts on it. A replay answers one question: did the edit change what an agent does? It is worth asking when the edit changes a decision (a rule, a step, a ranking, the trigger). The user never waits on it: an edit that has not run yet ships reported as unproven.
+A reread shows the text is clear, not that an agent acts on it. A replay answers one question: did the edit change what an agent does? It is worth asking when the edit changes a decision (a rule, a step, a ranking, the trigger). The user never waits on it: ship the edit and its link first, then run the replay in the same session; anything reported before the runs come back is reported as unproven.
 
 What makes a run evidence:
 
@@ -70,7 +70,7 @@ What makes a run evidence:
 - **Actions, not reports.** Grade the diff and the decisions in the log. Have the run quote the lines that were unclear, wrong, or in its way: those are the next edit.
 - **A task it was not tuned on,** before saying the skill works beyond the one it was.
 
-Done when the skill's `references/replay.md` holds Scenarios (prompt and expected result), Grading (check and pass), and Baseline (what each arm did, and what was not run), and the report says the same per arm.
+Done when every scenario the edit added has run on both arms, and the skill's `references/replay.md` holds Scenarios (prompt and expected result), Grading (check and pass), and Baseline (what each arm did), and the report says the same per arm. A gap the runs leave, such as a skipped scenario or a case the fixture cannot tell apart, is the next run, not a line in the report: write the fixture that closes it and run it. Call a run "not run" only after trying it, and say what you tried.
 
 ## References
 
