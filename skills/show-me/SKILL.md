@@ -110,6 +110,11 @@ surprise row marked (`references/representations.md`).
 split into parts that sum to it, with the counting rule stated and any figure
 the reader already holds reconciled (`references/representations.md`).
 
+**Where do these failures come from, and what fixes them?** Attribution: one
+counted set of failures split by observed state, by proven mechanism (with an
+unresolved part), and by the fix that covers each, with ruled-out mechanisms
+kept beside the count that ruled them out (`references/representations.md`).
+
 **Needs layout, color, or emphasis, or headed for GitHub or Slack?** One
 focused HTML view (diagram, table, panels, mockup) in the product's colors and
 type with real labels: opened in a browser, or captured as the image GitHub and
@@ -192,7 +197,7 @@ no relation earns a view, say so and let the owning workflow omit its section.
 
 Load on demand; do not reabsorb into this file:
 
-- `references/representations.md`: question-to-view matrix, layout gate, code fidelity, companion, and the grammars that need rules (sequence, state, dependency, causal, quantitative, policy before/after, graphical panels).
+- `references/representations.md`: question-to-view matrix, layout gate, code fidelity, companion, and the grammars that need rules (sequence, state, dependency, causal, attribution, quantitative, breakdown, policy before/after, graphical panels).
 - `references/surfaces.md`: rendering per destination (terminal, GitHub, Slack, browser), PNG capture, themes, embedding, source access, checks, and local handover.
 - `references/replay.md`: behavioral replay scenarios and grading.
 - `scripts/check-view.py FILE [--section NAME]`: exit 0 when a view (fence,
