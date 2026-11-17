@@ -8,7 +8,7 @@ Changing the renderer never fixes a badly chosen relationship.
 |---|---|---|
 | Terminal (chat reply, CLI, tool output) | Markdown text and fenced code; a ```` ```mermaid ```` or HTML block appears as raw source unless the client is known to render it | typed fences, indented trees, aligned tables, numbered sequence lines |
 | GitHub body or comment | Markdown, fenced code, uploaded images; Mermaid only at the host's pinned version and theme; strips HTML styles and scripts | an uploaded image for every view; Markdown code only for verbatim source the reader copies |
-| Slack message or thread | mrkdwn: bold, italic, code spans, unhighlighted code blocks that rewrap on narrow panes, `•` bullets, links; uploaded images. No tables, headers, Mermaid, or highlighting | a short code-block tree or sequence; everything else an image |
+| Slack message or thread | mrkdwn: bold, italic, code spans, unhighlighted code blocks that rewrap on narrow panes, `•` bullets, links; uploaded images; an attached self-contained HTML file, rendered inline as a page. No tables, headers, Mermaid, or highlighting in a message | a short code-block tree or sequence; everything else an image |
 | Browser file or document | HTML, inline SVG, embedded images, selectable code | one focused file, or a figure inside the caller's document |
 
 This skill owns visual selection, construction, rendering, and embedding.

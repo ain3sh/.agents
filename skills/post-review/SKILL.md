@@ -34,7 +34,7 @@ Resolve the PR and `REPO` from the supplied ref or current review context via **
 | `F<id>`, current tier, status | reconcile the dossier with the full event history for that id |
 | user decision | latest explicit approval, drop, rewording, retier, scope, or verdict choice |
 | prior thread | comment id when an earlier pass already posted it |
-| outgoing body | inline comment, grouped comment, thread reply (§5), or verdict passage carrying it; otherwise the exclusion reason |
+| outgoing body | the draft's inline thread, thread reply, or verdict passage carrying it (§3); otherwise the exclusion reason |
 
 Reconciliation rules:
 
@@ -53,9 +53,11 @@ Each live finding needs a **voice** severity (do not invent or remap tiers), bod
 
 ## 3. Draft Every Body
 
+Bodies are written at the **review-pr** approval gate into `./.agents/review.draft.md` (layout in its `references/systems/dossier.md`) under this section, and the user approves that text. At post time, post the draft as written. Change it only for a user instruction given after approval or a §4 gap, editing the draft first and telling the user what changed. With no draft (pasted findings), draft here under the same rules.
+
 ### Plain comment vs. suggestion block
 
-Posting-time decision; `/review-pr` is silent on this so review judgment isn't biased toward apply-clickable issues.
+Decided while drafting, after the findings are settled, so review judgment is never biased toward apply-clickable issues.
 
 Attach a `suggestion` block only when **all** hold:
 
@@ -74,9 +76,9 @@ Views appear only where they carry part of the ruling (first-pass §6, "Views");
 
 It names **every** still-gating finding, numbered, each with its concrete ask, including linked threads for already-posted blockers. There is no count limit. The GitHub event (§5) does not make these asks optional.
 
-### Deslop pass -- mandatory, even on a user-approved body
+### Deslop pass -- mandatory, before the draft is presented
 
-Approval at the `/review-pr` gate covered the findings and disposition, not the prose; re-read every body against **voice** and cut wholesale:
+The user approves the prose as well as the findings, so cut before presenting, never after. Re-read every body against **voice** and cut wholesale:
 
 - **Event-token prefix**: a verdict opening with "COMMENT." / "APPROVE." duplicates the badge GitHub renders from `event`; start with the *why* sentence instead.
 - **Internal deliberation**: the approval-gate chat never leaks. Draft history, severity re-calibrations, "my earlier draft over-weighted X", what the user reworded or dropped -- the PR author sees none of that conversation and must not learn it existed. Post the final position as if it were the only one you ever held.
@@ -94,7 +96,7 @@ Lead with the ruling and gate in the first two sentences; use the remaining spac
 
 ## 4. Coverage Check Before the First Write
 
-After the deslop pass and before any external write, walk the §2 coverage table against the final payload:
+Before any external write, walk the §2 coverage table against the draft:
 
 - Every live row maps to an outgoing comment or verdict passage preserving its claim, mechanism/impact, evidence, ask, uncertainty, and tier.
 - Every excluded row cites its recorded disposition or explicit user decision: unresolved candidate, killed, folded, dropped, superseded, already posted, or scoped out. Never "trimmed for length".
@@ -103,13 +105,13 @@ After the deslop pass and before any external write, walk the §2 coverage table
 - Grouped comments still carry each claim they merged.
 - Every verdict image's nodes, edges, and rows trace to the approved ruling and findings, and the exact PNG being posted passed **show-me**'s image check.
 
-Restore what deslop dropped and run the check again. A gap the ledger cannot close is a §2 decision, not a silent omission.
+Restore a gap in the draft per §3 and run the check again. A gap the ledger cannot close is a §2 decision, not a silent omission.
 
 ## 5. Post
 
 ### Line comments
 
-Build JSON with `jq` and pipe to `--input -`; multi-line bodies with backticks/newlines aren't safe through `-f body=...`.
+Each `# Inline threads` entry of the draft is one comment: path and lines from its heading, body as written. Build JSON with `jq` and pipe to `--input -`; multi-line bodies with backticks/newlines aren't safe through `-f body=...`.
 
 #### Single-line
 
@@ -167,7 +169,7 @@ Reopen with `unresolveReviewThread` in the same mutation shape. Read back `isRes
 
 ### Submit the verdict
 
-Upload each view's PNG first through `pr-description/references/artifacts.md` and embed it as `<img alt="<takeaway>" src="<url>" />` beside the asks it carries. Write the verdict to `/tmp/verdict-<number>.md` with a file tool and pass it with `-F body=@…`, as `pr-description/references/publish.md` does; a body typed inline in a quoted argument expands backticks and `$`.
+Upload each `{{img:<png path>|<takeaway>}}` PNG through `pr-description/references/artifacts.md` and replace the placeholder with `<img alt="<takeaway>" src="<url>" />`; replace each `{{thread:F<id>}}` with that thread's URL. Write the draft's `# Verdict` section, so substituted, to `/tmp/verdict-<number>.md` with a file tool and pass it with `-F body=@…`, as `pr-description/references/publish.md` does; a body typed inline in a quoted argument expands backticks and `$`.
 
 ```bash
 REVIEW_ID=$(gh api "repos/$REPO/pulls/<number>/reviews" \
