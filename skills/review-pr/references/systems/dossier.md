@@ -1,15 +1,16 @@
 # Review ledger & dossier
 
-Two paired artifacts per review worktree (worktree = one PR):
+Two paired artifacts per review worktree (worktree = one PR), plus the draft that the approval gate presents and `/post-review` publishes:
 
 | File | Role | Write mode |
 |---|---|---|
 | `./.agents/review.md` | **Dossier** — compact current state: findings, tiers, statuses, coverage. What follow-up loads. | Refreshed at checkpoints; state sections replaced each pass |
 | `./.agents/review.notes.md` | **Notes** — append-only event log: every candidate, kill, fold, retier, dispatch, reconciliation, with the evidence that caused it. | Appended in the same turn as the event; never edited or batched |
+| `./.agents/review.draft.md` | **Draft** — the exact verdict, inline threads, and thread replies to post (below). | Written at the approval gate (`workflows/first-pass.md` §6), edited with each gate change, replaced each pass |
 
-State lives in the dossier; history lives in the notes. The dossier answers "what do we post / what does the next pass need"; the notes answer "why is F14 a warning now" and "did we already investigate X". Killed suspicions are as valuable as findings — recorded at the moment of the kill with the killing evidence, they stop any later pass or worker from re-investigating settled ground. If the dossier is lost it is reconstructable from the notes; the reverse is false — which is why notes are written first and continuously.
+State lives in the dossier; history lives in the notes. The draft answers "what do we post", the dossier "what does the next pass need"; the notes answer "why is F14 a warning now" and "did we already investigate X". Killed suspicions are as valuable as findings — recorded at the moment of the kill with the killing evidence, they stop any later pass or worker from re-investigating settled ground. If the dossier is lost it is reconstructable from the notes; the reverse is false — which is why notes are written first and continuously.
 
-Both files are untracked, never committed, and owned by the main reviewer alone — workers never touch them. `mkdir -p ./.agents` on first write.
+All three files are untracked, never committed, and owned by the main reviewer alone — workers never touch them. `mkdir -p ./.agents` on first write.
 
 ## Notes file (`review.notes.md`)
 
@@ -116,3 +117,29 @@ audited_body: <body_seen value this audit covers>
 ```
 
 Keep the dossier under ~100 lines: one-line evidence with pointers (thread ids, worker session ids, notes timestamps) — transcripts and reasoning chains live in the notes. Empty section → keep the header with "none"; follow-up relies on the distinction between "none" and "not recorded".
+
+## Draft file (`review.draft.md`)
+
+Exactly what `/post-review` publishes, and nothing else. Two placeholders stand for what exists only at post time, and are the only text it replaces: `{{img:<png path>|<takeaway>}}` (the uploaded view, alt text = takeaway) and `{{thread:F<id>}}` (that thread's URL).
+
+```markdown
+<!-- PR <number> · event <COMMENT | APPROVE> · drafted at <HEAD_SHA> -->
+
+# Verdict
+
+<verdict body as posted (first-pass §6)>
+
+# Inline threads
+
+## F<id> · <path>:<line>[-<line>]
+
+<comment body as posted, severity prefix included>
+
+# Thread replies
+
+## F<id> · reply to <comment id> · <resolve | reopen | leave open>
+
+<reply as posted>
+```
+
+`# Thread replies` appears on follow-up passes only.

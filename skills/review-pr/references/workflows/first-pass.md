@@ -166,12 +166,18 @@ An open acceptance scenario is not an overcoverage category and no wave substitu
 
 ## 6. User approval gate
 
-Show every finding to the user before posting:
+The user approves the exact text that will post. Write it first as the **draft** (`./.agents/review.draft.md`, layout in `systems/dossier.md`): the verdict body (below), every inline thread, and on a follow-up every thread reply, each written under **post-review** §3. `/post-review` posts the draft as written, so every gate change is an edit to it.
 
-- Group by file; include severity, line, suggested fix.
-- State intended verdict (`APPROVE` / `COMMENT`) and draft the verdict body (below). Never propose `REQUEST_CHANGES` unless the user explicitly asks for that verdict type.
-- Plain chat prose; **do not use `AskUser`** — the user should be free to discuss, reword, drop, or re-severity findings.
-- **Wait for explicit confirmation.** Apply any user edits before handoff, and record them as notes entries (`gate` for drops/rewording/verdict choice, `retier` for severity changes) — the posted body never references this discussion, but the ledger keeps it.
+Present it on the surface the session reports to:
+
+- **Slack:** one HTML page on **design-doc**'s template that lets the user judge the review without leaving the thread: the ruling, views, findings, and evidence the review already produced, ending in a *Draft as posted* section rendered from the draft. It reports a review, so nothing beyond the page is built for it. Attach it and the draft file, then a short closing message saying what will post and how to approve it. Slack renders an attached HTML page, so views are not uploaded separately.
+- **Chat (TUI, CLI, web):** the message carries every finding grouped by file with severity, line, and fix, then the verdict body; show each view by passing its PNG to `image()`, and give the draft's path. These clients do not render an HTML page.
+
+Either way:
+
+- State the intended verdict (`APPROVE` / `COMMENT`). Never propose `REQUEST_CHANGES` unless the user explicitly asks for that verdict type.
+- **Do not use `AskUser`**: the user should be free to discuss, reword, drop, or re-severity findings.
+- **Wait for explicit confirmation.** Apply each user edit to the draft before handoff, and record it as a notes entry (`gate` for drops/rewording/verdict choice, `retier` for severity changes): the posted body never references this discussion, but the ledger keeps it.
 
 ### Draft the verdict body
 
@@ -209,7 +215,7 @@ Cover, in this order. Number gating asks continuously across sections so the aut
 4. **`## Non-gating`** — each `suggestion` and `nit`, one line each as `<tier>: <claim> ([thread](<url>))`; related nits share a line.
 5. **Pre-existing defects** — only those with no anchor in the diff (below).
 
-**Views** earn their place by carrying part of the ruling faster than the asks can: the PR's shape beside the reference design, a matches/differs table over its decisions, the edge a symptom patch changes beside where the invariant lives, a table of which cases a behavior change refuses, each blocker's locus, where each contested response landed on a follow-up, or the current shape beside the direction (labelled illustrative) on `revise`. Each sits beside the asks it carries, in whatever section, as one polished uploaded image whose alt text states its takeaway (`show-me` surfaces), drawn only from admitted evidence and approved findings. Never draw one to fill a section: a view that restates an ask, a line comment, or the body's own Architecture view is cut, and a verdict with no view is complete. A view carries its trace, so the ruling paragraph does not narrate it again. Show each rendered PNG at the gate.
+**Views** earn their place by carrying part of the ruling faster than the asks can: the PR's shape beside the reference design, a matches/differs table over its decisions, the edge a symptom patch changes beside where the invariant lives, a table of which cases a behavior change refuses, each blocker's locus, where each contested response landed on a follow-up, or the current shape beside the direction (labelled illustrative) on `revise`. Each sits beside the asks it carries, in whatever section, as one polished uploaded image whose alt text states its takeaway (`show-me` surfaces), drawn only from admitted evidence and approved findings. Never draw one to fill a section: a view that restates an ask, a line comment, or the body's own Architecture view is cut, and a verdict with no view is complete. A view carries its trace, so the ruling paragraph does not narrate it again. Render each to its PNG before the gate and place it in the draft as `{{img:<png path>|<takeaway>}}`.
 
 **Evidence, woven in** — attach the probe or scenario to the claim it backs (*"the new tests fail on base for the stated reason"*; *"the workflow completes on head at the real entry"*), inline, as the observed fact, at the boundary it actually exercised. **Never the commands behind it**: CLI invocations, tool names, "Checks run:" paragraphs, CI counts, and sweep inventories are process narration that buries the findings. A probe that supports no specific claim doesn't appear.
 
@@ -217,4 +223,4 @@ Pre-existing defects found en route are findings like any other, marked *pre-exi
 
 Omit an empty section. Length follows the findings: every passage carries a ruling, an ask, or a view, and recaps or process narration are cut at any length.
 
-Once confirmed: hand off to `/post-review <PR>` with findings and verdict body (suggestion-block decisions live there — review judgment must not be biased toward apply-clickable issues). Posting appends the `post` notes entry and refreshes the dossier per `systems/dossier.md`.
+Once confirmed: hand off to `/post-review <PR>`, which posts the draft. Posting appends the `post` notes entry and refreshes the dossier per `systems/dossier.md`.
