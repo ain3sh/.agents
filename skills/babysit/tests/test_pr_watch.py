@@ -326,6 +326,13 @@ class OnceVerdictTest(unittest.TestCase):
                 code = exit.code
         return code, out.getvalue().splitlines()
 
+    def test_once_on_a_fresh_machine_prints_its_verdict(self) -> None:
+        github = GitHub("CLEAN")
+        github.pr |= {"state": "closed", "merged_at": "2026-11-17T00:00:00Z"}
+        with mock.patch.object(pr_watch, "STATE_DIR", Path(pr_watch.STATE_DIR) / "fresh"):
+            code, out = self.poll(github)
+        self.assertEqual((code, out[-1].split()[0]), (0, "MERGED"))
+
     def test_approved_mergeable_green_pr_is_ready(self) -> None:
         failed = "check-failed optional (optional) https://ci/optional"
         for state, checks, listed in (

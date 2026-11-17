@@ -43,6 +43,8 @@ What wakes you depends on where you run:
   reply, sync). It remembers what it reported, so an item left open wakes you
   once; a first run reports everything open. A second watcher on the same PR
   exits 2 at once; kill the first only if its exit can no longer reach you.
+  A droid daemon restart kills watchers without an exit: `pr-watch --check`
+  lists the dead ones with the command that restarts each.
 
 What it reports:
 
