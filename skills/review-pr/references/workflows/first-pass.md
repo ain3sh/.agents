@@ -170,7 +170,7 @@ The user approves the exact text that will post. Write it first as the **draft**
 
 Present it on the surface the session reports to:
 
-- **Slack:** one HTML page built with **design-doc** that carries the ruling, the views, the findings, and the evidence, and ends in a *Draft as posted* section rendered from the draft. Attach the page and the draft file, then post one short closing message: the intended verdict and that nothing is on GitHub yet, the ruling with the one or two facts that decide it, what posts (numbered asks, threads by tier), anything to settle before posting, and "reply *post*, or say what to change". Slack renders an attached HTML page, so views are not uploaded separately and no PDF is made.
+- **Slack:** one HTML page from **design-doc**'s template, a review report rather than an RFC (no new figure, rivals section, or PDF), that carries the ruling, the views, the findings, and the evidence, and ends in a *Draft as posted* section rendered from the draft. Attach the page and the draft file, then post one short closing message: the intended verdict and that nothing is on GitHub yet, the ruling with the one or two facts that decide it, what posts (numbered asks, threads by tier), anything to settle before posting, and "reply *post*, or say what to change". Slack renders an attached HTML page, so views are not uploaded separately.
 - **Chat (TUI, CLI, web):** the message carries every finding grouped by file with severity, line, and fix, then the verdict body; show each view by passing its PNG to `image()`, and give the draft's path. These clients do not render an HTML page.
 
 Either way:
