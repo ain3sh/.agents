@@ -1,7 +1,7 @@
 ---
 name: astra
-description: GPT-6 for investigation, computer use, rigorous verification, and small local fixes.
-model: gpt-6-astra
+description: GPT-6.2 Astra for investigation, computer use, rigorous verification, and small local fixes.
+model: gpt-6.2-astra
 reasoningEffort: high
 ---
 

@@ -46,12 +46,12 @@ codex-instructions-enabled: true
 payload:
   override: # always set parameters, overwriting any existing values
     - models:
-        - name: "gpt-6-astra"
+        - name: "gpt-6.2-astra"
           protocol: "codex"
       params:
         "text.verbosity": "medium"
     - models:
-        - name: "gpt-6.1-sol-fast"
+        - name: "gpt-6.2-sol-fast"
           protocol: "codex"
         - name: "gpt-6-luna-fast"
           protocol: "codex"
@@ -145,9 +145,9 @@ remote-management: # api settings
   disable-control-panel: true # skip asset download and http route
 oauth-model-alias:
   codex:
-    - name: gpt-6.1-sol
-      alias: gpt-6.1-sol-fast
-      display-name: GPT-6.1 Sol Fast
+    - name: gpt-6.2-sol
+      alias: gpt-6.2-sol-fast
+      display-name: GPT-6.2 Sol Fast
       fork: true
       force-mapping: true
     - name: gpt-6-luna

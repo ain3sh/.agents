@@ -70,9 +70,9 @@ droids land in the same directory and are gitignored. Staffing policy is the
 |---|---|---|
 | `glm` | `glm-5.3-flash` | bounded implementation, evidence gathering, writing |
 | `ds-flash` | `deepseek-v4.1-flash` | fast, cheap bounded implementation and evidence gathering |
-| `sol` | `gpt-6.1-sol` | only when the user names it; orchestrate never staffs it |
+| `sol` | `gpt-6.2-sol` | only when the user names it; orchestrate never staffs it |
 | `fable` | `claude-fable-5.1` | approach design, coupled or taste-sensitive code, UI, structural review |
-| `astra` | `gpt-6-astra` | diagnosis, QA, computer use; small local fixes within assigned scope |
+| `astra` | `gpt-6.2-astra` | diagnosis, QA, computer use; small local fixes within assigned scope |
 | `opus` | `claude-opus-5-5-fast` | clean code, UI/UX, writing; not data gathering |
 
 ## Installed Tooling

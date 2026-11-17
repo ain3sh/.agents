@@ -1,7 +1,7 @@
 ---
 name: sol
-description: GPT-6.1 Sol. Use only when the user asks for Sol by name.
-model: gpt-6.1-sol
+description: GPT-6.2 Sol. Use only when the user asks for Sol by name.
+model: gpt-6.2-sol
 reasoningEffort: high
 ---
 
