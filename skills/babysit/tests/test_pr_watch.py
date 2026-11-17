@@ -151,10 +151,10 @@ class GitHub:
             raise pr_watch.GhError("gh: Resource not accessible by integration (HTTP 403)")
         raise AssertionError(f"unexpected REST read: {url}")
 
-    def gh(self, *args: str, ride: bool = True, unchanged: bool = False) -> str:
+    def gh(self, *args: str, unchanged: bool = False) -> str:
         assert args[0] == "api" and "--include" in args, args
         if args[1] == "graphql":
-            assert f"query={pr_watch.THREADS}" in args and not ride, args
+            assert f"query={pr_watch.THREADS}" in args, args
             assert "owner=o" in args and "name=r" in args and "number=7" in args, args
             # GitHub answers at most 100 threads a page; the cursor is the index after the page.
             start = int(next((a.removeprefix("after=") for a in args if a.startswith("after=")), "0"))
@@ -190,10 +190,10 @@ class GitHub:
     def ls_remote(self, args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         assert args == [
             "git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
-            "ls-remote", f"https://github.com/{REPO}.git", "refs/pull/7/head", "refs/heads/feat",
+            "ls-remote", f"https://github.com/{REPO}.git", "refs/pull/7/head", f"refs/heads/{self.pr['base']['ref']}", "refs/heads/feat",
         ], args
         head = self.pr["head"]["sha"]
-        return subprocess.CompletedProcess(args, 0, f"{head}\trefs/pull/7/head\n{head}\trefs/heads/feat\n", "")
+        return subprocess.CompletedProcess(args, 0, f"{head}\trefs/pull/7/head\n{head}\trefs/heads/feat\n{self.pr['base']['sha']}\trefs/heads/{self.pr['base']['ref']}\n", "")
 
     def stack(self, branches: tuple[str, ...], *, noise: bool = False) -> None:
         self.pr["base"]["ref"] = branches[0]
@@ -321,7 +321,7 @@ class OnceVerdictTest(unittest.TestCase):
                     watcher.run()
                 else:
                     watcher.poll()
-                    watcher.rest.save({"threads": watcher.threads})
+                    watcher.rest.save()
             except SystemExit as exit:
                 code = exit.code
         return code, out.getvalue().splitlines()
@@ -382,10 +382,17 @@ class OnceVerdictTest(unittest.TestCase):
                 self.assertTrue(lines[0].startswith(f"comment from {author}: "), lines)
                 self.assertEqual(lines[-1], f"ACTION {REPO}#{NUMBER} @ {HEAD}")
 
+    def with_comments(self, *comments: Any) -> GitHub:
+        github = GitHub("CLEAN")
+        github.comments = list(comments)
+        return github
+
     def test_a_bots_edit_after_the_agents_response_reopens_its_comment(self) -> None:
         # factory-mono#28661: a QA report was edited to FAILED after our reply.
         qa = comment("factory-droid", "Bot", "<!-- qa-report -->\n## QA: FAILED (32 / 34)")
-        reply = comment("me", "User", f"Fixed.\n\n{pr_watch.AGENT_MARK}", id=2, at="2026-01-02T00:00:00Z")
+        _, lines = self.poll(self.with_comments(qa))
+        token = lines[0][lines[0].index("<!-- addressed:"):]
+        reply = comment("me", "User", f"Fixed. {token}\n\n{pr_watch.AGENT_MARK}", id=2, at="2026-01-02T00:00:00Z")
         status = {**comment("github-actions", "Bot", "Deployed", id=3), "updated_at": "2026-01-03T00:00:00Z"}
         for edited, expected in (
             ("2026-01-03T00:00:00Z", (1, [
@@ -393,12 +400,30 @@ class OnceVerdictTest(unittest.TestCase):
                 f"ACTION {REPO}#{NUMBER} @ {HEAD}",
             ])),
             (qa["created_at"], (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"])),
-            ("2026-01-01T12:00:00Z", (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"])),
+
         ):
             with self.subTest(edited=edited):
                 github = GitHub("CLEAN")
                 github.comments = [{**qa, "updated_at": edited}, reply, status]
-                self.assertEqual(self.poll(github), expected)
+                code, lines = self.poll(github)
+                self.assertEqual((code, [line.split(" <!-- addressed:")[0] for line in lines]), expected)
+
+    def test_answering_one_top_level_item_does_not_close_another(self) -> None:
+        first = comment("someone", "User", "Which branch?", id=4)
+        second = comment("someone", "User", "Which revision?", id=5)
+        _, lines = self.poll(self.with_comments(first, second))
+        token = lines[0][lines[0].index("<!-- addressed:"):]
+        response = comment("me", "User", f"main. {token}\n{pr_watch.AGENT_MARK}", id=6)
+        code, out = self.poll(self.with_comments(first, second, response))
+        self.assertEqual(code, 1)
+        self.assertEqual([line.split(": ", 1)[1].split(" https:")[0] for line in out[:-1]], ["Which revision?"])
+
+    def test_rate_limited_once_returns_wait_without_sleeping(self) -> None:
+        github = GitHub("CLEAN")
+        with mock.patch.object(github, "gh", side_effect=pr_watch.GhError("API rate limit exceeded")):
+            code, lines = self.poll(github)
+        self.assertEqual(code, 3)
+        self.assertTrue(lines[-1].startswith("WAIT o/r#7 GitHub rate limited"))
 
     def test_once_lists_the_heads_risk_assessment_without_setting_the_verdict(self) -> None:
         scored = risk_assessment(HEAD[:12], "Human review needed")
@@ -478,25 +503,45 @@ class OnceVerdictTest(unittest.TestCase):
             (True, [asked, pending]),
         ):
             with self.subTest(resolved=resolved):
-                self.assertEqual(self.poll(replied_pr(submitted=False, resolved=resolved)),
+                code, lines = self.poll(replied_pr(submitted=False, resolved=resolved))
+                self.assertEqual((code, [line.split(" <!-- addressed:")[0] for line in lines]),
                                  (1, [*expected, f"ACTION {REPO}#{NUMBER} @ {HEAD}"]))
 
-    def test_submitted_reply_settles_its_thread_and_comment(self) -> None:
+    def test_submitted_reply_settles_only_its_thread(self) -> None:
         unresolved = (1, [
             f"unresolved review threads (1): https://github.com/{REPO}/pull/{NUMBER}#discussion_1",
             f"ACTION {REPO}#{NUMBER} @ {HEAD}",
         ])
-        self.assertEqual(self.poll(replied_pr(submitted=True, resolved=False)), unresolved)
+        pending = replied_pr(submitted=True, resolved=False)
+        self.assertTrue(self.poll(pending)[1][0].startswith("comment from someone: Why?"))
+        pending.comments = []
+        self.assertEqual(self.poll(pending), unresolved)
         github = replied_pr(submitted=True, resolved=True)
+        github.comments = []
         # Resolution can change without changing a comment's updated_at.
         self.assertEqual(self.poll(github), (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"]))
         github.resolved[1] = False
         self.assertEqual(self.poll(github), unresolved)
 
+    def test_unread_resolution_never_inherits_a_cached_ready(self) -> None:
+        github = replied_pr(submitted=True, resolved=True)
+        github.comments = []
+        self.assertEqual(self.poll(github)[0], 0)
+        github.resolved[1] = False
+        for blocked in (True, False):
+            with mock.patch.object(pr_watch.BUDGET, "low", return_value=blocked), mock.patch.object(
+                pr_watch, "graphql", side_effect=pr_watch.GhError("unavailable")
+            ):
+                code, lines = self.poll(github)
+            self.assertEqual(code, 3)
+            self.assertIn("waiting: review thread resolution unavailable", lines)
+        self.assertEqual(self.poll(github)[0], 1)
+
     def test_an_answered_thread_left_unresolved_blocks_a_stamped_green_pr(self) -> None:
         # dev requires every conversation resolved, so GitHub reports BLOCKED;
         # the open thread is the agent's to resolve, not a wait.
         github = replied_pr(submitted=True, resolved=False)
+        github.comments = []
         github.pr["mergeable_state"] = "blocked"
         self.assertEqual(self.poll(github), (1, [
             f"unresolved review threads (1): https://github.com/{REPO}/pull/{NUMBER}#discussion_1",
@@ -548,6 +593,17 @@ class OnceVerdictTest(unittest.TestCase):
         self.assertEqual(self.poll(github, watcher)[0], 1)
         github.notes[0]["line"] = None
         self.assertEqual(self.poll(github, pr_watch.Watcher(REPO, NUMBER, 300, once=False)), (None, []))
+
+    def test_reopened_reported_thread_wakes_again_without_a_comment_edit(self) -> None:
+        github = replied_pr(submitted=False, resolved=False)
+        github.comments.clear()
+        github.reviews.clear()
+        github.notes.pop()
+        for resolved, wake in [(False, True), (False, False), (True, False), (False, True)]:
+            github.resolved[1] = resolved
+            watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=False)
+            _, lines = self.poll(github, watcher)
+            self.assertEqual(any(line.startswith("thread from") for line in lines), wake)
 
     def test_every_threads_resolution_is_read_past_the_first_page(self) -> None:
         # factory-mono#27387 has 179 threads, all resolved; a one-page read left

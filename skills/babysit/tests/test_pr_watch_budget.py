@@ -35,55 +35,28 @@ def answer(status: int, body: Any = None, etag: str = "e1", remaining: int = 900
 
 
 class BudgetTest(unittest.TestCase):
-    def test_every_status_but_304_counts_and_each_reset_is_its_own_bucket(self) -> None:
+    def test_pace_uses_observed_account_spend_not_a_fleet_estimate(self) -> None:
         budget = pr_watch.Budget()
-        self.assertEqual(budget.record(answer(200, {"a": 1}))[0], 200)
-        self.assertEqual(budget.record(answer(304, remaining=8000))[0], 304)
-        budget.record(answer(200, {}, remaining=6000).replace(str(RESET), "9000"))
-        self.assertEqual(budget.take(), 2)
-        self.assertEqual(budget.take(), 0)
-        self.assertEqual(sorted(b["remaining"] for b in budget.buckets.values()), [6000, 8000])
+        for _ in range(4):
+            budget.record(answer(200, remaining=2192))
+        self.assertEqual(budget.pace(300, RESET - 1800), 300)
+        # Other machines also spent this bucket. Even our free 304 observes it.
+        budget.record(answer(304, remaining=1792))
+        self.assertEqual(budget.pace(300, RESET - 1500), 670)
+        budget.record(answer(304, remaining=1792))
+        self.assertEqual(budget.pace(300, RESET - 830), 300)
 
-    def pace(self, remaining: int, calls: float, now: float = RESET - 3600) -> int:
+    def test_reset_and_resource_each_start_a_new_sample(self) -> None:
         budget = pr_watch.Budget()
-        budget.record(answer(304, remaining=remaining))
-        return budget.pace(300, calls, now)
-
-    def test_a_poll_of_every_watcher_never_spends_more_than_half_of_what_is_left(self) -> None:
-        for remaining in (15000, 8000, 3000, 900):
-            for calls in (0.2, 1, 2.5, 8):
-                delay = self.pace(remaining, calls)
-                polls = 3600 / delay
-                if calls * pr_watch.WATCHERS <= remaining / 2:
-                    self.assertLessEqual(polls * calls * pr_watch.WATCHERS, remaining / 2 + 1e-6)
-                else:
-                    self.assertEqual(delay, 3605)
-
-    def test_free_polls_run_at_the_interval(self) -> None:
-        self.assertEqual(self.pace(100, 0), 300)
-
-    def test_a_past_reset_is_forgotten(self) -> None:
-        self.assertEqual(self.pace(10, 5, now=RESET + 1), 300)
-
-    def test_the_watcher_sleeps_from_counted_responses_over_its_rolling_window(self) -> None:
-        with (
-            tempfile.TemporaryDirectory() as state,
-            mock.patch.object(pr_watch, "STATE_DIR", Path(state)),
-            mock.patch.object(pr_watch, "BUDGET", pr_watch.Budget()),
-            mock.patch.object(pr_watch.time, "time", return_value=RESET - 3600),
-            mock.patch.object(pr_watch.time, "sleep") as sleep,
-            contextlib.redirect_stderr(io.StringIO()) as err,
-        ):
-            watcher = pr_watch.Watcher("o/r", 7, 300, once=False)
-            watcher.sleep()
-            for _ in range(4):
-                pr_watch.BUDGET.record(answer(200, {}, remaining=1000))
-            watcher.sleep()
-            for _ in range(pr_watch.FULL_EVERY):
-                pr_watch.BUDGET.record(answer(304, remaining=1000))
-                watcher.sleep()
-        self.assertEqual([c.args[0] for c in sleep.call_args_list], [300, 2880, 1920, 1440, 1152, 960, 960, 300])
-        self.assertIn("core 1000/15000", err.getvalue())
+        for _ in range(10):
+            budget.record(answer(200, remaining=15000))
+        budget.record(answer(200, remaining=10).replace("core", "graphql"))
+        self.assertEqual(budget.pace(300, RESET - 1800), 360)
+        budget.record(answer(304, remaining=0))
+        self.assertEqual(budget.pace(300, RESET - 1440), 1445)
+        budget.record(answer(200, remaining=14000).replace(str(RESET), "13600"))
+        self.assertEqual(budget.pace(300, RESET + 1), 300)
+        self.assertEqual(set(budget.buckets), {"core@13600"})
 
 
 class RateLimitSleepTest(unittest.TestCase):
@@ -125,20 +98,22 @@ class LoopTest(unittest.TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
         self.head = "a" * 40
+        self.base = "b" * 40
+        self.merge = "blocked"
         self.calls: list[str] = []
 
     def body(self, url: str) -> Any:
         if url.endswith("/pulls/7"):
             return {"html_url": "u", "merged_at": None, "state": "open", "draft": False,
                     "head": {"sha": self.head, "ref": "feat", "repo": {"full_name": "o/r"}},
-                    "base": {"ref": "dev", "sha": "b" * 40}, "mergeable_state": "blocked", "labels": []}
+                    "base": {"ref": "dev", "sha": self.base}, "mergeable_state": self.merge, "labels": []}
         if "check-runs" in url:
             return {"check_runs": []}
         if url.endswith("/status?per_page=100"):
             return {"statuses": []}
         return []
 
-    def gh(self, *args: str, ride: bool = True, unchanged: bool = False) -> str:
+    def gh(self, *args: str, unchanged: bool = False) -> str:
         url = args[-1]
         self.calls.append(url)
         if "rules/branches" in url or "protection" in url:
@@ -152,27 +127,32 @@ class LoopTest(unittest.TestCase):
 
     def ls_remote(self, *args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
         self.calls.append("ls-remote")
-        out = f"{self.head}\trefs/pull/7/head\n{self.head}\trefs/heads/feat\n"
+        out = f"{self.head}\trefs/pull/7/head\n{self.head}\trefs/heads/feat\n{self.base}\trefs/heads/dev\n"
         return subprocess.CompletedProcess(args, 0, out, "")
 
     def poll(self, watcher: Any) -> list[str]:
         self.calls = []
         with mock.patch.object(pr_watch, "gh", self.gh), mock.patch.object(pr_watch.subprocess, "run", self.ls_remote):
             watcher.fetch()
-        watcher.rest.save({})
+        watcher.rest.save()
         return self.calls
 
     def test_steady_polls_read_the_head_by_git_and_never_the_pr(self) -> None:
         watcher = pr_watch.Watcher("o/r", 7, 300, once=False)
         first = self.poll(watcher)
         self.assertIn("repos/o/r/pulls/7", first)
-        pr_watch.BUDGET.take()
         for _ in range(pr_watch.FULL_EVERY - 1):
             calls = self.poll(watcher)
             self.assertNotIn("repos/o/r/pulls/7", calls)
             self.assertIn("ls-remote", calls)
-        self.assertEqual(pr_watch.BUDGET.take(), 0)
         self.assertIn("repos/o/r/pulls/7", self.poll(watcher))
+
+    def test_a_base_only_move_reads_conflict_on_the_next_poll(self) -> None:
+        watcher = pr_watch.Watcher("o/r", 7, 300, once=False)
+        self.poll(watcher)
+        self.base, self.merge = "c" * 40, "dirty"
+        self.assertIn("repos/o/r/pulls/7", self.poll(watcher))
+        self.assertEqual(watcher.rest.cache["repos/o/r/pulls/7"]["body"]["mergeable_state"], "dirty")
 
     def test_a_moved_head_reads_the_pr(self) -> None:
         watcher = pr_watch.Watcher("o/r", 7, 300, once=False)

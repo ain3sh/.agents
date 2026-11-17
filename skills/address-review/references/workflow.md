@@ -199,6 +199,7 @@ gh api "repos/$REPO/issues/<n>/comments" --method POST \
 
 Fixed in <sha>.
 
+<copy the fully answered item’s <!-- addressed: … --> from pr-watch --once>
 <!-- agent-reply -->
 EOF
 )"

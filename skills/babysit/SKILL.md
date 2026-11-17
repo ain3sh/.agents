@@ -29,43 +29,12 @@ Output is event lines, then one verdict: `READY` or `MERGED` (exit 0),
 `ACTION` or `CLOSED` (1), `ERROR` (2), and from `--once` only, `WAIT` (3). The
 script's docstring defines every event and the `READY` gate.
 
-What wakes you depends on where you run:
+One wake source per PR:
 
-- **Cockpit change notices reach your session** (a cluster agent's do): the
-  notice is your watcher. When you start, read each PR's current mark as your
-  brief says, then run `pr-watch <url> --once` on each one you may act on; after
-  that, on each PR a notice lists. Never start a blocking watcher: it
-  polls GitHub every 300 seconds or slower on the budget the cockpit needs to
-  detect changes, and it freezes when your computer pauses while you are idle.
-- **Otherwise**, run `pr-watch <pr>` as a `fireAndForget` Execute, one per PR.
-  It polls quietly and exits on the first poll that needs you, so its exit is
-  the wake-up. Start it again in the same turn after every action (push,
-  reply, sync). It remembers what it reported, so an item left open wakes you
-  once; a first run reports everything open. A second watcher on the same PR
-  exits 2 at once; kill the first only if its exit can no longer reach you.
-  A droid daemon restart kills watchers without an exit: `pr-watch --check`
-  lists the dead ones with the command that restarts each.
+- **Cluster:** on each owner tick, batch-read assigned PR marks; run `--once` on actionable changes. No cockpit wake or second watcher.
+- **Standalone:** run one background `pr-watch` per owned PR (`fireAndForget`); rearm after acting. On resume, `--check` and restart only dead watches for PRs you still own.
 
-What it reports:
-
-- Feedback events are what is open on GitHub now: a thread that is unresolved
-  and whose last comment is not your marked reply, outdated or not (a review
-  drafted on an older commit arrives outdated), or a
-  top-level comment or review posted, or edited by a human, after your latest
-  marked reply. Bots and `factory-service-*` accounts rewrite status reports
-  in place, so their edits never reopen anything. Comments from CI and
-  deploy bots, from service accounts, and Linear's issue linkback are
-  skipped outright.
-  Only replies carrying `<!-- agent-reply -->` count as yours (address-review
-  ends every reply with it); pushes, unmarked comments from your account, and
-  replies still sitting in your pending review, which nobody else can read,
-  never settle anything.
-- Answered threads never wake you as feedback, but while unresolved they
-  block `READY` through `unresolved`.
-- `--once` reports everything open without reading or saving what it
-  reported, though `MERGED` or `CLOSED` still deletes the watcher's state. It
-  lists each failed optional check beside whatever verdict it gives. Run it
-  whenever you need the PR's current state.
+Run the full command above unpiped so its exit code reaches you.
 
 ## Act
 
@@ -77,7 +46,7 @@ What it reports:
 | `pending-review` | Your account holds an unsubmitted review, and nobody else can read what is in it. The account is shared with the user, so the event alone does not say whose drafts these are: inspect them with **address-review** step 7's pending-review check, which submits or deletes the review only when its body, if non-empty, and every comment carry `<!-- agent-reply -->`. If any pending content lacks the mark, report it to the user and never submit or delete it. Re-run `pr-watch <pr> --once`. |
 | Any push | **pr-description** refresh: the body stays first-screen excellent, never a patch log. |
 | `READY` | Run `pr-watch <pr> --once`. On `READY`, merge with the repo's allowed method (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`) pinned to the sha that verdict line ends with (`gh pr merge <pr> --<method> --match-head-commit <sha>`), confirm `MERGED`, stop. On `ACTION`, handle its lines instead; on `WAIT`, follow its row. |
-| `WAIT` | After handling its event lines, start the watcher again, or under change notices, end the turn. |
+| `WAIT` | Resume the Watch path above. |
 | `blocked` | Check, in order: rulesets, required reviewers, merge queue, then `pr-context` for anything GitHub reports that the watcher does not model. |
 | `MERGED`, `CLOSED` | Stop and report. |
 | `ERROR` | Fix the input it names, or wait out GitHub, then run pr-watch again. |
