@@ -80,8 +80,29 @@ get_pr_number() {
     printf '%s' "$val"
 }
 
+# The CLI's payload names no Droid Computer, so look this machine's registration
+# up once a day; the lookup runs detached, so the line never waits on it.
+computer_name() {
+    local id cache
+    id=$(jq -r '.computerId // empty' "$HOME/.factory/computer.json" 2>/dev/null)
+    [[ -n "$id" ]] || return 0
+    cache="${XDG_CACHE_HOME:-$HOME/.cache}/factory-statusline/computer-${id}"
+    if [[ ! -s "$cache" || -n $(find "$cache" -mmin +1440 2>/dev/null) ]] &&
+        command -v setsid >/dev/null && command -v flock >/dev/null; then
+        mkdir -p "${cache%/*}" 2>/dev/null
+        # FACTORY_SESSION_ID makes droid refuse its own commands from a session's shell.
+        setsid -f flock -n "${cache}.lock" bash -c '
+            name=$(env -u FACTORY_SESSION_ID droid computer list 2>/dev/null |
+                jq -r --arg id "$1" ".data.computers[] | select(.id == \$id) | .name")
+            [[ -n "$name" ]] && printf "%s\n" "$name" > "$2.tmp" && mv -f "$2.tmp" "$2"
+        ' _ "$id" "$cache" >/dev/null 2>&1
+    fi
+    [[ -s "$cache" ]] && cat "$cache"
+}
+
 TIME=$(TZ=America/Los_Angeles date '+%H:%M')
-HOSTNAME=$(hostname -s)
+HOSTNAME=$(computer_name)
+[[ -n "$HOSTNAME" ]] || HOSTNAME=$(hostname -s)
 
 MODEL="droid"
 CLI_VERSION=""
@@ -91,7 +112,6 @@ REASONING_EFFORT=""
 CONTEXT_DISPLAY=""
 CONTEXT_TOKENS=""
 CONTEXT_PERCENT=""
-COMPUTER_REMOTE=""
 
 if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1 <<< "$input"; then
     mapfile -t json_fields < <(
@@ -103,9 +123,7 @@ if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1
             .model.reasoning_effort // "",
             .context.display // "",
             (.context.last_call_compaction_tokens // "" | tostring),
-            (.context.percentage // "" | tostring),
-            .computer.name // "",
-            (.computer.is_remote // "" | tostring)
+            (.context.percentage // "" | tostring)
         ][]' <<< "$input" 2>/dev/null
     )
 
@@ -117,8 +135,6 @@ if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1
     p_context_display=${json_fields[5]:-}
     p_context_tokens=${json_fields[6]:-}
     p_context_percent=${json_fields[7]:-}
-    p_computer_name=${json_fields[8]:-}
-    p_computer_remote=${json_fields[9]:-}
 
     [[ -n "$p_model" && "$p_model" != "null" ]] && MODEL="${p_model,,}"
     MODEL="${MODEL// /-}"
@@ -129,12 +145,6 @@ if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1
     [[ -n "$p_context_display" && "$p_context_display" != "null" ]] && CONTEXT_DISPLAY="$p_context_display"
     [[ -n "$p_context_tokens" && "$p_context_tokens" != "null" ]] && CONTEXT_TOKENS="$p_context_tokens"
     [[ -n "$p_context_percent" && "$p_context_percent" != "null" ]] && CONTEXT_PERCENT="$p_context_percent"
-    # AC-768: prefer the CLI-reported computer identity over local hostname;
-    # flags remote execution after a /handoff (field absent until that ships).
-    if [[ -n "$p_computer_name" && "$p_computer_name" != "null" ]]; then
-        HOSTNAME="$p_computer_name"
-        [[ "$p_computer_remote" == "true" ]] && COMPUTER_REMOTE=1
-    fi
 fi
 
 DIR_NAME=$(basename "$CWD")
@@ -225,11 +235,7 @@ if [[ -n "$GIT_INFO" ]]; then
 fi
 
 printf " ${SEPARATOR_COLOR}%s${RESET} " "$SEP_DOT"
-if [[ -n "$COMPUTER_REMOTE" ]]; then
-    printf "📡 ${HOST_COLOR}%s${RESET}" "$HOSTNAME"
-else
-    printf "💻 ${HOST_COLOR}%s${RESET}" "$HOSTNAME"
-fi
+printf "💻 ${HOST_COLOR}%s${RESET}" "$HOSTNAME"
 if [[ -n "$SESSION_ID" ]]; then
     printf "${ACCENT_COLOR}/${RESET}${SESSION_COLOR}%s${RESET}" "$SESSION_ID"
 fi
