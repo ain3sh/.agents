@@ -170,7 +170,7 @@ The user approves the exact text that will post. Write it first as the **draft**
 
 Present it on the surface the session reports to:
 
-- **Slack:** one HTML page on **design-doc**'s template that lets the user judge the review without leaving the thread: the ruling, views, findings, and evidence the review already produced, ending in a *Draft as posted* section rendered from the draft. It reports a review, so nothing new is built for it. Attach it and the draft file, then a short closing message saying what will post and how to approve it. Slack renders an attached HTML page, so views are not uploaded separately.
+- **Slack:** one HTML page on **design-doc**'s template that lets the user judge the review without leaving the thread: the ruling, views, findings, and evidence the review already produced, ending in a *Draft as posted* section rendered from the draft. It reports a review, so nothing beyond the page is built for it. Attach it and the draft file, then a short closing message saying what will post and how to approve it. Slack renders an attached HTML page, so views are not uploaded separately.
 - **Chat (TUI, CLI, web):** the message carries every finding grouped by file with severity, line, and fix, then the verdict body; show each view by passing its PNG to `image()`, and give the draft's path. These clients do not render an HTML page.
 
 Either way:
