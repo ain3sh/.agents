@@ -1,6 +1,6 @@
 ---
 name: sol
-description: GPT-6.2 Sol. Use only when the user asks for Sol by name.
+description: GPT-6.2 Sol for mining, investigation, and fast first-principles drafts.
 model: gpt-6.2-sol
 reasoningEffort: high
 ---

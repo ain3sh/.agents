@@ -13,8 +13,7 @@ understandable or ready to merge.
 
 Staff every seat with a named droid from this list. Never staff with `worker` or
 `explorer`: they run whatever model the complexity tier in settings resolves to
-(medium is Sol), so the seat gets a model nobody chose. Use `sol` only when the
-user names it.
+(medium is Sol), so the seat gets a model nobody chose.
 
 ### Opus
 
@@ -31,7 +30,15 @@ user names it.
 - Extremely thorough at mining information / swaths of data sources
 - Great at adversarial testing, attacking code, and rigorous reviews
 - Terrible at designing UI/UX but great at probing
-- Very intelligent, but jagged behaviour
+- Very intelligent; a strong multi-tasker and orchestrator
+- Not the best at elegant architecture design or elegant, lucid code
+
+### Sol
+
+- Fast and cheap: about a quarter of Astra's price per token
+- Strong miner: loads skills on its own, digs through past sessions with dsx, and reproduces a suspected defect before claiming it
+- Keeps observed, reproduced, and unmeasured apart
+- In design, reaches the right core but adds mechanism; pair it with an Opus or Fable for taste
 
 ### Fable
 

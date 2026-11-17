@@ -29,7 +29,7 @@ merge their output before the next stage.
 **For:** copy or prose built from data or evidence: write-ups, PR bodies,
 summaries.
 
-1. **Mine:** Astras mine the data sources and write thorough reports.
+1. **Mine:** Astras and Sols mine the data sources and write thorough reports.
 2. **Write:** Opuses write from the reports.
 3. **Verify:** the Astras fact-check the draft.
 4. **Refine:** the Opuses correct it from the findings.
@@ -43,7 +43,7 @@ summaries.
 1. **Ground:** ground yourself in the problem and derive the crux of what we
    want to achieve (crux lens steps 1–2,
    `~/.agents/skills/review-pr/references/lenses/crux.md`).
-2. **Round table:** freeform Opuses, Fables, and Astras each solve the crux
+2. **Round table:** freeform Opuses, Fables, Astras, and Sols each solve the crux
    from first principles (that lens's steps 3–5: pure solution, then layers
    of reality).
 3. **Cross-critique:** send every proposal to every other designer for an
