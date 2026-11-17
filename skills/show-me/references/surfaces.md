@@ -141,7 +141,7 @@ Wrap the view in one element (`<main id="view">`) and capture that element at
 
 ```bash
 agent-browser --session showme open file:///tmp/<view>.html
-agent-browser --session showme set viewport 1400 900 2   # width >= the view's width; scale 2
+agent-browser --session showme set viewport 1400 2400 2  # width and height >= the view's; scale 2
 agent-browser --session showme screenshot '#view' /tmp/<view>.png
 agent-browser --session showme close
 ```

@@ -60,7 +60,8 @@ RCA alternates two moves. Neither is a fallback for the other; the region's size
 
 When the proven causal chain spans more than two actors or transitions, load
 `show-me` after step 11 and replace the prose chain with one grounded causal flow
-or sequence. Mark the first unintended edge; do not visualize a theory.
+or sequence; an RCA over a counted set of failures gets an attribution. Mark the
+first unintended edge; do not visualize a theory.
 
 ## Switch to narrow when reading becomes guessing
 

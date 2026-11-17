@@ -27,6 +27,7 @@ be omitted is settled in `SKILL.md` (Check before sending).
 | Which work depends on which? | Dependency graph | nodes, directed edges, independent branches |
 | Which path produced the failure? | Causal flow | expected path, first wrong edge, downstream symptom |
 | How much changed, under what conditions? | Quantitative comparison | units, scale, baseline, measurement frame, delta |
+| Where do these failures come from, and what fixes them? | Attribution | the counted set with its source and window; observed-state, mechanism, and fix columns that each sum to it; each mechanism's proof; an unresolved part; ruled-out mechanisms with the count that ruled each out |
 | How big is it, and where does the size sit? | Breakdown | the counted whole at a pinned revision, the counting rule, parts that sum to it, the figure the reader already holds reconciled |
 
 ## Code companion
@@ -299,6 +300,45 @@ LogUpdate.commit           1     0   log-update.d.ts
 - Order parts by what the reader does with them, the part the question names
   first, not by size. The lowest rows are things the reader can open: a file
   or a symbol.
+
+### Attribution
+
+For a counted set of failures (warnings, errors, failed runs) that traces to
+more than one mechanism, when the reader asks where they come from and what
+fixes them. One failure on one path is a causal flow.
+
+```text
+138 "cursor is not in transcript" warnings · factory-traces 2026-11-07 → 11-15 · 96 sessions
+
+State at the load          Mechanism                              Fix
+ 94  turn running       ┐
+ 12  idle, message new  ┴─→ 106  M1 window holds only unsaved   ─→ F1 cursor = durable seq
+                                 rows · reproduced (m01)
+ 18  idle, none queued  ┐
+ 14  no turn telemetry  ┴─→  32  unresolved · cursor not logged ┄→ F3 one session path
+138  every miss ───────────────────────────────────────────────→ F2 error on unknown id
+
+Ruled out in the same 96 sessions
+ M2 frame re-cut            0  "Shrunk oversized response" logs
+ M6 in-place rewrite race   1  "session not found" in 6,748 page calls
+```
+
+- The count, its source, and its window head the view. Each column splits the
+  same count, so every column sums to it (Breakdown's counting rules apply).
+- Split the first column on what was observed at the failure (state, client,
+  version), never on the suspected mechanism: it is the evidence a reader
+  checks the mechanism column against.
+- Each mechanism names its proof: reproduced (which repro), matched in logs,
+  or inferred. Failures no proven mechanism explains are their own
+  `unresolved` part, with what keeps them open, never folded into the nearest
+  mechanism.
+- A fix edge means the fix removes that mechanism; dash it when unproven. A
+  backstop that covers every failure spans the whole count.
+- Ruled-out mechanisms stay, each with the count that ruled it out in the same
+  population: a mechanism missing from the view reads as never checked.
+- Every count comes from the owning analysis; a part it did not count is
+  marked unknown, never estimated.
+- For an image, draw the columns as bands whose widths follow the counts.
 
 ## Fidelity check
 
