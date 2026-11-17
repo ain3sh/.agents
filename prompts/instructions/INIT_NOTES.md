@@ -23,6 +23,7 @@ User comment: <tool response `userComment`, or "none">
 ```
 ## <ISO timestamp> — <one-line title>
 **Type**: decision | deviation | tradeoff | surprise | open-decision
+**Source**: user | chose | seen | guess (AGENTS.md `<context>`); quote the user verbatim, or give the evidence for `seen`
 **Context**: <2-3 lines>
 **Resolution**: <what was done, why, what alternative was rejected>
 ```
