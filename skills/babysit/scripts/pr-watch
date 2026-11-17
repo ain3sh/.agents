@@ -610,6 +610,7 @@ class Watcher:
         self.repo, self.number, self.interval, self.once = repo, number, interval, once
         self.owner, self.name = repo.split("/")
         slug = f"{repo.replace('/', '__')}__{number}"
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
         self.state_path = STATE_DIR / f"{slug}.json"
         self.lock_path = STATE_DIR / f"{slug}.lock"
         self.reported: set[str] = set()
@@ -628,7 +629,6 @@ class Watcher:
         self.started = SELF.stat().st_mtime
 
     def lock(self) -> Any:
-        STATE_DIR.mkdir(parents=True, exist_ok=True)
         # Held open for the life of the process; the OS drops the lock on exit.
         handle = open(self.lock_path, "a+")  # noqa: SIM115
         try:

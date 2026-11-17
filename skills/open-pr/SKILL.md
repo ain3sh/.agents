@@ -35,7 +35,8 @@ after you stop. The request grants:
 
 It never grants deleting data, touching production, changes outside the repo,
 closing a PR, force-pushing another branch, or bypassing branch protection.
-Run steps 1–5.
+Run steps 1–5; on an already-open PR, keep its branch and PR: skip step 1's new
+branch and step 4's `gh pr create`.
 
 Ask only when you cannot continue alone: the change cannot be proven, the
 merge gate cannot pass and you cannot fix it, the next step falls outside the
