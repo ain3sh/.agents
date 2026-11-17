@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO, Callable
 
-MAX_LOG_FILES = 50
+LOG_RETENTION_SECONDS = 24 * 60 * 60
 READ_SIZE = 64 * 1024
 TERMINATION_GRACE_SECONDS = 1.0
 LOCK_POLL_SECONDS = 2.0
@@ -343,16 +343,16 @@ def _log_dir() -> Path:
 
 
 def _prune_logs(log_dir: Path) -> None:
-    logs: list[tuple[float, Path]] = []
+    """Delete each log once it is older than the retention window.
+
+    Age is the only rule: a count shared by every label and session on the
+    host deletes a log a review still cites as soon as others run 50 checks.
+    """
+    cutoff = time.time() - LOG_RETENTION_SECONDS
     for path in log_dir.glob("*.log"):
         try:
-            logs.append((path.stat().st_mtime, path))
-        except FileNotFoundError:
-            pass
-    logs.sort(key=lambda item: item[0], reverse=True)
-    for _mtime, path in logs[MAX_LOG_FILES:]:
-        try:
-            path.unlink()
+            if path.stat().st_mtime < cutoff:
+                path.unlink()
         except FileNotFoundError:
             pass
 
