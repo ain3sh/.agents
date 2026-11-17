@@ -4,7 +4,6 @@
 input=$(cat)
 
 TIME_COLOR="\033[38;2;135;206;250m"
-HOST_COLOR="\033[38;2;106;159;181m"
 MODEL_COLOR="\033[38;2;186;133;232m"
 CONTEXT_COLOR="\033[38;2;255;204;102m"
 DIR_COLOR="\033[38;2;255;179;71m"
@@ -80,29 +79,10 @@ get_pr_number() {
     printf '%s' "$val"
 }
 
-# The CLI's payload names no Droid Computer, so look this machine's registration
-# up once a day; the lookup runs detached, so the line never waits on it.
-computer_name() {
-    local id cache
-    id=$(jq -r '.computerId // empty' "$HOME/.factory/computer.json" 2>/dev/null)
-    [[ -n "$id" ]] || return 0
-    cache="${XDG_CACHE_HOME:-$HOME/.cache}/factory-statusline/computer-${id}"
-    if [[ ! -s "$cache" || -n $(find "$cache" -mmin +1440 2>/dev/null) ]] &&
-        command -v setsid >/dev/null && command -v flock >/dev/null; then
-        mkdir -p "${cache%/*}" 2>/dev/null
-        # FACTORY_SESSION_ID makes droid refuse its own commands from a session's shell.
-        setsid -f flock -n "${cache}.lock" bash -c '
-            name=$(env -u FACTORY_SESSION_ID droid computer list 2>/dev/null |
-                jq -r --arg id "$1" ".data.computers[] | select(.id == \$id) | .name")
-            [[ -n "$name" ]] && printf "%s\n" "$name" > "$2.tmp" && mv -f "$2.tmp" "$2"
-        ' _ "$id" "$cache" >/dev/null 2>&1
-    fi
-    [[ -s "$cache" ]] && cat "$cache"
-}
-
 TIME=$(TZ=America/Los_Angeles date '+%H:%M')
-HOSTNAME=$(computer_name)
-[[ -n "$HOSTNAME" ]] || HOSTNAME=$(hostname -s)
+# Red marks a name the hook did not supply: the hostname of the machine drawing the line.
+HOSTNAME=$(hostname -s)
+HOST_COLOR="\033[38;2;224;108;117m"
 
 MODEL="droid"
 CLI_VERSION=""
@@ -123,7 +103,8 @@ if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1
             .model.reasoning_effort // "",
             .context.display // "",
             (.context.last_call_compaction_tokens // "" | tostring),
-            (.context.percentage // "" | tostring)
+            (.context.percentage // "" | tostring),
+            .computer.name // ""
         ][]' <<< "$input" 2>/dev/null
     )
 
@@ -135,6 +116,7 @@ if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1
     p_context_display=${json_fields[5]:-}
     p_context_tokens=${json_fields[6]:-}
     p_context_percent=${json_fields[7]:-}
+    p_computer_name=${json_fields[8]:-}
 
     [[ -n "$p_model" && "$p_model" != "null" ]] && MODEL="${p_model,,}"
     MODEL="${MODEL// /-}"
@@ -145,6 +127,10 @@ if command -v jq >/dev/null 2>&1 && [[ -n "$input" ]] && jq -e . >/dev/null 2>&1
     [[ -n "$p_context_display" && "$p_context_display" != "null" ]] && CONTEXT_DISPLAY="$p_context_display"
     [[ -n "$p_context_tokens" && "$p_context_tokens" != "null" ]] && CONTEXT_TOKENS="$p_context_tokens"
     [[ -n "$p_context_percent" && "$p_context_percent" != "null" ]] && CONTEXT_PERCENT="$p_context_percent"
+    if [[ -n "$p_computer_name" && "$p_computer_name" != "null" ]]; then
+        HOSTNAME="$p_computer_name"
+        HOST_COLOR="\033[38;2;106;159;181m"
+    fi
 fi
 
 DIR_NAME=$(basename "$CWD")
