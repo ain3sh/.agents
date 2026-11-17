@@ -137,7 +137,15 @@ class ChildEnvTest(unittest.TestCase):
 
     def test_strips_every_inherited_credential_by_default(self) -> None:
         env, stripped = self.child_env()
-        self.assertEqual(env, {"MONKEY": "not a credential", "PATH": "/bin", "FACTORY_ENV": "prod"})
+        self.assertEqual(
+            env,
+            {
+                "MONKEY": "not a credential",
+                "PATH": "/bin",
+                "FACTORY_ENV": "prod",
+                "NPM_CONFIG_YES": "false",
+            },
+        )
         self.assertEqual(
             stripped,
             [
@@ -162,6 +170,17 @@ class ChildEnvTest(unittest.TestCase):
         env, stripped = self.child_env("--env", "OPENAI_API_KEY=mock")
         self.assertEqual(env["OPENAI_API_KEY"], "mock")
         self.assertNotIn("OPENAI_API_KEY", stripped)
+
+    def test_npx_never_installs_a_missing_package_unless_the_check_says_so(self) -> None:
+        options = run_check._parse(["test", "--", "true"])
+        env, _stripped = run_check._child_env(options, {"npm_config_yes": "true", "PATH": "/bin"})
+        self.assertEqual(env, {"PATH": "/bin", "NPM_CONFIG_YES": "false"})
+        for name in ("NPM_CONFIG_YES", "npm_config_yes"):
+            env, _stripped = self.child_env("--env", f"{name}=true")
+            self.assertEqual(
+                {key: value for key, value in env.items() if key.upper() == "NPM_CONFIG_YES"},
+                {name: "true"},
+            )
 
     def test_unset_prefix_still_drops_its_names(self) -> None:
         env, _stripped = self.child_env("--unset-prefix", "FACTORY_")
