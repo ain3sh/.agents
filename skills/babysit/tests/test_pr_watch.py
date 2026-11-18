@@ -608,6 +608,8 @@ class OnceVerdictTest(unittest.TestCase):
             # Written dispositions can resolve the remaining threads without a patch.
             github.resolved.update({2: True, 4: True})
             self.assertEqual(self.poll(github), (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"]))
+            github.comments.append(risk_assessment(HEAD[:12], "Human review needed"))
+            self.assertEqual(self.poll(github), (0, [RISK_LINE, f"READY {REPO}#{NUMBER} @ {HEAD}"]))
         github.resolved[4] = False
         with mock.patch.object(pr_watch, "ground_up_complete", return_value=True):
             self.assertEqual(self.poll(github)[1][-1].split()[0], "ACTION")

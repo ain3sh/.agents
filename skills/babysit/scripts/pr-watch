@@ -1122,7 +1122,7 @@ class Watcher:
         feedback = list(self.feedback(pr))
         if self.stop_path.exists():
             actions, _ = self.evaluate(pr, checks, gating, stable=True)
-            if (feedback or actions or advisory) and not ground_up_complete(self.repo, self.number, head):
+            if (feedback or actions) and not ground_up_complete(self.repo, self.number, head):
                 key = f"review-stop:{head}"
                 if self.once or key not in self.reported:
                     if not self.once:
