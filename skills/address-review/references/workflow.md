@@ -2,6 +2,14 @@ Load skills: **pr-context**, **quality-ship**, **voice**.
 
 Treat **voice** as mandatory for reviewer-facing replies: load it before drafting responses, declines, or alternative-rationale text so the reply states a position with specifics instead of sounding generically agreeable.
 
+## On a new thread
+
+Read the conversation and the cited code on the **pushed PR head**. Post the answer on the thread within minutes, human reviewers first. This is the triage action, before editing code, assigning a builder or waiting for CI. A code hold leaves replies open; an explicit no-contact order stops them.
+
+Tell the reviewer what you verified. For a change you own, explain what will change and why; use the repository's promise marker for unpushed work. If the cause or decision is still open, name the concrete observation and the question that remains. Don't promise an unapproved change or publish an unconfirmed decline. Use **Posting replies** below, including its pending-review check.
+
+Resolve an answered thread when its answer stands on the pushed head and nothing is owed; don't post it again. An unshipped fix stays open. After an authorized push, explain the change on the thread, add `Fixed in <sha>.` on its own line, then resolve.
+
 ## 1. Gather Feedback
 
 Follow the **pr-context** skill to fetch full PR context from the text supplied after the slash command.
@@ -10,21 +18,22 @@ Fetch all three PR-comment surfaces plus **GraphQL thread IDs** (needed for reso
 
 ```bash
 # Line-level review threads (inline diff comments).
-gh api "repos/$REPO/pulls/<number>/comments" | jq '.[] | {id, path, line, body, user: .user.login, in_reply_to_id}'
+gh api --paginate "repos/$REPO/pulls/<number>/comments" | jq '.[] | {id, path, line, body, user: .user.login, in_reply_to_id}'
 
 # Review summary bodies (REQUEST_CHANGES / APPROVE / COMMENT with body).
-gh api "repos/$REPO/pulls/<number>/reviews" | jq '.[] | {id, state, body, user: .user.login}'
+gh api --paginate "repos/$REPO/pulls/<number>/reviews" | jq '.[] | {id, state, body, user: .user.login}'
 
 # Conversation comments, bots included: a bot's finding can be actionable. Skip status
 # reports (deploy previews, CI and scan summaries); they need no reply.
-gh api "repos/$REPO/issues/<number>/comments" | jq '.[] | {id, body, user: .user.login}'
+gh api --paginate "repos/$REPO/issues/<number>/comments" | jq '.[] | {id, body, user: .user.login}'
 
 # Fetch thread node IDs upfront -- REST API cannot resolve threads.
-gh api graphql -f query='
-  query {
+gh api graphql --paginate -f query='
+  query($endCursor: String) {
     repository(owner: "<owner>", name: "<repo>") {
       pullRequest(number: <number>) {
-        reviewThreads(first: 100) {
+        reviewThreads(first: 100, after: $endCursor) {
+          pageInfo { hasNextPage endCursor }
           nodes { id isResolved comments(first: 1) { nodes { databaseId body } } }
         }
       }
@@ -36,7 +45,7 @@ Group comments into threads. For each thread, capture:
 - **What the reviewer is asking for**: code change, clarification, or acknowledgment.
 - **File + line**: where the feedback targets (`--` for conversation comments).
 - **Whether it's blocking**: `REQUEST_CHANGES` reviews vs `COMMENT` suggestions.
-- **GraphQL thread ID**: map each root review comment's `databaseId` to its thread `id` for step 8. Conversation comments have no thread and are closed by the reply itself.
+- **GraphQL thread ID**: map each root review comment's `databaseId` to its thread `id` for resolution. Conversation comments have no thread and are closed by the reply itself.
 
 ## 2. Classify
 
@@ -72,7 +81,7 @@ If steps 1-3 produced **>=2 threads whose resolution requires editing code** (an
 
 ## 4. Triage
 
-**Discovery gate.** The triage table is the point of no return: do the due diligence and discovery *now* — read every file an approach block will touch, trace the symbols it names, and self-check each `Change` and `Verify` against code actually read this session — so that step 5 is mechanical execution with no guesswork and no major decision left unconfirmed merely because you didn't read enough. A decision that would otherwise surface mid-apply is an undiscovered `Investigate`; surface it here instead.
+**Discovery gate for edits.** Read every file an approach block will touch, trace its symbols and check each `Change` and `Verify` against the code. A choice you cannot settle before applying a fix belongs here as `Investigate`.
 
 Produce two artifacts in this order.
 
@@ -107,12 +116,6 @@ Verify:      <test/check that proves the fix across every thread>
 
 For `Decline` rows, write a one-paragraph rationale citing the constraint or design decision that overrides the request. Declines are per-thread, not aggregated. A real bug is never a `Decline` row: move it to `Fix`, or keep the thread open and name the exact decision for the user in the plan.
 
-For `Fix` rows, draft the reply text inline under the table row alongside the locus's approach block: 1-3 sentences restating `Change` + `Why here` in the reviewer's frame, plus a pointer to where to look in the diff. The approach block is for the user; the reply is for the reviewer, whose context is only thread + diff -- not your locus blocks or this chat. Multi-thread loci produce one draft per thread, each in its reviewer's frame. **Bare `Fixed in <sha>.` is forbidden** -- it forces the reviewer to re-derive substance you produced upstream.
-
-For `Respond`, `Ack`, `Resolved`, `Investigate` rows, draft the reply text inline under the table row (no block needed).
-
-Write every reply draft with the loaded **voice** skill: specifics and named actors, no slop, and treat declines and chosen-alternative rationale as `opinion`-grade pushback (state the position and the *why*).
-
 **Hedging is forbidden in approach blocks.** Words like "likely", "probably", "should fix", "might be", "I think", "we may need to" indicate the RCA is incomplete. If you reach for them, demote the **locus** to `Investigate`; every thread it would have addressed becomes an `Investigate` row stating what's unknown and what you'd need to read or run to know it. The user cannot approve a fix you yourself are unsure of.
 
 **A valid bug report does not validate the fix the reporter suggested.** The reviewer found a symptom; you did the RCA; you choose the patch. When **any thread under a locus** includes a specific fix proposal -- a `suggestion` block, an inline patch, "you should X", "what about Y", "wrap this in...", or any concrete code shape -- extend the locus's Approach block with three extra fields *before* `Verify`:
@@ -127,29 +130,11 @@ If after consideration the reviewer's suggestion *is* the right fix, say so expl
 
 Present this in normal chat prose; **do not use `AskUser`** for the triage report. Addressing review feedback often needs nuanced back-and-forth, rewording, pushback, and partial acceptance that does not fit a constrained multiple-choice flow.
 
-**Wait for user confirmation** before making changes.
+**Wait for confirmation before changing code or posting a decline**, unless the invocation already authorizes that action.
 
-## 5. Apply Fixes
+## Posting replies
 
-User confirmation means proceed **fully** — every confirmed `Fix` row lands in this pass; do not quietly re-punt during application. If applying a fix forces a choice its approach block didn't confirm, stop: that is a step-4 discovery failure — return to triage with the new question rather than deciding it silently.
-
-Apply the change for **each locus** (or each `Fix` thread when 3.5 was skipped):
-
-- Make the code change exactly as specified in the locus's approach block.
-- Keep changes minimal and scoped to the locus -- multi-thread loci are still one change at one layer, not several stitched together.
-- Do not refactor unrelated code in the same pass.
-
-## 6. Quality + Push
-
-Follow the **quality-ship** skill for quality checks, commit, and push:
-- **Worktree pre-check first** -- if cwd is a git worktree, load **worktree-setup** and run its repair before any validator. Never `npm install` / `pip install` inside a worktree.
-- Run detected quality checks. Fix issues until clean.
-- Commit: `fix(<scope>): address review feedback (<TICKET-ID>)`
-- Push to the existing PR branch.
-
-## 7. Respond to Threads
-
-Send the row's step-4 reply draft verbatim; append `Fixed in <sha>.` only when a commit landed against it. Do not improvise reply text at API time -- if a row has no draft, return to step 4. End every reply with `<!-- agent-reply -->`: the agent often posts from the user's own GitHub account, and the marker is how **babysit**'s watcher tells its replies from the user's comments.
+End every reply with `<!-- agent-reply -->`: the agent often posts from the user's own GitHub account, and the marker is how **babysit**'s watcher tells its replies from the user's comments.
 
 **Pending review first.** GitHub keeps at most one pending review per account per PR, and GraphQL review mutations (`addPullRequestReviewThreadReply` among them) file the account's comments into it, where only the account can read them: reviewers see no answer. Before the first reply, look for the account's pending review (only its author can see one, so any review printed here belongs to the account). The query pages through every comment and prints the review once per page of 100:
 
@@ -180,9 +165,7 @@ Pick endpoint by surface.
 ```bash
 gh api "repos/$REPO/pulls/<n>/comments/<comment-id>/replies" --method POST \
   -f body="$(cat <<'EOF'
-<reply draft #N>
-
-Fixed in <sha>.
+<answer to this thread>
 
 <!-- agent-reply -->
 EOF
@@ -195,9 +178,7 @@ gh api "repos/$REPO/issues/<n>/comments" --method POST \
   -f body="$(cat <<'EOF'
 > <quoted snippet>
 
-<reply draft #N>
-
-Fixed in <sha>.
+<answer to this point>
 
 <copy the fully answered item’s <!-- addressed: … --> from pr-watch --once>
 <!-- agent-reply -->
@@ -207,11 +188,11 @@ EOF
 
 **Conversation comment** (from `issues/<n>/comments`, anchor `#issuecomment-...`) -- no thread to reply on. Use the review-body quote-reply pattern above.
 
-## 8. Resolve Threads
+## Resolve what stands
 
 Thread resolution is **GraphQL-only** and applies only to review threads -- REST has no endpoint, and conversation comments have no thread node.
 
-For each addressed review thread, resolve it using the thread ID fetched in step 1:
+Leave unverified reports, decisions and requested reviewer follow-up open. Use the repository’s head-pinned resolver when present; otherwise use the thread ID fetched in step 1, after checking the PR head and latest response:
 ```bash
 gh api graphql -f query='
   mutation {
@@ -221,7 +202,25 @@ gh api graphql -f query='
   }'
 ```
 
-## 9. Re-request Review
+## 5. Apply Confirmed Fixes
+
+Once the invocation or user confirms the proposed fixes, proceed **fully** — every confirmed `Fix` row lands in this pass; do not quietly re-punt during application. If applying a fix forces a choice its approach block didn't confirm, stop: that is a step-4 discovery failure — return to triage with the new question rather than deciding it silently.
+
+Apply the change for **each locus** (or each `Fix` thread when 3.5 was skipped):
+
+- Make the code change exactly as specified in the locus's approach block.
+- Keep changes minimal and scoped to the locus -- multi-thread loci are still one change at one layer, not several stitched together.
+- Do not refactor unrelated code in the same pass.
+
+## 6. Quality + Push
+
+Follow the **quality-ship** skill for quality checks, commit, and push:
+- **Worktree pre-check first** -- if cwd is a git worktree, load **worktree-setup** and run its repair before any validator. Never `npm install` / `pip install` inside a worktree.
+- Run detected quality checks. Fix issues until clean.
+- Commit: `fix(<scope>): address review feedback (<TICKET-ID>)`
+- Push to the existing PR branch. Revisit the threads this push changes.
+
+## 7. Re-request Review
 
 **Never re-request anyone who has approved this PR.** An `APPROVED` review at any point disqualifies that login for good, even if they later commented, requested changes, or had the approval dismissed. No exceptions and no user-confirmation path: the user re-requests approvers manually when a special case calls for it.
 
