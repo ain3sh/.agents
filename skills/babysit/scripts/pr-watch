@@ -43,6 +43,9 @@ Stdout carries event lines, then one verdict line; progress goes to stderr.
                   far the base moved
   MERGED  exit 0
   ACTION  exit 1  the event lines say what needs doing
+  REVIEW_STOP exit 1  two distinct agent fix pushes drew new bot findings.
+                  Reply/ticket without another patch until this head has a
+                  completed ground-up dossier in the PR worktree.
   CLOSED  exit 1
   ERROR   exit 2  bad input, another watcher holds the PR, or GitHub failed
   WAIT    exit 3  --once only: nothing gates on the agent; the waiting lines
@@ -167,6 +170,8 @@ STATE_DIR = (
 # The agent ends every reply it posts with this. It often shares one GitHub
 # account with the user, so the author alone cannot tell their comments apart.
 AGENT_MARK = "<!-- agent-reply -->"
+FIX_RECEIPT = re.compile(r"(?im)^Fixed in ([^\n]+)")
+COMMIT_REF = re.compile(r"(?<![a-zA-Z0-9])[0-9a-f]{7,40}(?![a-zA-Z0-9])")
 # Service accounts are GitHub Users that automation drives, such as the snyk
 # scanner, so their author type alone reads as human.
 SERVICE_PREFIX = "factory-service-"
@@ -231,7 +236,7 @@ query($owner: String!, $name: String!, $number: Int!, $after: String) {
     reviews(first: 100, after: $after) {
       pageInfo { hasNextPage endCursor }
       nodes { id databaseId url state author { login } viewerDidAuthor
-              body submittedAt lastEditedAt comments { totalCount } }
+              body submittedAt lastEditedAt commit { oid } comments { totalCount } }
     }
   } }
 }
@@ -516,6 +521,67 @@ def replies(thread: Json) -> list[Json]:
     return [c for c in thread["comments"]["nodes"] if c["state"] == "SUBMITTED"]
 
 
+def reviewed_fixes(threads: dict[int, list[Json]], reviews_by_id: dict[int, Json],
+                   author: Json) -> dict[str, tuple[str, str]]:
+    """For each reviewed fix tip, bound its push between two bot reviews.
+    A human account is shared: require its agent-marked Fix receipt as well.
+    A reply's commit_id is its thread anchor, not the fix it shipped."""
+    fixes: set[tuple[str, str, str]] = set()
+    findings: dict[str, list[str]] = {}
+    for root_id, thread in threads.items():
+        root = thread[0]
+        review = reviews_by_id.get(root.get("pull_request_review_id"), {})
+        sha = (review.get("commit") or {}).get("oid")
+        if (root["id"] != root_id or (root.get("user") or {}).get("type") != "Bot"
+                or not sha or not review.get("submittedAt") or review["state"] == "PENDING"):
+            continue
+        when = review["submittedAt"]
+        findings.setdefault(sha, []).append(when)
+        for reply in thread[1:]:
+            if ((reply.get("user") or {}).get("login") != author["login"]
+                    or not reply["body"].rstrip().endswith(AGENT_MARK)
+                    or reviews_by_id.get(reply.get("pull_request_review_id"), {}).get("state") == "PENDING"):
+                continue
+            for receipt in FIX_RECEIPT.findall(reply["body"]):
+                fixes.update((token, when, sha) for token in COMMIT_REF.findall(receipt))
+    # An old-head review arriving late is still actionable but cannot stand
+    # in for a review of another fix. Ambiguous abbreviations prove neither.
+    if author["type"] == "Bot":
+        first = min(((min(times), sha) for sha, times in findings.items()), default=None)
+        return {sha: (first[0], max(times)) for sha, times in findings.items() if first and sha != first[1]}
+    result = {}
+    for token, original, old_sha in fixes:
+        matches = [sha for sha in findings if sha.startswith(token)]
+        if len(matches) == 1 and matches[0] != old_sha:
+            sha = matches[0]
+            lower = min(result.get(sha, (original,))[0], original)
+            result[sha] = (lower, max(findings[sha]))
+    return result
+
+
+def ground_up_complete(repo: str, number: int, head: str) -> bool:
+    """Read review-pr's existing dossier, not a second acknowledgement file."""
+    tree = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False)
+    if tree.returncode:
+        return False
+    path = Path(tree.stdout.strip()) / ".agents/review.md"
+    try:
+        text = path.read_text()
+    except (OSError, UnicodeError):
+        return False
+    header, _, sections = text.partition("\n## ")
+    design = re.search(r"^## Reference design\n+(.+?)(?:\n## |\Z)", "\n## " + sections, re.M | re.S)
+    return bool(
+        re.match(rf"# PR {number}\b", header)
+        and f"repo: {repo}" in header.splitlines()
+        and f"reviewed_head: {head}" in header.splitlines()
+        and re.search(r"^mode: ground-up(?:\+crux)?$", header, re.M)
+        and re.search(r"^verdict: (?:APPROVE|COMMENT)$", header, re.M)
+        and design and design[1].strip() and design[1].strip().lower() != "none"
+        and not design[1].lstrip().startswith("<")
+    )
+
+
 def parse_target(raw: str, repo: str | None) -> tuple[str, int]:
     url = re.fullmatch(
         r"https?://github\.com/([^/\s]+/[^/\s]+)/pull/(\d+)\S*", raw.strip()
@@ -584,6 +650,7 @@ class Watcher:
         slug = f"{repo.replace('/', '__')}__{number}"
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         self.state_path = STATE_DIR / f"{slug}.json"
+        self.stop_path = STATE_DIR / f"{slug}.review-stop"
         self.lock_path = STATE_DIR / f"{slug}.lock"
         self.reported: set[str] = set()
         if not once and self.state_path.exists():
@@ -633,6 +700,7 @@ class Watcher:
             self.lock_path.unlink(missing_ok=True)
         if verdict in ("MERGED", "CLOSED"):
             self.state_path.unlink(missing_ok=True)
+            self.stop_path.unlink(missing_ok=True)
         elif self.events and not self.once:
             self.save()
         sys.exit(code)
@@ -694,6 +762,26 @@ class Watcher:
         for c in sorted(notes, key=lambda c: c["created_at"]):
             threads.setdefault(c.get("in_reply_to_id") or c["id"], []).append(c)
         resolved = self.resolution(notes)
+        # REST already persists each PR's paginated inputs. Recompute the
+        # distinct heads, never increment on a poll or count commits in a push.
+        author = p.get("user")
+        if author and p["state"] == "open" and not self.stop_path.exists():
+            fixes = reviewed_fixes(threads, {r["databaseId"]: r for r in reviewed}, author)
+            source = p["head"].get("repo")
+            if len(fixes) >= 2 and source:
+                ref = f"refs/heads/{p['head']['ref']}"
+                url = f"repos/{source['full_name']}/activity?ref={quote(ref, safe='')}&per_page={PAGE}"
+                fix_heads = {
+                    push["after"] for push in self.rest.all(url)
+                    if push["ref"] == ref and push["activity_type"] in ("push", "force_push")
+                    and (push.get("actor") or {}).get("login") == author["login"] and push["after"] in fixes
+                    and fixes[push["after"]][0] <= push["timestamp"] <= fixes[push["after"]][1]
+                }
+                if len(fix_heads) >= 2:
+                    # Monotone across background/--once races, lost ref history
+                    # and edited/deleted replies. Only finish on a closed PR
+                    # removes this latch. A dossier releases its own head only.
+                    self.stop_path.touch(exist_ok=True)
         return {
             "url": p["html_url"],
             "state": "MERGED" if p["merged_at"] else p["state"].upper(),
@@ -1053,6 +1141,21 @@ class Watcher:
         ]
         advisory += filter(None, (assessment(c, head) for c in pr["comments"]["nodes"]))
         feedback = list(self.feedback(pr))
+        if self.stop_path.exists():
+            actions, _ = self.evaluate(pr, checks, gating, stable=True)
+            if (feedback or actions) and not ground_up_complete(self.repo, self.number, head):
+                key = f"review-stop:{head}"
+                if self.once or key not in self.reported:
+                    if not self.once:
+                        self.reported.add(key)
+                        self.save()
+                    self.finish("REVIEW_STOP", (
+                        f"@ {head}: fix loop closed. No patch or push. Reply to remaining findings; "
+                        "ticket and link what no user can hit. Run /review-pr ground-up on this PR, "
+                        "including its deeper pass; only its completed .agents/review.md for this head "
+                        "reopens fixing. Recheck with --once."
+                    ), 1)
+                return
         if self.once:
             self.events.extend(feedback)
             actions, waits = self.evaluate(pr, checks, gating, stable=True)

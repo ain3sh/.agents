@@ -26,7 +26,7 @@ Never `sleep`+poll, run a cron loop, or use `gh run watch` or
 ```
 
 Output is event lines, then one verdict: `READY` or `MERGED` (exit 0),
-`ACTION` or `CLOSED` (1), `ERROR` (2), and from `--once` only, `WAIT` (3). The
+`ACTION`, `REVIEW_STOP` or `CLOSED` (1), `ERROR` (2), and from `--once` only, `WAIT` (3). The
 script's docstring defines every event and the `READY` gate.
 
 One wake source per PR:
