@@ -562,6 +562,95 @@ class OnceVerdictTest(unittest.TestCase):
             f"ACTION {REPO}#{NUMBER} @ {HEAD}",
         ]))
 
+    def test_fix_pushes_not_commits_or_bot_replies_close_both_watch_modes(self) -> None:
+        github = GitHub("CLEAN")
+        github.pr["user"] = {"login": "me", "type": "User"}
+        original, fix = "c" * 40, "d" * 40
+        ref = f"refs/heads/{github.pr['head']['ref']}"
+        pushes = [{"after": sha, "ref": ref, "actor": {"login": "me"}, "activity_type": "push",
+                   "timestamp": f"2026-01-{day:02}T00:59:00Z"}
+                  for day, sha in enumerate((original, fix, HEAD), 2)]
+        resource = f"repos/{REPO}/activity?ref={pr_watch.quote(ref, safe='')}&per_page=100"
+        body = github.body
+        github.body = lambda url: pushes if url == resource else body(url)
+
+        def finding(n, sha, day, fixed=""):
+            at = f"2026-01-{day:02}T01:00:00Z"
+            github.reviews.append({**comment("reviewer", "Bot", "", id=n, at=at),
+                                   "state": "COMMENTED", "submitted_at": at, "commit_id": sha})
+            root = {**comment("reviewer", "Bot", "Bad rounding.", id=n, at=at),
+                    "path": "a.py", "pull_request_review_id": n, "original_commit_id": sha}
+            github.notes.append(root)
+            github.resolved[n] = bool(fixed)
+            if fixed:
+                github.notes.append({**root, **comment("me", "User", f"Fixed in {fixed}.\n\n{pr_watch.AGENT_MARK}",
+                                                       id=n+100, at=at), "in_reply_to_id": n})
+
+        finding(1, original, 2, f"{'e'*9}, tests in {fix[:9]}")
+        finding(2, fix, 3)
+        finding(3, fix, 3, HEAD[:9])
+        # A two-commit fix, two reviews on one tip, and a human push do not close the loop.
+        self.assertEqual(self.poll(github)[1][-1].split()[0], "ACTION")
+        finding(4, HEAD, 4)
+        pushes[-1]["actor"]["login"] = "other"
+        self.assertEqual(self.poll(github)[1][-1].split()[0], "ACTION")
+        pushes[-1]["actor"]["login"] = "me"
+        with mock.patch.object(pr_watch, "ground_up_complete", return_value=False):
+            for once in (True, False, True):
+                code, lines = self.poll(github, pr_watch.Watcher(REPO, NUMBER, 300, once))
+                self.assertEqual(code, 1)
+                self.assertEqual(len(lines), 1)
+                self.assertTrue(lines[0].startswith(f"REVIEW_STOP {REPO}#{NUMBER} @ {HEAD}"))
+            # The watcher wakes once; a foreground recheck never hides the stop.
+            self.assertEqual(self.poll(github, pr_watch.Watcher(REPO, NUMBER, 300, False)), (None, []))
+            pushes.clear()
+            self.assertTrue(self.poll(github)[1][0].startswith("REVIEW_STOP "))
+            # Written dispositions can resolve the remaining threads without a patch.
+            github.resolved.update({2: True, 4: True})
+            self.assertEqual(self.poll(github), (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"]))
+        github.resolved[4] = False
+        with mock.patch.object(pr_watch, "ground_up_complete", return_value=True):
+            self.assertEqual(self.poll(github)[1][-1].split()[0], "ACTION")
+
+    def test_only_completed_dossier_for_this_pr_and_head_authorizes_fixing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.remote.return_value = subprocess.CompletedProcess([], 0, tmp+"\n")
+            dossier = Path(tmp) / ".agents/review.md"
+            dossier.parent.mkdir()
+            text = f"# PR {NUMBER} — Change\n\nrepo: {REPO}\nreviewed_head: {HEAD}\nmode: ground-up\nverdict: COMMENT\n\n## Reference design\nOne owner.\n"
+            for old, new in ((HEAD, BASE_OID), (REPO, "other/repo"), ("PR 7", "PR 71"),
+                             ("ground-up", "first-pass"), ("COMMENT", "not yet issued"), ("One owner.", "none")):
+                dossier.write_text(text.replace(old, new))
+                self.assertFalse(pr_watch.ground_up_complete(REPO, NUMBER, HEAD), (old, new))
+            dossier.write_text(text)
+            self.assertTrue(pr_watch.ground_up_complete(REPO, NUMBER, HEAD))
+
+    def test_bot_owned_pr_counts_only_actual_post_review_push_tips(self) -> None:
+        github = GitHub("CLEAN")
+        github.pr["user"] = {"login": "delegations[bot]", "type": "Bot"}
+        source = github.pr["head"]
+        ref = f"refs/heads/{source['ref']}"
+        shas = ["1" * 40, "2" * 40, "3" * 40, HEAD]
+        activity = []
+        for i, sha in enumerate(shas, 1):
+            at = f"2026-01-{i:02}T01:00:00Z"
+            github.reviews.append({**comment("droid", "Bot", "", id=i), "commit_id": sha,
+                                   "state": "COMMENTED", "submitted_at": at})
+            github.notes.append({**comment("droid", "Bot", "Incorrect.", id=i, at=at),
+                                 "pull_request_review_id": i, "path": "f.py", "line": 1})
+            github.resolved[i] = i != len(shas)
+            activity.append({"ref": ref, "actor": github.pr["user"], "activity_type": "push",
+                             "after": sha, "timestamp": f"2026-01-{i:02}T00:00:00Z"})
+        # The second reviewed SHA was inside a push, never itself a pushed tip.
+        del activity[1]
+        activity[-1]["actor"] = {"login": "someone-else"}
+        body = github.body
+        github.body = lambda url: activity if "/activity?" in url else body(url)
+        self.assertEqual(self.poll(github)[1][-1].split()[0], "ACTION")
+        activity[-1]["actor"] = github.pr["user"]
+        with mock.patch.object(pr_watch, "ground_up_complete", return_value=False):
+            self.assertTrue(self.poll(github)[1][0].startswith("REVIEW_STOP "))
+
     def test_a_late_submitted_review_drafted_on_an_older_commit_is_feedback(self) -> None:
         # A pending review's comments keep their drafting time and are outdated
         # the moment it is submitted (factory-mono#27809: drafted Oct 22 on an
