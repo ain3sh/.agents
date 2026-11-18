@@ -114,6 +114,11 @@ class LoopTest(unittest.TestCase):
         return []
 
     def gh(self, *args: str, unchanged: bool = False) -> str:
+        if args[1] == "graphql":
+            self.calls.append("reviews graphql")
+            return answer(200, {"data": {"viewer": {"id": "me"}, "repository": {"pullRequest": {
+                "reviews": {"nodes": [], "pageInfo": {"hasNextPage": False}},
+            }}}})
         url = args[-1]
         self.calls.append(url)
         if "rules/branches" in url or "protection" in url:
@@ -144,6 +149,7 @@ class LoopTest(unittest.TestCase):
         for _ in range(pr_watch.FULL_EVERY - 1):
             calls = self.poll(watcher)
             self.assertNotIn("repos/o/r/pulls/7", calls)
+            self.assertNotIn("reviews graphql", calls)
             self.assertIn("ls-remote", calls)
         self.assertIn("repos/o/r/pulls/7", self.poll(watcher))
 
