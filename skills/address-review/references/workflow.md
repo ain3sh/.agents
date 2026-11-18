@@ -134,7 +134,7 @@ Present this in normal chat prose; **do not use `AskUser`** for the triage repor
 
 ## Posting replies
 
-End every reply with `<!-- agent-reply -->`: the agent often posts from the user's own GitHub account, and the marker is how **babysit**'s watcher tells its replies from the user's comments.
+End every reply with `<!-- agent-reply -->` so the agent's thread replies and drafts are distinguishable on a shared account. Triage all top-level feedback before replying: GitHub does not pair conversation replies with individual items.
 
 **Pending review first.** GitHub keeps at most one pending review per account per PR, and GraphQL review mutations (`addPullRequestReviewThreadReply` among them) file the account's comments into it, where only the account can read them: reviewers see no answer. Before the first reply, look for the account's pending review (only its author can see one, so any review printed here belongs to the account). The query pages through every comment and prints the review once per page of 100:
 
@@ -180,7 +180,6 @@ gh api "repos/$REPO/issues/<n>/comments" --method POST \
 
 <answer to this point>
 
-<copy the fully answered item’s <!-- addressed: … --> from pr-watch --once>
 <!-- agent-reply -->
 EOF
 )"
