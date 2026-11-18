@@ -73,6 +73,8 @@ Events
                 file the account's comments and thread replies into it, where
                 only the account can read them, so its threads read as
                 answered to the agent and as silent to everyone else
+  body-stale    the description's last pr-desc-base marker is behind the head;
+                an unmarked description does not opt in to refresh
   conflict      the branch conflicts with its base
   behind        branch protection requires the branch to be current; GitHub
                 reports BEHIND only then, so a behind PR on any other base
@@ -191,6 +193,7 @@ LINKBACK = "<!-- linear-linkback -->"
 # it scores the head, then its verdict and the head it scored: in a hidden
 # marker, or in the visible line of a comment published before the marker.
 RISK_MARK = "<!-- factory-pr-risk -->"
+DESC_BASE = re.compile(r"^<!-- pr-desc-base: ([0-9a-f]{7,40}) -->\r?$", re.MULTILINE)
 RISK_VERDICT = re.compile(r"^## Risk Assessment: (.+)$", re.MULTILINE)
 RISK_HEAD = re.compile(r"(?:<!-- factory-pr-risk-scored-head: |Scored head `)([0-9a-f]{7,40})")
 PASSED = {"SUCCESS", "NEUTRAL", "SKIPPED"}
@@ -695,6 +698,7 @@ class Watcher:
             "url": p["html_url"],
             "state": "MERGED" if p["merged_at"] else p["state"].upper(),
             "isDraft": p["draft"],
+            "body": p.get("body") or "",
             "headRefOid": head,
             "baseRefName": p["base"]["ref"],
             "baseRef": {"target": {"oid": p["base"]["sha"]}},
@@ -923,6 +927,10 @@ class Watcher:
         base_oid = ((pr["baseRef"] or {}).get("target") or {}).get("oid", "")
         actions: list[tuple[str, str]] = []
         waits: list[str] = []
+
+        synced = DESC_BASE.findall(pr["body"])
+        if synced and not head.startswith(synced[-1]):
+            actions.append((f"body-stale:{head}", f"body-stale: description last reconciled at {synced[-1][:7]}"))
 
         # Only the viewer's own pending review is visible, and GitHub allows
         # one per account per PR.

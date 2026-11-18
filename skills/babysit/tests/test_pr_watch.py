@@ -358,6 +358,20 @@ class OnceVerdictTest(unittest.TestCase):
             "conflict: the branch conflicts with dev", f"ACTION {REPO}#{NUMBER} @ {HEAD}",
         ]))
 
+    def test_only_a_stale_description_marker_needs_refresh(self) -> None:
+        github = GitHub("CLEAN")
+        ready = (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"])
+        stale = f"<!-- pr-desc-base: {BASE_OID} -->"
+        current = f"<!-- pr-desc-base: {HEAD} -->"
+        for body, expected in (
+            ("A hand-written upstream description.", ready),
+            (stale, (1, [f"body-stale: description last reconciled at {BASE_OID[:7]}", f"ACTION {REPO}#{NUMBER} @ {HEAD}"])),
+            (f"{stale}\r\n{current}", ready),
+        ):
+            with self.subTest(body=body):
+                github.pr["body"] = body
+                self.assertEqual(self.poll(github), expected)
+
     def test_behind_a_strict_base_needs_action(self) -> None:
         self.assertEqual(self.poll(GitHub("BEHIND")), (1, [
             "behind: branch protection requires the branch to be current with dev",

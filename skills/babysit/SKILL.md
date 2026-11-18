@@ -44,7 +44,7 @@ Run the full command above unpiped so its exit code reaches you.
 | `conflict`, `behind` | **sync-target** without asking, including whatever disposition it rules. Stacked: **stack-cli**, merge bottom-up. |
 | `comment`, `review`, `thread`, `unresolved` | **address-review**. This invocation confirms its `Fix`, `Respond`, and `Ack` rows; `Decline` rows and open product calls go to the user. |
 | `pending-review` | Run **address-review**'s [pending-review check](../address-review/references/workflow.md#posting-replies) before touching the shared account's drafts. Re-run `pr-watch <pr> --once`. |
-| Any push | **pr-description** refresh: the body stays first-screen excellent, never a patch log. |
+| `body-stale` | Refresh the description with **pr-description** and re-stamp it at the current head. |
 | `READY` | Run `pr-watch <pr> --once`. On `READY`, merge with the repo's allowed method (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`) pinned to the sha that verdict line ends with (`gh pr merge <pr> --<method> --match-head-commit <sha>`), confirm `MERGED`, stop. On `ACTION`, handle its lines instead; on `WAIT`, follow its row. |
 | `WAIT` | Resume the Watch path above. |
 | `blocked` | Check, in order: rulesets, required reviewers, merge queue, then `pr-context` for anything GitHub reports that the watcher does not model. |
