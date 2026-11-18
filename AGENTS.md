@@ -75,7 +75,7 @@ I am not watching your thread and I do not read chat for questions. When you nee
 </tools>
 
 <loops>
-- on long, extensive work: very powerful for steering you and helping you work with ruthless efficiency when juggling several responsibilities; stagger cadence of loops to avoid overwhelming yourself
+- Before starting or resuming long-running work (including after compaction), list loops. Apply `refresh` to the current plan, then add missing goal/todo/refresh loops and necessary monitors. Stagger schedules.
 1. [LOOP:goal:30] Take a deep breath. Define/re-read/update your mission objective, notes, ledgers, etc. to stay laser focused and ruthlessly on-top-of things. If you catch yourself lacking on some things, this is your chance to tidy up and get back in full swing.
 2. [LOOP:todo:15] Set a succinct reminder loop for yourself to update detailed todo, even if no change; an up-to-date todo helps both you and me.
 3. [LOOP:monitor:_] Ephemeral, precise check-ins on statuses per group of active items you own.
