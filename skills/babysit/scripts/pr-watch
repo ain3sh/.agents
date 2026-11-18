@@ -11,8 +11,9 @@ it after acting: it remembers what it already reported.
 
 A poll checks the head and base tips in one `git ls-remote` (no API quota),
 then reads REST resources conditionally. It refreshes the PR when either tip
-moves, feedback changes, checks settle, or FULL_EVERY polls elapse. Thread
-resolution comes from GraphQL, not REST. No cached resolution authorizes READY.
+moves, feedback changes, checks settle, or FULL_EVERY polls elapse. A refresh
+reads the viewer and review edit times from GraphQL. No cached thread resolution
+authorizes READY.
 
 At each poll, compare the same GitHub bucket's remaining balance with its
 balance at the last poll. That drop includes other machines and clients. When
@@ -59,7 +60,8 @@ Events
                 job's notice while the status jobs skip and their required
                 checks never report. Either is a wait, not a failure
   comment, review
-                a top-level comment or review not acknowledged at its current version; comments from CI and
+                top-level feedback newer than the authenticated account's last
+                top-level comment or submitted review. Comments from CI and
                 deploy bots and factory-service-* accounts are skipped, since
                 checks carry that news, as is Linear's linkback comment to the
                 issue
@@ -76,6 +78,8 @@ Events
                 file the account's comments and thread replies into it, where
                 only the account can read them, so its threads read as
                 answered to the agent and as silent to everyone else
+  body-stale    the description's last pr-desc-base marker is behind the head;
+                an unmarked description does not opt in to refresh
   conflict      the branch conflicts with its base
   behind        branch protection requires the branch to be current; GitHub
                 reports BEHIND only then, so a behind PR on any other base
@@ -95,16 +99,11 @@ workflows into the landing branch often filter on it and run only once GitHub
 retargets the PR there. A landing branch that requires none makes every check
 gate.
 
-Feedback events describe what is open on GitHub now, not what changed since a
-run. The agent's words are exactly the comments, reviews, and thread replies
-carrying AGENT_MARK; authors and commits never count, since the agent shares
-an account with its user, and neither does a pending review or its comments,
-which nobody else can read. A marked conversation reply acknowledges only the
-comment or review versions whose printed acknowledgment tokens it carries.
-An inline reply settles only its own thread. A bot's edit reopens too: a QA bot rewrites its report
-in place when a run fails (factory-mono#28661 went from passing to FAILED
-32/34 in an edit). Status bots, whose in-place rewrites only repeat what checks
-say, are skipped whatever they post.
+GitHub gives top-level replies no parent. Triage every open item on a wake;
+the account's next top-level word clears earlier versions together. A later
+edit can reopen feedback, including a QA report edited from passing to failed.
+Inline replies are thread-local: only a submitted reply ending in AGENT_MARK
+counts as the agent's. A pending draft speaks to nobody.
 
 State lives in $XDG_STATE_HOME/pr-watch (default ~/.local/state/pr-watch): the
 keys the watcher has reported, so a restart never re-wakes on what it already
@@ -146,7 +145,6 @@ from __future__ import annotations
 
 import argparse
 import fcntl
-import hashlib
 import html
 import json
 import math
@@ -172,7 +170,6 @@ STATE_DIR = (
 # The agent ends every reply it posts with this. It often shares one GitHub
 # account with the user, so the author alone cannot tell their comments apart.
 AGENT_MARK = "<!-- agent-reply -->"
-ACK = re.compile(r"<!-- addressed: ([0-9a-f]{16}) -->")
 FIX_RECEIPT = re.compile(r"(?im)^Fixed in ([^\n]+)")
 COMMIT_REF = re.compile(r"(?<![a-zA-Z0-9])[0-9a-f]{7,40}(?![a-zA-Z0-9])")
 # Service accounts are GitHub Users that automation drives, such as the snyk
@@ -196,6 +193,7 @@ LINKBACK = "<!-- linear-linkback -->"
 # it scores the head, then its verdict and the head it scored: in a hidden
 # marker, or in the visible line of a comment published before the marker.
 RISK_MARK = "<!-- factory-pr-risk -->"
+DESC_BASE = re.compile(r"^<!-- pr-desc-base: ([0-9a-f]{7,40}) -->\r?$", re.MULTILINE)
 RISK_VERDICT = re.compile(r"^## Risk Assessment: (.+)$", re.MULTILINE)
 RISK_HEAD = re.compile(r"(?:<!-- factory-pr-risk-scored-head: |Scored head `)([0-9a-f]{7,40})")
 PASSED = {"SUCCESS", "NEUTRAL", "SKIPPED"}
@@ -230,7 +228,19 @@ DENIED_TTL = 24 * 3600
 # REST pages hold at most 100 items; the next page's URL comes in the Link header.
 PAGE = 100
 NEXT = re.compile(r'<([^>]+)>;\s*rel="next"')
-# REST exposes no thread resolution. Only PRs with inline comments need GraphQL.
+# REST exposes neither review edit times nor thread resolution.
+REVIEWS = """
+query($owner: String!, $name: String!, $number: Int!, $after: String) {
+  viewer { id }
+  repository(owner: $owner, name: $name) { pullRequest(number: $number) {
+    reviews(first: 100, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      nodes { id databaseId url state author { login } viewerDidAuthor
+              body submittedAt lastEditedAt commit { oid } comments { totalCount } }
+    }
+  } }
+}
+"""
 THREADS = """
 query($owner: String!, $name: String!, $number: Int!, $after: String) {
   repository(owner: $owner, name: $name) { pullRequest(number: $number) {
@@ -504,23 +514,11 @@ def stamp(node: Json) -> str:
     )
 
 
-def reviews(pr: Json) -> list[Json]:
-    return [
-        r for r in pr["reviews"]["nodes"] if r["state"] not in ("PENDING", "DISMISSED")
-    ]
-
-
 def replies(thread: Json) -> list[Json]:
     """A thread's comments as everyone else sees them. A pending review
     hides its comments from all but their author, who is the viewer, so a
     reply filed into one answers nothing."""
     return [c for c in thread["comments"]["nodes"] if c["state"] == "SUBMITTED"]
-
-
-def ack_id(node: Json) -> str:
-    # Reviews (unlike comments) have no REST edit timestamp; their id in fetch()
-    # includes the body digest. An edit must not inherit the previous answer.
-    return hashlib.sha256(f"{node['id']}:{stamp(node)}:{node['body']}".encode()).hexdigest()[:16]
 
 
 def reviewed_fixes(threads: dict[int, list[Json]], reviews_by_id: dict[int, Json],
@@ -533,11 +531,11 @@ def reviewed_fixes(threads: dict[int, list[Json]], reviews_by_id: dict[int, Json
     for root_id, thread in threads.items():
         root = thread[0]
         review = reviews_by_id.get(root.get("pull_request_review_id"), {})
-        sha = review.get("commit_id")
+        sha = (review.get("commit") or {}).get("oid")
         if (root["id"] != root_id or (root.get("user") or {}).get("type") != "Bot"
-                or not sha or not review.get("submitted_at") or review["state"] == "PENDING"):
+                or not sha or not review.get("submittedAt") or review["state"] == "PENDING"):
             continue
-        when = review["submitted_at"]
+        when = review["submittedAt"]
         findings.setdefault(sha, []).append(when)
         for reply in thread[1:]:
             if ((reply.get("user") or {}).get("login") != author["login"]
@@ -665,6 +663,7 @@ class Watcher:
         self.fresh = True
         self.delay = interval
         self.rest = Rest(STATE_DIR / f"{slug}.rest.json")
+        self.review_snapshot: tuple[str, list[Json]] | None = None
         self.started = SELF.stat().st_mtime
 
     def lock(self) -> Any:
@@ -726,8 +725,7 @@ class Watcher:
         }
 
     def fetch(self) -> Json:
-        """The PR, its head's checks, and its feedback: the head by git, the
-        rest by REST, and the PR itself only when the module docstring says."""
+        """The PR, its head's checks, and its feedback, refreshed as above."""
         repo, n = f"repos/{self.repo}", self.number
         url = f"{repo}/pulls/{n}"
         kept = self.rest.cache.get(url, {}).get("body")
@@ -742,7 +740,9 @@ class Watcher:
         settled = self.rest.changed > before and all(r["status"] == "completed" for r in runs)
         before = self.rest.changed
         comments = self.rest.all(f"{repo}/issues/{n}/comments?per_page={PAGE}")
-        reviewed = self.rest.all(f"{repo}/pulls/{n}/reviews?per_page={PAGE}")
+        if not self.once:
+            # Its ETags detect a changed review without spending GraphQL quota.
+            self.rest.all(f"{repo}/pulls/{n}/reviews?per_page={PAGE}")
         notes = self.rest.all(f"{repo}/pulls/{n}/comments?per_page={PAGE}")
         if not self.fresh:
             self.fresh = (
@@ -750,11 +750,14 @@ class Watcher:
             )
             p, _ = self.rest.get(url, self.fresh)
         self.polls += 1
-        pending = {r["id"] for r in reviewed if r["state"] == "PENDING"}
+        if self.fresh or self.review_snapshot is None:
+            self.review_snapshot = self.read_reviews()
+        viewer, reviewed = self.review_snapshot
+        pending = {r["databaseId"] for r in reviewed if r["state"] == "PENDING"}
         latest: dict[str, str] = {}
         for r in reviewed:
-            if r["state"] in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED") and r["user"]:
-                latest[r["user"]["login"]] = r["state"]
+            if r["state"] in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED") and r["author"]:
+                latest[login(r)] = r["state"]
         threads: dict[int, list[Json]] = {}
         for c in sorted(notes, key=lambda c: c["created_at"]):
             threads.setdefault(c.get("in_reply_to_id") or c["id"], []).append(c)
@@ -763,7 +766,7 @@ class Watcher:
         # distinct heads, never increment on a poll or count commits in a push.
         author = p.get("user")
         if author and p["state"] == "open" and not self.stop_path.exists():
-            fixes = reviewed_fixes(threads, {r["id"]: r for r in reviewed}, author)
+            fixes = reviewed_fixes(threads, {r["databaseId"]: r for r in reviewed}, author)
             source = p["head"].get("repo")
             if len(fixes) >= 2 and source:
                 ref = f"refs/heads/{p['head']['ref']}"
@@ -783,6 +786,7 @@ class Watcher:
             "url": p["html_url"],
             "state": "MERGED" if p["merged_at"] else p["state"].upper(),
             "isDraft": p["draft"],
+            "body": p.get("body") or "",
             "headRefOid": head,
             "baseRefName": p["base"]["ref"],
             "baseRef": {"target": {"oid": p["base"]["sha"]}},
@@ -797,15 +801,10 @@ class Watcher:
                 *({"__typename": "StatusContext", "context": s["context"], "state": s["state"].upper(),
                    "targetUrl": s["target_url"]} for s in statuses),
             ]}}}}]},
-            "comments": {"nodes": [self.note(c) for c in comments]},
-            # A review's body can be edited with no REST timestamp, so its id
-            # carries the body's digest: an edit is a new version.
-            "reviews": {"nodes": [
-                self.note(r, id=f"{r['node_id']}:{hashlib.sha1((r.get('body') or '').encode()).hexdigest()[:8]}",
-                          state=r["state"], submittedAt=r.get("submitted_at"),
-                          comments={"totalCount": sum(c.get("pull_request_review_id") == r["id"] for c in notes)})
-                for r in reviewed
+            "comments": {"nodes": [
+                self.note(c, viewerDidAuthor=(c.get("user") or {}).get("node_id") == viewer) for c in comments
             ]},
+            "reviews": {"nodes": reviewed},
             "reviewThreads": {"nodes": [
                 {
                     "isResolved": resolved.get(str(root)),
@@ -819,6 +818,19 @@ class Watcher:
                 for root, t in threads.items()
             ]},
         }
+
+    def read_reviews(self) -> tuple[str, list[Json]]:
+        """REST reviews have no edit timestamp. Use each submitted review's
+        actual edit, not when this watcher happened to observe a new body."""
+        nodes: list[Json] = []
+        after: dict[str, str] = {}
+        while True:
+            data = graphql(REVIEWS, owner=self.owner, name=self.name, number=self.number, **after)
+            page = data["repository"]["pullRequest"]["reviews"]
+            nodes.extend(page["nodes"])
+            if not page["pageInfo"]["hasNextPage"]:
+                return data["viewer"]["id"], nodes
+            after = {"after": page["pageInfo"]["endCursor"]}
 
     def remote_head(self, pr: Json) -> str | None:
         """The PR's head by `git ls-remote`, which spends no API budget; None
@@ -967,25 +979,30 @@ class Watcher:
 
     def feedback(self, pr: Json) -> Iterator[tuple[str, str]]:
         """Yield each currently unanswered item, independent of prior wake-ups."""
-        answered = {key for reply in pr["comments"]["nodes"] if marked(reply)
-                    for key in ACK.findall(reply["body"])}
+        comments = pr["comments"]["nodes"]
+        # An empty COMMENTED review only publishes inline replies; it says
+        # nothing at the top level. An approval or change request is itself a word.
+        reviews = [r for r in pr["reviews"]["nodes"] if r["submittedAt"]
+                   and (r["body"].strip() or r["state"] in ("APPROVED", "CHANGES_REQUESTED"))]
+        last_word = max((datetime.fromisoformat(stamp(n)) for n in (*comments, *reviews) if n["viewerDidAuthor"]),
+                        default=datetime.min.replace(tzinfo=UTC))
 
         def fresh(node: Json) -> bool:
-            return not marked(node) and ack_id(node) not in answered
+            return not node["viewerDidAuthor"] and datetime.fromisoformat(stamp(node)) > last_word
 
-        for c in pr["comments"]["nodes"]:
+        for c in comments:
             if fresh(c) and not noise(c):
                 yield (
-                    f"c:{ack_id(c)}",
-                    f"comment from {login(c)}: {snippet(c['body'])} {c['url']} <!-- addressed: {ack_id(c)} -->",
+                    f"c:{c['id']}:{stamp(c)}",
+                    f"comment from {login(c)}: {snippet(c['body'])} {c['url']}",
                 )
-        for r in reviews(pr):
-            if fresh(r) and (r["state"] == "CHANGES_REQUESTED" or r["body"].strip()):
+        for r in reviews:
+            if fresh(r) and r["state"] != "DISMISSED" and (r["state"] == "CHANGES_REQUESTED" or r["body"].strip()):
                 state = r["state"].lower().replace("_", " ")
                 text = f": {snippet(r['body'])}" if r["body"].strip() else ""
                 yield (
-                    f"c:{ack_id(r)}",
-                    f"review from {login(r)} ({state}){text} {r['url']} <!-- addressed: {ack_id(r)} -->",
+                    f"c:{r['id']}:{stamp(r)}",
+                    f"review from {login(r)} ({state}){text} {r['url']}",
                 )
         for t in pr["reviewThreads"]["nodes"]:
             nodes = replies(t)
@@ -1011,6 +1028,10 @@ class Watcher:
         base_oid = ((pr["baseRef"] or {}).get("target") or {}).get("oid", "")
         actions: list[tuple[str, str]] = []
         waits: list[str] = []
+
+        synced = DESC_BASE.findall(pr["body"])
+        if synced and not head.startswith(synced[-1]):
+            actions.append((f"body-stale:{head}", f"body-stale: description last reconciled at {synced[-1][:7]}"))
 
         # Only the viewer's own pending review is visible, and GitHub allows
         # one per account per PR.

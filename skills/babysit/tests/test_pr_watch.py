@@ -66,7 +66,7 @@ def comment(
         "body": body,
         "created_at": at,
         "updated_at": at,
-        "user": {"login": author + ("[bot]" if kind == "Bot" else ""), "type": kind},
+        "user": {"node_id": f"{kind}_{author}", "login": author + ("[bot]" if kind == "Bot" else ""), "type": kind},
     }
 
 
@@ -88,7 +88,7 @@ def forks(branch: str) -> list[dict[str, Any]]:
 
 
 class GitHub:
-    """Only the REST resources pr-watch reads, plus GraphQL thread resolution."""
+    """The REST resources, submitted review history and thread resolution on GitHub."""
 
     def __init__(
         self, state: str, *, approved: bool = True, checks: list[Any] | None = None
@@ -154,10 +154,23 @@ class GitHub:
     def gh(self, *args: str, unchanged: bool = False) -> str:
         assert args[0] == "api" and "--include" in args, args
         if args[1] == "graphql":
-            assert f"query={pr_watch.THREADS}" in args, args
             assert "owner=o" in args and "name=r" in args and "number=7" in args, args
             # GitHub answers at most 100 threads a page; the cursor is the index after the page.
             start = int(next((a.removeprefix("after=") for a in args if a.startswith("after=")), "0"))
+            if f"query={pr_watch.THREADS}" not in args:
+                assert f"query={pr_watch.REVIEWS}" in args, args
+                rows = self.reviews[start:start + 100]
+                end = start + len(rows)
+                return response({"data": {"viewer": {"id": "User_me"}, "repository": {"pullRequest": {"reviews": {
+                    "pageInfo": {"hasNextPage": end < len(self.reviews), "endCursor": str(end)},
+                    "nodes": [{
+                        "id": r["node_id"], "databaseId": r["id"], "url": r["html_url"], "state": r["state"],
+                        "body": r["body"], "submittedAt": r["submitted_at"], "lastEditedAt": r.get("lastEditedAt"),
+                        "commit": {"oid": r["commit_id"]} if r.get("commit_id") else None,
+                        "author": {"login": r["user"]["login"]}, "viewerDidAuthor": r["user"]["node_id"] == "User_me",
+                        "comments": {"totalCount": sum(c.get("pull_request_review_id") == r["id"] for c in self.notes)},
+                    } for r in rows],
+                }}}}}, resource="graphql")
             roots = list(self.resolved.items())[start:start + 100]
             end = start + len(roots)
             return response(
@@ -181,10 +194,10 @@ class GitHub:
         out = response(body, link=link)
         etag = pr_watch.header(out.split("\r\n\r\n")[0], "etag")
         # Pull objects and lists embed pushed_at and do not answer 304.
-        if f"{REPO}/pulls" not in url or "/reviews?" in url or "/comments?" in url:
-            if f"If-None-Match: {etag}" in args:
-                assert unchanged, args
-                return response(body, status=304, link=link)
+        conditional = f"{REPO}/pulls" not in url or "/reviews?" in url or "/comments?" in url
+        if conditional and f"If-None-Match: {etag}" in args:
+            assert unchanged, args
+            return response(body, status=304, link=link)
         return out
 
     def ls_remote(self, args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
@@ -358,6 +371,20 @@ class OnceVerdictTest(unittest.TestCase):
             "conflict: the branch conflicts with dev", f"ACTION {REPO}#{NUMBER} @ {HEAD}",
         ]))
 
+    def test_only_a_stale_description_marker_needs_refresh(self) -> None:
+        github = GitHub("CLEAN")
+        ready = (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"])
+        stale = f"<!-- pr-desc-base: {BASE_OID} -->"
+        current = f"<!-- pr-desc-base: {HEAD} -->"
+        for body, expected in (
+            ("A hand-written upstream description.", ready),
+            (stale, (1, [f"body-stale: description last reconciled at {BASE_OID[:7]}", f"ACTION {REPO}#{NUMBER} @ {HEAD}"])),
+            (f"{stale}\r\n{current}", ready),
+        ):
+            with self.subTest(body=body):
+                github.pr["body"] = body
+                self.assertEqual(self.poll(github), expected)
+
     def test_behind_a_strict_base_needs_action(self) -> None:
         self.assertEqual(self.poll(GitHub("BEHIND")), (1, [
             "behind: branch protection requires the branch to be current with dev",
@@ -390,9 +417,7 @@ class OnceVerdictTest(unittest.TestCase):
     def test_a_bots_edit_after_the_agents_response_reopens_its_comment(self) -> None:
         # factory-mono#28661: a QA report was edited to FAILED after our reply.
         qa = comment("factory-droid", "Bot", "<!-- qa-report -->\n## QA: FAILED (32 / 34)")
-        _, lines = self.poll(self.with_comments(qa))
-        token = lines[0][lines[0].index("<!-- addressed:"):]
-        reply = comment("me", "User", f"Fixed. {token}\n\n{pr_watch.AGENT_MARK}", id=2, at="2026-01-02T00:00:00Z")
+        reply = comment("me", "User", "Fixed.", id=2, at="2026-01-02T00:00:00Z")
         status = {**comment("github-actions", "Bot", "Deployed", id=3), "updated_at": "2026-01-03T00:00:00Z"}
         for edited, expected in (
             ("2026-01-03T00:00:00Z", (1, [
@@ -405,18 +430,25 @@ class OnceVerdictTest(unittest.TestCase):
             with self.subTest(edited=edited):
                 github = GitHub("CLEAN")
                 github.comments = [{**qa, "updated_at": edited}, reply, status]
-                code, lines = self.poll(github)
-                self.assertEqual((code, [line.split(" <!-- addressed:")[0] for line in lines]), expected)
+                self.assertEqual(self.poll(github), expected)
 
-    def test_answering_one_top_level_item_does_not_close_another(self) -> None:
-        first = comment("someone", "User", "Which branch?", id=4)
-        second = comment("someone", "User", "Which revision?", id=5)
-        _, lines = self.poll(self.with_comments(first, second))
-        token = lines[0][lines[0].index("<!-- addressed:"):]
-        response = comment("me", "User", f"main. {token}\n{pr_watch.AGENT_MARK}", id=6)
-        code, out = self.poll(self.with_comments(first, second, response))
+    def test_only_feedback_after_the_viewers_last_word_holds_ready(self) -> None:
+        question = comment("pr-author", "User", "Which revision?", id=5)
+        github = self.with_comments(question)
+        github.pr["user"] = question["user"]
+        watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=False)
+        self.assertEqual(self.poll(github, watcher)[0], 1)
+        self.assertEqual(self.poll(github, watcher), (None, []))
+        self.assertEqual(self.poll(github)[0], 1)  # Delivery was not an answer.
+        reply = comment("me", "User", "The revision on dev.", id=6)
+        github.reviews.append({**reply, "state": "COMMENTED", "submitted_at": "2026-01-02T00:00:00Z"})
+        self.assertEqual(self.poll(github)[0], 0)
+        review = github.reviews[0]
+        review.update(body="Why was it reverted?", lastEditedAt="2026-01-03T00:00:00Z")
+        code, lines = self.poll(github, watcher)
         self.assertEqual(code, 1)
-        self.assertEqual([line.split(": ", 1)[1].split(" https:")[0] for line in out[:-1]], ["Which revision?"])
+        self.assertIn("Why was it reverted?", lines[0])
+        self.assertEqual(self.poll(github)[0], 1)
 
     def test_rate_limited_once_returns_wait_without_sleeping(self) -> None:
         github = GitHub("CLEAN")
@@ -503,8 +535,7 @@ class OnceVerdictTest(unittest.TestCase):
             (True, [asked, pending]),
         ):
             with self.subTest(resolved=resolved):
-                code, lines = self.poll(replied_pr(submitted=False, resolved=resolved))
-                self.assertEqual((code, [line.split(" <!-- addressed:")[0] for line in lines]),
+                self.assertEqual(self.poll(replied_pr(submitted=False, resolved=resolved)),
                                  (1, [*expected, f"ACTION {REPO}#{NUMBER} @ {HEAD}"]))
 
     def test_submitted_reply_settles_only_its_thread(self) -> None:
@@ -528,9 +559,16 @@ class OnceVerdictTest(unittest.TestCase):
         github.comments = []
         self.assertEqual(self.poll(github)[0], 0)
         github.resolved[1] = False
+        read = pr_watch.graphql
+
+        def unread_threads(query: str, **variables: Any) -> Any:
+            if query == pr_watch.THREADS:
+                raise pr_watch.GhError("unavailable")
+            return read(query, **variables)
+
         for blocked in (True, False):
             with mock.patch.object(pr_watch.BUDGET, "low", return_value=blocked), mock.patch.object(
-                pr_watch, "graphql", side_effect=pr_watch.GhError("unavailable")
+                pr_watch, "graphql", side_effect=unread_threads
             ):
                 code, lines = self.poll(github)
             self.assertEqual(code, 3)
