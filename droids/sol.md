@@ -1,6 +1,6 @@
 ---
 name: sol
-description: GPT-6.2 Sol for mining, investigation, and fast first-principles drafts.
+description: GPT-6.2 Sol for mining and investigation, NOT design.
 model: gpt-6.2-sol
 reasoningEffort: high
 ---

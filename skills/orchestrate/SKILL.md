@@ -38,7 +38,7 @@ Staff every seat with a named droid from this list. Never staff with `worker` or
 - Fast and cheap: about a quarter of Astra's price per token
 - Strong miner: loads skills on its own, digs through past sessions with dsx, and reproduces a suspected defect before claiming it
 - Keeps observed, reproduced, and unmeasured apart
-- In design, reaches the right core but adds mechanism; pair it with an Opus or Fable for taste
+- Not a designer: it reaches the right core but adds mechanism. Give it the mining brief and let an Opus, Fable, or Astra design from its report
 
 ### Fable
 
