@@ -211,10 +211,10 @@ PLAN_JOB = "plan"
 RANK = {"fail": 3, "pending": 2, "gate": 2, "pass": 1, "cancelled": 0}
 MERGEABLE = {"CLEAN", "UNSTABLE", "HAS_HOOKS"}
 MAX_FAILED_POLLS = 10
-PROXY_AUTH = re.compile(r"proxy authentication required|(?:HTTP(?:/\d(?:\.\d)?)?|CONNECT tunnel failed, response)\s+407\b", re.I)
 TRANSIENT = re.compile(
     r"HTTP 5\d\d|timed? ?out|connection (reset|refused)|EOF|temporar|"
-    r"could not resolve host|TLS handshake|Something went wrong",
+    r"could not resolve host|TLS handshake|Something went wrong|proxy authentication required|"
+    r"(?:HTTP(?:/\d(?:\.\d)?)?|CONNECT tunnel failed, response)\s+407\b",
     re.IGNORECASE,
 )
 # GitHub words its secondary limit as abuse detection too, with a 403.
@@ -263,10 +263,6 @@ FULL_EVERY = 6
 
 class GhError(Exception):
     pass
-
-
-class ProxyReadError(GhError):
-    """The proxy still refused this read after its short retry budget."""
 
 
 def log(message: str) -> None:
@@ -347,12 +343,8 @@ def wait_for_rate_limit() -> None:
     remaining: sleep until its reset. Any other match is GitHub's secondary
     limit, which no bucket reports and which lifts within about a minute, so
     sleeping to a primary reset would blind the watcher for an hour."""
-    try:
-        core = json.loads(gh("api", "rate_limit"))["resources"]["core"]
-    except ProxyReadError:
-        raise
-    except GhError:
-        core = {}
+    proc = subprocess.run(["gh", "api", "rate_limit"], check=False, capture_output=True, text=True)
+    core = json.loads(proc.stdout)["resources"]["core"] if proc.returncode == 0 else {}
     if core.get("remaining") == 0:
         delay = min(max(core["reset"] - int(time.time()), 0) + 5, 3600)
         log(f"GitHub rate limit spent; sleeping {delay}s until it resets")
@@ -363,31 +355,28 @@ def wait_for_rate_limit() -> None:
 
 
 def read_command(command: list[str], label: str, *, unchanged: bool = False, timeout: int | None = None) -> str:
-    """Retry the same network read, never a poll or a write. Discard failed output."""
+    """Retry transient reads. Rate limits go to the poll owner."""
     delay = 2
     for attempt in range(5):
         proc = subprocess.run(
             command, check=False, capture_output=True, text=True, timeout=timeout
         )
-        if proc.returncode == 0:
+        if proc.returncode == 0 or (unchanged and "HTTP 304" in proc.stderr):
             return proc.stdout
         message = (
-            proc.stderr.strip().splitlines() or [f"gh exited {proc.returncode}"]
+            proc.stderr.strip().splitlines() or [f"{command[0]} exited {proc.returncode}"]
         )[-1]
-        if PROXY_AUTH.search(proc.stderr):
-            if attempt >= 2:
-                raise ProxyReadError(f"{label}: proxy authentication required")
-        elif unchanged and "HTTP 304" in proc.stderr:
-            return proc.stdout
-        elif command[0] != "gh" or RATE_LIMITED.search(proc.stderr) or not TRANSIENT.search(proc.stderr) or attempt >= 4:
+        if not RATE_LIMITED.search(proc.stderr) and TRANSIENT.search(proc.stderr) and attempt < 4:
+            log(f"{label}: {message}; retrying in {delay}s")
+            time.sleep(delay)
+            delay *= 2
+        else:
             raise GhError(message)
-        log(f"{label}: {message}; retrying in {delay}s")
-        time.sleep(delay)
-        delay *= 2
-    raise GhError("gh kept failing")
+    raise GhError(f"{label} kept failing")
 
 
 def gh(*args: str, unchanged: bool = False) -> str:
+    # With unchanged, a 304 answers like a success: gh exits 1 on it.
     return read_command(["gh", *args], f"gh {' '.join(args[:2])}", unchanged=unchanged)
 
 
@@ -705,8 +694,7 @@ class Watcher:
         tmp.replace(self.state_path)
 
     def finish(self, verdict: str, detail: str, code: int) -> NoReturn:
-        if verdict != "ERROR":
-            self.rest.save()
+        self.rest.save()
         for key, line in self.events:
             print(line, flush=True)
             self.reported.add(key)
@@ -865,6 +853,8 @@ class Watcher:
             )
         except subprocess.TimeoutExpired as error:
             raise GhError("git ls-remote timed out") from error
+        except GhError as error:
+            raise GhError(f"git ls-remote: {error}") from error
         found = {ref: sha for sha, ref in (line.split("\t") for line in output.splitlines())}
         if found.get(base) != pr["base"]["sha"] or (own and refs[-1] not in found):
             return None
@@ -884,8 +874,6 @@ class Watcher:
                 if not threads["pageInfo"]["hasNextPage"]:
                     break
                 after = {"after": threads["pageInfo"]["endCursor"]}
-        except ProxyReadError:
-            raise
         except GhError as error:
             log(f"thread resolution unread: {error}")
             return {}
@@ -1228,15 +1216,11 @@ class Watcher:
                     if self.once:
                         self.events = []
                         self.finish("WAIT", f"GitHub rate limited this read: {error}", 3)
-                    try:
-                        wait_for_rate_limit()
-                    except ProxyReadError as proxy:
-                        self.events = []
-                        self.finish("ERROR", f"GitHub failed: {proxy}", 2)
+                    wait_for_rate_limit()
                     continue
                 failures += 1
                 log(f"poll failed ({failures}/{MAX_FAILED_POLLS}): {error}")
-                if self.once or isinstance(error, ProxyReadError) or failures >= MAX_FAILED_POLLS:
+                if self.once or failures >= MAX_FAILED_POLLS:
                     self.events = []
                     self.finish("ERROR", f"GitHub failed: {error}", 2)
             self.sleep()

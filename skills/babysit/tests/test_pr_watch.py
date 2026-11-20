@@ -835,38 +835,38 @@ class OnceVerdictTest(unittest.TestCase):
 
 
 class ProxyReadTest(unittest.TestCase):
-    def test_proxy_407_retries_the_same_read_and_never_uses_partial_output(self) -> None:
-        watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=True)
-        pr = GitHub("CLEAN").pr
-        refs = f"{HEAD}\trefs/pull/7/head\n{HEAD}\trefs/heads/feat\n{pr['base']['sha']}\trefs/heads/{pr['base']['ref']}\n"
-        for kind in ("api", "remote"):
-            command = mock.Mock(side_effect=[
-                subprocess.CompletedProcess([], 1, "partial", "Proxy Authentication Required"),
-                subprocess.CompletedProcess([], 1, "", "CONNECT tunnel failed, response 407"),
-                subprocess.CompletedProcess([], 0, "fresh" if kind == "api" else refs, ""),
-            ])
-            with self.subTest(kind=kind), mock.patch.object(pr_watch.subprocess, "run", command), mock.patch.object(pr_watch.time, "sleep") as sleep:
-                result = pr_watch.gh("api", "--include", RULES) if kind == "api" else watcher.remote_head(pr)
-                self.assertEqual(result, "fresh" if kind == "api" else HEAD)
-                self.assertEqual(command.call_args_list, [command.call_args] * 3)
-                self.assertEqual(sleep.call_args_list, [mock.call(2), mock.call(4)])
+    def test_standing_watcher_survives_a_failed_poll_then_alternating_407s(self) -> None:
+        github = GitHub("CLEAN")
+        calls: list[list[str]] = []
 
-    def test_proxy_exhaustion_is_error_not_a_verdict_or_an_outer_retry(self) -> None:
-        failure = subprocess.CompletedProcess([], 1, "partial", "gh: Proxy Authentication Required (HTTP 407)")
+        def run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+            calls.append(command)
+            # The first read exhausts all five attempts. Thereafter every other call fails.
+            if len(calls) <= 5 or len(calls) % 2 == 0:
+                message = "CONNECT tunnel failed, response 407" if command[0] == "git" else "Proxy Authentication Required"
+                return subprocess.CompletedProcess(command, 1, "", message)
+            if command[0] == "git":
+                return github.ls_remote(command)
+            return subprocess.CompletedProcess(command, 0, github.gh(*command[1:], unchanged=True), "")
+
         with tempfile.TemporaryDirectory() as root, mock.patch.object(pr_watch, "STATE_DIR", Path(root)):
-            for once in (True, False):
-                watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=once)
-                watcher.rest.path.write_text('{"previous": {}}')
-                with (
-                    self.subTest(once=once), mock.patch.object(pr_watch.subprocess, "run", return_value=failure),
-                    mock.patch.object(pr_watch.time, "sleep") as sleep,
-                    mock.patch.object(watcher, "sleep", side_effect=AssertionError("outer retry")),
-                    self.assertRaises(SystemExit) as exit,
-                ):
-                    watcher.run()
-                self.assertEqual(exit.exception.code, 2)
-                self.assertEqual(sleep.call_args_list, [mock.call(2), mock.call(4)])
-                self.assertEqual(watcher.rest.path.read_text(), '{"previous": {}}')
+            watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=False)
+            out = io.StringIO()
+            with (
+                mock.patch.object(pr_watch.subprocess, "run", side_effect=run),
+                mock.patch.object(pr_watch.time, "sleep"),
+                mock.patch.object(pr_watch, "BUDGET", pr_watch.Budget()),
+                mock.patch.object(pr_watch.time, "time", return_value=NOW),
+                mock.patch.object(watcher, "sleep", side_effect=[None, None, AssertionError("third poll did not reach READY")]) as between_polls,
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()),
+                self.assertRaises(SystemExit) as exit,
+            ):
+                watcher.run()
+        self.assertEqual((exit.exception.code, out.getvalue().splitlines()[-1]), (0, f"READY {REPO}#{NUMBER} @ {HEAD}"))
+        self.assertEqual(between_polls.call_count, 2)  # failed poll, then first green snapshot
+        self.assertEqual(calls[:5], [calls[0]] * 5)
+        self.assertEqual(calls[5::2], calls[6::2])  # retry each failed read, including ls-remote
+        self.assertIn("git", [command[0] for command in calls])
 
 
 class RequiredChecksErrorTest(unittest.TestCase):
