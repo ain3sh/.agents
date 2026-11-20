@@ -834,6 +834,41 @@ class OnceVerdictTest(unittest.TestCase):
         ]))
 
 
+class ProxyReadTest(unittest.TestCase):
+    def test_standing_watcher_survives_a_failed_poll_then_alternating_407s(self) -> None:
+        github = GitHub("CLEAN")
+        calls: list[list[str]] = []
+
+        def run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+            calls.append(command)
+            # The first read exhausts all five attempts. Thereafter every other call fails.
+            if len(calls) <= 5 or len(calls) % 2 == 0:
+                message = "CONNECT tunnel failed, response 407" if command[0] == "git" else "Proxy Authentication Required"
+                return subprocess.CompletedProcess(command, 1, "", message)
+            if command[0] == "git":
+                return github.ls_remote(command)
+            return subprocess.CompletedProcess(command, 0, github.gh(*command[1:], unchanged=True), "")
+
+        with tempfile.TemporaryDirectory() as root, mock.patch.object(pr_watch, "STATE_DIR", Path(root)):
+            watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=False)
+            out = io.StringIO()
+            with (
+                mock.patch.object(pr_watch.subprocess, "run", side_effect=run),
+                mock.patch.object(pr_watch.time, "sleep"),
+                mock.patch.object(pr_watch, "BUDGET", pr_watch.Budget()),
+                mock.patch.object(pr_watch.time, "time", return_value=NOW),
+                mock.patch.object(watcher, "sleep", side_effect=[None, None, AssertionError("third poll did not reach READY")]) as between_polls,
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()),
+                self.assertRaises(SystemExit) as exit,
+            ):
+                watcher.run()
+        self.assertEqual((exit.exception.code, out.getvalue().splitlines()[-1]), (0, f"READY {REPO}#{NUMBER} @ {HEAD}"))
+        self.assertEqual(between_polls.call_count, 2)  # failed poll, then first green snapshot
+        self.assertEqual(calls[:5], [calls[0]] * 5)
+        self.assertEqual(calls[5::2], calls[6::2])  # retry each failed read, including ls-remote
+        self.assertIn("git", [command[0] for command in calls])
+
+
 class RequiredChecksErrorTest(unittest.TestCase):
     def setUp(self) -> None:
         patcher = mock.patch.object(pr_watch, "BUDGET", pr_watch.Budget())

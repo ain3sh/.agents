@@ -213,7 +213,8 @@ MERGEABLE = {"CLEAN", "UNSTABLE", "HAS_HOOKS"}
 MAX_FAILED_POLLS = 10
 TRANSIENT = re.compile(
     r"HTTP 5\d\d|timed? ?out|connection (reset|refused)|EOF|temporar|"
-    r"could not resolve host|TLS handshake|Something went wrong",
+    r"could not resolve host|TLS handshake|Something went wrong|proxy authentication required|"
+    r"(?:HTTP(?:/\d(?:\.\d)?)?|CONNECT tunnel failed, response)\s+407\b",
     re.IGNORECASE,
 )
 # GitHub words its secondary limit as abuse detection too, with a 403.
@@ -353,26 +354,30 @@ def wait_for_rate_limit() -> None:
     time.sleep(delay)
 
 
-def gh(*args: str, unchanged: bool = False) -> str:
-    """Run gh, retrying transient failures. Rate limits go to the poll owner. With
-    unchanged, a 304 answers like a success: gh exits 1 on it."""
+def read_command(command: list[str], label: str, *, unchanged: bool = False, timeout: int | None = None) -> str:
+    """Retry transient reads. Rate limits go to the poll owner."""
     delay = 2
     for attempt in range(5):
         proc = subprocess.run(
-            ["gh", *args], check=False, capture_output=True, text=True
+            command, check=False, capture_output=True, text=True, timeout=timeout
         )
         if proc.returncode == 0 or (unchanged and "HTTP 304" in proc.stderr):
             return proc.stdout
         message = (
-            proc.stderr.strip().splitlines() or [f"gh exited {proc.returncode}"]
+            proc.stderr.strip().splitlines() or [f"{command[0]} exited {proc.returncode}"]
         )[-1]
         if not RATE_LIMITED.search(proc.stderr) and TRANSIENT.search(proc.stderr) and attempt < 4:
-            log(f"gh {' '.join(args[:2])}: {message}; retrying in {delay}s")
+            log(f"{label}: {message}; retrying in {delay}s")
             time.sleep(delay)
             delay *= 2
         else:
             raise GhError(message)
-    raise GhError("gh kept failing")
+    raise GhError(f"{label} kept failing")
+
+
+def gh(*args: str, unchanged: bool = False) -> str:
+    # With unchanged, a 304 answers like a success: gh exits 1 on it.
+    return read_command(["gh", *args], f"gh {' '.join(args[:2])}", unchanged=unchanged)
 
 
 def graphql(query: str, **variables: str | int) -> Json:
@@ -841,16 +846,16 @@ class Watcher:
         if own:
             refs.append(f"refs/heads/{pr['head']['ref']}")
         try:
-            proc = subprocess.run(
+            output = read_command(
                 ["git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
                  "ls-remote", f"https://github.com/{self.repo}.git", *refs],
-                check=False, capture_output=True, text=True, timeout=120,
+                "git ls-remote", timeout=120,
             )
         except subprocess.TimeoutExpired as error:
             raise GhError("git ls-remote timed out") from error
-        if proc.returncode:
-            raise GhError(f"git ls-remote: {(proc.stderr.strip().splitlines() or ['failed'])[-1]}")
-        found = {ref: sha for sha, ref in (line.split("\t") for line in proc.stdout.splitlines())}
+        except GhError as error:
+            raise GhError(f"git ls-remote: {error}") from error
+        found = {ref: sha for sha, ref in (line.split("\t") for line in output.splitlines())}
         if found.get(base) != pr["base"]["sha"] or (own and refs[-1] not in found):
             return None
         return found.get(refs[0])
