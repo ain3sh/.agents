@@ -834,6 +834,41 @@ class OnceVerdictTest(unittest.TestCase):
         ]))
 
 
+class ProxyReadTest(unittest.TestCase):
+    def test_proxy_407_retries_the_same_read_and_never_uses_partial_output(self) -> None:
+        watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=True)
+        pr = GitHub("CLEAN").pr
+        refs = f"{HEAD}\trefs/pull/7/head\n{HEAD}\trefs/heads/feat\n{pr['base']['sha']}\trefs/heads/{pr['base']['ref']}\n"
+        for kind in ("api", "remote"):
+            command = mock.Mock(side_effect=[
+                subprocess.CompletedProcess([], 1, "partial", "Proxy Authentication Required"),
+                subprocess.CompletedProcess([], 1, "", "CONNECT tunnel failed, response 407"),
+                subprocess.CompletedProcess([], 0, "fresh" if kind == "api" else refs, ""),
+            ])
+            with self.subTest(kind=kind), mock.patch.object(pr_watch.subprocess, "run", command), mock.patch.object(pr_watch.time, "sleep") as sleep:
+                result = pr_watch.gh("api", "--include", RULES) if kind == "api" else watcher.remote_head(pr)
+                self.assertEqual(result, "fresh" if kind == "api" else HEAD)
+                self.assertEqual(command.call_args_list, [command.call_args] * 3)
+                self.assertEqual(sleep.call_args_list, [mock.call(2), mock.call(4)])
+
+    def test_proxy_exhaustion_is_error_not_a_verdict_or_an_outer_retry(self) -> None:
+        failure = subprocess.CompletedProcess([], 1, "partial", "gh: Proxy Authentication Required (HTTP 407)")
+        with tempfile.TemporaryDirectory() as root, mock.patch.object(pr_watch, "STATE_DIR", Path(root)):
+            for once in (True, False):
+                watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=once)
+                watcher.rest.path.write_text('{"previous": {}}')
+                with (
+                    self.subTest(once=once), mock.patch.object(pr_watch.subprocess, "run", return_value=failure),
+                    mock.patch.object(pr_watch.time, "sleep") as sleep,
+                    mock.patch.object(watcher, "sleep", side_effect=AssertionError("outer retry")),
+                    self.assertRaises(SystemExit) as exit,
+                ):
+                    watcher.run()
+                self.assertEqual(exit.exception.code, 2)
+                self.assertEqual(sleep.call_args_list, [mock.call(2), mock.call(4)])
+                self.assertEqual(watcher.rest.path.read_text(), '{"previous": {}}')
+
+
 class RequiredChecksErrorTest(unittest.TestCase):
     def setUp(self) -> None:
         patcher = mock.patch.object(pr_watch, "BUDGET", pr_watch.Budget())

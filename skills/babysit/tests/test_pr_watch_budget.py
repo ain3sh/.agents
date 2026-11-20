@@ -73,7 +73,7 @@ class RateLimitSleepTest(unittest.TestCase):
             contextlib.redirect_stderr(io.StringIO()),
         ):
             pr_watch.wait_for_rate_limit()
-        run.assert_called_once_with(["gh", "api", "rate_limit"], check=False, capture_output=True, text=True)
+        run.assert_called_once_with(["gh", "api", "rate_limit"], check=False, capture_output=True, text=True, timeout=None)
         return sleep.call_args.args[0]
 
     def test_spent_primary_limit_sleeps_until_reset_with_a_one_hour_cap(self) -> None:
