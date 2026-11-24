@@ -31,6 +31,7 @@
 
 <skills>
 - I wrote my skills to help you. Load each one at the moment it applies, before the first tool call of that phase, and name the ones a subagent should load in its brief. A needless load costs a few hundred tokens; a missed one costs the task.
+- Skills state the why and the what and leave the how to judgment; a how belongs in one only as a tool that does a mechanical job every agent would otherwise rebuild (a PR watcher, not a replay recipe), and test records never live in a skill, where they become the target later edits overfit to.
 - Tool skills (slack-cli, pr-description, voice, ...) fire on their own. The thinking skills don't, and long runs drift back to old habits, so bind these to their moments:
 
 | Moment | Load |
