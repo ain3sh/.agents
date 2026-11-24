@@ -653,8 +653,18 @@ class OnceVerdictTest(unittest.TestCase):
             self.assertEqual(self.poll(github)[1][-1].split()[0], "ACTION")
 
     def test_only_completed_dossier_for_this_pr_and_head_authorizes_fixing(self) -> None:
+        reviewed, fix, later = "1" * 40, "2" * 40, HEAD
+        # reviewed <- fix <- later; BASE_OID is unrelated.
+        history = {(reviewed, fix), (reviewed, later), (fix, later)}
+
         with tempfile.TemporaryDirectory() as tmp:
-            self.remote.return_value = subprocess.CompletedProcess([], 0, tmp+"\n")
+            def git(argv, **_):
+                if argv[1:3] == ["merge-base", "--is-ancestor"]:
+                    old, new = argv[3:5]
+                    return subprocess.CompletedProcess(argv, 0 if old == new or (old, new) in history else 1)
+                return subprocess.CompletedProcess(argv, 0, tmp + "\n")
+
+            self.remote.side_effect = git
             dossier = Path(tmp) / ".agents/review.md"
             dossier.parent.mkdir()
             text = f"# PR {NUMBER} — Change\n\nrepo: {REPO}\nreviewed_head: {HEAD}\nmode: ground-up\nverdict: COMMENT\n\n## Reference design\nOne owner.\n"
@@ -664,6 +674,12 @@ class OnceVerdictTest(unittest.TestCase):
                 self.assertFalse(pr_watch.ground_up_complete(REPO, NUMBER, HEAD), (old, new))
             dossier.write_text(text)
             self.assertTrue(pr_watch.ground_up_complete(REPO, NUMBER, HEAD))
+            # Fix commits on a reviewed head need no second pass, until a bot
+            # finds something on one of them.
+            dossier.write_text(text.replace(HEAD, reviewed))
+            self.assertTrue(pr_watch.ground_up_complete(REPO, NUMBER, later, {reviewed}))
+            self.assertFalse(pr_watch.ground_up_complete(REPO, NUMBER, later, {reviewed, fix}))
+            self.assertFalse(pr_watch.ground_up_complete(REPO, NUMBER, BASE_OID))
 
     def test_bot_owned_pr_counts_only_actual_post_review_push_tips(self) -> None:
         github = GitHub("CLEAN")
