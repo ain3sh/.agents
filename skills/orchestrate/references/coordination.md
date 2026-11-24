@@ -63,12 +63,18 @@ summaries.
 **Build**
 
 1. **Build:** fan out builders extensively.
-2. **Attack:** fan out attackers extensively, incrementally or at the end.
+2. **Attack:** fan out attackers, incrementally or at the end: Sols by
+   default, an Astra for a very extensive or complex surface. Split the
+   surface into independent slices, one seat each, so breadth costs wall time
+   once; two seats on one slice is waste.
 3. **Fix:** reuse builders for minor issues; start fresh ones for extensive
    issues. When a round's fixes would add more mechanism than they remove,
    stop fixing and send that part back through Design with the findings as
    constraints.
 4. **Review:** attackers confirm their issues are fixed, then review-pr
-   subagents (Astras and Opuses) review. Loop with Fix until clean.
+   subagents (Astras and Opuses) review. Loop with Fix until clean. Each
+   round attacks the whole diff against the base with fresh attack seats,
+   staffed as in step 2: a resumed seat keeps its old scope, and a review of
+   the latest push cannot see what a fix moved under callers it left alone.
 5. **Finish:** report what was done, how, and the deliverables, with a
    show-me view; add a design-doc for very complex campaigns.

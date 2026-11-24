@@ -26,7 +26,8 @@ Staff every seat with a named droid from this list. Never staff with `worker` or
 
 ### Astra
 
-- Best in the world at live QA, computer use, etc.
+- Best in the world at computer use, and the QA seat for very extensive or
+  complex surfaces
 - Extremely thorough at mining information / swaths of data sources
 - Great at adversarial testing, attacking code, and rigorous reviews
 - Terrible at designing UI/UX but great at probing
@@ -37,6 +38,7 @@ Staff every seat with a named droid from this list. Never staff with `worker` or
 
 - Fast and cheap: about a quarter of Astra's price per token
 - Strong miner: loads skills on its own, digs through past sessions with dsx, and reproduces a suspected defect before claiming it
+- Default QA and attack seat: cheap enough to run many in parallel
 - Keeps observed, reproduced, and unmeasured apart
 - Not a designer: it reaches the right core but adds mechanism. Give it the mining brief and let an Opus, Fable, or Astra design from its report
 
@@ -58,6 +60,10 @@ Staff every seat with a named droid from this list. Never staff with `worker` or
 
 - Provide verified, ground-truth context/facts, useful commands, etc., that you don't want it to rediscover.
 - Provide prime-directive, action-oriented *goals*, not a prescription on how.
+- For QA and attack seats, the goal is to break the change the way a user
+  could, across the whole diff against its base. Scenarios you list are the
+  floor, never the plan: a checklist of your own claims tests your framing,
+  not the code.
 - Provide hard constraints when you deem apt.
 - Provide a checkable definition of done.
 - Suggest or directly trigger skills freely.
@@ -84,6 +90,7 @@ Staff every seat with a named droid from this list. Never staff with `worker` or
 | Child rediscovered what you already knew, or returned narrative instead of evidence | The brief was missing facts or a checkable done ([prompting](#prompting)); fix it before resuming. |
 | Model unavailable, interrupted writer, or unclear ownership | Follow [coordination](references/coordination.md) before reassigning. |
 | Fresh edits invalidate QA | Re-run the checks those edits touch; keep the rest of the evidence. |
+| QA passed, then a reviewer or bot found a defect from the code alone | The brief listed your claims or scoped to the latest push; rerun fresh attackers on the whole diff with a goal brief. |
 
 ## References
 
