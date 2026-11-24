@@ -66,5 +66,3 @@ Load on demand; do not reabsorb into this file:
   finding coverage, canonical severity taxonomy, and final review sweep.
 - [references/anti-slop.md](references/anti-slop.md): pattern families with fixes
   and earned exceptions, reply ceremony, and before/after examples.
-- [references/replay.md](references/replay.md): scenarios, fixture, and grading
-  to rerun after editing this skill.

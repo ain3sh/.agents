@@ -66,14 +66,8 @@ A reread shows the text is clear, not that an agent acts on it. A replay answers
 What makes a run evidence:
 
 - **A control.** The old revision, or no skill when it is new, on the same brief with the skill as the only difference. Without it the skill takes credit for what the model does anyway, and a run that matches it means the edit changed nothing.
-- **A blind run.** A fresh subagent reads a copy of the skill by path, not through the Skill tool, without its `replay.md` and without any result the skill has since absorbed. A path, branch, or description that says `control` or `old` tells it which arm it is.
+- **A blind run.** A fresh subagent reads a copy of the skill by path, not through the Skill tool, without the scenarios' expected results or any result the skill has since absorbed. A path, branch, or description that says `control` or `old` tells it which arm it is.
 - **Actions, not reports.** Grade the diff and the decisions in the log. Have the run quote the lines that were unclear, wrong, or in its way: those are the next edit.
 - **A task it was not tuned on,** before saying the skill works beyond the one it was.
 
 Done when every scenario the edit added has run on both arms and the report says what each arm did. Keep the scenarios and results out of the skill: a checked-in answer key becomes the target later edits overfit to. A gap the runs leave, such as a skipped scenario or a case the fixture cannot tell apart, is the next run, not a line in the report: write the fixture that closes it and run it. Call a run "not run" only after trying it, and say what you tried.
-
-## References
-
-Load on demand; do not reabsorb into this file:
-
-- `references/replay.md`: the scenario, grading, and baseline for edits to this skill.
