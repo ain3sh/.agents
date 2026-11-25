@@ -175,7 +175,7 @@ Present it on the surface the session reports to:
 
 Either way:
 
-- State the intended verdict (`APPROVE` / `COMMENT`). Never propose `REQUEST_CHANGES` unless the user explicitly asks for that verdict type.
+- State the intended verdict (`APPROVE` / `COMMENT`). Never propose `REQUEST_CHANGES` unless the user explicitly asks for that verdict type or for **post-review**'s `for-dummies` shape (its §3).
 - **Do not use `AskUser`**: the user should be free to discuss, reword, drop, or re-severity findings.
 - **Wait for explicit confirmation.** Apply each user edit to the draft before handoff, and record it as a notes entry (`gate` for drops/rewording/verdict choice, `retier` for severity changes): the posted body never references this discussion, but the ledger keeps it.
 
