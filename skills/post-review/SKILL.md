@@ -9,7 +9,7 @@ The posting half of the review workflow. Findings come from an upstream `/review
 
 ## Act
 
-Usage: `/post-review [<PR-number-or-URL>] [for-dummies]`. `for-dummies` makes every gating thread carry a test the author must pass (§3).
+Usage: `/post-review [<PR-number-or-URL>] [for-dummies]`. `for-dummies` phrases each thread so a literal fixer cannot miss its invariant (§3).
 
 Default (`/post-review <PR>` alone): post the full approved review, every live finding at its approved tier (gating follows tier) plus a verdict that names every blocker, reconciled against the whole ledger (`./.agents/review.md` and all of `./.agents/review.notes.md`) before the first write. Use trailing text as instructions or pasted findings; only explicit subset selection narrows the default.
 
@@ -68,18 +68,13 @@ Attach a `suggestion` block only when **all** hold:
 
 Otherwise post the prose as a plain comment. Don't downgrade severity because a suggestion isn't attachable.
 
-### `for-dummies` bodies
+### `for-dummies` threads
 
-For an author, often an agent, that answers a comment's words rather than its invariant: it patches the cited case, adds a second mechanism beside the broken one, and resolves the thread as "fixed". Prose cannot stop that; a test it has to pass can. Use this shape when the user asks for it before the draft is approved. If they ask after approval, redraft and present it again, because the tests are substance the user approves.
+A phrasing gate for each thread, for an author (often an agent) that answers a comment's words rather than its invariant. It changes how a thread is written and nothing else in the review. Each thread states, plainly and in order:
 
-Every gating thread carries, in order:
-
-1. **Invariant**: one sentence stating what must hold, as behavior rather than implementation.
-2. **Done-test**: complete test code in a fenced block, headed by the exact path it goes in, built on that file's existing fixtures. It asserts the invariant through the production entry point, so any correct fix passes and a fix of only the cited case fails; include the sibling case the author would otherwise miss. Before it enters the body, run it in a review checkout (**worktree-setup** for dependencies; an untracked file deleted afterwards, per review-pr's `references/systems/workers.md`) and confirm it fails on `HEAD_SHA` at the finding's assertion, not on an import or compile error. Quote that failure line under the test. A test you could not run red is not a done-test: post that finding in the default shape and say in its body what stays unverified.
-3. **Cut**: the owning locus, what to replace there, and what must not appear in the fix (a new helper, retry, flag, or branch, or a second path beside the one named). When one fix depends on another, name the thread that lands first.
-4. **Contract**, ending the body: "Add the test unedited; done means it passes. Reply with `<sha> · <test name>` and leave this thread open: the reviewer resolves it after rerunning the test."
-
-The verdict's numbered asks name each done-test in landing order, and the review posts as `REQUEST_CHANGES` (§5). Non-gating threads keep the default shape.
+1. **Invariant**: what must hold, as behavior, in one sentence.
+2. **Fix**: the owning locus and the change there, and what must not appear in the fix (a new helper, retry, flag, or branch, or a second path beside the one named).
+3. **Verification test**, on a gating thread whose invariant a test can state: complete code under its exact path, built on that file's fixtures, asserting through the production entry point so a fix of only the cited case fails. Include it only after it fails on `HEAD_SHA` at the finding's assertion (**worktree-setup** for dependencies; an untracked file deleted afterwards, per review-pr's `references/systems/workers.md`), quote the failure line, and end with "Add this test unedited; done means it passes." Without a test, name the sibling case a correct fix must also cover.
 
 ### Verdict body
 
@@ -194,7 +189,7 @@ REVIEW_ID=$(gh api "repos/$REPO/pulls/<number>/reviews" \
 
 Verify with `publish.md`'s round-trip command, reading `repos/$REPO/pulls/<number>/reviews/$REVIEW_ID`; on any difference, fix it with `PUT` on that review and the same `-F body=@…`. `REVIEW_ID` feeds §6.
 
-The event is the verdict approved at the `/review-pr` gate -- don't recompute it here. Default to `COMMENT` when blockers gate or `APPROVE` otherwise; the number of blockers never changes the event. Use `REQUEST_CHANGES` only when the user explicitly requested that verdict type or the `for-dummies` shape (§3); never infer it from blocking findings. `APPROVE` with non-gating line comments (`suggestion`/`nit`) is legitimate per review-pr's `references/workflows/first-pass.md` §6.
+The event is the verdict approved at the `/review-pr` gate -- don't recompute it here. Default to `COMMENT` when blockers gate or `APPROVE` otherwise; the number of blockers never changes the event. Use `REQUEST_CHANGES` only when the user explicitly requested that verdict type; never infer it from blocking findings. `APPROVE` with non-gating line comments (`suggestion`/`nit`) is legitimate per review-pr's `references/workflows/first-pass.md` §6.
 
 ## 6. Close the Ledger
 
