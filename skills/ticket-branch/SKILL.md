@@ -22,7 +22,9 @@ description: Shared atom for creating or resolving a Linear ticket and checking 
   constraints, and discussion context. Do not chase deeper hierarchy unless the
   ticket explicitly depends on it. Use the provided ticket for branch naming.
 - **No ticket**: create one.
-  Discover teams with `linear t list --output json --compact --fields key,name`.
+  Team: the repo's routing guide decides (factory-mono:
+  `git show origin/dev:docs/triage-routing-guide.md`). Without one, pick from
+  `linear t list --output json --compact --fields key,name`.
   Default priority: 3 (medium).
 
   **Write a meaningful description** before creating. The description should include:
