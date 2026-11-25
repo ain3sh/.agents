@@ -9,7 +9,7 @@ The posting half of the review workflow. Findings come from an upstream `/review
 
 ## Act
 
-Usage: `/post-review [<PR-number-or-URL>]`.
+Usage: `/post-review [<PR-number-or-URL>] [for-dummies]`. `for-dummies` phrases each thread so a literal fixer cannot miss its invariant (§3).
 
 Default (`/post-review <PR>` alone): post the full approved review, every live finding at its approved tier (gating follows tier) plus a verdict that names every blocker, reconciled against the whole ledger (`./.agents/review.md` and all of `./.agents/review.notes.md`) before the first write. Use trailing text as instructions or pasted findings; only explicit subset selection narrows the default.
 
@@ -67,6 +67,14 @@ Attach a `suggestion` block only when **all** hold:
 - Indentation matches the file (tabs vs spaces).
 
 Otherwise post the prose as a plain comment. Don't downgrade severity because a suggestion isn't attachable.
+
+### `for-dummies` threads
+
+A phrasing gate for each thread, for an author (often an agent) that answers a comment's words rather than its invariant. It changes how a thread is written and nothing else in the review. Each thread states, plainly and in order:
+
+1. **Invariant**: what must hold, as behavior, in one sentence.
+2. **Fix**: the owning locus and the change there, and what must not appear in the fix (a new helper, retry, flag, or branch, or a second path beside the one named).
+3. **Verification test**, on a gating thread whose invariant a test can state: complete code under its exact path, built on that file's fixtures, asserting through the production entry point so a fix of only the cited case fails. Include it only after it fails on `HEAD_SHA` at the finding's assertion (**worktree-setup** for dependencies; an untracked file deleted afterwards, per review-pr's `references/systems/workers.md`), quote the failure line, and end with "Add this test unedited; done means it passes." Without a test, name the sibling case a correct fix must also cover.
 
 ### Verdict body
 
