@@ -582,7 +582,8 @@ def ground_up_complete(repo: str, number: int, head: str,
                        finding_shas: Iterable[str] = ()) -> bool:
     """Read review-pr's existing dossier, not a second acknowledgement file.
     It covers its own head and the fixes built on it until a bot finding
-    lands on one of them: a small fix needs no second ground-up pass."""
+    lands on one of them: a small fix needs no second ground-up pass. Only
+    a ground-up pass writes *Reference design*; `mode:` names the last pass."""
     tree = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False)
     if tree.returncode:
         return False
@@ -596,7 +597,6 @@ def ground_up_complete(repo: str, number: int, head: str,
     return bool(
         re.match(rf"# PR {number}\b", header)
         and f"repo: {repo}" in header.splitlines()
-        and re.search(r"^mode: ground-up(?:\+crux)?$", header, re.M)
         and re.search(r"^verdict: (?:APPROVE|COMMENT)$", header, re.M)
         and design and design[1].strip() and design[1].strip().lower() != "none"
         and not design[1].lstrip().startswith("<")

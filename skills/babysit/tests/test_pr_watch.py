@@ -669,10 +669,13 @@ class OnceVerdictTest(unittest.TestCase):
             dossier.parent.mkdir()
             text = f"# PR {NUMBER} — Change\n\nrepo: {REPO}\nreviewed_head: {HEAD}\nmode: ground-up\nverdict: COMMENT\n\n## Reference design\nOne owner.\n"
             for old, new in ((HEAD, BASE_OID), (REPO, "other/repo"), ("PR 7", "PR 71"),
-                             ("ground-up", "first-pass"), ("COMMENT", "not yet issued"), ("One owner.", "none")):
+                             ("COMMENT", "not yet issued"), ("One owner.", "none")):
                 dossier.write_text(text.replace(old, new))
                 self.assertFalse(pr_watch.ground_up_complete(REPO, NUMBER, HEAD), (old, new))
             dossier.write_text(text)
+            self.assertTrue(pr_watch.ground_up_complete(REPO, NUMBER, HEAD))
+            # A follow-up on a ground-up review renames the mode and keeps the reference design.
+            dossier.write_text(text.replace("mode: ground-up", "mode: follow-up"))
             self.assertTrue(pr_watch.ground_up_complete(REPO, NUMBER, HEAD))
             # Fix commits on a reviewed head need no second pass, until a bot
             # finds something on one of them.
