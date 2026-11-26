@@ -22,9 +22,13 @@ description: Shared atom for creating or resolving a Linear ticket and checking 
   constraints, and discussion context. Do not chase deeper hierarchy unless the
   ticket explicitly depends on it. Use the provided ticket for branch naming.
 - **No ticket**: create one.
-  Team: the repo's routing guide decides (factory-mono:
-  `git show origin/dev:docs/triage-routing-guide.md`). Without one, pick from
-  `linear t list --output json --compact --fields key,name`.
+  Team: the repo's ticket routing guide decides, when it has one. Find it at the
+  default branch's tip and read it there:
+  ```bash
+  git ls-tree -r --name-only origin/HEAD | grep -iE '(routing|triage)[^/]*\.md$'
+  git show origin/HEAD:<path>
+  ```
+  Without one, pick from `linear t list --output json --compact --fields key,name`.
   Default priority: 3 (medium).
 
   **Write a meaningful description** before creating. The description should include:
@@ -43,7 +47,7 @@ description: Shared atom for creating or resolving a Linear ticket and checking 
   ```
 
 Extract from the ticket identifier:
-- **Team prefix**: the letters before the dash (e.g., `FAC`).
+- **Team prefix**: the letters before the dash (e.g., `ENG`).
 - **Issue number**: the digits after the dash (e.g., `456`).
 
 ## Create Branch
@@ -57,6 +61,6 @@ git checkout -b "<owner>/<prefix>-<number>-<stub>" "origin/$DEFAULT_BRANCH"
 - Derive `<stub>` from the ticket title: lowercase, hyphenated, ASCII-only.
 - **Full branch name must be <= 32 characters.** Truncate the stub to fit.
 - Replace `<owner>` with your branch namespace.
-- Example: `FAC-456 "Fix onboarding tooltip"` -> `team/fac-456-fix-onboard`
+- Example: `ENG-456 "Fix onboarding tooltip"` -> `team/eng-456-fix-onboard`
 
 
