@@ -38,7 +38,8 @@ the head sha that the verdict line ends with.
 Stdout carries event lines, then one verdict line; progress goes to stderr.
 
   READY   exit 0  approved; every check finished and every gating check passed;
-                  no unresolved review thread; no pending review; and GitHub
+                  no unresolved review thread; no pending review; no comment or
+                  review after the agent's last top-level word; and GitHub
                   reports it mergeable (CLEAN, HAS_HOOKS, or UNSTABLE), however
                   far the base moved
   MERGED  exit 0
@@ -87,6 +88,10 @@ Events
                 stays mergeable
   unresolved    otherwise ready, but review threads are unresolved, answered
                 and outdated ones included: they still block merging
+  unanswered    otherwise ready, but comments or reviews already reported still
+                post-date the agent's last top-level word, which they wait on;
+                once per head and set, so a restart that answered nothing on
+                the PR wakes again instead of holding silently
   (BLOCKED)     otherwise ready, but GitHub still reports BLOCKED: a wait, since
                 REST has no review decision and an approval branch protection
                 does not count yet (a code owner's is missing) looks the same
@@ -1205,6 +1210,14 @@ class Watcher:
 
         actions, waits = self.evaluate(pr, checks, gating, stable)
         current = feedback + advisory + actions
+        # Delivered feedback holds READY until the agent's next top-level word.
+        # Holding on it silently would strand a PR nothing else will move.
+        if feedback and not actions and not waits and all(k in self.reported for k, _ in feedback):
+            current.append((
+                f"unanswered:{head}:{sorted(k for k, _ in feedback)}",
+                f"unanswered: otherwise ready, but {len(feedback)} reported item(s) wait on your next "
+                f"top-level comment or review: {' '.join(line.rsplit(' ', 1)[-1] for _, line in feedback)}",
+            ))
         # A resolved thread can reopen without a new comment. Retire its wake
         # key on observed resolution, never merely because a check is settling.
         threads = pr["reviewThreads"]["nodes"]

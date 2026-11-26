@@ -438,6 +438,9 @@ class OnceVerdictTest(unittest.TestCase):
         github.pr["user"] = question["user"]
         watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=False)
         self.assertEqual(self.poll(github, watcher)[0], 1)
+        code, lines = self.poll(github, watcher)
+        self.assertEqual(code, 1)
+        self.assertTrue(lines[0].startswith("unanswered: otherwise ready, but 1 reported item(s)"), lines)
         self.assertEqual(self.poll(github, watcher), (None, []))
         self.assertEqual(self.poll(github)[0], 1)  # Delivery was not an answer.
         reply = comment("me", "User", "The revision on dev.", id=6)
@@ -450,6 +453,26 @@ class OnceVerdictTest(unittest.TestCase):
         self.assertIn("Why was it reverted?", lines[0])
         self.assertEqual(self.poll(github)[0], 1)
 
+    def test_reported_feedback_wakes_once_when_it_alone_holds_ready(self) -> None:
+        # factory-mono#38396: a bot notice edited after the agent's last word was
+        # reported while checks ran; once they passed, the watcher held silently.
+        qa = comment("factory-droid", "Bot", "<!-- qa-report -->\n## QA: SKIPPED (0 / 0)", id=9)
+        unanswered = (
+            "unanswered: otherwise ready, but 1 reported item(s) wait on your next "
+            f"top-level comment or review: {qa['html_url']}"
+        )
+        github = GitHub("CLEAN", checks=[check("lint")])
+        github.comments = [qa]
+        watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=False)
+        self.assertEqual(self.poll(github, watcher)[0], 1)
+        self.assertEqual(self.poll(github, watcher), (None, []))  # Checks still gate.
+        github.checks = [check(n) for n in REQUIRED]
+        self.assertEqual(self.poll(github, watcher), (None, []))  # Checks settling.
+        self.assertEqual(self.poll(github, watcher), (1, [unanswered, f"ACTION {REPO}#{NUMBER} @ {HEAD}"]))
+        watcher = pr_watch.Watcher(REPO, NUMBER, 300, once=False)
+        self.assertEqual(self.poll(github, watcher), (None, []))  # Reported once per set.
+        github.comments.append(comment("me", "User", "Ack: QA skipped.", id=10, at="2026-01-02T00:00:00Z"))
+        self.assertEqual(self.poll(github, watcher), (0, [f"READY {REPO}#{NUMBER} @ {HEAD}"]))
     def test_rate_limited_once_returns_wait_without_sleeping(self) -> None:
         github = GitHub("CLEAN")
         with mock.patch.object(github, "gh", side_effect=pr_watch.GhError("API rate limit exceeded")):
