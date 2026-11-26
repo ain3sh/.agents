@@ -202,14 +202,20 @@ PASSED = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 # The E2E workflow (factory-mono GHA-016) releases its required checks only for
 # a head with a reason to run E2E: a standing approval of that exact commit, or
 # one of ADMITTING_LABELS. Without one, PLAN_JOB of the head's newest E2E run
-# (titled E2E_RUN ...) runs NO_REASON_STEP and the required checks never report.
+# (titled E2E_RUN ...) runs its no-reason step and the required checks never report.
 # A reason that arrives later makes E2E Admit re-run that run, so only a PR still
 # without one stays unadmitted. Any approval satisfies GitHub's review gate, so a
 # push to an approved PR leaves E2E unadmitted with nothing else to say so.
-NO_REASON_STEP = "Found no reason to run E2E"
+# The workflow renamed that step when e2e:run became ci:run, and a re-run keeps
+# the revision that planned the run: NO_REASON_STEPS maps each name of the step
+# to the labels its revision reads, the one the remedy names first. A label in
+# ADMITTING_LABELS admits the head whichever revision planned its run.
+NO_REASON_STEPS = {
+    "Found no reason to run E2E yet": ("ci:run", "e2e:run", "release-bump", "hotfix-bump"),
+    "Found no reason to run E2E": ("e2e:run", "release-bump", "hotfix-bump"),
+}
 E2E_RUN = "E2E #"
-GATE_LABEL = "e2e:run"
-ADMITTING_LABELS = {GATE_LABEL, "release-bump", "hotfix-bump"}
+ADMITTING_LABELS = set.intersection(*map(set, NO_REASON_STEPS.values()))
 PLAN_JOB = "plan"
 # Worst run wins per name, except a cancelled run loses to any other run: a
 # concurrency group cancels the duplicate push or pull_request run of a job.
@@ -937,16 +943,18 @@ class Watcher:
             return set(checks)
         return required if landing == pr["baseRefName"] else required & set(checks)
 
-    def e2e_unadmitted(self, pr: Json) -> bool:
-        """Whether the head's newest E2E run found no reason to run E2E and
-        the live PR still gives none. A finished job never changes (a re-run
-        is a new job), so each job's steps are read once and kept."""
+    def admitting_label(self, pr: Json) -> str | None:
+        """The label that admits the head, when its newest E2E run found no
+        reason to run E2E and the live PR still gives none. A finished job
+        never changes (a re-run is a new job), so each job's steps are read
+        once and kept."""
         head = pr["headRefOid"]
-        if any(label["name"] in ADMITTING_LABELS for label in pr["labels"]["nodes"]) or any(
+        labels = {label["name"] for label in pr["labels"]["nodes"]}
+        if labels & ADMITTING_LABELS or any(
             r["state"] == "APPROVED" and (r["commit"] or {}).get("oid") == head
             for r in pr["latestOpinionatedReviews"]["nodes"]
         ):
-            return False
+            return None
         jobs = [
             self.rest.get(f"repos/{self.repo}/actions/jobs/{n['id']}", fresh=False)[0]
             for n in contexts(pr)["nodes"]
@@ -954,10 +962,16 @@ class Watcher:
         ]
         runs = [j for j in jobs if j["workflow_name"].startswith(E2E_RUN)]
         if not runs:
-            return False
+            return None
         newest = max(runs, key=lambda j: j["started_at"])
-        return any(
-            s["name"] == NO_REASON_STEP and s["conclusion"] == "success" for s in newest["steps"]
+        ran = {s["name"] for s in newest["steps"] if s["conclusion"] == "success"}
+        return next(
+            (
+                admitting[0]
+                for step, admitting in NO_REASON_STEPS.items()
+                if step in ran and labels.isdisjoint(admitting)
+            ),
+            None,
         )
 
     def required_checks(self, base: str) -> set[str]:
@@ -1118,12 +1132,12 @@ class Watcher:
                 (
                     f"e2e-unadmitted:{head}",
                     f"e2e-unadmitted ({len(gated)} checks): the approval is on an older commit, so E2E "
-                    f"will not run on this head: gh pr edit {self.number} --repo {self.repo} --add-label {GATE_LABEL}",
+                    f"will not run on this head: gh pr edit {self.number} --repo {self.repo} --add-label {checks[gated[0]]['label']}",
                 )
             )
         elif gated:
             waits.append(
-                f"E2E gate ({len(gated)} checks): runs once this head is approved or labelled {GATE_LABEL}"
+                f"E2E gate ({len(gated)} checks): runs once this head is approved or labelled {checks[gated[0]]['label']}"
             )
         if not approved:
             waits.append(
@@ -1164,8 +1178,8 @@ class Watcher:
             self.finish("CLOSED", pr["url"], 1)
         checks = collapse_checks(pr)
         gating = self.gating(pr, checks)
-        if self.e2e_unadmitted(pr):
-            checks |= {n: {"bucket": "gate", "url": ""} for n in gating - set(checks)}
+        if label := self.admitting_label(pr):
+            checks |= {n: {"bucket": "gate", "url": "", "label": label} for n in gating - set(checks)}
         # What only the agent can judge: a watcher wakes once on each, and
         # --once lists them without letting them set its verdict.
         advisory = [
