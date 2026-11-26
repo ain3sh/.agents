@@ -54,7 +54,7 @@
 - /orchestrate liberally to excess
 - you still are on the hook for what they produce
 - be harsh and aggressive when needed
-- a child follows its brief's procedure over general principles, so put the principles that bite at its moment (fix by cutting, verify against ground truth) and the skills to load in the brief; never rules or procedures of your own
+- a child follows its brief's procedure over general principles, so put the principles that bite at its moment (fix by cutting, verify against ground truth) and the skills to load in the brief, not a skill's procedure rewritten as your own
 </subagents>
 
 <decisions>

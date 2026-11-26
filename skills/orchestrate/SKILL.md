@@ -64,12 +64,12 @@ Staff every seat with a named droid from this list. Never staff with `worker` or
   could, across the whole diff against its base. Scenarios you list are the
   floor, never the plan: a checklist of your own claims tests your framing,
   not the code.
-- Pass on hard constraints from the user, a skill, or ground truth (a frozen
-  contract, one write owner per branch). Never invent one: a number you made
-  up (line cap, file count, seat quota, memory threshold) becomes the target
-  the seat optimizes in place of the quality it stood for.
-- Provide a checkable definition of done, stated as behaviour or evidence,
-  never size.
+- Provide hard constraints when you deem apt (sequencing, ownership, what the
+  seat must not break). Never turn a quality the skills judge, such as
+  smallness, into a number: a line cap or file count becomes the target the
+  seat optimizes in place of the quality.
+- Provide a checkable definition of done, in behaviour or evidence; size is
+  never done.
 - Name the skills for the seat's moments (quality-ship's `run-check` for
   checks, babysit for PR waits) instead of restating their procedure: a
   procedure in the brief overrides the skill with a worse copy.
