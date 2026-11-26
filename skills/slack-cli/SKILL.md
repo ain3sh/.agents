@@ -45,7 +45,7 @@ every review thread addressed and no approval yet is a review-request moment.
 | DM sends rate-limit or an upload is invisible | Follow [DMs and file sharing](ops/cli.md#dms-and-file-sharing-when-slck-hits-ratelimited). |
 | Markdown renders incorrectly | Use [Slack message formatting](ops/cli.md#slack-message-formatting). |
 | Reply is stiff or too terse to evaluate | Re-run [voice's reply checks](../voice/references/external-replies.md#preserve-substance-before-sending). |
-| Unsure whom to tag or where to post a PR | Use the diff-path table in [review requests](ops/review-request.md#channel-and-reviewer-scope). |
+| Unsure whom to tag or where to post a PR | Follow [channel and reviewer scope](ops/review-request.md#channel-and-reviewer-scope) in review requests. |
 | PR changed after the review post | Post nothing: a new head is no news to reviewers. Only a step that moves the review (an answer, a nudge, a new reviewer's request, an escalation) or the merge notice goes in the post's thread. |
 | PR merged after the review post | React `:merged:` on the post and reply in its thread with the merge commit ([delivery](ops/review-request.md#delivery)). |
 
