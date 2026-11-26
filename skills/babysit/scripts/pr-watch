@@ -200,14 +200,16 @@ RISK_VERDICT = re.compile(r"^## Risk Assessment: (.+)$", re.MULTILINE)
 RISK_HEAD = re.compile(r"(?:<!-- factory-pr-risk-scored-head: |Scored head `)([0-9a-f]{7,40})")
 PASSED = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 # The E2E workflow (factory-mono GHA-016) releases its required checks only for
-# a head with a reason to run E2E: an approval of that exact commit, or
-# GATE_LABEL. Without one, PLAN_JOB of the head's newest E2E run (titled E2E_RUN
-# ...) runs NO_REASON_STEP and the required checks never report. Any approval
-# satisfies GitHub's review gate, so a push to an approved PR leaves E2E
-# unadmitted with nothing else to say so.
+# a head with a reason to run E2E: a standing approval of that exact commit, or
+# one of ADMITTING_LABELS. Without one, PLAN_JOB of the head's newest E2E run
+# (titled E2E_RUN ...) runs NO_REASON_STEP and the required checks never report.
+# A reason that arrives later makes E2E Admit re-run that run, so only a PR still
+# without one stays unadmitted. Any approval satisfies GitHub's review gate, so a
+# push to an approved PR leaves E2E unadmitted with nothing else to say so.
 NO_REASON_STEP = "Found no reason to run E2E"
 E2E_RUN = "E2E #"
 GATE_LABEL = "e2e:run"
+ADMITTING_LABELS = {GATE_LABEL, "release-bump", "hotfix-bump"}
 PLAN_JOB = "plan"
 # Worst run wins per name, except a cancelled run loses to any other run: a
 # concurrency group cancels the duplicate push or pull_request run of a job.
@@ -779,10 +781,10 @@ class Watcher:
             self.review_snapshot = self.read_reviews()
         viewer, reviewed = self.review_snapshot
         pending = {r["databaseId"] for r in reviewed if r["state"] == "PENDING"}
-        latest: dict[str, str] = {}
+        latest: dict[str, Json] = {}
         for r in reviewed:
             if r["state"] in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED") and r["author"]:
-                latest[login(r)] = r["state"]
+                latest[login(r)] = r
         threads: dict[int, list[Json]] = {}
         for c in sorted(notes, key=lambda c: c["created_at"]):
             threads.setdefault(c.get("in_reply_to_id") or c["id"], []).append(c)
@@ -820,7 +822,9 @@ class Watcher:
             "mergeStateStatus": (p.get("mergeable_state") or "unknown").upper(),
             "reviewDecision": None,
             "labels": {"nodes": p["labels"]},
-            "latestOpinionatedReviews": {"nodes": [{"state": s} for s in latest.values() if s != "DISMISSED"]},
+            "latestOpinionatedReviews": {"nodes": [
+                {"state": r["state"], "commit": r["commit"]} for r in latest.values() if r["state"] != "DISMISSED"
+            ]},
             "commits": {"nodes": [{"commit": {"statusCheckRollup": {"contexts": {"nodes": [
                 *({"__typename": "CheckRun", "id": r["id"], "name": r["name"], "status": r["status"].upper(),
                    "conclusion": (r["conclusion"] or "").upper() or None, "detailsUrl": r["html_url"] or r["details_url"]}
@@ -934,10 +938,14 @@ class Watcher:
         return required if landing == pr["baseRefName"] else required & set(checks)
 
     def e2e_unadmitted(self, pr: Json) -> bool:
-        """Whether the head's newest E2E run found no reason to run E2E. A
-        finished job never changes (a re-run is a new job), so each job's
-        steps are read once and kept."""
-        if any(label["name"] == GATE_LABEL for label in pr["labels"]["nodes"]):
+        """Whether the head's newest E2E run found no reason to run E2E and
+        the live PR still gives none. A finished job never changes (a re-run
+        is a new job), so each job's steps are read once and kept."""
+        head = pr["headRefOid"]
+        if any(label["name"] in ADMITTING_LABELS for label in pr["labels"]["nodes"]) or any(
+            r["state"] == "APPROVED" and (r["commit"] or {}).get("oid") == head
+            for r in pr["latestOpinionatedReviews"]["nodes"]
+        ):
             return False
         jobs = [
             self.rest.get(f"repos/{self.repo}/actions/jobs/{n['id']}", fresh=False)[0]

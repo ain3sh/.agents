@@ -501,7 +501,8 @@ class OnceVerdictTest(unittest.TestCase):
         self.assertTrue(lines[0].startswith(f"risk-assessment Approve at {HEAD[:12]}: "), lines)
     def test_an_unadmitted_e2e_head_waits_for_review_or_names_the_label(self) -> None:
         # The head's newest E2E plan job ran its no-reason step: the required
-        # checks never report. Approved, that approval is on an older commit.
+        # checks never report. Approved with no reason left, that approval is
+        # on an older commit; an approval of the head is E2E Admit's re-run to wait for.
         e2e, other = check("plan"), check("plan", "neutral")
         rerun = {**check("plan"), "id": e2e["id"] + 1}
         skipped = check("test${{ needs.units-admit.outputs.wait }}", "skipped")
@@ -523,12 +524,16 @@ class OnceVerdictTest(unittest.TestCase):
             ("unapproved", False, [], [unadmitted], (3, [waiting, review])),
             ("approved on an older commit", True, [], [unadmitted], (1, [label])),
             ("labelled", True, [{"name": "e2e:run"}], [unadmitted], (3, [pending])),
+            ("release bump", True, [{"name": "release-bump"}], [unadmitted], (3, [pending])),
+            ("approved on this head", HEAD, [], [unadmitted], (3, [pending])),
             ("newest run released", True, [], [unadmitted, released], (3, [pending])),
             ("another workflow's plan", True, [], [tofu], (3, [pending])),
         ):
             with self.subTest(name=name):
                 runs = {unadmitted["id"]: e2e, released["id"]: rerun, tofu["id"]: other}
-                github = GitHub("CLEAN", approved=approved, checks=[check("lint"), skipped, *(runs[j["id"]] for j in plans)])
+                github = GitHub("CLEAN", approved=bool(approved), checks=[check("lint"), skipped, *(runs[j["id"]] for j in plans)])
+                if approved == HEAD:
+                    github.reviews[0]["commit_id"] = HEAD
                 github.pr["labels"] = labels
                 github.jobs = {j["id"]: j for j in plans}
                 code, lines = expected
