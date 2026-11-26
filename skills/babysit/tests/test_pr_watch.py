@@ -116,7 +116,7 @@ class GitHub:
         self.notes: list[Any] = []
         self.resolved: dict[int, bool] = {}
         self.heads: dict[str, list[Any]] = {}
-        self.annotations: dict[int, list[str]] = {}
+        self.jobs: dict[int, Any] = {}
 
     def body(self, url: str) -> Any:
         repo = f"repos/{REPO}"
@@ -134,9 +134,8 @@ class GitHub:
             return self.notes
         if url.startswith(f"{repo}/pulls?state=open&per_page=100&head=o:"):
             return self.heads.get(unquote(url.split("head=o:", 1)[1]), [])
-        if url.startswith(f"{repo}/check-runs/") and url.endswith("/annotations?per_page=100"):
-            run = int(url.split("/check-runs/", 1)[1].split("/")[0])
-            return [{"title": title} for title in self.annotations.get(run, [])]
+        if url.startswith(f"{repo}/actions/jobs/"):
+            return self.jobs[int(url.rsplit("/", 1)[1])]
         if url == RULES:
             return [
                 {"type": "deletion"},
@@ -500,27 +499,41 @@ class OnceVerdictTest(unittest.TestCase):
         code, lines = self.poll(github, watcher)
         self.assertEqual(code, 1)
         self.assertTrue(lines[0].startswith(f"risk-assessment Approve at {HEAD[:12]}: "), lines)
-    def test_the_e2e_gate_waits_whether_its_status_runs_fail_or_skip(self) -> None:
-        # New heads annotate plan and skip unrendered job names; old heads
-        # fail each status run with the same approval-gate annotation.
-        gate = [pr_watch.GATE_TITLE]
-        skipped = check("test${{ needs.plan.outputs.wait }}", "skipped")
-        waiting = "waiting: E2E gate (1 checks): runs once approved or labelled e2e:run"
+    def test_an_unadmitted_e2e_head_waits_for_review_or_names_the_label(self) -> None:
+        # The head's newest E2E plan job ran its no-reason step: the required
+        # checks never report. Approved, that approval is on an older commit.
+        e2e, other = check("plan"), check("plan", "neutral")
+        rerun = {**check("plan"), "id": e2e["id"] + 1}
+        skipped = check("test${{ needs.units-admit.outputs.wait }}", "skipped")
+
+        def job(id: int, workflow: str, no_reason: str, at: str = "2026-01-01T00:00:00Z") -> Any:
+            return {"id": id, "workflow_name": workflow, "started_at": at,
+                    "steps": [{"name": "Admit the head", "conclusion": "success"},
+                              {"name": pr_watch.NO_REASON_STEP, "conclusion": no_reason}]}
+
+        unadmitted = job(e2e["id"], "E2E #7 into dev: feat", "success")
+        released = job(rerun["id"], "E2E #7 into dev: feat", "skipped", "2026-01-02T00:00:00Z")
+        tofu = job(other["id"], "OpenTofu", "success")
+        waiting = "waiting: E2E gate (1 checks): runs once this head is approved or labelled e2e:run"
         review = "waiting: review: no approval"
         pending = "waiting: pending checks (1): test"
-        for name, approved, checks, notes, expected in (
-            ("plan notice", False, [check("lint"), check("plan"), skipped],
-             {check("plan")["id"]: gate}, [waiting, review]),
-            ("failed status run", False, [check("lint"), check("test", "failure")],
-             {check("test", "failure")["id"]: gate}, [waiting, review]),
-            ("no notice", False, [check("lint"), check("plan"), skipped], {}, [pending, review]),
-            ("approved", True, [check("lint"), check("plan"), skipped],
-             {check("plan")["id"]: gate}, [pending]),
+        label = ("e2e-unadmitted (1 checks): the approval is on an older commit, so E2E will not run "
+                 f"on this head: gh pr edit {NUMBER} --repo {REPO} --add-label e2e:run")
+        for name, approved, labels, plans, expected in (
+            ("unapproved", False, [], [unadmitted], (3, [waiting, review])),
+            ("approved on an older commit", True, [], [unadmitted], (1, [label])),
+            ("labelled", True, [{"name": "e2e:run"}], [unadmitted], (3, [pending])),
+            ("newest run released", True, [], [unadmitted, released], (3, [pending])),
+            ("another workflow's plan", True, [], [tofu], (3, [pending])),
         ):
             with self.subTest(name=name):
-                github = GitHub("CLEAN", approved=approved, checks=checks)
-                github.annotations = notes
-                self.assertEqual(self.poll(github), (3, [*expected, f"WAIT {REPO}#{NUMBER} @ {HEAD}"]))
+                runs = {unadmitted["id"]: e2e, released["id"]: rerun, tofu["id"]: other}
+                github = GitHub("CLEAN", approved=approved, checks=[check("lint"), skipped, *(runs[j["id"]] for j in plans)])
+                github.pr["labels"] = labels
+                github.jobs = {j["id"]: j for j in plans}
+                code, lines = expected
+                verdict = "ACTION" if code == 1 else "WAIT"
+                self.assertEqual(self.poll(github), (code, [*lines, f"{verdict} {REPO}#{NUMBER} @ {HEAD}"]))
 
     def test_pending_review_hides_replies_and_blocks_ready(self) -> None:
         url = f"https://github.com/{REPO}/pull/{NUMBER}"

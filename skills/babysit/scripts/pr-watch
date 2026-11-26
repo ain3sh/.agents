@@ -54,12 +54,13 @@ Stdout carries event lines, then one verdict line; progress goes to stderr.
 
 Events
   check-failed  a check failed on the head; the PR author's own decision
-                whether an optional failure is real. While a PR has neither
-                an approval nor the e2e:run label, the E2E workflow waits by
-                design, and its "E2E waits for approval" annotation says so:
-                on each failed status run (the older form), or as the plan
-                job's notice while the status jobs skip and their required
-                checks never report. Either is a wait, not a failure
+                whether an optional failure is real
+  e2e-unadmitted
+                the PR is approved, but the head's newest E2E run found no
+                reason to run E2E, so its required checks will never report:
+                the approval is on an older commit. The line names the label
+                command that admits the head; an unapproved PR's gate is a
+                wait for review instead
   comment, review
                 top-level feedback newer than the authenticated account's last
                 top-level comment or submitted review. Comments from CI and
@@ -198,13 +199,14 @@ DESC_BASE = re.compile(r"^<!-- pr-desc-base: ([0-9a-f]{7,40}) -->\r?$", re.MULTI
 RISK_VERDICT = re.compile(r"^## Risk Assessment: (.+)$", re.MULTILINE)
 RISK_HEAD = re.compile(r"(?:<!-- factory-pr-risk-scored-head: |Scored head `)([0-9a-f]{7,40})")
 PASSED = {"SUCCESS", "NEUTRAL", "SKIPPED"}
-# The E2E workflow waits by design until the PR has an approving review or this
-# label. It used to fail its status jobs, annotating each with GATE_TITLE; since
-# factory-mono#30901 its PLAN_JOB carries GATE_TITLE as a notice and the status
-# jobs skip, so their required checks never report (a skipped job's name is its
-# unrendered template, matching no required name). The match is the annotation,
-# not a check name, so a reworded gate fails loudly again.
-GATE_TITLE = "E2E waits for approval"
+# The E2E workflow (factory-mono GHA-016) releases its required checks only for
+# a head with a reason to run E2E: an approval of that exact commit, or
+# GATE_LABEL. Without one, PLAN_JOB of the head's newest E2E run (titled E2E_RUN
+# ...) runs NO_REASON_STEP and the required checks never report. Any approval
+# satisfies GitHub's review gate, so a push to an approved PR leaves E2E
+# unadmitted with nothing else to say so.
+NO_REASON_STEP = "Found no reason to run E2E"
+E2E_RUN = "E2E #"
 GATE_LABEL = "e2e:run"
 PLAN_JOB = "plan"
 # Worst run wins per name, except a cancelled run loses to any other run: a
@@ -628,10 +630,8 @@ def parse_target(raw: str, repo: str | None) -> tuple[str, int]:
     return repo, pr
 
 
-def bucket(node: Json, gates: set[str]) -> str:
+def bucket(node: Json) -> str:
     if node["__typename"] == "CheckRun":
-        if node["id"] in gates:
-            return "gate"
         if node["status"] != "COMPLETED":
             return "pending"
         if node["conclusion"] == "CANCELLED":
@@ -648,7 +648,7 @@ def contexts(pr: Json) -> Json:
     return (rollup or {}).get("contexts") or {"nodes": []}
 
 
-def collapse_checks(pr: Json, gates: set[str]) -> dict[str, Json]:
+def collapse_checks(pr: Json) -> dict[str, Json]:
     """One entry per check name with its pass, pending, gate, or fail bucket; a
     job's push and pull_request runs share a name, and either failing fails the
     job."""
@@ -656,7 +656,7 @@ def collapse_checks(pr: Json, gates: set[str]) -> dict[str, Json]:
     for node in contexts(pr)["nodes"]:
         name = node.get("name") or node.get("context")
         entry = {
-            "bucket": bucket(node, gates),
+            "bucket": bucket(node),
             "url": node.get("detailsUrl") or node.get("targetUrl") or "",
         }
         if name not in checks or RANK[entry["bucket"]] > RANK[checks[name]["bucket"]]:
@@ -933,32 +933,24 @@ class Watcher:
             return set(checks)
         return required if landing == pr["baseRefName"] else required & set(checks)
 
-    def gates(self, pr: Json) -> tuple[set[str], bool]:
-        """Whether the E2E approval gate is waiting (GATE_TITLE on a failed or
-        plan run of the head), and its failed runs. Asked only while the PR has
-        neither an approval nor the label, each run's conditionally on every poll:
-        a run can be rerequested or updated and gain annotations."""
-        if any(
-            r["state"] == "APPROVED" for r in pr["latestOpinionatedReviews"]["nodes"]
-        ) or any(label["name"] == GATE_LABEL for label in pr["labels"]["nodes"]):
-            return set(), False
-        runs = {
-            n["id"]: n["conclusion"] == "FAILURE"
+    def e2e_unadmitted(self, pr: Json) -> bool:
+        """Whether the head's newest E2E run found no reason to run E2E. A
+        finished job never changes (a re-run is a new job), so each job's
+        steps are read once and kept."""
+        if any(label["name"] == GATE_LABEL for label in pr["labels"]["nodes"]):
+            return False
+        jobs = [
+            self.rest.get(f"repos/{self.repo}/actions/jobs/{n['id']}", fresh=False)[0]
             for n in contexts(pr)["nodes"]
-            if n["__typename"] == "CheckRun"
-            and (n["conclusion"] == "FAILURE" or n["name"] == PLAN_JOB)
-        }
+            if n["__typename"] == "CheckRun" and n["name"] == PLAN_JOB and n["conclusion"] == "SUCCESS"
+        ]
+        runs = [j for j in jobs if j["workflow_name"].startswith(E2E_RUN)]
         if not runs:
-            return set(), False
-        annotated = {
-            run
-            for run in runs
-            if any(
-                a["title"] == GATE_TITLE
-                for a in self.rest.all(f"repos/{self.repo}/check-runs/{run}/annotations?per_page={PAGE}")
-            )
-        }
-        return {run for run in annotated if runs[run]}, bool(annotated)
+            return False
+        newest = max(runs, key=lambda j: j["started_at"])
+        return any(
+            s["name"] == NO_REASON_STEP and s["conclusion"] == "success" for s in newest["steps"]
+        )
 
     def required_checks(self, base: str) -> set[str]:
         """Required check names per base, so a required check that has not
@@ -1104,10 +1096,6 @@ class Watcher:
             waits.append(f"pending checks ({len(pending)}): {', '.join(pending[:5])}")
         elif not stable:
             waits.append("checks settling")
-        if gated:
-            waits.append(
-                f"E2E gate ({len(gated)} checks): runs once approved or labelled {GATE_LABEL}"
-            )
         if pr["isDraft"]:
             waits.append("draft")
         decision = pr["reviewDecision"]
@@ -1117,6 +1105,18 @@ class Watcher:
             and "APPROVED" in opinions
             and "CHANGES_REQUESTED" not in opinions
         )
+        if gated and approved:
+            actions.append(
+                (
+                    f"e2e-unadmitted:{head}",
+                    f"e2e-unadmitted ({len(gated)} checks): the approval is on an older commit, so E2E "
+                    f"will not run on this head: gh pr edit {self.number} --repo {self.repo} --add-label {GATE_LABEL}",
+                )
+            )
+        elif gated:
+            waits.append(
+                f"E2E gate ({len(gated)} checks): runs once this head is approved or labelled {GATE_LABEL}"
+            )
         if not approved:
             waits.append(
                 f"review: {(decision or 'no approval').lower().replace('_', ' ')}"
@@ -1154,10 +1154,9 @@ class Watcher:
             self.finish("MERGED", pr["url"], 0)
         if pr["state"] == "CLOSED":
             self.finish("CLOSED", pr["url"], 1)
-        failed, waiting = self.gates(pr)
-        checks = collapse_checks(pr, failed)
+        checks = collapse_checks(pr)
         gating = self.gating(pr, checks)
-        if waiting:
+        if self.e2e_unadmitted(pr):
             checks |= {n: {"bucket": "gate", "url": ""} for n in gating - set(checks)}
         # What only the agent can judge: a watcher wakes once on each, and
         # --once lists them without letting them set its verdict.

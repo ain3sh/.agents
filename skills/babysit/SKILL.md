@@ -45,6 +45,7 @@ Run the full command above unpiped so its exit code reaches you.
 | `comment`, `review`, `thread`, `unresolved` | **address-review**. This invocation confirms its `Fix`, `Respond`, and `Ack` rows; `Decline` rows and open product calls go to the user. |
 | `pending-review` | Run **address-review**'s [pending-review check](../address-review/references/workflow.md#posting-replies) before touching the shared account's drafts. Re-run `pr-watch <pr> --once`. |
 | `body-stale` | Refresh the description with **pr-description** and re-stamp it at the current head. |
+| `e2e-unadmitted` | Run the label command the line names; a push after the approval left E2E unadmitted, and re-requesting the approver is never the fix (Rule 1). |
 | `READY` | Run `pr-watch <pr> --once`. On `READY`, merge with the repo's allowed method (`gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`) pinned to the sha that verdict line ends with (`gh pr merge <pr> --<method> --match-head-commit <sha>`), confirm `MERGED`, stop. On `ACTION`, handle its lines instead; on `WAIT`, follow its row. |
 | `WAIT` | Resume the Watch path above. |
 | `blocked` | Check, in order: rulesets, required reviewers, merge queue, then `pr-context` for anything GitHub reports that the watcher does not model. |
