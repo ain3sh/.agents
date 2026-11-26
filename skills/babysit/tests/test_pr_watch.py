@@ -503,42 +503,53 @@ class OnceVerdictTest(unittest.TestCase):
         # The head's newest E2E plan job ran its no-reason step: the required
         # checks never report. Approved with no reason left, that approval is
         # on an older commit; an approval of the head is E2E Admit's re-run to wait for.
-        e2e, other = check("plan"), check("plan", "neutral")
-        rerun = {**check("plan"), "id": e2e["id"] + 1}
+        # The workflow renamed the step when e2e:run became ci:run. A run planned
+        # before that keeps the old name and reads only the old labels, so ci:run
+        # does not admit it and the remedy names e2e:run.
         skipped = check("test${{ needs.units-admit.outputs.wait }}", "skipped")
-
-        def job(id: int, workflow: str, no_reason: str, at: str = "2026-01-01T00:00:00Z") -> Any:
-            return {"id": id, "workflow_name": workflow, "started_at": at,
-                    "steps": [{"name": "Admit the head", "conclusion": "success"},
-                              {"name": pr_watch.NO_REASON_STEP, "conclusion": no_reason}]}
-
-        unadmitted = job(e2e["id"], "E2E #7 into dev: feat", "success")
-        released = job(rerun["id"], "E2E #7 into dev: feat", "skipped", "2026-01-02T00:00:00Z")
-        tofu = job(other["id"], "OpenTofu", "success")
-        waiting = "waiting: E2E gate (1 checks): runs once this head is approved or labelled e2e:run"
         review = "waiting: review: no approval"
         pending = "waiting: pending checks (1): test"
-        label = ("e2e-unadmitted (1 checks): the approval is on an older commit, so E2E will not run "
-                 f"on this head: gh pr edit {NUMBER} --repo {REPO} --add-label e2e:run")
-        for name, approved, labels, plans, expected in (
-            ("unapproved", False, [], [unadmitted], (3, [waiting, review])),
-            ("approved on an older commit", True, [], [unadmitted], (1, [label])),
-            ("labelled", True, [{"name": "e2e:run"}], [unadmitted], (3, [pending])),
-            ("release bump", True, [{"name": "release-bump"}], [unadmitted], (3, [pending])),
-            ("approved on this head", HEAD, [], [unadmitted], (3, [pending])),
-            ("newest run released", True, [], [unadmitted, released], (3, [pending])),
-            ("another workflow's plan", True, [], [tofu], (3, [pending])),
-        ):
-            with self.subTest(name=name):
-                runs = {unadmitted["id"]: e2e, released["id"]: rerun, tofu["id"]: other}
-                github = GitHub("CLEAN", approved=bool(approved), checks=[check("lint"), skipped, *(runs[j["id"]] for j in plans)])
-                if approved == HEAD:
-                    github.reviews[0]["commit_id"] = HEAD
-                github.pr["labels"] = labels
-                github.jobs = {j["id"]: j for j in plans}
-                code, lines = expected
-                verdict = "ACTION" if code == 1 else "WAIT"
-                self.assertEqual(self.poll(github), (code, [*lines, f"{verdict} {REPO}#{NUMBER} @ {HEAD}"]))
+        revisions = (
+            ("Found no reason to run E2E yet", "ci:run", ("ci:run", "e2e:run", "release-bump", "hotfix-bump"), ()),
+            ("Found no reason to run E2E", "e2e:run", ("e2e:run", "release-bump", "hotfix-bump"), ("ci:run",)),
+        )
+        for revision, (step, remedy, admitting, ignored) in enumerate(revisions):
+            e2e, rerun, other = (
+                {**check("plan", conclusion), "id": check("plan")["id"] + 10 * revision + n}
+                for n, conclusion in enumerate(("success", "success", "neutral"))
+            )
+
+            def job(run: Any, workflow: str, no_reason: str, at: str = "2026-01-01T00:00:00Z") -> Any:
+                return {"id": run["id"], "workflow_name": workflow, "started_at": at,
+                        "steps": [{"name": "Admit the head", "conclusion": "success"},
+                                  {"name": step, "conclusion": no_reason}]}
+
+            unadmitted = job(e2e, "E2E #7 into dev: feat", "success")
+            released = job(rerun, "E2E #7 into dev: feat", "skipped", "2026-01-02T00:00:00Z")
+            tofu = job(other, "OpenTofu", "success")
+            waiting = f"waiting: E2E gate (1 checks): runs once this head is approved or labelled {remedy}"
+            label = ("e2e-unadmitted (1 checks): the approval is on an older commit, so E2E will not run "
+                     f"on this head: gh pr edit {NUMBER} --repo {REPO} --add-label {remedy}")
+            for name, approved, labels, plans, expected in (
+                ("unapproved", False, [], [unadmitted], (3, [waiting, review])),
+                ("approved on an older commit", True, [], [unadmitted], (1, [label])),
+                *((f"labelled {admits}", True, [admits], [unadmitted], (3, [pending])) for admits in admitting),
+                *((f"labelled {later}, which this revision ignores", True, [later], [unadmitted], (1, [label]))
+                  for later in ignored),
+                ("approved on this head", HEAD, [], [unadmitted], (3, [pending])),
+                ("newest run released", True, [], [unadmitted, released], (3, [pending])),
+                ("another workflow's plan", True, [], [tofu], (3, [pending])),
+            ):
+                with self.subTest(step=step, name=name):
+                    runs = {run["id"]: run for run in (e2e, rerun, other)}
+                    github = GitHub("CLEAN", approved=bool(approved), checks=[check("lint"), skipped, *(runs[j["id"]] for j in plans)])
+                    if approved == HEAD:
+                        github.reviews[0]["commit_id"] = HEAD
+                    github.pr["labels"] = [{"name": admits} for admits in labels]
+                    github.jobs = {j["id"]: j for j in plans}
+                    code, lines = expected
+                    verdict = "ACTION" if code == 1 else "WAIT"
+                    self.assertEqual(self.poll(github), (code, [*lines, f"{verdict} {REPO}#{NUMBER} @ {HEAD}"]))
 
     def test_pending_review_hides_replies_and_blocks_ready(self) -> None:
         url = f"https://github.com/{REPO}/pull/{NUMBER}"
